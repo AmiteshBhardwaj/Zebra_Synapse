@@ -74,8 +74,15 @@ export default function PatientHome() {
     if (!selectedFile) return;
     setSubmitting(true);
     try {
-      await uploadLabReport(selectedFile);
-      toast.success("Lab report uploaded.");
+      const result = await uploadLabReport(selectedFile);
+      toast.success(
+        result.extracted
+          ? result.message ?? "Lab report uploaded and biomarkers extracted."
+          : "Lab report uploaded.",
+      );
+      if (!result.extracted && result.message) {
+        toast(result.message);
+      }
       setSelectedFile(null);
       const input = document.getElementById("lab-upload") as HTMLInputElement | null;
       if (input) input.value = "";
