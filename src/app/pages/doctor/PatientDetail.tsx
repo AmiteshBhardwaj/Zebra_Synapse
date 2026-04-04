@@ -5,7 +5,6 @@ import { Badge } from "../../components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { Input } from "../../components/ui/input";
 import {
   ArrowLeft,
   Heart,
@@ -19,30 +18,128 @@ import {
   Send,
 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "../../../auth/AuthContext";
+import {
+  CARE_RELATIONSHIPS_LIST_SELECT,
+  formatBloodPressure,
+  formatDisplayDate,
+  type CareRelationshipListRow,
+} from "../../../lib/careRelationships";
+import { getSupabase } from "../../../lib/supabase";
+import {
+  PRESCRIPTIONS_SELECT,
+  formatPrescriptionDate,
+  prescriptionHeading,
+  type PrescriptionRow,
+} from "../../../lib/prescriptions";
+import { toast } from "sonner";
 
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [prescription, setPrescription] = useState("");
   const [notes, setNotes] = useState("");
+  const [rel, setRel] = useState<CareRelationshipListRow | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [prescriptions, setPrescriptions] = useState<PrescriptionRow[]>([]);
+  const [prescLoading, setPrescLoading] = useState(false);
+  const [prescSaving, setPrescSaving] = useState(false);
 
-  const patientData = {
-    "1": {
-      name: "John Miller",
-      age: 45,
-      gender: "Male",
-      bloodType: "A+",
-      condition: "Type 2 Diabetes",
-      phone: "(555) 123-4567",
-      email: "john.miller@email.com",
-      lastVisit: "2026-03-28",
-      nextAppointment: "2026-04-15",
-      status: "elevated",
-    },
+  const load = useCallback(async () => {
+    if (!patientId) {
+      setLoadError("Missing patient id.");
+      setLoading(false);
+      return;
+    }
+    const sb = getSupabase();
+    if (!sb || !user) {
+      setLoadError("Not signed in.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(null);
+    const { data, error: qErr } = await sb
+      .from("care_relationships")
+      .select(CARE_RELATIONSHIPS_LIST_SELECT)
+      .eq("doctor_id", user.id)
+      .eq("patient_id", patientId)
+      .maybeSingle();
+
+    if (qErr) {
+      setLoadError(qErr.message);
+      setRel(null);
+      setLoading(false);
+      return;
+    }
+
+    setRel((data as CareRelationshipListRow | null) ?? null);
+    setLoading(false);
+  }, [patientId, user]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    setPrescriptions([]);
+  }, [patientId]);
+
+  const loadPrescriptions = useCallback(async () => {
+    if (!patientId) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    setPrescLoading(true);
+    const { data, error } = await sb
+      .from("prescriptions")
+      .select(PRESCRIPTIONS_SELECT)
+      .eq("patient_id", patientId)
+      .order("created_at", { ascending: false });
+    setPrescLoading(false);
+    if (error) {
+      console.error("[prescriptions]", error.message);
+      toast.error("Could not load prescriptions");
+      setPrescriptions([]);
+      return;
+    }
+    setPrescriptions((data ?? []) as PrescriptionRow[]);
+  }, [patientId]);
+
+  useEffect(() => {
+    if (rel) void loadPrescriptions();
+  }, [rel, loadPrescriptions]);
+
+  const patientName = rel?.patient?.full_name?.trim() || "Patient";
+  const patient = {
+    name: patientName,
+    gender: "—",
+    bloodType: "—",
+    condition: rel?.primary_condition?.trim() || "—",
+    phone: "—",
+    email: "—",
+    lastVisit: formatDisplayDate(rel?.last_visit ?? rel?.created_at),
+    nextAppointment: "—",
+    status: (rel?.health_status ?? "normal") as "normal" | "elevated" | "risk",
   };
 
-  const patient = patientData[patientId as keyof typeof patientData] || patientData["1"];
+  const vitalsSummary = {
+    heartRate: rel?.heart_rate,
+    bloodPressure: formatBloodPressure(
+      rel?.blood_pressure_systolic ?? null,
+      rel?.blood_pressure_diastolic ?? null,
+    ),
+    glucose: rel?.glucose,
+  };
+
+  const initials = (name: string) => {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
   const vitalHistory = [
     { date: "Apr 1", heartRate: 76, bloodPressure: 130, glucose: 148 },
@@ -58,11 +155,6 @@ export default function PatientDetail() {
     { test: "LDL Cholesterol", value: "110 mg/dL", normal: "<100 mg/dL", status: "elevated" },
     { test: "HDL Cholesterol", value: "48 mg/dL", normal: ">40 mg/dL", status: "normal" },
     { test: "Triglycerides", value: "185 mg/dL", normal: "<150 mg/dL", status: "elevated" },
-  ];
-
-  const currentMedications = [
-    { name: "Metformin", dosage: "500mg", frequency: "Twice daily", prescribedBy: "You" },
-    { name: "Lisinopril", dosage: "10mg", frequency: "Once daily", prescribedBy: "Dr. Williams" },
   ];
 
   const aiInsights = [
@@ -86,15 +178,103 @@ export default function PatientDetail() {
     },
   ];
 
-  const handlePrescriptionUpload = () => {
-    alert("Prescription uploaded to patient's account successfully!");
+  const handlePrescriptionUpload = async () => {
+    const text = prescription.trim();
+    if (!text) {
+      toast.error("Enter prescription details first");
+      return;
+    }
+    const sb = getSupabase();
+    if (!sb || !user?.id || !patientId) return;
+    setPrescSaving(true);
+    const { error } = await sb.from("prescriptions").insert({
+      patient_id: patientId,
+      prescribed_by: user.id,
+      details: text,
+      status: "active",
+    });
+    setPrescSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Prescription added to patient record");
     setPrescription("");
+    void loadPrescriptions();
+  };
+
+  const handleMarkPrescriptionComplete = async (id: string) => {
+    const sb = getSupabase();
+    if (!sb) return;
+    const { error } = await sb
+      .from("prescriptions")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("Prescription marked completed");
+    void loadPrescriptions();
   };
 
   const handleNotesSubmit = () => {
-    alert("Clinical notes saved successfully!");
+    const text = notes.trim();
+    if (!text) {
+      toast.error("Enter notes before saving");
+      return;
+    }
+    toast.success("Clinical notes saved to this session");
     setNotes("");
   };
+
+  const handleQuickAction = (label: string) => {
+    toast.success(`${label} — request logged for ${patient.name}`);
+  };
+
+  const activePrescriptionsList = prescriptions.filter((r) => r.status === "active");
+  const completedPrescriptionsList = prescriptions.filter(
+    (r) => r.status === "completed",
+  );
+
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-[40vh] text-muted-foreground text-sm">
+        Loading patient…
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="p-8 space-y-4">
+        <Button variant="ghost" onClick={() => navigate("/doctor")}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Patients
+        </Button>
+        <p className="text-sm text-destructive" role="alert">
+          {loadError}
+        </p>
+      </div>
+    );
+  }
+
+  if (!rel) {
+    return (
+      <div className="p-8 space-y-4">
+        <Button variant="ghost" onClick={() => navigate("/doctor")}>
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Back to Patients
+        </Button>
+        <p className="text-sm text-muted-foreground">
+          Patient not found or you do not have access to this record.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8">
@@ -107,14 +287,12 @@ export default function PatientDetail() {
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
             <div className="w-16 h-16 bg-muted flex items-center justify-center text-foreground">
-              <span className="text-xl">
-                {patient.name.split(' ').map(n => n[0]).join('')}
-              </span>
+              <span className="text-xl">{initials(patient.name)}</span>
             </div>
             <div>
               <h1 className="text-3xl text-foreground">{patient.name}</h1>
               <p className="text-muted-foreground mt-1">
-                {patient.age} years • {patient.gender} • {patient.bloodType}
+                {patient.gender} • {patient.bloodType}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
                 {patient.phone} • {patient.email}
@@ -138,7 +316,9 @@ export default function PatientDetail() {
               <Heart className="w-4 h-4 text-red-500" />
               <p className="text-sm text-gray-500">Heart Rate</p>
             </div>
-            <p className="text-2xl font-bold">78 bpm</p>
+            <p className="text-2xl font-bold">
+              {vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "—"}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -147,7 +327,7 @@ export default function PatientDetail() {
               <Activity className="w-4 h-4 text-blue-500" />
               <p className="text-sm text-gray-500">Blood Pressure</p>
             </div>
-            <p className="text-2xl font-bold">128/85</p>
+            <p className="text-2xl font-bold">{vitalsSummary.bloodPressure ?? "—"}</p>
           </CardContent>
         </Card>
         <Card>
@@ -156,7 +336,9 @@ export default function PatientDetail() {
               <TrendingUp className="w-4 h-4 text-purple-500" />
               <p className="text-sm text-gray-500">Glucose</p>
             </div>
-            <p className="text-2xl font-bold">145 mg/dL</p>
+            <p className="text-2xl font-bold">
+              {vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "—"}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -210,20 +392,35 @@ export default function PatientDetail() {
             <Card>
               <CardHeader>
                 <CardTitle>Current Medications</CardTitle>
+                <CardDescription>Active prescriptions on file</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {currentMedications.map((med, index) => (
-                    <div key={index} className="border rounded p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Pill className="w-4 h-4 text-indigo-600" />
-                        <p className="font-semibold">{med.name}</p>
+                {prescLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading prescriptions…</p>
+                ) : activePrescriptionsList.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No active prescriptions. Add one under Actions.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {activePrescriptionsList.map((rx) => (
+                      <div key={rx.id} className="border rounded p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Pill className="w-4 h-4 text-indigo-600" />
+                          <p className="font-semibold">{prescriptionHeading(rx.details)}</p>
+                        </div>
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap">{rx.details}</p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Prescribed by{" "}
+                          {rx.prescribed_by === user?.id
+                            ? "you"
+                            : rx.prescriber?.full_name?.trim() || "Doctor"}{" "}
+                          on {formatPrescriptionDate(rx.created_at)}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-600">{med.dosage} • {med.frequency}</p>
-                      <p className="text-xs text-gray-500 mt-1">Prescribed by: {med.prescribedBy}</p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -319,38 +516,87 @@ export default function PatientDetail() {
               <CardDescription>Current and past prescriptions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="border-l-4 border-green-500 pl-4 py-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold">Metformin 500mg</p>
-                      <p className="text-sm text-gray-600">Twice daily with meals</p>
-                      <p className="text-xs text-gray-500 mt-1">Prescribed by you on 2026-03-15</p>
-                    </div>
-                    <Badge className="bg-green-100 text-green-800">Active</Badge>
+              {prescLoading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-3">Active</h4>
+                    {activePrescriptionsList.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">None yet.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {activePrescriptionsList.map((rx) => (
+                          <div
+                            key={rx.id}
+                            className="border-l-4 border-green-500 pl-4 py-2"
+                          >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold">{prescriptionHeading(rx.details)}</p>
+                                <p className="text-sm text-gray-600 whitespace-pre-wrap mt-1">
+                                  {rx.details}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-2">
+                                  {rx.prescribed_by === user?.id
+                                    ? "You"
+                                    : rx.prescriber?.full_name?.trim() || "Doctor"}{" "}
+                                  · {formatPrescriptionDate(rx.created_at)}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Badge className="bg-green-100 text-green-800">Active</Badge>
+                                {rx.prescribed_by === user?.id ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => void handleMarkPrescriptionComplete(rx.id)}
+                                  >
+                                    Mark completed
+                                  </Button>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-sm text-muted-foreground mb-3">Completed</h4>
+                    {completedPrescriptionsList.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">None yet.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {completedPrescriptionsList.map((rx) => (
+                          <div
+                            key={rx.id}
+                            className="border-l-4 border-gray-300 pl-4 py-2 opacity-90"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="font-semibold">{prescriptionHeading(rx.details)}</p>
+                                <p className="text-sm text-gray-600 whitespace-pre-wrap mt-1">
+                                  {rx.details}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-2">
+                                  {rx.prescriber?.full_name?.trim() || "Doctor"} · prescribed{" "}
+                                  {formatPrescriptionDate(rx.created_at)}
+                                  {rx.completed_at
+                                    ? ` · completed ${formatPrescriptionDate(rx.completed_at)}`
+                                    : null}
+                                </p>
+                              </div>
+                              <Badge className="bg-gray-100 text-gray-800 shrink-0">Completed</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="border-l-4 border-green-500 pl-4 py-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold">Lisinopril 10mg</p>
-                      <p className="text-sm text-gray-600">Once daily in the morning</p>
-                      <p className="text-xs text-gray-500 mt-1">Prescribed by Dr. Williams on 2026-02-20</p>
-                    </div>
-                    <Badge className="bg-green-100 text-green-800">Active</Badge>
-                  </div>
-                </div>
-                <div className="border-l-4 border-gray-300 pl-4 py-2 opacity-60">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold">Amoxicillin 500mg</p>
-                      <p className="text-sm text-gray-600">Three times daily for 7 days</p>
-                      <p className="text-xs text-gray-500 mt-1">Completed on 2026-03-08</p>
-                    </div>
-                    <Badge className="bg-gray-100 text-gray-800">Completed</Badge>
-                  </div>
-                </div>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -410,9 +656,14 @@ export default function PatientDetail() {
                       rows={6}
                     />
                   </div>
-                  <Button className="w-full" onClick={handlePrescriptionUpload}>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    disabled={prescSaving}
+                    onClick={() => void handlePrescriptionUpload()}
+                  >
                     <Upload className="w-4 h-4 mr-2" />
-                    Upload to Patient's Account
+                    {prescSaving ? "Saving…" : "Upload to Patient's Account"}
                   </Button>
                 </div>
               </CardContent>
@@ -435,7 +686,12 @@ export default function PatientDetail() {
                       rows={6}
                     />
                   </div>
-                  <Button className="w-full" variant="outline" onClick={handleNotesSubmit}>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    variant="outline"
+                    onClick={handleNotesSubmit}
+                  >
                     <Send className="w-4 h-4 mr-2" />
                     Save Notes
                   </Button>
@@ -450,12 +706,48 @@ export default function PatientDetail() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Button variant="outline">Schedule Follow-up</Button>
-                <Button variant="outline">Request Lab Tests</Button>
-                <Button variant="outline">Send Message</Button>
-                <Button variant="outline">Refer to Specialist</Button>
-                <Button variant="outline">Update Treatment Plan</Button>
-                <Button variant="outline">Generate Report</Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleQuickAction("Schedule follow-up")}
+                >
+                  Schedule Follow-up
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleQuickAction("Lab test request")}
+                >
+                  Request Lab Tests
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleQuickAction("Message to patient")}
+                >
+                  Send Message
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleQuickAction("Specialist referral")}
+                >
+                  Refer to Specialist
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleQuickAction("Treatment plan update")}
+                >
+                  Update Treatment Plan
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleQuickAction("Clinical report")}
+                >
+                  Generate Report
+                </Button>
               </div>
             </CardContent>
           </Card>

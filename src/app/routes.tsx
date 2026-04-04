@@ -13,6 +13,7 @@ import DiseasePrediction from "./pages/patient/DiseasePrediction";
 import Nutrition from "./pages/patient/Nutrition";
 import ClinicalTrials from "./pages/patient/ClinicalTrials";
 import WellnessTips from "./pages/patient/WellnessTips";
+import ProfileSettings from "./pages/ProfileSettings";
 import PatientsList from "./pages/doctor/PatientsList";
 import PatientDetail from "./pages/doctor/PatientDetail";
 import RequirePatientPortal from "./layouts/RequirePatientPortal";
@@ -52,6 +53,7 @@ export const router = createBrowserRouter([
       { path: "nutrition", Component: Nutrition },
       { path: "clinical-trials", Component: ClinicalTrials },
       { path: "wellness-tips", Component: WellnessTips },
+      { path: "settings", Component: ProfileSettings },
     ],
   },
   {
@@ -59,6 +61,7 @@ export const router = createBrowserRouter([
     Component: RequireDoctorPortal,
     children: [
       { index: true, Component: PatientsList },
+      { path: "settings", Component: ProfileSettings },
       { path: "patient/:patientId", Component: PatientDetail },
     ],
   },

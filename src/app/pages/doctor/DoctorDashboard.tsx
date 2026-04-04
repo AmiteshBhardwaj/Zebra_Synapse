@@ -1,7 +1,7 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
 import { Button } from "../../components/ui/button";
-import { Activity, Users, LogOut, Stethoscope } from "lucide-react";
+import { Activity, Users, LogOut, Stethoscope, Settings } from "lucide-react";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
@@ -54,6 +54,17 @@ export default function DoctorDashboard() {
             >
               <Users className="w-4 h-4" strokeWidth={1.5} />
               <span className="text-sm">My Patients</span>
+            </button>
+            <button
+              onClick={() => navigate("/doctor/settings")}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded transition-colors ${
+                location.pathname === "/doctor/settings"
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+            >
+              <Settings className="w-4 h-4" strokeWidth={1.5} />
+              <span className="text-sm">Account settings</span>
             </button>
           </div>
         </nav>

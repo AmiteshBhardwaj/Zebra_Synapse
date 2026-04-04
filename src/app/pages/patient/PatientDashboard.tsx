@@ -12,7 +12,8 @@ import {
   FlaskConical,
   Sparkles,
   LogOut,
-  Home
+  Home,
+  Settings,
 } from "lucide-react";
 
 export default function PatientDashboard() {
@@ -30,6 +31,7 @@ export default function PatientDashboard() {
     { path: "/patient/nutrition", icon: Apple, label: "Nutrition" },
     { path: "/patient/clinical-trials", icon: FlaskConical, label: "Clinical Trials" },
     { path: "/patient/wellness-tips", icon: Sparkles, label: "Wellness Tips" },
+    { path: "/patient/settings", icon: Settings, label: "Account settings" },
   ];
 
   const handleLogout = async () => {
