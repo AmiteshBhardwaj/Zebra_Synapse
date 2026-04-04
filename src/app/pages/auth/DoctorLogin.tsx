@@ -29,7 +29,7 @@ export default function DoctorLogin() {
 
     const emailTrimmed = email.trim();
     setSubmitting(true);
-    const { error } = await sb.auth.signInWithPassword({
+    const { data, error } = await sb.auth.signInWithPassword({
       email: emailTrimmed,
       password,
     });
@@ -39,9 +39,7 @@ export default function DoctorLogin() {
       return;
     }
 
-    const {
-      data: { user },
-    } = await sb.auth.getUser();
+    const user = data.user;
     if (!user) {
       toast.error("Could not load user.");
       setSubmitting(false);
