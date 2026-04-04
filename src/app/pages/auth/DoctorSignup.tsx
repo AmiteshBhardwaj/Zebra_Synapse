@@ -56,7 +56,7 @@ export default function DoctorSignup() {
       navigate("/doctor");
     } else {
       toast.success("Check your email to confirm your account, then sign in.");
-      navigate("/login/doctor");
+      navigate("/login/doctor?confirm=1");
     }
     setSubmitting(false);
   };

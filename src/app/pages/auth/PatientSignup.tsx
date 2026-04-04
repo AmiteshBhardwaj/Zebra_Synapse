@@ -54,7 +54,7 @@ export default function PatientSignup() {
       navigate("/patient");
     } else {
       toast.success("Check your email to confirm your account, then sign in.");
-      navigate("/login/patient");
+      navigate("/login/patient?confirm=1");
     }
     setSubmitting(false);
   };
