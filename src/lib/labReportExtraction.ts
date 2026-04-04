@@ -1,9 +1,10 @@
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
 import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { BIOMARKER_DEFINITIONS } from "./biomarkerCatalog";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 
-type BiomarkerKey =
+type LegacyBiomarkerKey =
   | "hemoglobinA1c"
   | "fastingGlucose"
   | "totalCholesterol"
@@ -17,7 +18,8 @@ type BiomarkerKey =
 
 export type ExtractedLabPanel = {
   recordedAt: string;
-  values: Partial<Record<BiomarkerKey, number>>;
+  values: Partial<Record<LegacyBiomarkerKey, number>>;
+  biomarkers: Record<string, number>;
   matchedCount: number;
   notes: string;
 };
@@ -27,8 +29,59 @@ type ExtractionResult =
   | { status: "no_data"; reason: string }
   | { status: "unsupported"; reason: string };
 
+type TextItem = {
+  str: string;
+  transform: number[];
+};
+
 function normalizeText(text: string): string {
   return text.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").replace(/\r/g, "\n");
+}
+
+function normalizeLine(text: string): string {
+  return text.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").trim();
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildPageLines(items: readonly unknown[]): string[] {
+  const positionedItems = items
+    .filter((item): item is TextItem => {
+      if (!item || typeof item !== "object") return false;
+      if (!("str" in item) || !("transform" in item)) return false;
+      const candidate = item as { str?: unknown; transform?: unknown };
+      return typeof candidate.str === "string" && Array.isArray(candidate.transform);
+    })
+    .map((item) => ({
+      str: item.str.trim(),
+      x: item.transform[4] ?? 0,
+      y: item.transform[5] ?? 0,
+    }))
+    .filter((item) => item.str.length > 0);
+
+  const lines: Array<{ y: number; items: Array<{ str: string; x: number }> }> = [];
+  for (const item of positionedItems) {
+    const existing = lines.find((line) => Math.abs(line.y - item.y) < 2);
+    if (existing) {
+      existing.items.push({ str: item.str, x: item.x });
+    } else {
+      lines.push({ y: item.y, items: [{ str: item.str, x: item.x }] });
+    }
+  }
+
+  return lines
+    .sort((a, b) => b.y - a.y)
+    .map((line) =>
+      normalizeLine(
+        line.items
+          .sort((a, b) => a.x - b.x)
+          .map((item) => item.str)
+          .join(" "),
+      ),
+    )
+    .filter((line) => line.length > 0);
 }
 
 function toIsoDate(value: string): string | null {
@@ -75,8 +128,35 @@ function extractValue(text: string, patterns: RegExp[]): number | null {
   return null;
 }
 
-function countMatches(values: Partial<Record<BiomarkerKey, number>>): number {
-  return Object.values(values).filter((value) => value != null).length;
+function extractValueFromLines(
+  lines: string[],
+  labels: RegExp[],
+  units: string[],
+  exclude?: RegExp[],
+): number | null {
+  const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
+  const unitPattern = units.filter((unit) => unit.trim().length > 0).map(escapeRegex).join("|");
+  const valuePattern = hasUnitConstraint
+    ? new RegExp(`(\\d+(?:\\.\\d+)?)(?=\\s*(?:${unitPattern})(?:\\s|$))`, "gi")
+    : /(?:^|\s)(\d+(?:\.\d+)?)(?=\s|$)/gi;
+
+  for (const line of lines) {
+    if (exclude?.some((pattern) => pattern.test(line))) continue;
+
+    const labelMatch = labels.find((pattern) => pattern.test(line));
+    if (!labelMatch) continue;
+
+    const startIndex = line.search(labelMatch);
+    const afterLabel = startIndex >= 0 ? line.slice(startIndex) : line;
+    const resultMatch = valuePattern.exec(afterLabel);
+    valuePattern.lastIndex = 0;
+
+    if (!resultMatch?.[1]) continue;
+    const value = Number(resultMatch[1]);
+    if (Number.isFinite(value)) return value;
+  }
+
+  return null;
 }
 
 export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResult> {
@@ -88,13 +168,13 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
   const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise;
 
   let text = "";
+  const lines: string[] = [];
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
     const page = await pdf.getPage(pageNumber);
     const content = await page.getTextContent();
-    const pageText = content.items
-      .map((item) => ("str" in item ? item.str : ""))
-      .join(" ");
-    text += `\n${pageText}`;
+    const pageLines = buildPageLines(content.items);
+    lines.push(...pageLines);
+    text += `\n${pageLines.join("\n")}`;
   }
 
   const normalized = normalizeText(text);
@@ -105,41 +185,35 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
     };
   }
 
-  const values: Partial<Record<BiomarkerKey, number>> = {
-    hemoglobinA1c: extractValue(normalized, [
-      /(?:hemoglobin\s*a1c|hba1c|glycated\s+hemoglobin)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
-    fastingGlucose: extractValue(normalized, [
-      /(?:fasting\s+glucose|glucose,\s*fasting|fasting\s+blood\s+glucose)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-      /(?:glucose)\s*[:\-]?\s*(\d+(?:\.\d+)?)\s*(?:mg\/dL)?/i,
-    ]),
-    totalCholesterol: extractValue(normalized, [
-      /(?:total\s+cholesterol|cholesterol,\s*total)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
-    ldl: extractValue(normalized, [
-      /(?:ldl(?:\s+cholesterol)?|ldl-c)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
-    hdl: extractValue(normalized, [
-      /(?:hdl(?:\s+cholesterol)?|hdl-c)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
-    triglycerides: extractValue(normalized, [
-      /(?:triglycerides?)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
-    hemoglobin: extractValue(normalized, [
-      /(?:hemoglobin|hgb)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
-    wbc: extractValue(normalized, [
-      /(?:white\s+blood\s+cell(?:\s+count)?|wbc)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
-    platelets: extractValue(normalized, [
-      /(?:platelet(?:s|\s+count)?)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
-    creatinine: extractValue(normalized, [
-      /(?:creatinine)\s*[:\-]?\s*(\d+(?:\.\d+)?)/i,
-    ]),
+  const biomarkers: Record<string, number> = {};
+  for (const definition of BIOMARKER_DEFINITIONS) {
+    const extracted =
+      extractValueFromLines(lines, definition.patterns, definition.units, definition.exclude) ??
+      extractValue(
+        normalized,
+        definition.patterns.map(
+          (pattern) => new RegExp(`${pattern.source}\\s*[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`, pattern.flags),
+        ),
+      );
+    if (extracted != null) {
+      biomarkers[definition.key] = extracted;
+    }
+  }
+
+  const values: Partial<Record<LegacyBiomarkerKey, number>> = {
+    hemoglobinA1c: biomarkers.hemoglobin_a1c,
+    fastingGlucose: biomarkers.fasting_glucose,
+    totalCholesterol: biomarkers.total_cholesterol,
+    ldl: biomarkers.ldl,
+    hdl: biomarkers.hdl,
+    triglycerides: biomarkers.triglycerides,
+    hemoglobin: biomarkers.hemoglobin,
+    wbc: biomarkers.wbc,
+    platelets: biomarkers.platelets,
+    creatinine: biomarkers.creatinine,
   };
 
-  const matchedCount = countMatches(values);
+  const matchedCount = Object.keys(biomarkers).length;
   if (matchedCount === 0) {
     return {
       status: "no_data",
@@ -152,6 +226,7 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
     panel: {
       recordedAt: extractRecordedAt(normalized),
       values,
+      biomarkers,
       matchedCount,
       notes: "Auto-extracted from uploaded PDF. Review values if the source format is unusual.",
     },

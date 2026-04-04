@@ -3,6 +3,7 @@ export type LabPanelRow = {
   patient_id: string;
   upload_id: string | null;
   recorded_at: string;
+  biomarkers: Record<string, number> | null;
   hemoglobin_a1c: number | null;
   fasting_glucose: number | null;
   total_cholesterol: number | null;
@@ -22,6 +23,7 @@ export const LAB_PANEL_SELECT = `
   patient_id,
   upload_id,
   recorded_at,
+  biomarkers,
   hemoglobin_a1c,
   fasting_glucose,
   total_cholesterol,
@@ -83,6 +85,18 @@ export function buildLabPanelInsertPayload(
     patient_id: patientId,
     upload_id: input.uploadId || null,
     recorded_at: input.recordedAt,
+    biomarkers: {
+      ...(parseNullableNumber(input.hemoglobinA1c) != null ? { hemoglobin_a1c: parseNullableNumber(input.hemoglobinA1c)! } : {}),
+      ...(parseNullableNumber(input.fastingGlucose) != null ? { fasting_glucose: parseNullableNumber(input.fastingGlucose)! } : {}),
+      ...(parseNullableNumber(input.totalCholesterol) != null ? { total_cholesterol: parseNullableNumber(input.totalCholesterol)! } : {}),
+      ...(parseNullableNumber(input.ldl) != null ? { ldl: parseNullableNumber(input.ldl)! } : {}),
+      ...(parseNullableNumber(input.hdl) != null ? { hdl: parseNullableNumber(input.hdl)! } : {}),
+      ...(parseNullableNumber(input.triglycerides) != null ? { triglycerides: parseNullableNumber(input.triglycerides)! } : {}),
+      ...(parseNullableNumber(input.hemoglobin) != null ? { hemoglobin: parseNullableNumber(input.hemoglobin)! } : {}),
+      ...(parseNullableNumber(input.wbc) != null ? { wbc: parseNullableNumber(input.wbc)! } : {}),
+      ...(parseNullableNumber(input.platelets) != null ? { platelets: parseNullableNumber(input.platelets)! } : {}),
+      ...(parseNullableNumber(input.creatinine) != null ? { creatinine: parseNullableNumber(input.creatinine)! } : {}),
+    },
     hemoglobin_a1c: parseNullableNumber(input.hemoglobinA1c),
     fasting_glucose: parseNullableNumber(input.fastingGlucose),
     total_cholesterol: parseNullableNumber(input.totalCholesterol),

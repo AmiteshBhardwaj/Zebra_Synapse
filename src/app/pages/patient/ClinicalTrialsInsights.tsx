@@ -2,7 +2,11 @@ import { FlaskConical } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { getLatestLabPanel, getTrialMatches } from "../../../lib/labInsights";
+import {
+  CategoryBarChart,
+  OverviewStatCards,
+} from "../../components/patient/InsightVisuals";
+import { getLatestLabPanel, getMetricsForDashboard, getTrialMatches } from "../../../lib/labInsights";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 
 export default function ClinicalTrialsInsights() {
@@ -10,6 +14,14 @@ export default function ClinicalTrialsInsights() {
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
   const latestPanel = getLatestLabPanel(panels);
   const matches = latestPanel ? getTrialMatches(latestPanel) : [];
+  const trialDrivers = latestPanel ? getMetricsForDashboard(latestPanel, 8) : [];
+  const matchBars = matches.map((match, index) => ({
+    key: match.title.toLowerCase().replace(/\s+/g, "-"),
+    label: match.title,
+    value: Math.max(match.query.split(/\s+/).length, 2),
+    fill: ["#0f766e", "#2563eb", "#d97706", "#d9485f"][index % 4],
+    detail: match.summary,
+  }));
 
   if (loading || panelsLoading) {
     return (
@@ -48,26 +60,63 @@ export default function ClinicalTrialsInsights() {
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {matches.map((match) => (
-            <Card key={match.title}>
-              <CardHeader>
-                <CardTitle>{match.title}</CardTitle>
-                <CardDescription>{match.summary}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">Search phrase: {match.query}</p>
-                <a
-                  href={`https://clinicaltrials.gov/search?term=${encodeURIComponent(match.query)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex text-sm font-medium text-primary underline"
-                >
-                  Search ClinicalTrials.gov
-                </a>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="space-y-6">
+          <OverviewStatCards
+            stats={[
+              {
+                label: "Match Themes",
+                value: matches.length,
+                detail: "Trial-search themes derived from the latest biomarker pattern.",
+                tone: "blue",
+              },
+              {
+                label: "Driver Markers",
+                value: trialDrivers.length,
+                detail: "Biomarkers currently influencing trial search categories.",
+                tone: "teal",
+              },
+              {
+                label: "Search Queries",
+                value: matches.length,
+                detail: "Direct ClinicalTrials.gov queries ready to launch.",
+                tone: "amber",
+              },
+              {
+                label: "Recorded Panels",
+                value: panels.length,
+                detail: "History that will improve matching when more reports are added.",
+                tone: "rose",
+              },
+            ]}
+          />
+
+          <CategoryBarChart
+            items={matchBars}
+            title="Trial search landscape"
+            description="Each bar reflects a matched trial-search theme derived from your panel."
+          />
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {matches.map((match) => (
+              <Card key={match.title}>
+                <CardHeader>
+                  <CardTitle>{match.title}</CardTitle>
+                  <CardDescription>{match.summary}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">Search phrase: {match.query}</p>
+                  <a
+                    href={`https://clinicaltrials.gov/search?term=${encodeURIComponent(match.query)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex text-sm font-medium text-primary underline"
+                  >
+                    Search ClinicalTrials.gov
+                  </a>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

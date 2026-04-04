@@ -1,3 +1,4 @@
+import { BIOMARKER_DEFINITIONS, getBiomarkerDefinition } from "./biomarkerCatalog";
 import type { LabPanelRow } from "./labPanels";
 
 type MetricStatus = "normal" | "borderline" | "high" | "low";
@@ -10,6 +11,7 @@ export type MetricAssessment = {
   range: string;
   status: MetricStatus | "missing";
   summary: string;
+  priority?: number;
 };
 
 export type DiseasePrediction = {
@@ -67,6 +69,44 @@ function formatValue(value: number | null, unit: string): string {
   return `${value} ${unit}`.trim();
 }
 
+function getPanelBiomarkerValue(panel: LabPanelRow, key: string): number | null {
+  const biomarkerValue = panel.biomarkers?.[key];
+  if (typeof biomarkerValue === "number") return biomarkerValue;
+  const definition = getBiomarkerDefinition(key);
+  if (!definition?.legacyField) return null;
+  const legacyValue = panel[definition.legacyField];
+  return typeof legacyValue === "number" ? legacyValue : null;
+}
+
+function evaluateConfiguredMetric(
+  value: number,
+  low?: number,
+  high?: number,
+  borderlineLow?: number,
+  borderlineHigh?: number,
+): MetricStatus {
+  if (high != null && value > high) return "high";
+  if (low != null && value < low) return "low";
+  if (borderlineHigh != null && value >= borderlineHigh) return "borderline";
+  if (borderlineLow != null && value <= borderlineLow) return "borderline";
+  return "normal";
+}
+
+function metricSummary(label: string, status: MetricAssessment["status"], range: string): string {
+  switch (status) {
+    case "high":
+      return `${label} is above the configured reference ${range}.`;
+    case "low":
+      return `${label} is below the configured reference ${range}.`;
+    case "borderline":
+      return `${label} is near the edge of the configured reference ${range}.`;
+    case "normal":
+      return `${label} is within the configured reference ${range}.`;
+    default:
+      return "Add this value to include it in your analysis.";
+  }
+}
+
 function buildMetric(
   key: string,
   label: string,
@@ -100,134 +140,43 @@ function buildMetric(
 }
 
 export function getMetricAssessments(panel: LabPanelRow): MetricAssessment[] {
-  return [
-    buildMetric(
-      "hemoglobin_a1c",
-      "Hemoglobin A1c",
-      panel.hemoglobin_a1c,
-      "%",
-      "< 5.7",
-      (v) => (v >= 6.5 ? "high" : v >= 5.7 ? "borderline" : "normal"),
-      {
-        normal: "In the usual range for long-term glucose control.",
-        borderline: "Borderline high and consistent with prediabetes risk.",
-        high: "High enough to suggest diabetes-range glucose exposure.",
-        low: "Low.",
-      },
-    ),
-    buildMetric(
-      "fasting_glucose",
-      "Fasting Glucose",
-      panel.fasting_glucose,
-      "mg/dL",
-      "70-99",
-      (v) => (v >= 126 ? "high" : v >= 100 ? "borderline" : v < 70 ? "low" : "normal"),
-      {
-        normal: "Within the usual fasting range.",
-        borderline: "Above the usual fasting range.",
-        high: "High enough to warrant follow-up for glucose control.",
-        low: "Lower than the usual fasting range.",
-      },
-    ),
-    buildMetric(
-      "ldl",
-      "LDL Cholesterol",
-      panel.ldl,
-      "mg/dL",
-      "< 100",
-      (v) => (v >= 160 ? "high" : v >= 100 ? "borderline" : "normal"),
-      {
-        normal: "Within the usual LDL target range.",
-        borderline: "Above ideal and worth improving with diet or treatment.",
-        high: "High enough to raise cardiovascular concern.",
-        low: "Low.",
-      },
-    ),
-    buildMetric(
-      "hdl",
-      "HDL Cholesterol",
-      panel.hdl,
-      "mg/dL",
-      ">= 40",
-      (v) => (v < 40 ? "low" : "normal"),
-      {
-        normal: "In a supportive range for heart health.",
-        borderline: "Borderline.",
-        high: "High.",
-        low: "Lower than ideal for cardiometabolic protection.",
-      },
-    ),
-    buildMetric(
-      "triglycerides",
-      "Triglycerides",
-      panel.triglycerides,
-      "mg/dL",
-      "< 150",
-      (v) => (v >= 200 ? "high" : v >= 150 ? "borderline" : "normal"),
-      {
-        normal: "Within the usual fasting target range.",
-        borderline: "Mildly elevated and often responsive to sugar and alcohol reduction.",
-        high: "High enough to warrant focused follow-up.",
-        low: "Low.",
-      },
-    ),
-    buildMetric(
-      "hemoglobin",
-      "Hemoglobin",
-      panel.hemoglobin,
-      "g/dL",
-      "12-17",
-      (v) => (v < 12 ? "low" : v > 17 ? "high" : "normal"),
-      {
-        normal: "Within the usual range.",
-        borderline: "Borderline.",
-        high: "Above the usual range.",
-        low: "Below the usual range and may fit anemia.",
-      },
-    ),
-    buildMetric(
-      "creatinine",
-      "Creatinine",
-      panel.creatinine,
-      "mg/dL",
-      "0.6-1.3",
-      (v) => (v > 1.3 ? "high" : v < 0.6 ? "low" : "normal"),
-      {
-        normal: "In the usual range for kidney function screening.",
-        borderline: "Borderline.",
-        high: "Higher than usual and worth reviewing with your clinician.",
-        low: "Lower than usual but often less concerning on its own.",
-      },
-    ),
-    buildMetric(
-      "wbc",
-      "White Blood Cells",
-      panel.wbc,
-      "x10^3/uL",
-      "4-11",
-      (v) => (v > 11 ? "high" : v < 4 ? "low" : "normal"),
-      {
-        normal: "Within the usual range.",
-        borderline: "Borderline.",
-        high: "Higher than usual and may reflect inflammation or infection.",
-        low: "Lower than usual and may need review in context.",
-      },
-    ),
-    buildMetric(
-      "platelets",
-      "Platelets",
-      panel.platelets,
-      "x10^3/uL",
-      "150-450",
-      (v) => (v > 450 ? "high" : v < 150 ? "low" : "normal"),
-      {
-        normal: "Within the usual range.",
-        borderline: "Borderline.",
-        high: "Higher than usual and worth interpreting with the rest of the CBC.",
-        low: "Lower than usual and worth clinical review.",
-      },
-    ),
-  ];
+  return BIOMARKER_DEFINITIONS.map((definition) => {
+    const value = getPanelBiomarkerValue(panel, definition.key);
+    const unit = definition.units[0] ?? "";
+    const range = definition.reference ?? "Configured in report format";
+
+    if (value == null) {
+      return {
+        key: definition.key,
+        label: definition.label,
+        value,
+        unit,
+        range,
+        status: "missing",
+        summary: "Add this value to include it in your analysis.",
+        priority: definition.priority,
+      };
+    }
+
+    const status = evaluateConfiguredMetric(
+      value,
+      definition.low,
+      definition.high,
+      definition.borderlineLow,
+      definition.borderlineHigh,
+    );
+
+    return {
+      key: definition.key,
+      label: definition.label,
+      value,
+      unit,
+      range,
+      status,
+      summary: metricSummary(definition.label, status, range),
+      priority: definition.priority,
+    };
+  });
 }
 
 export function getOverallStatus(panel: LabPanelRow): {
@@ -496,10 +445,15 @@ export function getTrialMatches(panel: LabPanelRow): TrialMatch[] {
   return trials;
 }
 
-export function getMetricsForDashboard(panel: LabPanelRow) {
+export function getMetricsForDashboard(panel: LabPanelRow, limit = 20) {
   return getMetricAssessments(panel)
     .filter((m) => m.status !== "missing")
-    .sort((a, b) => statusRank(b.status) - statusRank(a.status));
+    .sort((a, b) => {
+      const statusDiff = statusRank(b.status) - statusRank(a.status);
+      if (statusDiff !== 0) return statusDiff;
+      return (b.priority ?? 0) - (a.priority ?? 0);
+    })
+    .slice(0, limit);
 }
 
 export function getMetricValueLabel(metric: MetricAssessment): string {

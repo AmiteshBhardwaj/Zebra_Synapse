@@ -2,7 +2,12 @@ import { Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { getLatestLabPanel, getWellnessTips } from "../../../lib/labInsights";
+import {
+  CategoryBarChart,
+  MetricStatusDonut,
+  OverviewStatCards,
+} from "../../components/patient/InsightVisuals";
+import { getLatestLabPanel, getMetricAssessments, getWellnessTips } from "../../../lib/labInsights";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 
 export default function WellnessTipsInsights() {
@@ -10,6 +15,16 @@ export default function WellnessTipsInsights() {
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
   const latestPanel = getLatestLabPanel(panels);
   const tips = latestPanel ? getWellnessTips(latestPanel) : [];
+  const metrics = latestPanel
+    ? getMetricAssessments(latestPanel).filter((metric) => metric.status !== "missing")
+    : [];
+  const tipBars = tips.map((tip, index) => ({
+    key: tip.title.toLowerCase().replace(/\s+/g, "-"),
+    label: tip.title,
+    value: Math.max(3 - index, 1),
+    fill: ["#0f766e", "#2563eb", "#d97706", "#d9485f"][index % 4],
+    detail: tip.detail,
+  }));
 
   if (loading || panelsLoading) {
     return (
@@ -48,17 +63,61 @@ export default function WellnessTipsInsights() {
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {tips.map((tip) => (
-            <Card key={tip.title}>
-              <CardHeader>
-                <CardTitle>{tip.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">{tip.detail}</p>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="space-y-6">
+          <OverviewStatCards
+            stats={[
+              {
+                label: "Tip Count",
+                value: tips.length,
+                detail: "Personalized tip cards generated from the latest panel.",
+                tone: "teal",
+              },
+              {
+                label: "Flagged Biomarkers",
+                value: metrics.filter((metric) => metric.status === "high" || metric.status === "low").length,
+                detail: "Signals most likely to shape your daily wellness guidance.",
+                tone: "rose",
+              },
+              {
+                label: "Borderline Signals",
+                value: metrics.filter((metric) => metric.status === "borderline").length,
+                detail: "Signals that are stable enough to work on with habit changes.",
+                tone: "amber",
+              },
+              {
+                label: "Recorded Panels",
+                value: panels.length,
+                detail: "Panel history that can refine future wellness recommendations.",
+                tone: "blue",
+              },
+            ]}
+          />
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <MetricStatusDonut
+              metrics={metrics}
+              title="Wellness driver mix"
+              description="Your wellness tips now sit on top of a visual biomarker status breakdown."
+            />
+            <CategoryBarChart
+              items={tipBars}
+              title="Tip priority map"
+              description="Higher bars represent the tips pulled forward first from your latest marker pattern."
+            />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {tips.map((tip) => (
+              <Card key={tip.title}>
+                <CardHeader>
+                  <CardTitle>{tip.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{tip.detail}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

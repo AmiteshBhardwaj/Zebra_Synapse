@@ -3,7 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { getDiseasePredictions, getLatestLabPanel } from "../../../lib/labInsights";
+import {
+  CategoryBarChart,
+  MetricPriorityBars,
+  OverviewStatCards,
+} from "../../components/patient/InsightVisuals";
+import { getDiseasePredictions, getLatestLabPanel, getMetricsForDashboard } from "../../../lib/labInsights";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 
 export default function DiseasePredictionInsights() {
@@ -11,6 +16,12 @@ export default function DiseasePredictionInsights() {
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
   const latestPanel = getLatestLabPanel(panels);
   const predictions = latestPanel ? getDiseasePredictions(latestPanel) : [];
+  const supportingMetrics = latestPanel ? getMetricsForDashboard(latestPanel, 12) : [];
+  const predictionMix = [
+    { key: "high", label: "High", value: predictions.filter((prediction) => prediction.level === "high").length, fill: "#d9485f", detail: "Patterns that should be discussed promptly." },
+    { key: "moderate", label: "Moderate", value: predictions.filter((prediction) => prediction.level === "moderate").length, fill: "#d97706", detail: "Patterns worth structured follow-up." },
+    { key: "low", label: "Low", value: predictions.filter((prediction) => prediction.level === "low").length, fill: "#0f766e", detail: "Patterns with lower immediate concern." },
+  ].filter((item) => item.value > 0);
 
   if (loading || panelsLoading) {
     return (
@@ -59,24 +70,69 @@ export default function DiseasePredictionInsights() {
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {predictions.map((prediction) => (
-            <Card key={prediction.title}>
-              <CardHeader>
-                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                  <TrendingUp className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-                </div>
-                <CardTitle>{prediction.title}</CardTitle>
-                <CardDescription className="capitalize">
-                  Rule-based risk level: {prediction.level}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">{prediction.rationale}</p>
-                <p className="text-sm font-medium">{prediction.nextStep}</p>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="space-y-6">
+          <OverviewStatCards
+            stats={[
+              {
+                label: "Risk Cards",
+                value: predictions.length,
+                detail: "Rule-based patterns generated from your latest panel.",
+                tone: "blue",
+              },
+              {
+                label: "High Risk",
+                value: predictions.filter((prediction) => prediction.level === "high").length,
+                detail: "Patterns with the strongest immediate signal.",
+                tone: "rose",
+              },
+              {
+                label: "Moderate Risk",
+                value: predictions.filter((prediction) => prediction.level === "moderate").length,
+                detail: "Patterns that should still be tracked closely.",
+                tone: "amber",
+              },
+              {
+                label: "Supporting Markers",
+                value: supportingMetrics.length,
+                detail: "Biomarkers currently informing these rule-based cards.",
+                tone: "teal",
+              },
+            ]}
+          />
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <CategoryBarChart
+              items={predictionMix}
+              title="Risk mix"
+              description="This chart groups the generated cards by rule-based risk level."
+            />
+            <MetricPriorityBars
+              metrics={supportingMetrics}
+              title="Markers influencing risk cards"
+              description="The prediction view is now anchored to the biomarker signals behind the cards."
+              limit={8}
+            />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {predictions.map((prediction) => (
+              <Card key={prediction.title}>
+                <CardHeader>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                    <TrendingUp className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+                  </div>
+                  <CardTitle>{prediction.title}</CardTitle>
+                  <CardDescription className="capitalize">
+                    Rule-based risk level: {prediction.level}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-muted-foreground">{prediction.rationale}</p>
+                  <p className="text-sm font-medium">{prediction.nextStep}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>

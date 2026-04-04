@@ -84,12 +84,13 @@ export function usePatientLabReports() {
       }));
 
       if (extraction.status === "success") {
-        const { values, recordedAt, matchedCount, notes } = extraction.panel;
+        const { values, biomarkers, recordedAt, matchedCount, notes } = extraction.panel;
         const { error: panelErr } = await sb.from("lab_panels").upsert(
           {
             patient_id: user.id,
             upload_id: uploadRow.id,
             recorded_at: recordedAt,
+            biomarkers,
             hemoglobin_a1c: values.hemoglobinA1c ?? null,
             fasting_glucose: values.fastingGlucose ?? null,
             total_cholesterol: values.totalCholesterol ?? null,

@@ -2,18 +2,20 @@ import { Activity } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { getLatestLabPanel, getMetricAssessments, getMetricValueLabel } from "../../../lib/labInsights";
+import { getLatestLabPanel, getMetricsForDashboard, getMetricValueLabel } from "../../../lib/labInsights";
+import {
+  MetricPriorityBars,
+  MetricSparklineGrid,
+  MetricStatusDonut,
+  OverviewStatCards,
+} from "../../components/patient/InsightVisuals";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 
 export default function VitalsInsights() {
   const { hasLabReports, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
   const latestPanel = getLatestLabPanel(panels);
-  const metricCards = latestPanel
-    ? getMetricAssessments(latestPanel).filter((metric) =>
-        ["fasting_glucose", "ldl", "hdl", "triglycerides"].includes(metric.key),
-      )
-    : [];
+  const metricCards = latestPanel ? getMetricsForDashboard(latestPanel, 20) : [];
 
   if (loading || panelsLoading) {
     return (
@@ -53,6 +55,56 @@ export default function VitalsInsights() {
         </Card>
       ) : (
         <div className="space-y-6">
+          <OverviewStatCards
+            stats={[
+              {
+                label: "Visible Signals",
+                value: metricCards.length,
+                detail: "Markers currently surfaced in the vitals dashboard.",
+                tone: "teal",
+              },
+              {
+                label: "High Priority",
+                value: metricCards.filter((metric) => metric.status === "high" || metric.status === "low").length,
+                detail: "Signals that stand out on the latest panel.",
+                tone: "rose",
+              },
+              {
+                label: "Borderline",
+                value: metricCards.filter((metric) => metric.status === "borderline").length,
+                detail: "Signals to keep under closer watch.",
+                tone: "amber",
+              },
+              {
+                label: "Recent Panels",
+                value: panels.length,
+                detail: "Historical panels available for movement charts.",
+                tone: "blue",
+              },
+            ]}
+          />
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <MetricStatusDonut
+              metrics={metricCards}
+              title="Vitals signal mix"
+              description="This view emphasizes the strongest current cardio-metabolic signals from the latest panel."
+            />
+            <MetricPriorityBars
+              metrics={metricCards}
+              title="Most important signals"
+              description="Visual ranking makes it easier to spot which readings deserve attention first."
+              limit={10}
+            />
+          </div>
+
+          <MetricSparklineGrid
+            panels={panels}
+            metricKeys={metricCards.slice(0, 6).map((metric) => metric.key)}
+            title="Signal trend cards"
+            description="Each sparkline compresses recent movement into a quick dashboard card."
+          />
+
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {metricCards.map((metric) => (
               <Card key={metric.key}>

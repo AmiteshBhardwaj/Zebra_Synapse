@@ -2,7 +2,12 @@ import { Apple } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { getLatestLabPanel, getNutritionPlans } from "../../../lib/labInsights";
+import {
+  CategoryBarChart,
+  MetricSparklineGrid,
+  OverviewStatCards,
+} from "../../components/patient/InsightVisuals";
+import { getLatestLabPanel, getMetricsForDashboard, getNutritionPlans } from "../../../lib/labInsights";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 
 export default function NutritionInsights() {
@@ -10,6 +15,14 @@ export default function NutritionInsights() {
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
   const latestPanel = getLatestLabPanel(panels);
   const plans = latestPanel ? getNutritionPlans(latestPanel) : [];
+  const nutritionMetrics = latestPanel ? getMetricsForDashboard(latestPanel, 12) : [];
+  const planBars = plans.map((plan, index) => ({
+    key: plan.headline.toLowerCase().replace(/\s+/g, "-"),
+    label: plan.headline,
+    value: plan.actions.length,
+    fill: ["#0f766e", "#d97706", "#2563eb", "#d9485f"][index % 4],
+    detail: plan.focus,
+  }));
 
   if (loading || panelsLoading) {
     return (
@@ -49,24 +62,70 @@ export default function NutritionInsights() {
           </CardHeader>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {plans.map((plan) => (
-            <Card key={plan.headline}>
-              <CardHeader>
-                <CardTitle>{plan.headline}</CardTitle>
-                <CardDescription>{plan.focus}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {plan.actions.map((action) => (
-                    <div key={action} className="rounded-lg border bg-muted/30 p-3 text-sm">
-                      {action}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="space-y-6">
+          <OverviewStatCards
+            stats={[
+              {
+                label: "Nutrition Tracks",
+                value: plans.length,
+                detail: "Diet guidance tracks generated from your latest biomarkers.",
+                tone: "teal",
+              },
+              {
+                label: "Action Steps",
+                value: plans.reduce((sum, plan) => sum + plan.actions.length, 0),
+                detail: "Concrete recommendations surfaced across the current plan set.",
+                tone: "blue",
+              },
+              {
+                label: "Triggered Markers",
+                value: nutritionMetrics.filter((metric) => metric.status !== "normal").length,
+                detail: "Markers that are directly shaping food guidance.",
+                tone: "amber",
+              },
+              {
+                label: "Tracked Panels",
+                value: panels.length,
+                detail: "Historical panels available for nutrition-related trend review.",
+                tone: "rose",
+              },
+            ]}
+          />
+
+          <div className="grid gap-6 xl:grid-cols-2">
+            <CategoryBarChart
+              items={planBars}
+              title="Nutrition focus map"
+              description="Each bar shows how much action depth each nutrition track currently has."
+              valueLabel="actions"
+            />
+            <MetricSparklineGrid
+              panels={panels}
+              metricKeys={nutritionMetrics.slice(0, 6).map((metric) => metric.key)}
+              title="Diet-linked biomarker trends"
+              description="These biomarker cards are the visual backbone behind the nutrition guidance."
+            />
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            {plans.map((plan) => (
+              <Card key={plan.headline}>
+                <CardHeader>
+                  <CardTitle>{plan.headline}</CardTitle>
+                  <CardDescription>{plan.focus}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {plan.actions.map((action) => (
+                      <div key={action} className="rounded-lg border bg-muted/30 p-3 text-sm">
+                        {action}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
     </div>
