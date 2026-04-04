@@ -10,7 +10,7 @@ export function getSignInErrorMessage(error: AuthError): string {
   }
 
   if (code === "invalid_credentials" || msg.includes("invalid login credentials")) {
-    return "Invalid email or password—or your email may still need confirming. If you just signed up, use the confirmation link in your inbox before logging in.";
+    return "Invalid email or password.";
   }
 
   return error.message;

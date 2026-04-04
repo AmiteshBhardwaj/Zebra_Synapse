@@ -27,8 +27,12 @@ export default function PatientLogin() {
     const sb = getSupabase();
     if (!sb) return;
 
+    const emailTrimmed = email.trim();
     setSubmitting(true);
-    const { error } = await sb.auth.signInWithPassword({ email, password });
+    const { error } = await sb.auth.signInWithPassword({
+      email: emailTrimmed,
+      password,
+    });
     if (error) {
       toast.error(getSignInErrorMessage(error));
       setSubmitting(false);
