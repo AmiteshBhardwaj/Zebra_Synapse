@@ -32,9 +32,10 @@ export default function DoctorSignup() {
     const sb = getSupabase();
     if (!sb) return;
 
+    const email = formData.email.trim();
     setSubmitting(true);
     const { data, error } = await sb.auth.signUp({
-      email: formData.email,
+      email,
       password: formData.password,
       options: {
         data: {

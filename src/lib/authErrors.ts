@@ -10,7 +10,7 @@ export function getSignInErrorMessage(error: AuthError): string {
   }
 
   if (code === "invalid_credentials" || msg.includes("invalid login credentials")) {
-    return "Invalid email or password.";
+    return "Invalid email or password. If you created the account recently, confirm your email first using the link from Supabase, then try again.";
   }
 
   return error.message;
