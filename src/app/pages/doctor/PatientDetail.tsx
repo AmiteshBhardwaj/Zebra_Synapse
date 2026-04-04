@@ -12,12 +12,10 @@ import {
   TrendingUp,
   FileText,
   Pill,
-  AlertTriangle,
   Calendar,
   Upload,
   Send,
 } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
 import {
@@ -35,6 +33,23 @@ import {
 } from "../../../lib/prescriptions";
 import { toast } from "sonner";
 
+type PatientLabUploadRow = {
+  id: string;
+  original_filename: string;
+  created_at: string;
+};
+
+function formatLabUploadedAt(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 export default function PatientDetail() {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -47,6 +62,8 @@ export default function PatientDetail() {
   const [prescriptions, setPrescriptions] = useState<PrescriptionRow[]>([]);
   const [prescLoading, setPrescLoading] = useState(false);
   const [prescSaving, setPrescSaving] = useState(false);
+  const [labUploads, setLabUploads] = useState<PatientLabUploadRow[]>([]);
+  const [labLoading, setLabLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!patientId) {
@@ -112,6 +129,29 @@ export default function PatientDetail() {
     if (rel) void loadPrescriptions();
   }, [rel, loadPrescriptions]);
 
+  const loadLabUploads = useCallback(async () => {
+    if (!patientId || !rel) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    setLabLoading(true);
+    const { data, error } = await sb
+      .from("lab_report_uploads")
+      .select("id, original_filename, created_at")
+      .eq("patient_id", patientId)
+      .order("created_at", { ascending: false });
+    setLabLoading(false);
+    if (error) {
+      console.error("[lab_report_uploads]", error.message);
+      setLabUploads([]);
+      return;
+    }
+    setLabUploads((data ?? []) as PatientLabUploadRow[]);
+  }, [patientId, rel]);
+
+  useEffect(() => {
+    if (rel) void loadLabUploads();
+  }, [rel, loadLabUploads]);
+
   const patientName = rel?.patient?.full_name?.trim() || "Patient";
   const patient = {
     name: patientName,
@@ -140,43 +180,6 @@ export default function PatientDetail() {
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
-
-  const vitalHistory = [
-    { date: "Apr 1", heartRate: 76, bloodPressure: 130, glucose: 148 },
-    { date: "Apr 2", heartRate: 79, bloodPressure: 128, glucose: 142 },
-    { date: "Apr 3", heartRate: 77, bloodPressure: 132, glucose: 150 },
-    { date: "Apr 4", heartRate: 78, bloodPressure: 128, glucose: 145 },
-  ];
-
-  const labResults = [
-    { test: "HbA1c", value: "6.8%", normal: "<5.7%", status: "elevated" },
-    { test: "Fasting Glucose", value: "145 mg/dL", normal: "70-100 mg/dL", status: "elevated" },
-    { test: "Total Cholesterol", value: "195 mg/dL", normal: "<200 mg/dL", status: "normal" },
-    { test: "LDL Cholesterol", value: "110 mg/dL", normal: "<100 mg/dL", status: "elevated" },
-    { test: "HDL Cholesterol", value: "48 mg/dL", normal: ">40 mg/dL", status: "normal" },
-    { test: "Triglycerides", value: "185 mg/dL", normal: "<150 mg/dL", status: "elevated" },
-  ];
-
-  const aiInsights = [
-    {
-      type: "risk",
-      title: "Diabetes Risk Increasing",
-      description: "HbA1c trending upward over the past 3 months. Consider adjusting medication or intensifying lifestyle interventions.",
-      priority: "high",
-    },
-    {
-      type: "recommendation",
-      title: "Nutrition Consultation Recommended",
-      description: "Patient's glucose levels show high variability. A nutrition specialist consultation may help with meal planning.",
-      priority: "medium",
-    },
-    {
-      type: "positive",
-      title: "Medication Adherence Good",
-      description: "Wearable and prescription data indicates patient is taking medications as prescribed.",
-      priority: "low",
-    },
-  ];
 
   const handlePrescriptionUpload = async () => {
     const text = prescription.trim();
@@ -429,51 +432,15 @@ export default function PatientDetail() {
         <TabsContent value="vitals">
           <Card>
             <CardHeader>
-              <CardTitle>Vital Signs Trends - Last 7 Days</CardTitle>
-              <CardDescription>Real-time data from patient's wearable devices</CardDescription>
+              <CardTitle>Vital trends</CardTitle>
+              <CardDescription>Wearable or serial vitals (not demo data)</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                <div>
-                  <h4 className="font-semibold mb-3">Heart Rate</h4>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={vitalHistory}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis domain={[60, 100]} />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="heartRate" stroke="#ef4444" strokeWidth={2} name="Heart Rate (bpm)" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-3">Blood Pressure (Systolic)</h4>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={vitalHistory}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis domain={[100, 150]} />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="bloodPressure" stroke="#3b82f6" strokeWidth={2} name="Systolic (mmHg)" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-3">Glucose Levels</h4>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={vitalHistory}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis domain={[100, 180]} />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="glucose" stroke="#8b5cf6" strokeWidth={2} name="Glucose (mg/dL)" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+              <p className="text-sm text-muted-foreground">
+                No time-series vitals are stored for this patient yet. The summary cards above show
+                the latest values from your care relationship when provided. Charts will appear
+                when device or clinic data is integrated.
+              </p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -481,30 +448,39 @@ export default function PatientDetail() {
         <TabsContent value="labs">
           <Card>
             <CardHeader>
-              <CardTitle>Latest Lab Results</CardTitle>
-              <CardDescription>Uploaded on {patient.lastVisit}</CardDescription>
+              <CardTitle>Patient lab files</CardTitle>
+              <CardDescription>Reports the patient uploaded from their portal</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {labResults.map((lab, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex-1">
-                      <p className="font-semibold">{lab.test}</p>
-                      <p className="text-sm text-gray-500">Normal range: {lab.normal}</p>
+              {labLoading ? (
+                <p className="text-sm text-muted-foreground">Loading…</p>
+              ) : labUploads.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No lab files uploaded yet. Ask the patient to upload reports from Health Overview.
+                  Parsed biomarkers are not shown until extraction is implemented.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {labUploads.map((lab) => (
+                    <div
+                      key={lab.id}
+                      className="flex items-center justify-between gap-4 p-4 border rounded-lg"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                          <FileText className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold truncate">{lab.original_filename}</p>
+                          <p className="text-sm text-gray-500">
+                            Uploaded {formatLabUploadedAt(lab.created_at)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <p className="text-lg font-bold">{lab.value}</p>
-                      <Badge className={
-                        lab.status === "normal" ? "bg-green-100 text-green-800" :
-                        lab.status === "elevated" ? "bg-yellow-100 text-yellow-800" :
-                        "bg-red-100 text-red-800"
-                      }>
-                        {lab.status}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -602,39 +578,18 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="ai-insights">
-          <div className="space-y-4">
-            {aiInsights.map((insight, index) => {
-              const getInsightConfig = (type: string) => {
-                if (type === "risk") return { bg: "bg-red-50", border: "border-red-200", icon: <AlertTriangle className="w-5 h-5 text-red-600" /> };
-                if (type === "recommendation") return { bg: "bg-yellow-50", border: "border-yellow-200", icon: <FileText className="w-5 h-5 text-yellow-600" /> };
-                return { bg: "bg-green-50", border: "border-green-200", icon: <Activity className="w-5 h-5 text-green-600" /> };
-              };
-              const config = getInsightConfig(insight.type);
-
-              return (
-                <Card key={index} className={`border-2 ${config.border} ${config.bg}`}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div>{config.icon}</div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-semibold text-lg">{insight.title}</h4>
-                          <Badge className={
-                            insight.priority === "high" ? "bg-red-100 text-red-800" :
-                            insight.priority === "medium" ? "bg-yellow-100 text-yellow-800" :
-                            "bg-green-100 text-green-800"
-                          }>
-                            {insight.priority} priority
-                          </Badge>
-                        </div>
-                        <p className="text-gray-700">{insight.description}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>AI insights</CardTitle>
+              <CardDescription>Grounded in patient data only</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Demo risk cards are removed. Insights will appear here when models run on structured
+                lab extractions and verified vitals—not placeholder diabetes or adherence narratives.
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="actions">
