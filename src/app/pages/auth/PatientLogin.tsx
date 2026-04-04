@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { getSignInErrorMessage } from "../../../lib/authErrors";
-import { getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -86,8 +86,13 @@ export default function PatientLogin() {
     }
     const sb = getSupabase();
     if (!sb) return;
+    const emailRedirectTo = getAuthEmailRedirectUrl("/login/patient");
     setResending(true);
-    const { error } = await sb.auth.resend({ type: "signup", email: trimmed });
+    const { error } = await sb.auth.resend({
+      type: "signup",
+      email: trimmed,
+      options: { emailRedirectTo },
+    });
     setResending(false);
     if (error) {
       toast.error(error.message);

@@ -21,10 +21,12 @@
 
 1. Create a project at [supabase.com](https://supabase.com) and open **Project Settings → API**.
 2. Copy **Project URL** and **anon public** key into `.env` (see [`.env.example`](.env.example)) as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-3. In the Supabase **SQL Editor**, run the script in [`supabase/migrations/001_profiles.sql`](supabase/migrations/001_profiles.sql) once. It creates the `profiles` table, RLS policies, and a trigger so new sign-ups get a profile row with role `patient` or `doctor` from signup metadata.
-4. Run [`002_care_relationships.sql`](supabase/migrations/002_care_relationships.sql) and [`003_prescriptions.sql`](supabase/migrations/003_prescriptions.sql) after `001` so doctors can link patients and prescriptions sync between the doctor and patient portals.
-5. For local development, under **Authentication → Providers → Email**, you can disable **Confirm email** so sign-up returns a session immediately (optional).
-6. Add the same env vars in **Vercel** (or your host) under Project → Environment Variables, then redeploy.
+3. Set `VITE_SITE_URL` in `.env` to the public app origin used in auth emails, for example `http://localhost:5173` locally or your deployed HTTPS URL in production.
+4. In the Supabase **SQL Editor**, run the script in [`supabase/migrations/001_profiles.sql`](supabase/migrations/001_profiles.sql) once. It creates the `profiles` table, RLS policies, and a trigger so new sign-ups get a profile row with role `patient` or `doctor` from signup metadata.
+5. Run [`002_care_relationships.sql`](supabase/migrations/002_care_relationships.sql) and [`003_prescriptions.sql`](supabase/migrations/003_prescriptions.sql) after `001` so doctors can link patients and prescriptions sync between the doctor and patient portals.
+6. In Supabase **Authentication** URL settings, add the same site URL and any local/dev callback URLs you use, otherwise confirmation links can be rejected.
+7. For local development, under **Authentication → Providers → Email**, you can disable **Confirm email** so sign-up returns a session immediately (optional).
+8. Add the same env vars in **Vercel** (or your host) under Project → Environment Variables, then redeploy.
 
 Patient and doctor accounts use separate sign-up flows; logging in through the wrong portal signs you out and shows an error.
 

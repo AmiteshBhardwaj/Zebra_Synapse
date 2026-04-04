@@ -26,3 +26,18 @@ export function getSupabase(): SupabaseClient | null {
   }
   return client;
 }
+
+export function getAuthEmailRedirectUrl(path = "/"): string | undefined {
+  const configuredSiteUrl = import.meta.env.VITE_SITE_URL?.trim();
+  const baseUrl =
+    configuredSiteUrl ||
+    (typeof window !== "undefined" ? window.location.origin : "");
+
+  if (!baseUrl) return undefined;
+
+  try {
+    return new URL(path, baseUrl).toString();
+  } catch {
+    return undefined;
+  }
+}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -32,11 +32,13 @@ export default function PatientSignup() {
     if (!sb) return;
 
     const email = formData.email.trim();
+    const emailRedirectTo = getAuthEmailRedirectUrl("/login/patient");
     setSubmitting(true);
     const { data, error } = await sb.auth.signUp({
       email,
       password: formData.password,
       options: {
+        emailRedirectTo,
         data: {
           role: "patient",
           full_name: formData.name,
