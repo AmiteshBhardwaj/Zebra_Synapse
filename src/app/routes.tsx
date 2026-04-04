@@ -4,7 +4,6 @@ import PatientLogin from "./pages/auth/PatientLogin";
 import PatientSignup from "./pages/auth/PatientSignup";
 import DoctorLogin from "./pages/auth/DoctorLogin";
 import DoctorSignup from "./pages/auth/DoctorSignup";
-import PatientDashboard from "./pages/patient/PatientDashboard";
 import PatientHome from "./pages/patient/PatientHome";
 import MedicalRecords from "./pages/patient/MedicalRecords";
 import Appointments from "./pages/patient/Appointments";
@@ -14,9 +13,10 @@ import DiseasePrediction from "./pages/patient/DiseasePrediction";
 import Nutrition from "./pages/patient/Nutrition";
 import ClinicalTrials from "./pages/patient/ClinicalTrials";
 import WellnessTips from "./pages/patient/WellnessTips";
-import DoctorDashboard from "./pages/doctor/DoctorDashboard";
 import PatientsList from "./pages/doctor/PatientsList";
 import PatientDetail from "./pages/doctor/PatientDetail";
+import RequirePatientPortal from "./layouts/RequirePatientPortal";
+import RequireDoctorPortal from "./layouts/RequireDoctorPortal";
 
 export const router = createBrowserRouter([
   {
@@ -41,7 +41,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/patient",
-    Component: PatientDashboard,
+    Component: RequirePatientPortal,
     children: [
       { index: true, Component: PatientHome },
       { path: "medical-records", Component: MedicalRecords },
@@ -56,7 +56,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/doctor",
-    Component: DoctorDashboard,
+    Component: RequireDoctorPortal,
     children: [
       { index: true, Component: PatientsList },
       { path: "patient/:patientId", Component: PatientDetail },

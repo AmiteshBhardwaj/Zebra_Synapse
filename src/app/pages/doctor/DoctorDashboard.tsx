@@ -1,12 +1,15 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
+import { useAuth } from "../../../auth/AuthContext";
 import { Button } from "../../components/ui/button";
 import { Activity, Users, LogOut, Stethoscope } from "lucide-react";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut, profile } = useAuth();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 
@@ -29,8 +32,12 @@ export default function DoctorDashboard() {
               <Stethoscope className="w-5 h-5 text-foreground" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-sm">Dr. Sarah Johnson</p>
-              <p className="text-xs text-muted-foreground">Cardiologist</p>
+              <p className="text-sm">{profile?.full_name ?? "Doctor"}</p>
+              <p className="text-xs text-muted-foreground">
+                {profile?.license_number
+                  ? `License ${profile.license_number}`
+                  : "Physician"}
+              </p>
             </div>
           </div>
         </div>

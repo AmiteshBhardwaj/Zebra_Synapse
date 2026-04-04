@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -10,9 +12,59 @@ export default function DoctorLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isSupabaseConfigured()) {
+      toast.error("Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env");
+      return;
+    }
+    const sb = getSupabase();
+    if (!sb) return;
+
+    setSubmitting(true);
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      toast.error(error.message);
+      setSubmitting(false);
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await sb.auth.getUser();
+    if (!user) {
+      toast.error("Could not load user.");
+      setSubmitting(false);
+      return;
+    }
+
+    const { data: row, error: profErr } = await sb
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profErr) {
+      toast.error(profErr.message);
+      setSubmitting(false);
+      return;
+    }
+    if (!row) {
+      toast.error("No profile found. Run the SQL migration in Supabase.");
+      await sb.auth.signOut();
+      setSubmitting(false);
+      return;
+    }
+    if (row.role === "patient") {
+      await sb.auth.signOut();
+      toast.error("This account is registered as a patient. Use the patient login.");
+      setSubmitting(false);
+      return;
+    }
+
+    setSubmitting(false);
     navigate("/doctor");
   };
 
@@ -39,6 +91,12 @@ export default function DoctorLogin() {
             <CardDescription>Access your patient management dashboard</CardDescription>
           </CardHeader>
           <CardContent>
+            {!isSupabaseConfigured() && (
+              <p className="text-sm text-amber-600 dark:text-amber-500 mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+                Configure <code className="text-xs">.env</code> with Supabase URL and anon key to
+                enable login.
+              </p>
+            )}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -49,6 +107,7 @@ export default function DoctorLogin() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  autoComplete="email"
                 />
               </div>
               <div className="space-y-2">
@@ -60,10 +119,11 @@ export default function DoctorLogin() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  autoComplete="current-password"
                 />
               </div>
-              <Button type="submit" className="w-full">
-                Login
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? "Signing in…" : "Login"}
               </Button>
               <div className="text-center text-sm text-muted-foreground">
                 Don't have an account?{" "}

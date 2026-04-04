@@ -1,4 +1,5 @@
 import { Outlet, useNavigate, useLocation } from "react-router";
+import { useAuth } from "../../../auth/AuthContext";
 import { Button } from "../../components/ui/button";
 import {
   Activity,
@@ -17,6 +18,7 @@ import {
 export default function PatientDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut, profile } = useAuth();
 
   const menuItems = [
     { path: "/patient", icon: Home, label: "Health Overview" },
@@ -30,7 +32,8 @@ export default function PatientDashboard() {
     { path: "/patient/wellness-tips", icon: Sparkles, label: "Wellness Tips" },
   ];
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 
@@ -43,6 +46,11 @@ export default function PatientDashboard() {
             <div>
               <h2 className="text-base">Zebra Synapse</h2>
               <p className="text-xs text-muted-foreground">Patient Portal</p>
+              {profile?.full_name ? (
+                <p className="text-xs text-muted-foreground mt-1 truncate max-w-[11rem]">
+                  {profile.full_name}
+                </p>
+              ) : null}
             </div>
           </div>
         </div>
