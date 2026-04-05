@@ -3,6 +3,14 @@ dist
 .env
 .env.local
 .env.*.local
+.vercel
+.turbo
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+coverage
+*.tsbuildinfo
 .codex-*
 supabase/.temp
 *.log
