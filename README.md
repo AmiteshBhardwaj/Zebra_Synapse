@@ -1,23 +1,24 @@
-# Hackathon 2026 Submission Repository
+# Zebra Synapse Repository
 
-This repository is organized to match the hackathon submission template.
+This repository is structured for hackathon submission requirements.
 
-## Structure
+## Submission Folder
 
-- `.github/`: repository automation
-- `hackathon-2026/submission-template/`: final project submission package
-- `hackathon-2026/hackathon-resources/`: reserved for supporting material
-- `hackathon-2026/labs/`: reserved by template layout
-- `hackathon-2026/solutions/`: reserved by template layout
-- `hackathon-2026/starter-kits/`: reserved by template layout
+The complete project is contained in [`zebra-synapse`](./zebra-synapse).
 
-## Main Submission
+That folder includes:
 
-The complete Zebra Synapse project lives in [`hackathon-2026/submission-template`](./hackathon-2026/submission-template).
+- the runnable application source
+- the hackathon submission `README.md`
+- `architecture.md` with system design details
+- `demo.md` with the walkthrough and judging flow
 
-Start there for:
+## Repository Layout
 
-- project overview
-- architecture notes
-- demo instructions
-- runnable source code and configuration
+- `.github/`: CI workflow configuration
+- `zebra-synapse/`: final submission package
+- `requirements.txt`: environment prerequisites summary
+
+## Start Here
+
+Open [`zebra-synapse/README.md`](./zebra-synapse/README.md) for the full project overview, setup steps, and submission details.

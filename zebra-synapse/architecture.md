@@ -4,11 +4,11 @@ Zebra Synapse is built as a modern web application that combines a responsive cl
 
 ## Components
 
-- **Client Application:** A React and TypeScript frontend built with Vite powers the doctor and patient portals, dashboards, uploads, and insight views.
+- **Frontend:** A React and TypeScript frontend built with Vite powers the doctor and patient portals, dashboards, uploads, and insight views.
 - **Authentication and Access Control:** Supabase Auth manages signup, login, session persistence, and role-aware access for doctor and patient users.
 - **Clinical Data Layer:** Supabase Postgres stores profiles, care relationships, prescriptions, lab reports, lab panels, and care actions with row-level security.
-- **Report Processing Pipeline:** Lab reports are parsed in the browser with PDF.js, normalized into biomarker data, and persisted as structured clinical records.
-- **Insight Engine:** Deterministic rules analyze biomarkers and health metadata to generate explainable patient-facing and clinician-facing insights.
+- **Data Pipeline:** Lab reports are parsed in the browser with PDF.js, normalized into biomarker data, and persisted as structured clinical records.
+- **Inference Layer:** Deterministic rules analyze biomarkers and health metadata to generate explainable patient-facing and clinician-facing insights.
 
 ## Data Flow
 
