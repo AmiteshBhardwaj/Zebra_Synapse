@@ -37,7 +37,7 @@ export function usePatientLabPanels() {
       console.error("[lab panels]", error.message);
       setPanels([]);
     } else {
-      setPanels((data ?? []) as LabPanelRow[]);
+      setPanels(((data ?? []) as unknown) as LabPanelRow[]);
     }
     setLoading(false);
   }, [configured, user]);

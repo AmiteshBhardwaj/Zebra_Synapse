@@ -1,12 +1,11 @@
 import { AlertCircle, FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import { formatLabDate } from "../../../lib/labPanels";
-import { getLatestLabPanel, getMetricAssessments, getMetricValueLabel } from "../../../lib/labInsights";
+import { getLatestLabPanel } from "../../../lib/labInsights";
 
 function formatUploadedAt(iso: string): string {
   try {
@@ -23,8 +22,6 @@ export default function MedicalRecords() {
   const { hasLabReports, loading, uploads } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
   const latestPanel = getLatestLabPanel(panels);
-  const metrics = latestPanel ? getMetricAssessments(latestPanel) : [];
-
   if (loading || panelsLoading) {
     return (
       <div className="p-8">
@@ -54,7 +51,7 @@ export default function MedicalRecords() {
           <CardTitle>Uploaded lab reports</CardTitle>
           <CardDescription>These are the files stored for your account</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           {!hasPanels || !latestPanel ? (
             <Alert className="border-amber-200 bg-amber-50">
               <AlertCircle className="h-4 w-4 text-amber-700" />
@@ -64,7 +61,7 @@ export default function MedicalRecords() {
                 report. Enter those values on Health Overview first.
               </AlertDescription>
             </Alert>
-          ) : (
+          ) : null}
           <div className="space-y-4">
             {uploads.map((test) => (
               <div

@@ -44,7 +44,7 @@ export default function PatientsList() {
       return;
     }
 
-    const rows = (data ?? []) as CareRelationshipListRow[];
+    const rows = ((data ?? []) as unknown) as CareRelationshipListRow[];
     setPatients(rows.map(mapRowToListItem));
     setLoading(false);
   }, [user]);

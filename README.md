@@ -1,32 +1,76 @@
+# Zebra Synapse
 
-  # Zebra Synapse
+Zebra Synapse is a React and Supabase healthcare workflow prototype for patient insights, doctor review, lab report ingestion, prescriptions, and persisted care actions.
 
-  This is a code bundle for Zebra Synapse. The original project is available at https://www.figma.com/design/K3WyblY0vqq6EYGgUiVr0y/Zebra-Synapse.
+## Repository Goals
 
-  ## Running the code
+- single source of truth for continued development
+- reproducible local setup
+- deployable static frontend
+- clean migration history for Supabase-backed features
 
-  Run `npm i` to install the dependencies.
+## Tech Stack
 
-  Run `npm run dev` to start the development server.
-  
-## Production build and deploy
+- React 18
+- Vite 6
+- TypeScript
+- Supabase Auth, Database, and Storage
+- Radix UI and Tailwind-based styling
+- PDF.js for browser-side lab report text extraction
 
-- `npm run build` outputs static files to `dist/`.
-- `npm run preview` serves `dist` locally (smoke test before deploy).
-- **Vercel**: [`vercel.json`](vercel.json) rewrites all routes to `index.html` for client-side routing.
-- **Netlify**: [`public/_redirects`](public/_redirects) is copied into `dist` on build for the same behavior.
-- Deploy the **contents of `dist/`** (or connect the repo and set build command `npm run build`, publish directory `dist`).
+## Scripts
 
-## Authentication (Supabase)
+- `npm run dev`: start the local Vite dev server
+- `npm run build`: produce a production build in `dist/`
+- `npm run preview`: preview the production build locally
+- `npm run typecheck`: run TypeScript checks
+- `npm run check`: run typecheck plus production build
+- `npm run supabase:start`: start the local Supabase stack
+- `npm run supabase:status`: inspect the local Supabase stack
+- `npm run supabase:reset`: reset the local database from migrations
+- `npm run supabase:stop`: stop the local Supabase stack
+- `npm run env:local`: generate `.env.local` from the running local Supabase stack
 
-1. Create a project at [supabase.com](https://supabase.com) and open **Project Settings → API**.
-2. Copy **Project URL** and **anon public** key into `.env` (see [`.env.example`](.env.example)) as `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
-3. Set `VITE_SITE_URL` in `.env` to the public app origin used in auth emails, for example `http://localhost:5173` locally or your deployed HTTPS URL in production.
-4. In the Supabase **SQL Editor**, run the script in [`supabase/migrations/001_profiles.sql`](supabase/migrations/001_profiles.sql) once. It creates the `profiles` table, RLS policies, and a trigger so new sign-ups get a profile row with role `patient` or `doctor` from signup metadata.
-5. Run [`002_care_relationships.sql`](supabase/migrations/002_care_relationships.sql) and [`003_prescriptions.sql`](supabase/migrations/003_prescriptions.sql) after `001` so doctors can link patients and prescriptions sync between the doctor and patient portals.
-6. In Supabase **Authentication** URL settings, add the same site URL and any local/dev callback URLs you use, otherwise confirmation links can be rejected.
-7. For local development, under **Authentication → Providers → Email**, you can disable **Confirm email** so sign-up returns a session immediately (optional).
-8. Add the same env vars in **Vercel** (or your host) under Project → Environment Variables, then redeploy.
+## Local Development
 
-Patient and doctor accounts use separate sign-up flows; logging in through the wrong portal signs you out and shows an error.
+1. Install dependencies with `npm install`.
+2. Copy [`.env.example`](.env.example) to `.env` or use `npm run env:local` after starting the local Supabase stack.
+3. Start the app with `npm run dev`.
 
+For a reproducible local backend:
+
+1. Install Docker Desktop.
+2. Run `npm run supabase:start`.
+3. Run `npm run env:local`.
+
+## Supabase Setup
+
+Apply migrations from [`supabase/migrations`](supabase/migrations) in numeric order:
+
+1. `001_profiles.sql`
+2. `002_care_relationships.sql`
+3. `003_prescriptions.sql`
+4. `004_lab_reports.sql`
+5. `005_lab_panels.sql`
+6. `006_lab_panel_biomarkers.sql`
+7. `007_profiles_select_linked_users.sql`
+8. `008_care_actions.sql`
+
+Optional demo seed data is available in [`supabase/seed_doctors_patients.sql`](supabase/seed_doctors_patients.sql).
+
+## Deployment
+
+- `npm run build` outputs static files to `dist/`
+- [`vercel.json`](vercel.json) handles SPA rewrites for Vercel
+- [`public/_redirects`](public/_redirects) supports the same routing model for Netlify
+
+Set these environment variables in your host:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_SITE_URL`
+
+## Docs
+
+- [CODEBASE.md](CODEBASE.md): feature map and file ownership guide
+- [architecture.md](architecture.md): high-level system overview

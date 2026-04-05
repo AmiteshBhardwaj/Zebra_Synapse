@@ -1,6 +1,10 @@
 node_modules
 dist
-package-lock.json
 .env
 .env.local
 .env.*.local
+.codex-*
+supabase/.temp
+*.log
+Thumbs.db
+.DS_Store

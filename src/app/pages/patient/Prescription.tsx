@@ -38,7 +38,7 @@ export default function Prescription() {
       setList([]);
       return;
     }
-    setList((data ?? []) as PrescriptionRow[]);
+    setList(((data ?? []) as unknown) as PrescriptionRow[]);
   }, [user?.id]);
 
   useEffect(() => {
