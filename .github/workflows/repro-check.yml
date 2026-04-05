@@ -12,6 +12,9 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: zebra-synapse
 
     steps:
       - name: Checkout
@@ -22,6 +25,7 @@ jobs:
         with:
           node-version: 20.19.0
           cache: npm
+          cache-dependency-path: zebra-synapse/package-lock.json
 
       - name: Install Dependencies
         run: npm ci
