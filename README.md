@@ -56,7 +56,7 @@ Apply migrations from [`supabase/migrations`](supabase/migrations) in numeric or
 7. `007_profiles_select_linked_users.sql`
 8. `008_care_actions.sql`
 
-Optional demo seed data is available in [`supabase/seed_doctors_patients.sql`](supabase/seed_doctors_patients.sql).
+Optional demo seed data is available in [`supabase/migrations/seed_doctors_patients.sql`](supabase/migrations/seed_doctors_patients.sql).
 
 ## Deployment
 
