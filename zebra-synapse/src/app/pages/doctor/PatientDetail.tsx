@@ -720,7 +720,7 @@ export default function PatientDetail() {
     (r) => r.status === "completed",
   );
   const detailPageClass =
-    "min-h-full bg-transparent p-8 text-white [&_[data-slot=card]]:rounded-[1.5rem] [&_[data-slot=card]]:border [&_[data-slot=card]]:border-white/10 [&_[data-slot=card]]:bg-white/[0.05] [&_[data-slot=card]]:text-white [&_[data-slot=card]]:shadow-[0_8px_32px_rgba(0,0,0,0.4)] [&_[data-slot=card]]:backdrop-blur-xl [&_[data-slot=card-title]]:text-white [&_[data-slot=card-description]]:text-white/60 [&_[data-slot=tabs-list]]:h-auto [&_[data-slot=tabs-list]]:w-full [&_[data-slot=tabs-list]]:flex-wrap [&_[data-slot=tabs-list]]:rounded-2xl [&_[data-slot=tabs-list]]:border [&_[data-slot=tabs-list]]:border-white/10 [&_[data-slot=tabs-list]]:bg-white/[0.04] [&_[data-slot=tabs-list]]:p-1 [&_[data-slot=tabs-trigger]]:rounded-xl [&_[data-slot=tabs-trigger]]:px-4 [&_[data-slot=tabs-trigger]]:py-2.5 [&_[data-slot=tabs-trigger]]:text-white/60 [&_[data-slot=tabs-trigger][data-state=active]]:border-transparent [&_[data-slot=tabs-trigger][data-state=active]]:bg-gradient-to-r [&_[data-slot=tabs-trigger][data-state=active]]:from-orange-500 [&_[data-slot=tabs-trigger][data-state=active]]:to-orange-600 [&_[data-slot=tabs-trigger][data-state=active]]:text-white [&_[data-slot=tabs-trigger][data-state=active]]:shadow-lg [&_[data-slot=tabs-trigger][data-state=active]]:shadow-orange-500/20 [&_label]:text-white [&_input]:text-white [&_input]:placeholder:text-white/40 [&_textarea]:border-white/10 [&_textarea]:bg-white/[0.05] [&_textarea]:text-white [&_textarea]:placeholder:text-white/40 [&_textarea]:focus-visible:border-orange-500 [&_textarea]:focus-visible:ring-orange-500/30";
+    "min-h-full bg-transparent px-4 py-5 text-white sm:px-6 sm:py-6 lg:px-8 lg:py-8 [&_[data-slot=card]]:rounded-[1.5rem] [&_[data-slot=card]]:border [&_[data-slot=card]]:border-white/10 [&_[data-slot=card]]:bg-white/[0.05] [&_[data-slot=card]]:text-white [&_[data-slot=card]]:shadow-[0_8px_32px_rgba(0,0,0,0.4)] [&_[data-slot=card]]:backdrop-blur-xl [&_[data-slot=card-title]]:text-white [&_[data-slot=card-description]]:text-white/60 [&_[data-slot=tabs-list]]:h-auto [&_[data-slot=tabs-list]]:w-full [&_[data-slot=tabs-list]]:rounded-2xl [&_[data-slot=tabs-list]]:border [&_[data-slot=tabs-list]]:border-white/10 [&_[data-slot=tabs-list]]:bg-white/[0.04] [&_[data-slot=tabs-list]]:p-1.5 [&_[data-slot=tabs-trigger]]:rounded-xl [&_[data-slot=tabs-trigger]]:px-4 [&_[data-slot=tabs-trigger]]:py-2.5 [&_[data-slot=tabs-trigger]]:text-white/60 [&_[data-slot=tabs-trigger][data-state=active]]:border-transparent [&_[data-slot=tabs-trigger][data-state=active]]:bg-gradient-to-r [&_[data-slot=tabs-trigger][data-state=active]]:from-orange-500 [&_[data-slot=tabs-trigger][data-state=active]]:to-orange-600 [&_[data-slot=tabs-trigger][data-state=active]]:text-white [&_[data-slot=tabs-trigger][data-state=active]]:shadow-lg [&_[data-slot=tabs-trigger][data-state=active]]:shadow-orange-500/20 [&_label]:text-white [&_input]:text-white [&_input]:placeholder:text-white/40 [&_textarea]:border-white/10 [&_textarea]:bg-white/[0.05] [&_textarea]:text-white [&_textarea]:placeholder:text-white/40 [&_textarea]:focus-visible:border-orange-500 [&_textarea]:focus-visible:ring-orange-500/30";
 
   if (loading) {
     return (
@@ -829,14 +829,14 @@ export default function PatientDetail() {
         Back to Patients
       </Button>
 
-      <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-4">
+      <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] border border-white/10 bg-white/[0.05] text-white">
               <span className="text-xl">{initials(patient.name)}</span>
             </div>
-            <div>
-              <h1 className="text-3xl text-white">{patient.name}</h1>
+            <div className="min-w-0">
+              <h1 className="break-words text-3xl text-white sm:text-4xl">{patient.name}</h1>
               <p className="mt-1 text-white/60">
                 {patientIdentityLine}
               </p>
@@ -845,11 +845,11 @@ export default function PatientDetail() {
               </p>
             </div>
           </div>
-          <Badge className={
+          <Badge className={`w-fit ${
             patient.status === "normal" ? "border border-green-500/20 bg-green-500/20 text-green-400" :
             patient.status === "elevated" ? "border border-yellow-500/20 bg-yellow-500/20 text-yellow-400" :
             "border border-red-500/20 bg-red-500/20 text-red-400"
-          }>
+          }`}>
             {patient.status.toUpperCase()}
           </Badge>
         </div>

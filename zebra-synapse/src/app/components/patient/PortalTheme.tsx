@@ -4,9 +4,9 @@ import { Badge } from "../ui/badge";
 import { cn } from "../ui/utils";
 
 export const portalShellClass =
-  "min-h-full bg-[radial-gradient(circle_at_top_left,_rgba(255,106,0,0.14),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(108,91,212,0.16),_transparent_28%),linear-gradient(180deg,#121212_0%,#0d0d0d_100%)] px-6 py-8 text-white md:px-8 xl:px-10";
+  "min-h-full overflow-x-clip bg-[radial-gradient(circle_at_top_left,_rgba(255,106,0,0.14),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(108,91,212,0.16),_transparent_28%),linear-gradient(180deg,#121212_0%,#0d0d0d_100%)] px-4 py-5 text-white sm:px-5 sm:py-6 lg:px-8 lg:py-8 xl:px-10";
 
-export const portalContentClass = "mx-auto flex max-w-6xl flex-col gap-8";
+export const portalContentClass = "mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6 lg:gap-8";
 
 export const portalPanelClass =
   "rounded-[1.5rem] border border-white/8 bg-[rgba(255,255,255,0.03)] text-white shadow-[0_22px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#ff6a00]/30 hover:shadow-[0_28px_80px_rgba(255,106,0,0.12)]";
@@ -116,7 +116,7 @@ export function PatientPageHero({
   meta?: Array<{ label: string; value: ReactNode }>;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#141414]/95 px-6 py-7 shadow-[0_30px_80px_rgba(0,0,0,0.45)] md:px-8">
+    <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#141414]/95 px-5 py-6 shadow-[0_30px_80px_rgba(0,0,0,0.45)] sm:px-6 lg:px-8 lg:py-7">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -left-16 top-0 h-44 w-44 rounded-full bg-[radial-gradient(circle,_rgba(255,106,0,0.24)_0%,_rgba(255,106,0,0)_72%)] blur-2xl" />
         <div className="absolute right-0 top-3 h-56 w-56 rounded-full bg-[radial-gradient(circle,_rgba(108,91,212,0.18)_0%,_rgba(108,91,212,0)_72%)] blur-3xl" />
@@ -131,7 +131,7 @@ export function PatientPageHero({
               <Icon className="h-5 w-5 text-[#ff9c61]" />
             </span>
           </div>
-          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-white md:text-5xl">
+          <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
             {title}
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-[#A1A1AA] md:text-base">

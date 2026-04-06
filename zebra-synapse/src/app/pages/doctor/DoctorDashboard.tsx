@@ -17,9 +17,9 @@ export default function DoctorDashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-[radial-gradient(circle_at_10%_20%,_rgba(26,26,46,0.96),_rgba(10,10,15,0.98)_60%),radial-gradient(circle_at_top_right,_rgba(255,106,0,0.14),_transparent_26%),radial-gradient(circle_at_top_left,_rgba(108,91,212,0.16),_transparent_28%)] text-white">
-      <aside className="flex w-64 flex-col border-r border-white/10 bg-[#0b0b10]">
-        <div className="border-b border-white/10 p-6">
+    <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_10%_20%,_rgba(26,26,46,0.96),_rgba(10,10,15,0.98)_60%),radial-gradient(circle_at_top_right,_rgba(255,106,0,0.14),_transparent_26%),radial-gradient(circle_at_top_left,_rgba(108,91,212,0.16),_transparent_28%)] text-white lg:flex-row">
+      <aside className="flex shrink-0 flex-col border-b border-white/10 bg-[#0b0b10] lg:min-h-screen lg:w-64 lg:border-b-0 lg:border-r">
+        <div className="border-b border-white/10 px-4 py-5 sm:px-6">
           <div className="flex items-center gap-2">
             <Activity className="w-6 h-6 text-[#ff9c61]" strokeWidth={1.5} />
             <div>
@@ -29,7 +29,7 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        <div className="border-b border-white/10 p-6">
+        <div className="border-b border-white/10 px-4 py-5 sm:px-6">
           <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
               <Stethoscope className="w-5 h-5 text-[#ff9c61]" strokeWidth={1.5} />
@@ -45,11 +45,11 @@ export default function DoctorDashboard() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-4">
-          <div className="space-y-1">
+        <nav className="flex-1 overflow-hidden px-4 py-4 sm:px-6 lg:overflow-y-auto lg:px-4">
+          <div className="flex gap-2 overflow-x-auto pb-1 lg:block lg:space-y-1 lg:overflow-visible">
             <button
               onClick={() => navigate("/doctor")}
-              className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+              className={`flex min-w-[11rem] items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all lg:w-full lg:min-w-0 ${
                 location.pathname === "/doctor"
                   ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/20"
                   : "text-white/60 hover:bg-white/[0.08] hover:text-white"
@@ -60,7 +60,7 @@ export default function DoctorDashboard() {
             </button>
             <button
               onClick={() => navigate("/doctor/settings")}
-              className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+              className={`flex min-w-[11rem] items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all lg:w-full lg:min-w-0 ${
                 location.pathname === "/doctor/settings"
                   ? "bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/20"
                   : "text-white/60 hover:bg-white/[0.08] hover:text-white"
@@ -72,7 +72,7 @@ export default function DoctorDashboard() {
           </div>
         </nav>
 
-        <div className="border-t border-white/10 p-4">
+        <div className="border-t border-white/10 p-4 sm:px-6 lg:px-4">
           <Button
             variant="outline"
             className={`w-full justify-start ${portalSecondaryButtonClass}`}
@@ -84,7 +84,7 @@ export default function DoctorDashboard() {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto bg-transparent">
+      <main className="min-w-0 flex-1 overflow-y-auto bg-transparent">
         <Outlet />
       </main>
     </div>
