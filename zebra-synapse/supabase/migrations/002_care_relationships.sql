@@ -1,7 +1,7 @@
 -- Run in Supabase SQL Editor after 001_profiles.sql.
 -- Links doctors to patients and stores optional list-card clinical snapshot fields.
 
-create table public.care_relationships (
+create table if not exists public.care_relationships (
   id uuid primary key default gen_random_uuid(),
   doctor_id uuid not null references public.profiles (id) on delete cascade,
   patient_id uuid not null references public.profiles (id) on delete cascade,
@@ -18,15 +18,17 @@ create table public.care_relationships (
   constraint care_relationships_doctor_patient_unique unique (doctor_id, patient_id)
 );
 
-create index care_relationships_doctor_id_idx on public.care_relationships (doctor_id);
-create index care_relationships_patient_id_idx on public.care_relationships (patient_id);
+create index if not exists care_relationships_doctor_id_idx on public.care_relationships (doctor_id);
+create index if not exists care_relationships_patient_id_idx on public.care_relationships (patient_id);
 
 alter table public.care_relationships enable row level security;
 
+drop policy if exists "care_relationships_select_participant" on public.care_relationships;
 create policy "care_relationships_select_participant"
   on public.care_relationships for select
   using (auth.uid() = doctor_id or auth.uid() = patient_id);
 
+drop policy if exists "care_relationships_insert_doctor" on public.care_relationships;
 create policy "care_relationships_insert_doctor"
   on public.care_relationships for insert
   with check (
@@ -42,15 +44,18 @@ create policy "care_relationships_insert_doctor"
     and doctor_id <> patient_id
   );
 
+drop policy if exists "care_relationships_update_doctor" on public.care_relationships;
 create policy "care_relationships_update_doctor"
   on public.care_relationships for update
   using (doctor_id = auth.uid())
   with check (doctor_id = auth.uid());
 
+drop policy if exists "care_relationships_delete_doctor" on public.care_relationships;
 create policy "care_relationships_delete_doctor"
   on public.care_relationships for delete
   using (doctor_id = auth.uid());
 
+drop policy if exists "care_relationships_delete_patient" on public.care_relationships;
 create policy "care_relationships_delete_patient"
   on public.care_relationships for delete
   using (patient_id = auth.uid());

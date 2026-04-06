@@ -1,7 +1,5 @@
 import { AlertCircle, FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import {
@@ -13,6 +11,19 @@ import {
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import { formatLabDate } from "../../../lib/labPanels";
 import { getLatestLabPanel, getMetricAssessments, getMetricValueLabel } from "../../../lib/labInsights";
+import {
+  PatientPageHero,
+  PatientPortalPage,
+  StatusPill,
+  portalInsetClass,
+  portalPanelClass,
+  portalTableCellClass,
+  portalTableClass,
+  portalTableHeadClass,
+  portalTableRowClass,
+  portalTableWrapClass,
+} from "../../components/patient/PortalTheme";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
 
 function formatUploadedAt(iso: string): string {
   try {
@@ -35,9 +46,9 @@ export default function MedicalRecordsInsights() {
 
   if (loading || panelsLoading) {
     return (
-      <div className="p-8">
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
+      <PatientPortalPage>
+        <p className="text-sm text-[#A1A1AA]">Loading...</p>
+      </PatientPortalPage>
     );
   }
 
@@ -45,33 +56,46 @@ export default function MedicalRecordsInsights() {
     return (
       <LabReportsRequiredPlaceholder
         title="Medical Records"
-        description="View lab tests and biomarker trends from your uploads"
+        description="View lab tests and biomarker trends from your uploads."
       />
     );
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Medical Records</h1>
-        <p className="mt-1 text-gray-600">Uploaded reports and the structured markers derived from them</p>
-      </div>
+    <PatientPortalPage>
+      <PatientPageHero
+        eyebrow="Clinical Archive"
+        title="Medical Records"
+        description="Review uploaded reports, inspect extracted biomarker panels, and move through your lab history in the same premium dark workspace used by Health Overview."
+        icon={FileText}
+        meta={[
+          { label: "Uploaded Files", value: uploads.length },
+          { label: "Structured Panels", value: panels.length },
+          { label: "Latest Panel", value: latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting values" },
+        ]}
+      />
 
-      <Card className="mb-8">
+      <Card className={portalPanelClass}>
         <CardHeader>
-          <CardTitle>Uploaded lab reports</CardTitle>
-          <CardDescription>These are the files stored for your account</CardDescription>
+          <CardTitle className="text-white">Uploaded lab reports</CardTitle>
+          <CardDescription className="text-[#A1A1AA]">
+            These files are stored for your account and feed the downstream record views.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
             {uploads.map((test) => (
-              <div key={test.id} className="flex items-center gap-4 rounded-lg border p-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-100">
-                  <FileText className="h-5 w-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="font-medium">{test.original_filename}</p>
-                  <p className="text-sm text-gray-500">Uploaded {formatUploadedAt(test.created_at)}</p>
+              <div key={test.id} className="rounded-[1.2rem] border border-white/8 bg-[#111111]/80 p-4">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C42] shadow-[0_12px_28px_rgba(255,106,0,0.25)]">
+                    <FileText className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-white">{test.original_filename}</p>
+                    <p className="mt-1 text-sm text-[#A1A1AA]">
+                      Uploaded {formatUploadedAt(test.created_at)}
+                    </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -80,14 +104,20 @@ export default function MedicalRecordsInsights() {
       </Card>
 
       {!hasPanels || !latestPanel ? (
-        <Alert className="border-amber-200 bg-amber-50">
-          <AlertCircle className="h-4 w-4 text-amber-700" />
-          <AlertTitle className="text-amber-900">No structured values recorded yet</AlertTitle>
-          <AlertDescription className="text-amber-800">
-            Your files are uploaded, but Medical Records needs the actual biomarkers from the
-            report. Go to Health Overview and enter the values for one of the uploaded reports.
-          </AlertDescription>
-        </Alert>
+        <div className="rounded-[1.5rem] border border-[#FFC857]/15 bg-[#FFC857]/8 p-6 shadow-[0_18px_50px_rgba(0,0,0,0.22)]">
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#FFC857]/14">
+              <AlertCircle className="h-5 w-5 text-[#ffe09d]" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">No structured values recorded yet</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-[#f1d8a2]">
+                Your files are uploaded, but Medical Records needs the actual biomarkers from the
+                report. Go to Health Overview and enter the values for one of the uploaded reports.
+              </p>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="space-y-6">
           <OverviewStatCards
@@ -140,46 +170,58 @@ export default function MedicalRecordsInsights() {
             description="Each mini-chart tracks how a key marker moved across recent recorded panels."
           />
 
-          <Card>
+          <Card className={portalPanelClass}>
             <CardHeader>
-              <CardTitle>Latest biomarker panel</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Latest biomarker panel</CardTitle>
+              <CardDescription className="text-[#A1A1AA]">
                 Structured values recorded for {formatLabDate(latestPanel.recorded_at)}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Marker</TableHead>
-                    <TableHead>Value</TableHead>
-                    <TableHead>Reference</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Interpretation</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {metrics.map((metric) => (
-                    <TableRow key={metric.key}>
-                      <TableCell>{metric.label}</TableCell>
-                      <TableCell>{getMetricValueLabel(metric)}</TableCell>
-                      <TableCell>{metric.range}</TableCell>
-                      <TableCell className="capitalize">{metric.status}</TableCell>
-                      <TableCell className="whitespace-normal">{metric.summary}</TableCell>
+              <div className={portalTableWrapClass}>
+                <Table className={portalTableClass}>
+                  <TableHeader>
+                    <TableRow className="border-none hover:bg-transparent">
+                      <TableHead className={portalTableHeadClass}>Marker</TableHead>
+                      <TableHead className={portalTableHeadClass}>Value</TableHead>
+                      <TableHead className={portalTableHeadClass}>Reference</TableHead>
+                      <TableHead className={portalTableHeadClass}>Status</TableHead>
+                      <TableHead className={portalTableHeadClass}>Interpretation</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {metrics.map((metric, index) => (
+                      <TableRow key={metric.key} className={portalTableRowClass(index)}>
+                        <TableCell className={`${portalTableCellClass} font-medium text-white`}>
+                          {metric.label}
+                        </TableCell>
+                        <TableCell className={portalTableCellClass}>
+                          {getMetricValueLabel(metric)}
+                        </TableCell>
+                        <TableCell className={`${portalTableCellClass} text-[#A1A1AA]`}>
+                          {metric.range}
+                        </TableCell>
+                        <TableCell className={portalTableCellClass}>
+                          <StatusPill status={metric.status} />
+                        </TableCell>
+                        <TableCell className={`${portalTableCellClass} whitespace-normal text-[#D4D4D8]`}>
+                          {metric.summary}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
               <div className="space-y-3">
-                <h2 className="text-lg font-semibold">Panel history</h2>
+                <h2 className="text-lg font-semibold text-white">Panel history</h2>
                 {panels.map((panel) => (
-                  <div key={panel.id} className="rounded-lg border p-4">
-                    <p className="font-medium">{formatLabDate(panel.recorded_at)}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                  <div key={panel.id} className={`${portalInsetClass} p-4`}>
+                    <p className="font-medium text-white">{formatLabDate(panel.recorded_at)}</p>
+                    <p className="mt-1 text-sm text-[#A1A1AA]">
                       {Object.keys(panel.biomarkers ?? {}).length} biomarkers extracted from this panel
                     </p>
-                    {panel.notes ? <p className="mt-2 text-sm text-muted-foreground">{panel.notes}</p> : null}
+                    {panel.notes ? <p className="mt-2 text-sm text-[#D4D4D8]">{panel.notes}</p> : null}
                   </div>
                 ))}
               </div>
@@ -187,6 +229,6 @@ export default function MedicalRecordsInsights() {
           </Card>
         </div>
       )}
-    </div>
+    </PatientPortalPage>
   );
 }

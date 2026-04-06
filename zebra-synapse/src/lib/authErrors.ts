@@ -15,3 +15,16 @@ export function getSignInErrorMessage(error: AuthError): string {
 
   return error.message;
 }
+
+/** User-facing copy for network-level auth failures that do not return an AuthError. */
+export function getAuthRequestErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    if (msg.includes("failed to fetch") || msg.includes("fetch")) {
+      return "Could not reach Supabase. Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then verify your network and that the Supabase project is online.";
+    }
+    return error.message;
+  }
+
+  return "The authentication request failed before Supabase returned a response.";
+}

@@ -24,6 +24,11 @@ export type ExtractedLabPanel = {
   notes: string;
 };
 
+export type ExtractedPdfText = {
+  text: string;
+  lines: string[];
+};
+
 type ExtractionResult =
   | { status: "success"; panel: ExtractedLabPanel }
   | { status: "no_data"; reason: string }
@@ -159,11 +164,7 @@ function extractValueFromLines(
   return null;
 }
 
-export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResult> {
-  if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
-    return { status: "unsupported", reason: "Only PDF lab reports can be auto-extracted." };
-  }
-
+export async function extractTextFromPdfBlob(file: Blob): Promise<ExtractedPdfText> {
   const buffer = await file.arrayBuffer();
   const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise;
 
@@ -177,7 +178,18 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
     text += `\n${pageLines.join("\n")}`;
   }
 
-  const normalized = normalizeText(text);
+  return {
+    text: normalizeText(text),
+    lines,
+  };
+}
+
+export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResult> {
+  if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+    return { status: "unsupported", reason: "Only PDF lab reports can be auto-extracted." };
+  }
+
+  const { text: normalized, lines } = await extractTextFromPdfBlob(file);
   if (normalized.trim().length < 20) {
     return {
       status: "unsupported",

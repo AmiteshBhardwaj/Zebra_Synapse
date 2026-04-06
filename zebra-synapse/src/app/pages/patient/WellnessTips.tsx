@@ -1,16 +1,17 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
-import { Sparkles } from "lucide-react";
+import { HeartHandshake, MoonStar, Sparkles, Waves } from "lucide-react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
+import PatientFeaturePlaceholder from "../../components/patient/PatientFeaturePlaceholder";
+import { PatientPortalPage } from "../../components/patient/PortalTheme";
 
 export default function WellnessTips() {
   const { hasLabReports, loading } = usePatientLabReports();
 
   if (loading) {
     return (
-      <div className="p-8">
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </div>
+      <PatientPortalPage>
+        <p className="text-sm text-[#A1A1AA]">Loading...</p>
+      </PatientPortalPage>
     );
   }
 
@@ -24,29 +25,43 @@ export default function WellnessTips() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Wellness Tips</h1>
-        <p className="text-gray-600 mt-1">Personalized recommendations from your data</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-            <Sparkles className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-          </div>
-          <CardTitle>No personalized tips yet</CardTitle>
-          <CardDescription>
-            Wellness content will be generated from extracted lab values and linked vitals—not from
-            demo copy about glucose or blood pressure.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Uploads are saved; tip categories will populate when the pipeline can read your markers.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <PatientFeaturePlaceholder
+      eyebrow="Lifestyle Guidance"
+      title="Wellness Tips"
+      description="Surface recovery, sleep, movement, and everyday habit guidance inside the same premium dark environment used across the rest of the patient portal."
+      icon={Sparkles}
+      meta={[
+        { label: "Tip categories", value: "Pending" },
+        { label: "Signals", value: "Labs and vitals" },
+        { label: "Tone", value: "Personalized only" },
+      ]}
+      emptyTitle="No personalized tips yet"
+      emptyDescription="Wellness content will be generated from extracted lab values and linked vitals, not from demo copy about glucose, blood pressure, or generic lifestyle suggestions."
+      highlights={[
+        {
+          label: "Sleep and recovery",
+          value: "Sleep quality prompts and recovery guidance can appear once the system understands your trends.",
+          icon: MoonStar,
+          tone: "purple",
+        },
+        {
+          label: "Movement and energy",
+          value: "Activity recommendations stay linked to your own markers instead of broad one-size-fits-all coaching.",
+          icon: Waves,
+          tone: "blue",
+        },
+        {
+          label: "Care alignment",
+          value: "Tips are designed to complement your clinician guidance rather than replace it.",
+          icon: HeartHandshake,
+          tone: "orange",
+        },
+      ]}
+      supplementary={
+        <p className="text-sm leading-7 text-[#D4D4D8]">
+          Uploads are saved; tip categories will populate when the pipeline can read your markers.
+        </p>
+      }
+    />
   );
 }

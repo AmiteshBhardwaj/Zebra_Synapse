@@ -1,6 +1,6 @@
 -- Lab report file metadata + Storage bucket for patient uploads (run after 001_profiles).
 
-create table public.lab_report_uploads (
+create table if not exists public.lab_report_uploads (
   id uuid primary key default gen_random_uuid(),
   patient_id uuid not null references public.profiles (id) on delete cascade,
   storage_path text not null,
@@ -8,14 +8,16 @@ create table public.lab_report_uploads (
   created_at timestamptz not null default now()
 );
 
-create index lab_report_uploads_patient_id_idx on public.lab_report_uploads (patient_id);
+create index if not exists lab_report_uploads_patient_id_idx on public.lab_report_uploads (patient_id);
 
 alter table public.lab_report_uploads enable row level security;
 
+drop policy if exists "lab_report_uploads_select_own" on public.lab_report_uploads;
 create policy "lab_report_uploads_select_own"
   on public.lab_report_uploads for select
   using (auth.uid() = patient_id);
 
+drop policy if exists "lab_report_uploads_insert_own" on public.lab_report_uploads;
 create policy "lab_report_uploads_insert_own"
   on public.lab_report_uploads for insert
   with check (
@@ -26,10 +28,12 @@ create policy "lab_report_uploads_insert_own"
     )
   );
 
+drop policy if exists "lab_report_uploads_delete_own" on public.lab_report_uploads;
 create policy "lab_report_uploads_delete_own"
   on public.lab_report_uploads for delete
   using (auth.uid() = patient_id);
 
+drop policy if exists "lab_report_uploads_select_caring_doctor" on public.lab_report_uploads;
 create policy "lab_report_uploads_select_caring_doctor"
   on public.lab_report_uploads for select
   using (

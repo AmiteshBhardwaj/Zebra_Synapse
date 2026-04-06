@@ -26,10 +26,12 @@ create index if not exists lab_panels_patient_id_idx
 
 alter table public.lab_panels enable row level security;
 
+drop policy if exists "lab_panels_select_own" on public.lab_panels;
 create policy "lab_panels_select_own"
   on public.lab_panels for select
   using (auth.uid() = patient_id);
 
+drop policy if exists "lab_panels_insert_own" on public.lab_panels;
 create policy "lab_panels_insert_own"
   on public.lab_panels for insert
   with check (
@@ -47,15 +49,18 @@ create policy "lab_panels_insert_own"
     )
   );
 
+drop policy if exists "lab_panels_update_own" on public.lab_panels;
 create policy "lab_panels_update_own"
   on public.lab_panels for update
   using (auth.uid() = patient_id)
   with check (auth.uid() = patient_id);
 
+drop policy if exists "lab_panels_delete_own" on public.lab_panels;
 create policy "lab_panels_delete_own"
   on public.lab_panels for delete
   using (auth.uid() = patient_id);
 
+drop policy if exists "lab_panels_select_caring_doctor" on public.lab_panels;
 create policy "lab_panels_select_caring_doctor"
   on public.lab_panels for select
   using (

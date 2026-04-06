@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { getAuthRequestErrorMessage } from "../../../lib/authErrors";
 import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { getPasswordPolicyError } from "../../../lib/security";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -25,6 +27,11 @@ export default function DoctorSignup() {
       toast.error("Passwords do not match.");
       return;
     }
+    const passwordError = getPasswordPolicyError(formData.password);
+    if (passwordError) {
+      toast.error(passwordError);
+      return;
+    }
     if (!isSupabaseConfigured()) {
       toast.error("Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env");
       return;
@@ -35,33 +42,37 @@ export default function DoctorSignup() {
     const email = formData.email.trim();
     const emailRedirectTo = getAuthEmailRedirectUrl("/login/doctor");
     setSubmitting(true);
-    const { data, error } = await sb.auth.signUp({
-      email,
-      password: formData.password,
-      options: {
-        emailRedirectTo,
-        data: {
-          role: "doctor",
-          full_name: formData.name,
-          license_number: formData.licenseNumber,
+    try {
+      const { data, error } = await sb.auth.signUp({
+        email,
+        password: formData.password,
+        options: {
+          emailRedirectTo,
+          data: {
+            role: "doctor",
+            full_name: formData.name,
+            license_number: formData.licenseNumber,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
+      if (data.session) {
+        toast.success("Account created.");
+        navigate("/doctor");
+      } else {
+        toast.success("Check your email to confirm your account, then sign in.");
+        navigate("/login/doctor?confirm=1");
+      }
+    } catch (error) {
+      toast.error(getAuthRequestErrorMessage(error));
+    } finally {
       setSubmitting(false);
-      return;
     }
-
-    if (data.session) {
-      toast.success("Account created.");
-      navigate("/doctor");
-    } else {
-      toast.success("Check your email to confirm your account, then sign in.");
-      navigate("/login/doctor?confirm=1");
-    }
-    setSubmitting(false);
   };
 
   return (
@@ -138,7 +149,7 @@ export default function DoctorSignup() {
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   required
                   autoComplete="new-password"
-                  minLength={6}
+                  minLength={12}
                 />
               </div>
               <div className="space-y-2">

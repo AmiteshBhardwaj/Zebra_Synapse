@@ -1,17 +1,17 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
-import { Info, TrendingUp } from "lucide-react";
+import { AlertTriangle, Info, ShieldAlert, TrendingUp } from "lucide-react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
+import PatientFeaturePlaceholder from "../../components/patient/PatientFeaturePlaceholder";
+import { PatientPortalPage, portalPanelClass } from "../../components/patient/PortalTheme";
 
 export default function DiseasePrediction() {
   const { hasLabReports, loading } = usePatientLabReports();
 
   if (loading) {
     return (
-      <div className="p-8">
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </div>
+      <PatientPortalPage>
+        <p className="text-sm text-[#A1A1AA]">Loading...</p>
+      </PatientPortalPage>
     );
   }
 
@@ -25,39 +25,54 @@ export default function DiseasePrediction() {
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Disease Prediction</h1>
-        <p className="text-gray-600 mt-1">AI-powered risk assessment from your real data</p>
-      </div>
-
-      <Alert className="mb-8 border-blue-200 bg-blue-50">
-        <Info className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-900">Not a diagnosis</AlertTitle>
-        <AlertDescription className="text-blue-800">
-          Any future risk scores here will be computed from structured values extracted from your
-          uploads and your clinician&apos;s record—not from demo data.
-        </AlertDescription>
-      </Alert>
-
-      <Card>
-        <CardHeader>
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-            <TrendingUp className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
+    <PatientFeaturePlaceholder
+      eyebrow="Predictive Intelligence"
+      title="Disease Prediction"
+      description="Review future risk assessments in a dark analytical workspace designed to keep predictive insights readable, focused, and grounded in verified data."
+      icon={TrendingUp}
+      meta={[
+        { label: "Risk models", value: "Standby" },
+        { label: "Source data", value: "Structured biomarkers required" },
+        { label: "Clinical posture", value: "Decision support only" },
+      ]}
+      callout={
+        <section className={`${portalPanelClass} border-[#3B82F6]/15 bg-[#3B82F6]/[0.08] p-6`}>
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#3B82F6]/20 bg-[#3B82F6]/12">
+              <Info className="h-5 w-5 text-[#93c5fd]" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Not a diagnosis</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-7 text-[#c7ddff]">
+                Any future risk scores here will be computed from structured values extracted from
+                your uploads and your clinician&apos;s record, not from demo data or generic examples.
+              </p>
+            </div>
           </div>
-          <CardTitle>No risk models to display yet</CardTitle>
-          <CardDescription>
-            You have lab files uploaded, but biomarkers have not been parsed into a format the
-            models can use. Risk cards will appear here after extraction runs.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            This avoids showing sample diabetes or cardiovascular scores that are not tied to your
-            actual results.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+        </section>
+      }
+      emptyTitle="No risk models to display yet"
+      emptyDescription="You have lab files uploaded, but biomarkers have not yet been parsed into a format the models can use. Risk cards will appear here after extraction runs."
+      highlights={[
+        {
+          label: "Model input quality",
+          value: "Predictions wait until biomarkers are structured clearly enough for reliable interpretation.",
+          icon: ShieldAlert,
+          tone: "blue",
+        },
+        {
+          label: "Risk presentation",
+          value: "Future score cards will emphasize uncertainty, severity bands, and clinician review instead of flat percentages alone.",
+          icon: AlertTriangle,
+          tone: "yellow",
+        },
+        {
+          label: "False certainty avoided",
+          value: "This portal intentionally avoids showing sample diabetes or cardiovascular scores that are not tied to your results.",
+          icon: TrendingUp,
+          tone: "orange",
+        },
+      ]}
+    />
   );
 }

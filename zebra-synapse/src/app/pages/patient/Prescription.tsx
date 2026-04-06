@@ -51,6 +51,16 @@ export default function Prescription() {
   const prescriberLabel = (rx: PrescriptionRow) =>
     rx.prescriber?.full_name?.trim() || "Your doctor";
 
+  const handleRequestRefill = (rx: PrescriptionRow) => {
+    console.log("Request refill:", rx);
+    toast(`Refill request started for ${prescriptionHeading(rx.details)}`);
+  };
+
+  const handleContactDoctor = (rx: PrescriptionRow) => {
+    console.log("Contact doctor:", rx);
+    toast(`Opening contact options for ${prescriberLabel(rx)}`);
+  };
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -106,10 +116,26 @@ export default function Prescription() {
                 </div>
 
                 <div className="flex gap-2 mt-4">
-                  <Button type="button" variant="outline" disabled>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="active:scale-95 transition"
+                    onClick={() => {
+                      console.log("clicked");
+                      handleRequestRefill(rx);
+                    }}
+                  >
                     Request Refill
                   </Button>
-                  <Button type="button" variant="outline" disabled>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="active:scale-95 transition"
+                    onClick={() => {
+                      console.log("clicked");
+                      handleContactDoctor(rx);
+                    }}
+                  >
                     Contact Doctor
                   </Button>
                 </div>

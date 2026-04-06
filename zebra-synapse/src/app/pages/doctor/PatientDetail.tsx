@@ -50,6 +50,13 @@ import {
   type PrescriptionRow,
 } from "../../../lib/prescriptions";
 import { toast } from "sonner";
+import {
+  portalDialogClass,
+  portalInputClass,
+  portalPanelClass,
+  portalPrimaryButtonClass,
+  portalSecondaryButtonClass,
+} from "../../components/patient/PortalTheme";
 
 type PatientLabUploadRow = {
   id: string;
@@ -535,10 +542,12 @@ export default function PatientDetail() {
   const completedPrescriptionsList = prescriptions.filter(
     (r) => r.status === "completed",
   );
+  const detailPageClass =
+    "min-h-full bg-transparent p-8 text-white [&_[data-slot=card]]:rounded-[1.5rem] [&_[data-slot=card]]:border [&_[data-slot=card]]:border-white/10 [&_[data-slot=card]]:bg-white/[0.05] [&_[data-slot=card]]:text-white [&_[data-slot=card]]:shadow-[0_8px_32px_rgba(0,0,0,0.4)] [&_[data-slot=card]]:backdrop-blur-xl [&_[data-slot=card-title]]:text-white [&_[data-slot=card-description]]:text-white/60 [&_[data-slot=tabs-list]]:h-auto [&_[data-slot=tabs-list]]:w-full [&_[data-slot=tabs-list]]:flex-wrap [&_[data-slot=tabs-list]]:rounded-2xl [&_[data-slot=tabs-list]]:border [&_[data-slot=tabs-list]]:border-white/10 [&_[data-slot=tabs-list]]:bg-white/[0.04] [&_[data-slot=tabs-list]]:p-1 [&_[data-slot=tabs-trigger]]:rounded-xl [&_[data-slot=tabs-trigger]]:px-4 [&_[data-slot=tabs-trigger]]:py-2.5 [&_[data-slot=tabs-trigger]]:text-white/60 [&_[data-slot=tabs-trigger][data-state=active]]:border-transparent [&_[data-slot=tabs-trigger][data-state=active]]:bg-gradient-to-r [&_[data-slot=tabs-trigger][data-state=active]]:from-orange-500 [&_[data-slot=tabs-trigger][data-state=active]]:to-orange-600 [&_[data-slot=tabs-trigger][data-state=active]]:text-white [&_[data-slot=tabs-trigger][data-state=active]]:shadow-lg [&_[data-slot=tabs-trigger][data-state=active]]:shadow-orange-500/20 [&_label]:text-white [&_input]:text-white [&_input]:placeholder:text-white/40 [&_textarea]:border-white/10 [&_textarea]:bg-white/[0.05] [&_textarea]:text-white [&_textarea]:placeholder:text-white/40 [&_textarea]:focus-visible:border-orange-500 [&_textarea]:focus-visible:ring-orange-500/30";
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center min-h-[40vh] text-muted-foreground text-sm">
+      <div className="flex min-h-[40vh] items-center justify-center p-8 text-sm text-white/60">
         Loading patient...
       </div>
     );
@@ -546,12 +555,12 @@ export default function PatientDetail() {
 
   if (loadError) {
     return (
-      <div className="p-8 space-y-4">
-        <Button variant="ghost" onClick={() => navigate("/doctor")}>
+      <div className="space-y-4 p-8 text-white">
+        <Button variant="outline" className={portalSecondaryButtonClass} onClick={() => navigate("/doctor")}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Patients
         </Button>
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-[#ff9c9c]" role="alert">
           {loadError}
         </p>
       </div>
@@ -560,12 +569,12 @@ export default function PatientDetail() {
 
   if (!rel) {
     return (
-      <div className="p-8 space-y-4">
-        <Button variant="ghost" onClick={() => navigate("/doctor")}>
+      <div className="space-y-4 p-8 text-white">
+        <Button variant="outline" className={portalSecondaryButtonClass} onClick={() => navigate("/doctor")}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Patients
         </Button>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-white/60">
           Patient not found or you do not have access to this record.
         </p>
       </div>
@@ -574,12 +583,12 @@ export default function PatientDetail() {
 
   return (
     <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
-      <DialogContent>
+      <DialogContent className={portalDialogClass}>
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-white">
             {activeActionKind ? quickActionConfig(activeActionKind).label : "Quick Action"}
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-white/60">
             {activeActionKind
               ? quickActionConfig(activeActionKind).description
               : "Save a new care action for this patient."}
@@ -593,6 +602,7 @@ export default function PatientDetail() {
               value={actionTitle}
               onChange={(e) => setActionTitle(e.target.value)}
               placeholder="Short summary"
+              className={portalInputClass}
             />
           </div>
           {activeActionKind === "follow_up" ? (
@@ -603,6 +613,7 @@ export default function PatientDetail() {
                 type="datetime-local"
                 value={actionSchedule}
                 onChange={(e) => setActionSchedule(e.target.value)}
+                className={portalInputClass}
               />
             </div>
           ) : null}
@@ -622,11 +633,12 @@ export default function PatientDetail() {
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => setActionDialogOpen(false)}>
+          <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => setActionDialogOpen(false)}>
             Cancel
           </Button>
           <Button
             type="button"
+            className={portalPrimaryButtonClass}
             onClick={() => void handleQuickActionSubmit()}
             disabled={careActionSaving}
           >
@@ -634,32 +646,32 @@ export default function PatientDetail() {
           </Button>
         </DialogFooter>
       </DialogContent>
-      <div className="p-8">
-      <Button variant="ghost" className="mb-6" onClick={() => navigate("/doctor")}>
+      <div className={detailPageClass}>
+      <Button variant="outline" className={`mb-6 ${portalSecondaryButtonClass}`} onClick={() => navigate("/doctor")}>
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Patients
       </Button>
 
-      <div className="mb-8">
+      <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-xl">
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 bg-muted flex items-center justify-center text-foreground">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] border border-white/10 bg-white/[0.05] text-white">
               <span className="text-xl">{initials(patient.name)}</span>
             </div>
             <div>
-              <h1 className="text-3xl text-foreground">{patient.name}</h1>
-              <p className="text-muted-foreground mt-1">
+              <h1 className="text-3xl text-white">{patient.name}</h1>
+              <p className="mt-1 text-white/60">
                 {patient.gender} • {patient.bloodType}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="mt-1 text-sm text-white/50">
                 {patient.phone} • {patient.email}
               </p>
             </div>
           </div>
           <Badge className={
-            patient.status === "normal" ? "bg-green-100 text-green-800" :
-            patient.status === "elevated" ? "bg-yellow-100 text-yellow-800" :
-            "bg-red-100 text-red-800"
+            patient.status === "normal" ? "border border-green-500/20 bg-green-500/20 text-green-400" :
+            patient.status === "elevated" ? "border border-yellow-500/20 bg-yellow-500/20 text-yellow-400" :
+            "border border-red-500/20 bg-red-500/20 text-red-400"
           }>
             {patient.status.toUpperCase()}
           </Badge>
@@ -667,44 +679,44 @@ export default function PatientDetail() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <Card>
+        <Card className={portalPanelClass}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Heart className="w-4 h-4 text-red-500" />
-              <p className="text-sm text-gray-500">Heart Rate</p>
+              <p className="text-sm text-white/40">Heart Rate</p>
             </div>
-            <p className="text-2xl font-bold">
+            <p className="text-2xl font-bold text-white">
               {vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "-"}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={portalPanelClass}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-blue-500" />
-              <p className="text-sm text-gray-500">Blood Pressure</p>
+              <p className="text-sm text-white/40">Blood Pressure</p>
             </div>
-            <p className="text-2xl font-bold">{vitalsSummary.bloodPressure ?? "-"}</p>
+            <p className="text-2xl font-bold text-white">{vitalsSummary.bloodPressure ?? "-"}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={portalPanelClass}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-4 h-4 text-purple-500" />
-              <p className="text-sm text-gray-500">Glucose</p>
+              <p className="text-sm text-white/40">Glucose</p>
             </div>
-            <p className="text-2xl font-bold">
+            <p className="text-2xl font-bold text-white">
               {vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "-"}
             </p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className={portalPanelClass}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="w-4 h-4 text-green-500" />
-              <p className="text-sm text-gray-500">Next Appointment</p>
+              <p className="text-sm text-white/40">Next Appointment</p>
             </div>
-            <p className="text-lg font-bold">{nextAppointmentLabel}</p>
+            <p className="text-lg font-bold text-white">{nextAppointmentLabel}</p>
           </CardContent>
         </Card>
       </div>
@@ -721,53 +733,53 @@ export default function PatientDetail() {
 
         <TabsContent value="overview">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card className={portalPanelClass}>
               <CardHeader>
                 <CardTitle>Patient Information</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-gray-500">Primary Condition</p>
-                  <p className="font-semibold">{patient.condition}</p>
+                  <p className="text-sm text-white/40">Primary Condition</p>
+                  <p className="font-semibold text-white">{patient.condition}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Last Visit</p>
-                  <p className="font-semibold">{patient.lastVisit}</p>
+                  <p className="text-sm text-white/40">Last Visit</p>
+                  <p className="font-semibold text-white">{patient.lastVisit}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Next Appointment</p>
-                  <p className="font-semibold">{nextAppointmentLabel}</p>
+                  <p className="text-sm text-white/40">Next Appointment</p>
+                  <p className="font-semibold text-white">{nextAppointmentLabel}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Contact</p>
-                  <p className="font-semibold">{patient.phone}</p>
-                  <p className="text-sm text-gray-600">{patient.email}</p>
+                  <p className="text-sm text-white/40">Contact</p>
+                  <p className="font-semibold text-white">{patient.phone}</p>
+                  <p className="text-sm text-white/60">{patient.email}</p>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={portalPanelClass}>
               <CardHeader>
                 <CardTitle>Current Medications</CardTitle>
                 <CardDescription>Active prescriptions on file</CardDescription>
               </CardHeader>
               <CardContent>
                 {prescLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading prescriptions...</p>
+                  <p className="text-sm text-white/60">Loading prescriptions...</p>
                 ) : activePrescriptionsList.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-white/60">
                     No active prescriptions. Add one under Actions.
                   </p>
                 ) : (
                   <div className="space-y-3">
                     {activePrescriptionsList.map((rx) => (
-                      <div key={rx.id} className="border rounded p-3">
+                      <div key={rx.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
                         <div className="flex items-center gap-2 mb-1">
-                          <Pill className="w-4 h-4 text-indigo-600" />
-                          <p className="font-semibold">{prescriptionHeading(rx.details)}</p>
+                          <Pill className="w-4 h-4 text-[#ff9c61]" />
+                          <p className="font-semibold text-white">{prescriptionHeading(rx.details)}</p>
                         </div>
-                        <p className="text-sm text-gray-600 whitespace-pre-wrap">{rx.details}</p>
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="text-sm text-white/70 whitespace-pre-wrap">{rx.details}</p>
+                        <p className="text-xs text-white/40 mt-2">
                           Prescribed by{" "}
                           {rx.prescribed_by === user?.id
                             ? "you"
@@ -784,13 +796,13 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="vitals">
-          <Card>
+          <Card className={portalPanelClass}>
             <CardHeader>
               <CardTitle>Vital trends</CardTitle>
               <CardDescription>Wearable or serial vitals (not demo data)</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white/60">
                 No time-series vitals are stored for this patient yet. The summary cards above show
                 the latest values from your care relationship when provided. Charts will appear
                 when device or clinic data is integrated.
@@ -800,16 +812,16 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="labs">
-          <Card>
+          <Card className={portalPanelClass}>
             <CardHeader>
               <CardTitle>Patient lab files</CardTitle>
               <CardDescription>Reports the patient uploaded from their portal</CardDescription>
             </CardHeader>
             <CardContent>
               {labLoading ? (
-                <p className="text-sm text-muted-foreground">Loading...</p>
+                <p className="text-sm text-white/60">Loading...</p>
               ) : labUploads.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-white/60">
                   No lab files uploaded yet. Ask the patient to upload reports from Health Overview.
                   Parsed biomarkers are not shown until extraction is implemented.
                 </p>
@@ -818,15 +830,15 @@ export default function PatientDetail() {
                   {labUploads.map((lab) => (
                     <div
                       key={lab.id}
-                      className="flex items-center justify-between gap-4 p-4 border rounded-lg"
+                      className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
-                          <FileText className="w-5 h-5 text-indigo-600" />
+                        <div className="flex w-10 h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                          <FileText className="w-5 h-5 text-[#ff9c61]" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold truncate">{lab.original_filename}</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="font-semibold truncate text-white">{lab.original_filename}</p>
+                          <p className="text-sm text-white/40">
                             Uploaded {formatLabUploadedAt(lab.created_at)}
                           </p>
                         </div>
@@ -840,20 +852,20 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="medications">
-          <Card>
+          <Card className={portalPanelClass}>
             <CardHeader>
               <CardTitle>Medication History</CardTitle>
               <CardDescription>Current and past prescriptions</CardDescription>
             </CardHeader>
             <CardContent>
               {prescLoading ? (
-                <p className="text-sm text-muted-foreground">Loading...</p>
+                <p className="text-sm text-white/60">Loading...</p>
               ) : (
                 <div className="space-y-6">
                   <div>
-                    <h4 className="font-medium text-sm text-muted-foreground mb-3">Active</h4>
+                    <h4 className="font-medium text-sm text-white/50 mb-3">Active</h4>
                     {activePrescriptionsList.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">None yet.</p>
+                      <p className="text-sm text-white/60">None yet.</p>
                     ) : (
                       <div className="space-y-4">
                         {activePrescriptionsList.map((rx) => (
@@ -863,11 +875,11 @@ export default function PatientDetail() {
                           >
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                               <div className="flex-1 min-w-0">
-                                <p className="font-semibold">{prescriptionHeading(rx.details)}</p>
-                                <p className="text-sm text-gray-600 whitespace-pre-wrap mt-1">
+                                <p className="font-semibold text-white">{prescriptionHeading(rx.details)}</p>
+                                <p className="text-sm text-white/70 whitespace-pre-wrap mt-1">
                                   {rx.details}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-2">
+                                <p className="text-xs text-white/40 mt-2">
                                   {rx.prescribed_by === user?.id
                                     ? "You"
                                     : rx.prescriber?.full_name?.trim() || "Doctor"}{" "}
@@ -875,12 +887,13 @@ export default function PatientDetail() {
                                 </p>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                <Badge className="bg-green-100 text-green-800">Active</Badge>
+                                <Badge className="border border-green-500/20 bg-green-500/20 text-green-400">Active</Badge>
                                 {rx.prescribed_by === user?.id ? (
                                   <Button
                                     type="button"
                                     variant="outline"
                                     size="sm"
+                                    className={portalSecondaryButtonClass}
                                     onClick={() => void handleMarkPrescriptionComplete(rx.id)}
                                   >
                                     Mark completed
@@ -894,9 +907,9 @@ export default function PatientDetail() {
                     )}
                   </div>
                   <div>
-                    <h4 className="font-medium text-sm text-muted-foreground mb-3">Completed</h4>
+                    <h4 className="font-medium text-sm text-white/50 mb-3">Completed</h4>
                     {completedPrescriptionsList.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">None yet.</p>
+                      <p className="text-sm text-white/60">None yet.</p>
                     ) : (
                       <div className="space-y-4">
                         {completedPrescriptionsList.map((rx) => (
@@ -906,11 +919,11 @@ export default function PatientDetail() {
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0">
-                                <p className="font-semibold">{prescriptionHeading(rx.details)}</p>
-                                <p className="text-sm text-gray-600 whitespace-pre-wrap mt-1">
+                                <p className="font-semibold text-white">{prescriptionHeading(rx.details)}</p>
+                                <p className="text-sm text-white/70 whitespace-pre-wrap mt-1">
                                   {rx.details}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-2">
+                                <p className="text-xs text-white/40 mt-2">
                                   {rx.prescriber?.full_name?.trim() || "Doctor"} · prescribed{" "}
                                   {formatPrescriptionDate(rx.created_at)}
                                   {rx.completed_at
@@ -918,7 +931,7 @@ export default function PatientDetail() {
                                     : null}
                                 </p>
                               </div>
-                              <Badge className="bg-gray-100 text-gray-800 shrink-0">Completed</Badge>
+                              <Badge className="shrink-0 border border-white/10 bg-white/[0.08] text-white/75">Completed</Badge>
                             </div>
                           </div>
                         ))}
@@ -932,13 +945,13 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="ai-insights">
-          <Card>
+          <Card className={portalPanelClass}>
             <CardHeader>
               <CardTitle>AI insights</CardTitle>
               <CardDescription>Grounded in patient data only</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-white/60">
                 Demo risk cards are removed. Insights will appear here when models run on structured
                 lab extractions and verified vitals-not placeholder diabetes or adherence narratives.
               </p>
@@ -948,7 +961,7 @@ export default function PatientDetail() {
 
         <TabsContent value="actions">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card className={portalPanelClass}>
               <CardHeader>
                 <CardTitle>Upload Prescription</CardTitle>
                 <CardDescription>Add new prescription for this patient</CardDescription>
@@ -967,7 +980,7 @@ export default function PatientDetail() {
                   </div>
                   <Button
                     type="button"
-                    className="w-full"
+                    className={`w-full ${portalPrimaryButtonClass}`}
                     disabled={prescSaving}
                     onClick={() => void handlePrescriptionUpload()}
                   >
@@ -978,7 +991,7 @@ export default function PatientDetail() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className={portalPanelClass}>
               <CardHeader>
                 <CardTitle>Clinical Notes</CardTitle>
                 <CardDescription>Add notes for this patient's record</CardDescription>
@@ -997,7 +1010,7 @@ export default function PatientDetail() {
                   </div>
                   <Button
                     type="button"
-                    className="w-full"
+                    className={`w-full ${portalSecondaryButtonClass}`}
                     variant="outline"
                     onClick={() => void handleNotesSubmit()}
                     disabled={careActionSaving}
@@ -1006,12 +1019,12 @@ export default function PatientDetail() {
                     {careActionSaving ? "Saving…" : "Save Notes"}
                   </Button>
                   {recentNotes.length > 0 ? (
-                    <div className="space-y-3 border-t pt-4">
-                      <p className="text-sm font-medium">Recent notes</p>
+                    <div className="space-y-3 border-t border-white/10 pt-4">
+                      <p className="text-sm font-medium text-white">Recent notes</p>
                       {recentNotes.map((note) => (
-                        <div key={note.id} className="rounded-lg border p-3">
-                          <p className="text-sm whitespace-pre-wrap">{note.details}</p>
-                          <p className="mt-2 text-xs text-muted-foreground">
+                        <div key={note.id} className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
+                          <p className="text-sm whitespace-pre-wrap text-white">{note.details}</p>
+                          <p className="mt-2 text-xs text-white/40">
                             Saved {formatCareActionDateTime(note.created_at)}
                           </p>
                         </div>
@@ -1023,67 +1036,67 @@ export default function PatientDetail() {
             </Card>
           </div>
 
-          <Card className="mt-6">
+          <Card className={`${portalPanelClass} mt-6`}>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Persist requests and updates on this patient's chart</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <Button type="button" variant="outline" onClick={() => openQuickAction("follow_up")}>
+                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("follow_up")}>
                   Schedule Follow-up
                 </Button>
-                <Button type="button" variant="outline" onClick={() => openQuickAction("lab_request")}>
+                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("lab_request")}>
                   Request Lab Tests
                 </Button>
-                <Button type="button" variant="outline" onClick={() => openQuickAction("message")}>
+                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("message")}>
                   Send Message
                 </Button>
-                <Button type="button" variant="outline" onClick={() => openQuickAction("referral")}>
+                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("referral")}>
                   Refer to Specialist
                 </Button>
-                <Button type="button" variant="outline" onClick={() => openQuickAction("treatment_plan")}>
+                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("treatment_plan")}>
                   Update Treatment Plan
                 </Button>
-                <Button type="button" variant="outline" onClick={() => void handleGenerateReport()}>
+                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => void handleGenerateReport()}>
                   Generate Report
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="mt-6">
+          <Card className={`${portalPanelClass} mt-6`}>
             <CardHeader>
               <CardTitle>Care Activity</CardTitle>
               <CardDescription>Recent actions saved for this patient</CardDescription>
             </CardHeader>
             <CardContent>
               {careActionsLoading ? (
-                <p className="text-sm text-muted-foreground">Loading care activity…</p>
+                <p className="text-sm text-white/60">Loading care activity…</p>
               ) : activityFeed.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-white/60">
                   No quick actions logged yet. Use the buttons above to save follow-ups, messages, referrals, lab requests, or reports.
                 </p>
               ) : (
                 <div className="space-y-3">
                   {activityFeed.map((action) => (
-                    <div key={action.id} className="rounded-lg border p-4">
+                    <div key={action.id} className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold">{action.title}</p>
-                            <Badge variant="outline">{careActionTypeLabel(action.action_type)}</Badge>
-                            <Badge className="bg-muted text-foreground">
+                            <p className="font-semibold text-white">{action.title}</p>
+                            <Badge variant="outline" className="border-white/10 bg-white/[0.04] text-white/75">{careActionTypeLabel(action.action_type)}</Badge>
+                            <Badge className="border border-white/10 bg-white/[0.08] text-white">
                               {careActionStatusLabel(action.status)}
                             </Badge>
                           </div>
                           {action.details ? (
-                            <p className="mt-2 text-sm text-muted-foreground whitespace-pre-wrap">
+                            <p className="mt-2 text-sm text-white/60 whitespace-pre-wrap">
                               {action.details}
                             </p>
                           ) : null}
                         </div>
-                        <div className="shrink-0 text-xs text-muted-foreground">
+                        <div className="shrink-0 text-xs text-white/40">
                           <p>Logged {formatCareActionDateTime(action.created_at)}</p>
                           {action.scheduled_for ? (
                             <p className="mt-1">Scheduled {formatCareActionDateTime(action.scheduled_for)}</p>
@@ -1102,8 +1115,6 @@ export default function PatientDetail() {
     </Dialog>
   );
 }
-
-
 
 
 

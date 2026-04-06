@@ -15,6 +15,14 @@ import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import {
+  portalDialogClass,
+  portalInputClass,
+  portalPrimaryButtonClass,
+  portalSecondaryButtonClass,
+  portalSelectItemClass,
+  portalSelectTriggerClass,
+} from "../../components/patient/PortalTheme";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -114,25 +122,25 @@ export default function LinkPatientDialog({ onLinked }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" variant="default">
+        <Button type="button" className={`rounded-xl shadow-lg shadow-orange-500/30 hover:opacity-90 ${portalPrimaryButtonClass}`}>
           <UserPlus className="w-4 h-4 mr-2" />
           Link patient
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
+      <DialogContent className={`${portalDialogClass} max-h-[90vh] overflow-y-auto sm:max-w-md`}>
         <form onSubmit={(e) => void handleSubmit(e)}>
           <DialogHeader>
-            <DialogTitle>Link a patient</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">Link a patient</DialogTitle>
+            <DialogDescription className="text-[#A1A1AA]">
               Ask the patient for their profile ID from{" "}
-              <span className="font-medium">Account settings</span> in the patient
+              <span className="font-medium text-white">Account settings</span> in the patient
               portal, then paste it below. Optional fields populate the patient
               card.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="link_patient_id">Patient profile ID</Label>
+              <Label htmlFor="link_patient_id" className="text-white">Patient profile ID</Label>
               <Input
                 id="link_patient_id"
                 value={patientId}
@@ -140,98 +148,106 @@ export default function LinkPatientDialog({ onLinked }: Props) {
                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 autoComplete="off"
                 required
+                className={portalInputClass}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="link_last_visit">Last visit (optional)</Label>
+              <Label htmlFor="link_last_visit" className="text-white">Last visit (optional)</Label>
               <Input
                 id="link_last_visit"
                 type="date"
                 value={lastVisit}
                 onChange={(e) => setLastVisit(e.target.value)}
+                className={portalInputClass}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="link_condition">Primary condition (optional)</Label>
+              <Label htmlFor="link_condition" className="text-white">Primary condition (optional)</Label>
               <Input
                 id="link_condition"
                 value={primaryCondition}
                 onChange={(e) => setPrimaryCondition(e.target.value)}
                 placeholder="e.g. Type 2 Diabetes"
+                className={portalInputClass}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="link_hr">Heart rate</Label>
+                <Label htmlFor="link_hr" className="text-white">Heart rate</Label>
                 <Input
                   id="link_hr"
                   inputMode="numeric"
                   value={heartRate}
                   onChange={(e) => setHeartRate(e.target.value)}
                   placeholder="bpm"
+                  className={portalInputClass}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="link_glucose">Glucose</Label>
+                <Label htmlFor="link_glucose" className="text-white">Glucose</Label>
                 <Input
                   id="link_glucose"
                   inputMode="numeric"
                   value={glucose}
                   onChange={(e) => setGlucose(e.target.value)}
                   placeholder="mg/dL"
+                  className={portalInputClass}
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="link_bps">BP systolic</Label>
+                <Label htmlFor="link_bps" className="text-white">BP systolic</Label>
                 <Input
                   id="link_bps"
                   inputMode="numeric"
                   value={bpSys}
                   onChange={(e) => setBpSys(e.target.value)}
+                  className={portalInputClass}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="link_bpd">BP diastolic</Label>
+                <Label htmlFor="link_bpd" className="text-white">BP diastolic</Label>
                 <Input
                   id="link_bpd"
                   inputMode="numeric"
                   value={bpDia}
                   onChange={(e) => setBpDia(e.target.value)}
+                  className={portalInputClass}
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="link_status">Health status</Label>
+              <Label htmlFor="link_status" className="text-white">Health status</Label>
               <select
                 id="link_status"
-                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className={`${portalSelectTriggerClass} flex h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm text-white shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl focus-visible:outline-none`}
                 value={healthStatus}
                 onChange={(e) =>
                   setHealthStatus(e.target.value as "normal" | "elevated" | "risk")
                 }
               >
-                <option value="normal">Normal</option>
-                <option value="elevated">Elevated</option>
-                <option value="risk">Risk</option>
+                <option value="normal" className={portalSelectItemClass}>Normal</option>
+                <option value="elevated" className={portalSelectItemClass}>Elevated</option>
+                <option value="risk" className={portalSelectItemClass}>Risk</option>
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="link_flags">Risk flags (optional)</Label>
+              <Label htmlFor="link_flags" className="text-white">Risk flags (optional)</Label>
               <Input
                 id="link_flags"
                 value={riskFlags}
                 onChange={(e) => setRiskFlags(e.target.value)}
                 placeholder="Comma-separated, e.g. High glucose, Elevated BP"
+                className={portalInputClass}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" className={portalPrimaryButtonClass} disabled={submitting}>
               {submitting ? "Linking…" : "Link patient"}
             </Button>
           </DialogFooter>

@@ -6,6 +6,7 @@ import {
   type LabReportUploadRow,
 } from "../lib/labReports";
 import { extractLabPanelFromPdf } from "../lib/labReportExtraction";
+import { getLabReportFileError } from "../lib/security";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
 
 type UploadLabReportResult = {
@@ -55,6 +56,8 @@ export function usePatientLabReports() {
       if (!user) throw new Error("Not signed in");
       const sb = getSupabase();
       if (!sb) throw new Error("Supabase not configured");
+      const fileError = getLabReportFileError(file);
+      if (fileError) throw new Error(fileError);
 
       const path = buildLabReportStoragePath(user.id, file.name);
       const { error: upErr } = await sb.storage.from(LAB_REPORTS_BUCKET).upload(path, file, {

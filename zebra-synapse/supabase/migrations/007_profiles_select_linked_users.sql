@@ -2,6 +2,7 @@
 -- through care_relationships. This is required for doctor patient lists/details
 -- and patient views that show the assigned doctor's name.
 
+drop policy if exists "profiles_select_linked_care_team" on public.profiles;
 create policy "profiles_select_linked_care_team"
   on public.profiles for select
   using (

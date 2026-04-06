@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null = null;
+const AUTH_STORAGE_KEY = "zebra-synapse.auth";
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -20,6 +21,9 @@ export function getSupabase(): SupabaseClient | null {
         auth: {
           persistSession: true,
           autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: "pkce",
+          storageKey: AUTH_STORAGE_KEY,
         },
       },
     );

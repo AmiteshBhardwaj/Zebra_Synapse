@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useMemo,
   useState,
   type ReactNode,
@@ -10,6 +11,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
+import { getAuthInactivityTimeoutMs } from "../lib/security";
 import type { Profile } from "./types";
 
 type AuthContextValue = {
@@ -46,6 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured());
+  const inactivityTimerRef = useRef<number | null>(null);
+  const inactivityTimeoutMs = getAuthInactivityTimeoutMs();
 
   const refreshProfile = useCallback(async () => {
     const sb = getSupabase();
@@ -95,6 +99,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sb = getSupabase();
     if (sb) await sb.auth.signOut();
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const clearTimer = () => {
+      if (inactivityTimerRef.current != null) {
+        window.clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+    };
+
+    const resetTimer = () => {
+      clearTimer();
+      if (!session?.user) return;
+
+      inactivityTimerRef.current = window.setTimeout(() => {
+        const sb = getSupabase();
+        if (!sb) return;
+        void sb.auth.signOut();
+      }, inactivityTimeoutMs);
+    };
+
+    const events: Array<keyof WindowEventMap> = [
+      "click",
+      "keydown",
+      "mousemove",
+      "scroll",
+      "touchstart",
+    ];
+
+    resetTimer();
+    for (const eventName of events) {
+      window.addEventListener(eventName, resetTimer, { passive: true });
+    }
+    document.addEventListener("visibilitychange", resetTimer);
+
+    return () => {
+      clearTimer();
+      for (const eventName of events) {
+        window.removeEventListener(eventName, resetTimer);
+      }
+      document.removeEventListener("visibilitychange", resetTimer);
+    };
+  }, [inactivityTimeoutMs, session?.user]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
