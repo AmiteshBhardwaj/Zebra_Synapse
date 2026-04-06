@@ -49,6 +49,18 @@ import {
   prescriptionHeading,
   type PrescriptionRow,
 } from "../../../lib/prescriptions";
+import {
+  LAB_PANEL_SELECT,
+  formatLabDate,
+  type LabPanelRow,
+} from "../../../lib/labPanels";
+import {
+  getDiseasePredictions,
+  getLatestLabPanel,
+  getNutritionPlans,
+  getOverallStatus,
+  getWellnessTips,
+} from "../../../lib/labInsights";
 import { toast } from "sonner";
 import {
   portalDialogClass,
@@ -62,6 +74,17 @@ type PatientLabUploadRow = {
   id: string;
   original_filename: string;
   created_at: string;
+};
+
+type TimelineItem = {
+  id: string;
+  kind: "care_action" | "prescription";
+  title: string;
+  details: string | null;
+  createdAt: string;
+  badge: string;
+  status?: string;
+  scheduledFor?: string | null;
 };
 
 type QuickActionKind =
@@ -97,6 +120,67 @@ function toDatetimeLocalInput(date: Date): string {
 function joinAvailableValues(values: Array<string | null | undefined>, fallback: string) {
   const items = values.map((value) => value?.trim()).filter(Boolean);
   return items.length ? items.join(" • ") : fallback;
+}
+
+function formatNullableMetric(value: number | null | undefined, suffix = ""): string {
+  if (value == null) return "-";
+  return `${value}${suffix}`;
+}
+
+function buildRelationshipInsights(args: {
+  glucose: number | null | undefined;
+  bloodPressureSystolic: number | null | undefined;
+  bloodPressureDiastolic: number | null | undefined;
+  riskFlags: string[] | null | undefined;
+  status: "normal" | "elevated" | "risk";
+}) {
+  const insights: Array<{ title: string; summary: string; nextStep: string }> = [];
+
+  if (args.riskFlags?.length) {
+    insights.push({
+      title: "Priority risk flags",
+      summary: `Current chart flags: ${args.riskFlags.join(", ")}.`,
+      nextStep: "Review these flags alongside the current care plan and recent prescriptions.",
+    });
+  }
+
+  if (args.glucose != null) {
+    if (args.glucose >= 126) {
+      insights.push({
+        title: "Glucose is in a diabetes-range pattern",
+        summary: `The latest glucose value is ${args.glucose} mg/dL, which warrants clinical review.`,
+        nextStep: "Confirm with repeat labs or A1c and align the treatment plan with the patient.",
+      });
+    } else if (args.glucose >= 100) {
+      insights.push({
+        title: "Glucose is above the ideal fasting range",
+        summary: `The latest glucose value is ${args.glucose} mg/dL, suggesting closer monitoring.`,
+        nextStep: "Track trend direction and reinforce diet, activity, and follow-up timing.",
+      });
+    }
+  }
+
+  if (
+    args.bloodPressureSystolic != null &&
+    args.bloodPressureDiastolic != null &&
+    (args.bloodPressureSystolic >= 130 || args.bloodPressureDiastolic >= 80)
+  ) {
+    insights.push({
+      title: "Blood pressure remains elevated",
+      summary: `Current blood pressure is ${args.bloodPressureSystolic}/${args.bloodPressureDiastolic}.`,
+      nextStep: "Recheck adherence, home readings, and whether medication adjustment is needed.",
+    });
+  }
+
+  if (insights.length === 0) {
+    insights.push({
+      title: "Current chart looks stable",
+      summary: `The latest linked-care status is ${args.status}. No additional structured alerts were generated from the current snapshot alone.`,
+      nextStep: "Use lab uploads or serial vitals to strengthen longitudinal insight quality.",
+    });
+  }
+
+  return insights;
 }
 
 function quickActionConfig(type: QuickActionKind): {
@@ -189,6 +273,8 @@ export default function PatientDetail() {
   const [prescSaving, setPrescSaving] = useState(false);
   const [labUploads, setLabUploads] = useState<PatientLabUploadRow[]>([]);
   const [labLoading, setLabLoading] = useState(false);
+  const [labPanels, setLabPanels] = useState<LabPanelRow[]>([]);
+  const [labPanelsLoading, setLabPanelsLoading] = useState(false);
   const [careActions, setCareActions] = useState<CareActionRow[]>([]);
   const [careActionsLoading, setCareActionsLoading] = useState(false);
   const [careActionsUnavailable, setCareActionsUnavailable] = useState(false);
@@ -237,6 +323,8 @@ export default function PatientDetail() {
 
   useEffect(() => {
     setPrescriptions([]);
+    setLabUploads([]);
+    setLabPanels([]);
     setCareActions([]);
     setCareActionsUnavailable(false);
   }, [patientId]);
@@ -287,6 +375,30 @@ export default function PatientDetail() {
   useEffect(() => {
     if (rel) void loadLabUploads();
   }, [rel, loadLabUploads]);
+
+  const loadLabPanels = useCallback(async () => {
+    if (!patientId || !rel) return;
+    const sb = getSupabase();
+    if (!sb) return;
+    setLabPanelsLoading(true);
+    const { data, error } = await sb
+      .from("lab_panels")
+      .select(LAB_PANEL_SELECT)
+      .eq("patient_id", patientId)
+      .order("recorded_at", { ascending: false })
+      .order("created_at", { ascending: false });
+    setLabPanelsLoading(false);
+    if (error) {
+      console.error("[lab_panels]", error.message);
+      setLabPanels([]);
+      return;
+    }
+    setLabPanels(((data ?? []) as unknown) as LabPanelRow[]);
+  }, [patientId, rel]);
+
+  useEffect(() => {
+    if (rel) void loadLabPanels();
+  }, [rel, loadLabPanels]);
 
   const loadCareActions = useCallback(async () => {
     if (!patientId) return;
@@ -370,7 +482,6 @@ export default function PatientDetail() {
       action.scheduled_for ? new Date(action.scheduled_for).getTime() >= Date.now() : false,
     ) ?? upcomingFollowUps[0] ?? null;
   const recentNotes = careActions.filter((action) => action.action_type === "note").slice(0, 3);
-  const activityFeed = careActions.filter((action) => action.action_type !== "note");
   const patient = {
     name: patientName,
     gender: "",
@@ -402,6 +513,40 @@ export default function PatientDetail() {
     ),
     glucose: rel?.glucose,
   };
+  const latestLabPanel = getLatestLabPanel(labPanels);
+  const latestLabStatus = latestLabPanel ? getOverallStatus(latestLabPanel) : null;
+  const diseasePredictions = latestLabPanel ? getDiseasePredictions(latestLabPanel) : [];
+  const nutritionPlans = latestLabPanel ? getNutritionPlans(latestLabPanel) : [];
+  const wellnessTips = latestLabPanel ? getWellnessTips(latestLabPanel) : [];
+  const relationshipInsights = buildRelationshipInsights({
+    glucose: rel?.glucose,
+    bloodPressureSystolic: rel?.blood_pressure_systolic,
+    bloodPressureDiastolic: rel?.blood_pressure_diastolic,
+    riskFlags: rel?.risk_flags,
+    status: patient.status,
+  });
+  const activityFeed: TimelineItem[] = [
+    ...careActions.map((action) => ({
+      id: action.id,
+      kind: "care_action" as const,
+      title: action.title,
+      details: action.details,
+      createdAt: action.created_at,
+      badge: careActionTypeLabel(action.action_type),
+      status: careActionStatusLabel(action.status),
+      scheduledFor: action.scheduled_for,
+    })),
+    ...prescriptions.map((rx) => ({
+      id: `prescription-${rx.id}`,
+      kind: "prescription" as const,
+      title: prescriptionHeading(rx.details),
+      details: rx.details,
+      createdAt: rx.created_at,
+      badge: "Prescription",
+      status: rx.status === "completed" ? "Completed" : "Active",
+      scheduledFor: null,
+    })),
+  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const initials = (name: string) => {
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -828,19 +973,121 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="vitals">
-          <Card className={portalPanelClass}>
-            <CardHeader>
-              <CardTitle>Vital trends</CardTitle>
-              <CardDescription>Wearable or serial vitals (not demo data)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-white/60">
-                No time-series vitals are stored for this patient yet. The summary cards above show
-                the latest values from your care relationship when provided. Charts will appear
-                when device or clinic data is integrated.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <Card className={portalPanelClass}>
+                <CardHeader>
+                  <CardTitle>Current clinical snapshot</CardTitle>
+                  <CardDescription>Latest linked-care vitals and chart context</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-sm text-white/40">Heart Rate</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">
+                      {formatNullableMetric(vitalsSummary.heartRate, " bpm")}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-sm text-white/40">Blood Pressure</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">
+                      {vitalsSummary.bloodPressure ?? "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-sm text-white/40">Glucose</p>
+                    <p className="mt-2 text-2xl font-semibold text-white">
+                      {formatNullableMetric(vitalsSummary.glucose, " mg/dL")}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-sm text-white/40">Last Visit</p>
+                    <p className="mt-2 text-lg font-semibold text-white">{patient.lastVisit}</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className={portalPanelClass}>
+                <CardHeader>
+                  <CardTitle>Trend coverage</CardTitle>
+                  <CardDescription>Structured history available for this patient</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-sm text-white/40">Lab panels on file</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">{labPanels.length}</p>
+                    <p className="mt-2 text-sm text-white/60">
+                      {latestLabPanel
+                        ? `Latest structured panel recorded ${formatLabDate(latestLabPanel.recorded_at)}.`
+                        : "No structured lab panel yet. The doctor portal is currently limited to the latest care snapshot."}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-sm text-white/40">Uploaded reports</p>
+                    <p className="mt-2 text-3xl font-semibold text-white">{labUploads.length}</p>
+                    <p className="mt-2 text-sm text-white/60">
+                      Uploads create longitudinal context for glucose, A1c, and related insights.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className={portalPanelClass}>
+              <CardHeader>
+                <CardTitle>Vitals history timeline</CardTitle>
+                <CardDescription>Recorded observations available to the doctor portal</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {labPanelsLoading ? (
+                  <p className="text-sm text-white/60">Loading vitals history...</p>
+                ) : labPanels.length === 0 ? (
+                  <p className="text-sm text-white/60">
+                    No longitudinal lab-backed history is stored yet. The cards above show the latest
+                    linked-care snapshot. Upload reports or record additional structured panels to
+                    unlock a true timeline.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {labPanels.map((panel) => (
+                      <div key={panel.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="font-semibold text-white">{formatLabDate(panel.recorded_at)}</p>
+                            <p className="mt-1 text-sm text-white/60">
+                              Structured panel values recorded for this patient.
+                            </p>
+                          </div>
+                          {panel.notes ? (
+                            <p className="max-w-xl text-sm text-white/60">{panel.notes}</p>
+                          ) : null}
+                        </div>
+                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                          <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                            <p className="text-xs text-white/40">Fasting Glucose</p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                              {formatNullableMetric(panel.fasting_glucose, " mg/dL")}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                            <p className="text-xs text-white/40">Hemoglobin A1c</p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                              {formatNullableMetric(panel.hemoglobin_a1c, "%")}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                            <p className="text-xs text-white/40">Creatinine</p>
+                            <p className="mt-2 text-lg font-semibold text-white">
+                              {formatNullableMetric(panel.creatinine, " mg/dL")}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="labs">
@@ -977,18 +1224,79 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="ai-insights">
-          <Card className={portalPanelClass}>
-            <CardHeader>
-              <CardTitle>AI insights</CardTitle>
-              <CardDescription>Grounded in patient data only</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-white/60">
-                Demo risk cards are removed. Insights will appear here when models run on structured
-                lab extractions and verified vitals, not placeholder diabetes or adherence narratives.
-              </p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card className={portalPanelClass}>
+              <CardHeader>
+                <CardTitle>AI insights</CardTitle>
+                <CardDescription>Grounded in current chart data and structured labs</CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {relationshipInsights.map((insight) => (
+                  <div key={insight.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="font-semibold text-white">{insight.title}</p>
+                    <p className="mt-2 text-sm text-white/60">{insight.summary}</p>
+                    <p className="mt-3 text-sm text-[#ffb788]">{insight.nextStep}</p>
+                  </div>
+                ))}
+                {latestLabStatus ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="font-semibold text-white">Latest structured panel</p>
+                    <p className="mt-2 text-sm text-white/60">
+                      {latestLabStatus.label} from the panel recorded {formatLabDate(latestLabPanel!.recorded_at)}.
+                    </p>
+                    <p className="mt-3 text-sm text-[#ffb788]">{latestLabStatus.summary}</p>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            {latestLabPanel ? (
+              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <Card className={portalPanelClass}>
+                  <CardHeader>
+                    <CardTitle>Disease risk signals</CardTitle>
+                    <CardDescription>Rule-based patterns from the latest structured panel</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {diseasePredictions.map((prediction) => (
+                      <div key={prediction.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-semibold text-white">{prediction.title}</p>
+                          <Badge className="border border-white/10 bg-white/[0.08] text-white">
+                            {prediction.level}
+                          </Badge>
+                        </div>
+                        <p className="mt-2 text-sm text-white/60">{prediction.rationale}</p>
+                        <p className="mt-3 text-sm text-[#ffb788]">{prediction.nextStep}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+
+                <Card className={portalPanelClass}>
+                  <CardHeader>
+                    <CardTitle>Recommended coaching themes</CardTitle>
+                    <CardDescription>Nutrition and wellness guidance inferred from the latest panel</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {nutritionPlans.slice(0, 2).map((plan) => (
+                      <div key={plan.headline} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <p className="font-semibold text-white">{plan.headline}</p>
+                        <p className="mt-2 text-sm text-white/60">{plan.focus}</p>
+                        <p className="mt-3 text-sm text-[#ffb788]">{plan.actions[0]}</p>
+                      </div>
+                    ))}
+                    {wellnessTips.slice(0, 2).map((tip) => (
+                      <div key={tip.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <p className="font-semibold text-white">{tip.title}</p>
+                        <p className="mt-2 text-sm text-white/60">{tip.detail}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </div>
+            ) : null}
+          </div>
         </TabsContent>
 
         <TabsContent value="actions">
@@ -1115,7 +1423,7 @@ export default function PatientDetail() {
                 <p className="text-sm text-white/60">Loading care activity...</p>
               ) : activityFeed.length === 0 ? (
                 <p className="text-sm text-white/60">
-                  No quick actions logged yet. Use the buttons above to save follow-ups, messages, referrals, lab requests, or reports.
+                  No care activity logged yet. Notes, quick actions, and prescriptions will appear here once saved.
                 </p>
               ) : (
                 <div className="space-y-3">
@@ -1125,10 +1433,14 @@ export default function PatientDetail() {
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-semibold text-white">{action.title}</p>
-                            <Badge variant="outline" className="border-white/10 bg-white/[0.04] text-white/75">{careActionTypeLabel(action.action_type)}</Badge>
-                            <Badge className="border border-white/10 bg-white/[0.08] text-white">
-                              {careActionStatusLabel(action.status)}
+                            <Badge variant="outline" className="border-white/10 bg-white/[0.04] text-white/75">
+                              {action.badge}
                             </Badge>
+                            {action.status ? (
+                              <Badge className="border border-white/10 bg-white/[0.08] text-white">
+                                {action.status}
+                              </Badge>
+                            ) : null}
                           </div>
                           {action.details ? (
                             <p className="mt-2 text-sm text-white/60 whitespace-pre-wrap">
@@ -1137,9 +1449,9 @@ export default function PatientDetail() {
                           ) : null}
                         </div>
                         <div className="shrink-0 text-xs text-white/40">
-                          <p>Logged {formatCareActionDateTime(action.created_at)}</p>
-                          {action.scheduled_for ? (
-                            <p className="mt-1">Scheduled {formatCareActionDateTime(action.scheduled_for)}</p>
+                          <p>Logged {formatCareActionDateTime(action.createdAt)}</p>
+                          {action.scheduledFor ? (
+                            <p className="mt-1">Scheduled {formatCareActionDateTime(action.scheduledFor)}</p>
                           ) : null}
                         </div>
                       </div>
