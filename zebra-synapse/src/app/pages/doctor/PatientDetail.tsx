@@ -71,6 +71,12 @@ type QuickActionKind =
   | "referral"
   | "treatment_plan";
 
+function isMissingCareActionsTableError(message: string | undefined): boolean {
+  const normalized = (message ?? "").toLowerCase();
+  return normalized.includes("could not find the table 'public.care_actions'")
+    || normalized.includes('could not find the table "public.care_actions"');
+}
+
 function formatLabUploadedAt(iso: string): string {
   try {
     return new Date(iso).toLocaleString(undefined, {
@@ -86,6 +92,11 @@ function toDatetimeLocalInput(date: Date): string {
   const copy = new Date(date);
   copy.setMinutes(copy.getMinutes() - copy.getTimezoneOffset());
   return copy.toISOString().slice(0, 16);
+}
+
+function joinAvailableValues(values: Array<string | null | undefined>, fallback: string) {
+  const items = values.map((value) => value?.trim()).filter(Boolean);
+  return items.length ? items.join(" • ") : fallback;
 }
 
 function quickActionConfig(type: QuickActionKind): {
@@ -180,6 +191,7 @@ export default function PatientDetail() {
   const [labLoading, setLabLoading] = useState(false);
   const [careActions, setCareActions] = useState<CareActionRow[]>([]);
   const [careActionsLoading, setCareActionsLoading] = useState(false);
+  const [careActionsUnavailable, setCareActionsUnavailable] = useState(false);
   const [careActionSaving, setCareActionSaving] = useState(false);
   const [actionDialogOpen, setActionDialogOpen] = useState(false);
   const [activeActionKind, setActiveActionKind] = useState<QuickActionKind | null>(null);
@@ -226,6 +238,7 @@ export default function PatientDetail() {
   useEffect(() => {
     setPrescriptions([]);
     setCareActions([]);
+    setCareActionsUnavailable(false);
   }, [patientId]);
 
   const loadPrescriptions = useCallback(async () => {
@@ -287,11 +300,17 @@ export default function PatientDetail() {
       .order("created_at", { ascending: false });
     setCareActionsLoading(false);
     if (error) {
+      if (isMissingCareActionsTableError(error.message)) {
+        setCareActionsUnavailable(true);
+        setCareActions([]);
+        return;
+      }
       console.error("[care_actions]", error.message);
       toast.error("Could not load care activity");
       setCareActions([]);
       return;
     }
+    setCareActionsUnavailable(false);
     setCareActions(((data ?? []) as unknown) as CareActionRow[]);
   }, [patientId]);
 
@@ -323,9 +342,15 @@ export default function PatientDetail() {
       });
       setCareActionSaving(false);
       if (error) {
+        if (isMissingCareActionsTableError(error.message)) {
+          setCareActionsUnavailable(true);
+          toast.error("Supabase is missing the care_actions table. Apply migration 008_care_actions.sql.");
+          return false;
+        }
         toast.error(error.message);
         return false;
       }
+      setCareActionsUnavailable(false);
       await loadCareActions();
       return true;
     },
@@ -348,19 +373,26 @@ export default function PatientDetail() {
   const activityFeed = careActions.filter((action) => action.action_type !== "note");
   const patient = {
     name: patientName,
-    gender: "-",
-    bloodType: "-",
-    condition: rel?.primary_condition?.trim() || "-",
-    phone: "-",
-    email: "-",
+    gender: "",
+    bloodType: "",
+    condition: rel?.primary_condition?.trim() || "Not recorded",
+    phone: "",
+    email: "",
     lastVisit: formatDisplayDate(rel?.last_visit ?? rel?.created_at),
-    nextAppointment: "-",
     status: (rel?.health_status ?? "normal") as "normal" | "elevated" | "risk",
   };
 
   const nextAppointmentLabel = nextFollowUp?.scheduled_for
     ? formatCareActionDateTime(nextFollowUp.scheduled_for)
     : "-";
+  const patientIdentityLine = joinAvailableValues(
+    [patient.gender, patient.bloodType],
+    "Profile details not available",
+  );
+  const patientContactLine = joinAvailableValues(
+    [patient.phone, patient.email],
+    "No contact details on file",
+  );
 
   const vitalsSummary = {
     heartRate: rel?.heart_rate,
@@ -502,9 +534,9 @@ export default function PatientDetail() {
       `Next appointment: ${nextAppointmentLabel}`,
       "",
       "Latest vitals",
-      `- Heart rate: ${vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "—"}`,
-      `- Blood pressure: ${vitalsSummary.bloodPressure ?? "—"}`,
-      `- Glucose: ${vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "—"}`,
+      `- Heart rate: ${vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "â€”"}`,
+      `- Blood pressure: ${vitalsSummary.bloodPressure ?? "â€”"}`,
+      `- Glucose: ${vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "â€”"}`,
       "",
       "Risk flags",
       ...(rel?.risk_flags?.length
@@ -642,7 +674,7 @@ export default function PatientDetail() {
             onClick={() => void handleQuickActionSubmit()}
             disabled={careActionSaving}
           >
-            {careActionSaving ? "Saving…" : "Save Action"}
+            {careActionSaving ? "Saving..." : "Save Action"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -661,10 +693,10 @@ export default function PatientDetail() {
             <div>
               <h1 className="text-3xl text-white">{patient.name}</h1>
               <p className="mt-1 text-white/60">
-                {patient.gender} • {patient.bloodType}
+                {patientIdentityLine}
               </p>
               <p className="mt-1 text-sm text-white/50">
-                {patient.phone} • {patient.email}
+                {patientContactLine}
               </p>
             </div>
           </div>
@@ -883,7 +915,7 @@ export default function PatientDetail() {
                                   {rx.prescribed_by === user?.id
                                     ? "You"
                                     : rx.prescriber?.full_name?.trim() || "Doctor"}{" "}
-                                  · {formatPrescriptionDate(rx.created_at)}
+                                  • {formatPrescriptionDate(rx.created_at)}
                                 </p>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
@@ -924,10 +956,10 @@ export default function PatientDetail() {
                                   {rx.details}
                                 </p>
                                 <p className="text-xs text-white/40 mt-2">
-                                  {rx.prescriber?.full_name?.trim() || "Doctor"} · prescribed{" "}
+                                  {rx.prescriber?.full_name?.trim() || "Doctor"} • prescribed{" "}
                                   {formatPrescriptionDate(rx.created_at)}
                                   {rx.completed_at
-                                    ? ` · completed ${formatPrescriptionDate(rx.completed_at)}`
+                                    ? ` • completed ${formatPrescriptionDate(rx.completed_at)}`
                                     : null}
                                 </p>
                               </div>
@@ -953,7 +985,7 @@ export default function PatientDetail() {
             <CardContent className="space-y-3">
               <p className="text-sm text-white/60">
                 Demo risk cards are removed. Insights will appear here when models run on structured
-                lab extractions and verified vitals-not placeholder diabetes or adherence narratives.
+                lab extractions and verified vitals, not placeholder diabetes or adherence narratives.
               </p>
             </CardContent>
           </Card>
@@ -985,7 +1017,7 @@ export default function PatientDetail() {
                     onClick={() => void handlePrescriptionUpload()}
                   >
                     <Upload className="w-4 h-4 mr-2" />
-                    {prescSaving ? "Saving…" : "Upload to Patient's Account"}
+                    {prescSaving ? "Saving..." : "Upload to Patient's Account"}
                   </Button>
                 </div>
               </CardContent>
@@ -1016,7 +1048,7 @@ export default function PatientDetail() {
                     disabled={careActionSaving}
                   >
                     <Send className="w-4 h-4 mr-2" />
-                    {careActionSaving ? "Saving…" : "Save Notes"}
+                    {careActionSaving ? "Saving..." : "Save Notes"}
                   </Button>
                   {recentNotes.length > 0 ? (
                     <div className="space-y-3 border-t border-white/10 pt-4">
@@ -1071,8 +1103,16 @@ export default function PatientDetail() {
               <CardDescription>Recent actions saved for this patient</CardDescription>
             </CardHeader>
             <CardContent>
-              {careActionsLoading ? (
-                <p className="text-sm text-white/60">Loading care activity…</p>
+              {careActionsUnavailable ? (
+                <p className="text-sm text-white/60">
+                  Care activity is unavailable because this Supabase project is missing
+                  <code className="mx-1 text-xs">public.care_actions</code>.
+                  Apply
+                  <code className="mx-1 text-xs">supabase/migrations/008_care_actions.sql</code>
+                  and refresh.
+                </p>
+              ) : careActionsLoading ? (
+                <p className="text-sm text-white/60">Loading care activity...</p>
               ) : activityFeed.length === 0 ? (
                 <p className="text-sm text-white/60">
                   No quick actions logged yet. Use the buttons above to save follow-ups, messages, referrals, lab requests, or reports.
@@ -1115,7 +1155,6 @@ export default function PatientDetail() {
     </Dialog>
   );
 }
-
 
 
 
