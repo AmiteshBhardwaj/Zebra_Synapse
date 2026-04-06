@@ -37,13 +37,28 @@ type PatientVitalsRow = {
   created_at: string;
 };
 
-function statusBadgeClass(status: PatientVitalsRow["health_status"]) {
+type VitalsStatus = PatientVitalsRow["health_status"];
+
+type VitalsSummary = {
+  source: "care" | "lab";
+  bloodPressure: string | null;
+  heartRate: number | null;
+  glucose: number | null;
+  a1c: number | null;
+  riskFlags: string[];
+  lastUpdated: string;
+  condition: string;
+  status: VitalsStatus;
+  statusLabel: string;
+};
+
+function statusBadgeClass(status: VitalsStatus) {
   if (status === "normal") return "border border-green-500/20 bg-green-500/20 text-green-400";
   if (status === "elevated") return "border border-yellow-500/20 bg-yellow-500/20 text-yellow-400";
   return "border border-red-500/20 bg-red-500/20 text-red-400";
 }
 
-function statusLabel(status: PatientVitalsRow["health_status"]) {
+function statusLabel(status: VitalsStatus) {
   if (status === "normal") return "Normal";
   if (status === "elevated") return "Elevated";
   return "Risk";
@@ -98,7 +113,7 @@ export default function Vitals() {
   const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
   const labStatus = latestPanel ? getOverallStatus(latestPanel) : null;
 
-  const summary = useMemo(() => {
+  const summary = useMemo<VitalsSummary | null>(() => {
     if (vitalsRow) {
       return {
         source: "care" as const,
@@ -127,7 +142,7 @@ export default function Vitals() {
         riskFlags: [] as string[],
         lastUpdated: formatLabDate(latestPanel.recorded_at),
         condition: "Latest uploaded lab panel",
-        status: labStatus?.tone === "normal" ? "normal" : "elevated",
+        status: (labStatus?.tone === "normal" ? "normal" : "elevated") as VitalsStatus,
         statusLabel: labStatus?.label ?? "Lab-derived",
       };
     }
