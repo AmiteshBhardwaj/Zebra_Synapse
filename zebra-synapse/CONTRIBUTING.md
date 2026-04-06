@@ -14,7 +14,7 @@
    `npm run supabase:start`
 6. Generate local environment variables:
    `npm run env:local`
-   If you are not using local Supabase, copy [`.env.example`](./.env.example) to `.env.local` and fill in the hosted Supabase values.
+   If you are not using local Supabase, copy [`.env.example`](./.env.example) to `.env` and fill in the hosted Supabase values.
 7. Start the app:
    `npm run dev`
 8. Create a feature branch before making changes:
@@ -28,13 +28,19 @@
     `git push -u origin fix/<short-description>`
 12. Open a pull request to the `main` branch of `AmiteshBhardwaj/Zebra_Synapse`.
 
+## Database Prerequisites
+
+- Apply the SQL migrations in [`supabase/migrations/`](./supabase/migrations/) in order.
+- Doctor notes, quick actions, and care activity depend on `008_care_actions.sql`.
+- The patient insight pages depend on structured records in `lab_panels`, not only uploaded files in `lab_report_uploads`.
+
 ## If Something Fails Locally
 
 - If `npm install` fails, confirm Node.js `20.19.0` and npm `11.6.2`.
 - If `npm run env:local` fails, start Docker Desktop and rerun `npm run supabase:start`.
-- If Supabase is not needed for the change, use hosted credentials in `.env.local` instead of local Docker services.
+- If Supabase is not needed for the change, use hosted credentials in `.env` instead of local Docker services.
 - If `npm run check` fails, fix the TypeScript or build error before opening the pull request.
-- Do not commit `.env.local`, local screenshots, or unrelated generated files.
+- Do not commit `.env`, local screenshots, `dist`, `node_modules`, `.vercel`, or unrelated generated files.
 
 ## Development Workflow
 
@@ -49,6 +55,7 @@
 - include screenshots for visible UI changes
 - note any schema or environment variable changes
 - avoid committing generated files unless they are required for deployment
+- mention if a change affects patient insight screens, doctor patient detail, or Supabase migrations
 
 ## Local Verification
 

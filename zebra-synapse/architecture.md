@@ -1,29 +1,53 @@
 # System Architecture
 
-Zebra Synapse is built as a modern web application that combines a responsive clinical workflow frontend with a secure Supabase backend and a lightweight report-processing pipeline.
+Zebra Synapse is a single-page React application backed by Supabase. It combines patient and doctor workflows, browser-side report extraction, structured lab persistence, and deterministic health-insight generation.
 
-## Components
+## Core Components
 
-- **Frontend:** A React and TypeScript frontend built with Vite powers the doctor and patient portals, dashboards, uploads, and insight views.
-- **Authentication and Access Control:** Supabase Auth manages signup, login, session persistence, and role-aware access for doctor and patient users.
-- **Clinical Data Layer:** Supabase Postgres stores profiles, care relationships, prescriptions, lab reports, lab panels, and care actions with row-level security.
-- **Data Pipeline:** Lab reports are parsed in the browser with PDF.js, normalized into biomarker data, and persisted as structured clinical records.
-- **Inference Layer:** Deterministic rules analyze biomarkers and health metadata to generate explainable patient-facing and clinician-facing insights.
+- **Frontend:** React + TypeScript + Vite application with separate patient and doctor portal flows under one router.
+- **Authentication:** Supabase Auth manages signup, login, session persistence, and role-aware route protection.
+- **Clinical Data Layer:** Supabase Postgres stores profiles, care relationships, prescriptions, lab uploads, lab panels, and doctor-authored care actions under RLS.
+- **Storage Layer:** Supabase Storage holds uploaded lab-report files in patient-scoped paths.
+- **Extraction Layer:** PDF.js-based browser extraction reads uploaded reports and attempts to map values into structured biomarkers.
+- **Insight Layer:** Deterministic rule engines generate biomarker interpretation, disease-risk assessments, nutrition plans, wellness tips, and trial-search suggestions.
 
-## Data Flow
+## Main Product Surfaces
 
-1. A doctor or patient signs in through the web portal.
-2. Supabase validates the session and loads the corresponding user profile.
-3. A patient uploads a lab report or a doctor reviews a linked patient record.
-4. PDF content is extracted in the browser and mapped into normalized biomarker entries.
-5. Structured lab panels and related records are saved in Supabase.
-6. Zebra Synapse renders dashboards, prescriptions, care actions, and health insights from the stored data.
+- **Patient portal:** health overview, medical records, appointments, vitals, prescriptions, disease prediction, nutrition, clinical trials, wellness tips, and profile settings.
+- **Doctor portal:** linked patient list, patient detail workspace, prescriptions, notes, quick actions, care timeline, lab results, vitals snapshot, and chart-grounded insights.
 
-## APIs Used
+## Data Model
 
-- **Supabase API:** authentication, relational database access, and storage
-- **PDF.js:** client-side PDF text extraction for medical report ingestion
+- `profiles`: doctor/patient identity, role, and profile metadata
+- `care_relationships`: links a doctor to a patient and stores latest shared clinical snapshot values
+- `prescriptions`: doctor-authored medication records for linked patients
+- `lab_report_uploads`: uploaded file metadata for patient reports
+- `lab_panels`: structured biomarker values extracted from reports
+- `care_actions`: follow-ups, notes, messages, referrals, reports, and treatment-plan actions
+
+## Application Flow
+
+1. A patient or doctor signs in through Supabase Auth.
+2. Route guards load the signed-in profile and role.
+3. Patients upload lab files or doctors open a linked patient chart.
+4. Uploaded PDFs are stored in Supabase Storage and parsed in the browser.
+5. Extracted biomarker values are persisted into `lab_panels`.
+6. Patient insight pages and doctor chart views read from `care_relationships`, `lab_panels`, `lab_report_uploads`, `prescriptions`, and `care_actions`.
+7. Deterministic insight functions convert structured data into readable summaries, risk cards, wellness tips, and research prompts.
+
+## Security Model
+
+- Supabase row-level security protects all clinical tables.
+- `009_security_hardening.sql` forces RLS on PHI tables and adds auditing.
+- `010_security_invariants.sql` adds trigger-based ownership and relationship validation.
+- Browser-exposed configuration is limited to `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+
+## External Libraries And Services
+
+- **Supabase:** auth, relational queries, RLS, and storage
+- **PDF.js / pdfjs-dist:** client-side PDF extraction
+- **Recharts:** visual lab and biomarker insight components
 
 ## AI Model Usage
 
-Zebra Synapse uses an AI-style clinical insight workflow rather than a black-box diagnostic model. The platform converts raw health records into structured biomarker panels and applies deterministic interpretation logic to generate explainable insights, trends, and care-oriented summaries. This design improves trust, traceability, and practical use in a hackathon healthcare setting.
+Zebra Synapse does not rely on a black-box diagnostic model in the deployed portal. Instead, it uses deterministic interpretation and scoring logic over structured biomarkers and extracted document text. This keeps the system explainable, reviewable, and more appropriate for a healthcare hackathon workflow.

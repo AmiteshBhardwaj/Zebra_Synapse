@@ -1,5 +1,7 @@
 # Multimodal Rare Disease Training
 
+This `ml/` package is an offline experimentation area. It is not part of the deployed Zebra Synapse patient or doctor portal runtime.
+
 This package trains a multimodal multi-label classifier over:
 
 - structured MIMIC-IV variables: age, admission demographics, selected lab values

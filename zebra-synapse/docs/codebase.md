@@ -131,6 +131,8 @@ Current sequence:
 6. `006_lab_panel_biomarkers.sql`
 7. `007_profiles_select_linked_users.sql`
 8. `008_care_actions.sql`
+9. `009_security_hardening.sql`
+10. `010_security_invariants.sql`
 
 ## Verification
 
@@ -146,4 +148,5 @@ Manual smoke checks:
 - doctor signup and login
 - lab report upload
 - patient detail quick actions and care activity feed
+- patient insight pages populated from structured lab data
 - prescription create and patient-side visibility
