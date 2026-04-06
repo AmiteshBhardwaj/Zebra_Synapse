@@ -390,7 +390,13 @@ export function getWellnessTips(panel: LabPanelRow): WellnessTip[] {
     });
   }
 
-  return tips;
+  const seen = new Set<string>();
+  return tips.filter((tip) => {
+    const key = `${tip.title}::${tip.detail}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function getTrialMatches(panel: LabPanelRow): TrialMatch[] {
