@@ -15,6 +15,11 @@ function isPdfUpload(upload: LabReportUploadRow): boolean {
   return upload.original_filename.toLowerCase().endsWith(".pdf");
 }
 
+function isMissingMedicalRecordCorpusError(message: string | undefined): boolean {
+  const normalized = (message ?? "").toLowerCase();
+  return normalized.includes("medical_record_corpus");
+}
+
 export function usePatientMedicalRecordCorpus(uploads: LabReportUploadRow[]) {
   const { user, configured } = useAuth();
   const [records, setRecords] = useState<MedicalRecordText[]>([]);
@@ -57,7 +62,9 @@ export function usePatientMedicalRecordCorpus(uploads: LabReportUploadRow[]) {
       if (cancelled) return;
 
       if (error) {
-        console.error("[medical record corpus]", error.message);
+        if (!isMissingMedicalRecordCorpusError(error.message)) {
+          console.error("[medical record corpus]", error.message);
+        }
         setRecords([]);
         setFailedCount(0);
         setLoading(false);
@@ -90,7 +97,12 @@ export function usePatientMedicalRecordCorpus(uploads: LabReportUploadRow[]) {
             .select(MEDICAL_RECORD_CORPUS_SELECT)
             .single();
 
-          if (insertError) throw new Error(insertError.message);
+          if (insertError) {
+            if (isMissingMedicalRecordCorpusError(insertError.message)) {
+              return null;
+            }
+            throw new Error(insertError.message);
+          }
 
           return mapMedicalRecordCorpusRow((inserted as unknown) as MedicalRecordCorpusRow);
         }),

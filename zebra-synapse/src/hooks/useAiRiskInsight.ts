@@ -18,6 +18,50 @@ import type { LabReportUploadRow } from "../lib/labReports";
 import type { MedicalRecordText } from "../lib/medicalRecordCorpus";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
 
+async function resolveFunctionErrorMessage(error: unknown): Promise<string> {
+  if (!(error instanceof Error)) {
+    return "The AI inference request failed.";
+  }
+
+  const candidate = error as Error & {
+    context?: {
+      json?: () => Promise<unknown>;
+      text?: () => Promise<string>;
+    };
+  };
+
+  if (candidate.context?.json) {
+    try {
+      const payload = await candidate.context.json();
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "error" in payload &&
+        typeof (payload as { error?: unknown }).error === "string"
+      ) {
+        return (payload as { error: string }).error;
+      }
+    } catch {
+      // Fall through to other extraction paths.
+    }
+  }
+
+  if (candidate.context?.text) {
+    try {
+      const text = await candidate.context.text();
+      if (text.trim().length > 0) return text.trim();
+    } catch {
+      // Fall through to the original error message.
+    }
+  }
+
+  return error.message;
+}
+
+function normalizeAuthHeader(accessToken: string | null | undefined): Record<string, string> {
+  return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+}
+
 type UseAiRiskInsightArgs = {
   patientId?: string;
   panels: LabPanelRow[];
@@ -124,12 +168,17 @@ export function useAiRiskInsight({
         return;
       }
 
+      const {
+        data: { session },
+      } = await sb.auth.getSession();
+
       const { data, error: invokeError } = await sb.functions.invoke("ai-risk-inference", {
         body: { patientId, forceRefresh: force },
+        headers: normalizeAuthHeader(session?.access_token),
       });
 
       if (invokeError) {
-        setError(invokeError.message);
+        setError(await resolveFunctionErrorMessage(invokeError));
         setRefreshing(false);
         return;
       }

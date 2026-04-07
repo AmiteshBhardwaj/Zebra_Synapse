@@ -38,6 +38,11 @@ function badRequest(message: string, status = 400) {
   return json({ error: message }, { status });
 }
 
+function isMissingMedicalRecordCorpusError(message: string | undefined): boolean {
+  const normalized = (message ?? "").toLowerCase();
+  return normalized.includes("medical_record_corpus");
+}
+
 async function loadPatientContext(args: {
   supabase: ReturnType<typeof createClient>;
   patientId: string;
@@ -78,7 +83,7 @@ async function loadPatientContext(args: {
     return { error: panelsResult.error.message };
   }
 
-  if (corpusResult.error) {
+  if (corpusResult.error && !isMissingMedicalRecordCorpusError(corpusResult.error.message)) {
     return { error: corpusResult.error.message };
   }
 
