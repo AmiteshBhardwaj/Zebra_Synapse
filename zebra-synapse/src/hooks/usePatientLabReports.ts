@@ -3,6 +3,7 @@ import { useAuth } from "../auth/AuthContext";
 import {
   LAB_REPORTS_BUCKET,
   buildLabReportStoragePath,
+  createClientGeneratedId,
   type LabReportUploadRow,
 } from "../lib/labReports";
 import { extractLabPanelFromPdf } from "../lib/labReportExtraction";
@@ -34,7 +35,7 @@ export function usePatientLabReports() {
     setLoading(true);
     const { data, error } = await sb
       .from("lab_report_uploads")
-      .select("id, patient_id, storage_path, original_filename, created_at")
+      .select("id, original_filename, created_at")
       .eq("patient_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -60,21 +61,19 @@ export function usePatientLabReports() {
       if (fileError) throw new Error(fileError);
 
       const path = buildLabReportStoragePath(user.id, file.name);
+      const uploadId = createClientGeneratedId();
       const { error: upErr } = await sb.storage.from(LAB_REPORTS_BUCKET).upload(path, file, {
         cacheControl: "3600",
         upsert: false,
       });
       if (upErr) throw upErr;
 
-      const { data: uploadRow, error: rowErr } = await sb
-        .from("lab_report_uploads")
-        .insert({
+      const { error: rowErr } = await sb.from("lab_report_uploads").insert({
+          id: uploadId,
           patient_id: user.id,
           storage_path: path,
           original_filename: file.name,
-        })
-        .select("id, patient_id, storage_path, original_filename, created_at")
-        .single();
+        });
       if (rowErr) {
         await sb.storage.from(LAB_REPORTS_BUCKET).remove([path]);
         throw rowErr;
@@ -91,7 +90,7 @@ export function usePatientLabReports() {
         const { error: panelErr } = await sb.from("lab_panels").upsert(
           {
             patient_id: user.id,
-            upload_id: uploadRow.id,
+            upload_id: uploadId,
             recorded_at: recordedAt,
             biomarkers,
             hemoglobin_a1c: values.hemoglobinA1c ?? null,
