@@ -36,7 +36,164 @@ export type TrialMatch = {
   title: string;
   summary: string;
   query: string;
+  searchUrl: string;
+  studies: TrialStudy[];
 };
+
+export type TrialStudy = {
+  nctId: string;
+  title: string;
+  href: string;
+  status: string;
+  fitNote: string;
+};
+
+type TrialCategoryConfig = TrialMatch;
+
+function buildClinicalTrialsSearchUrl(query: string): string {
+  return `https://clinicaltrials.gov/search?term=${encodeURIComponent(query)}`;
+}
+
+function buildStudy(
+  nctId: string,
+  title: string,
+  status: string,
+  fitNote: string,
+): TrialStudy {
+  return {
+    nctId,
+    title,
+    href: `https://clinicaltrials.gov/study/${nctId}`,
+    status,
+    fitNote,
+  };
+}
+
+function createTrialCategory(
+  title: string,
+  summary: string,
+  query: string,
+  studies: TrialStudy[],
+): TrialCategoryConfig {
+  return {
+    title,
+    summary,
+    query,
+    searchUrl: buildClinicalTrialsSearchUrl(query),
+    studies,
+  };
+}
+
+const GLUCOSE_TRIAL_CATEGORY = createTrialCategory(
+  "Prediabetes and diabetes prevention studies",
+  "Your glucose markers suggest a metabolism-focused category often used for prediabetes or diabetes-prevention research screening.",
+  "prediabetes OR type 2 diabetes prevention",
+  [
+    buildStudy(
+      "NCT07243821",
+      "Metabolic Syndrome and Prediabetes",
+      "Recruiting",
+      "Fits elevated A1c or glucose patterns that can overlap with metabolic syndrome and prediabetes screening.",
+    ),
+    buildStudy(
+      "NCT05426525",
+      "Use of Empagliflozin to Treat Prediabetes",
+      "Active, not recruiting",
+      "Relevant when glucose markers are above ideal and the focus is delaying progression toward type 2 diabetes.",
+    ),
+    buildStudy(
+      "NCT00004992",
+      "Diabetes Prevention Program",
+      "Completed",
+      "Classic prevention reference for adults at high risk of diabetes based on impaired glucose tolerance.",
+    ),
+  ],
+);
+
+const LIPID_TRIAL_CATEGORY = createTrialCategory(
+  "Cholesterol and cardiometabolic studies",
+  "Your lipid markers point toward dyslipidemia and cardiometabolic-risk research categories used in cholesterol or triglyceride-focused studies.",
+  "dyslipidemia OR hyperlipidemia prevention",
+  [
+    buildStudy(
+      "NCT07223658",
+      "Study of ARO-DIMERPA in Adult Participants With Mixed Hyperlipidemia",
+      "Recruiting",
+      "Useful when LDL and triglyceride elevations suggest a mixed hyperlipidemia pattern.",
+    ),
+    buildStudy(
+      "NCT05852431",
+      "To Evaluate the Efficacy and Safety of Pegozafermin in Subjects With Severe Hypertriglyceridemia",
+      "Active, not recruiting",
+      "Relevant when triglycerides are part of the patient-specific signal driving the match.",
+    ),
+    buildStudy(
+      "NCT01737099",
+      "Efficacy and Safety Study of DHA-O in Adults With Hypertriglyceridemia",
+      "Completed",
+      "Reference study for adults with elevated triglycerides and broader cardiometabolic risk.",
+    ),
+  ],
+);
+
+const KIDNEY_TRIAL_CATEGORY = createTrialCategory(
+  "Kidney monitoring studies",
+  "Creatinine-driven follow-up can overlap with chronic-kidney-disease research categories focused on progression, monitoring, or kidney-protection strategies.",
+  "chronic kidney disease early monitoring",
+  [
+    buildStudy(
+      "NCT06531824",
+      "EASi-KIDNEY (The Studies of Heart & Kidney Protection With BI 690517 in Combination With Empagliflozin)",
+      "Recruiting",
+      "Relevant when kidney follow-up is needed and the concern is progression risk in chronic kidney disease.",
+    ),
+    buildStudy(
+      "NCT06268873",
+      "A Phase III Study to Investigate the Efficacy and Safety of Baxdrostat in Combination With Dapagliflozin on CKD Progression in Participants With CKD and High Blood Pressure.",
+      "Active, not recruiting",
+      "Fits patients whose renal follow-up sits alongside blood pressure and cardiorenal risk management.",
+    ),
+    buildStudy(
+      "NCT05914259",
+      "An Observational Study to Learn More How Chronic Kidney Disease Gradually Changes Over Time in Adults Using Electronic Healthcare Records",
+      "Completed",
+      "Helpful as a reference example for longitudinal CKD monitoring and disease-progression tracking.",
+    ),
+  ],
+);
+
+const ANEMIA_TRIAL_CATEGORY = createTrialCategory(
+  "Anemia and iron deficiency studies",
+  "Low hemoglobin can align with anemia and iron-deficiency research categories that study cause, treatment response, or symptom improvement.",
+  "anemia OR iron deficiency",
+  [
+    buildStudy(
+      "NCT06366698",
+      "Intravenous Iron Versus Oral Iron for the Treatment of Iron Deficiency Anemia",
+      "Recruiting",
+      "Relevant when low hemoglobin raises questions about iron-replacement strategies and treatment response.",
+    ),
+    buildStudy(
+      "NCT05985070",
+      "Evaluating the Effectiveness of Various Iron Salts in Oral Iron Therapy for Iron Deficiency and Anemia in Healthy Adults",
+      "Active, not recruiting",
+      "Useful when the signal suggests iron-deficiency screening terms rather than a single fixed diagnosis.",
+    ),
+    buildStudy(
+      "NCT05185024",
+      "Daily Oral Iron Supplementation for Replenishment of Depleted Iron in Adults",
+      "Completed",
+      "Reference study for adult iron-deficiency correction tied to hemoglobin and ferritin recovery.",
+    ),
+  ],
+);
+
+const GENERIC_TRIAL_CATEGORY = createTrialCategory(
+  "General preventive health studies",
+  "No strong lab-driven category was detected, so this falls back to a broader prevention search rather than pinned trial records.",
+  "preventive health adults",
+  [],
+);
 
 function statusRank(status: MetricAssessment["status"]): number {
   switch (status) {
@@ -406,46 +563,26 @@ export function getTrialMatches(panel: LabPanelRow): TrialMatch[] {
     (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 5.7) ||
     (panel.fasting_glucose != null && panel.fasting_glucose >= 100)
   ) {
-    trials.push({
-      title: "Prediabetes and diabetes prevention studies",
-      summary: "Your glucose markers may align with screening terms used in metabolic prevention trials.",
-      query: "prediabetes OR type 2 diabetes prevention",
-    });
+    trials.push(GLUCOSE_TRIAL_CATEGORY);
   }
 
   if (
     (panel.ldl != null && panel.ldl >= 100) ||
     (panel.triglycerides != null && panel.triglycerides >= 150)
   ) {
-    trials.push({
-      title: "Cholesterol and cardiometabolic studies",
-      summary: "Lipid markers may fit search terms around dyslipidemia or cardiovascular prevention.",
-      query: "dyslipidemia OR hyperlipidemia prevention",
-    });
+    trials.push(LIPID_TRIAL_CATEGORY);
   }
 
   if (panel.creatinine != null && panel.creatinine > 1.3) {
-    trials.push({
-      title: "Kidney monitoring studies",
-      summary: "Renal follow-up trials often screen for reduced kidney reserve or chronic kidney disease risk.",
-      query: "chronic kidney disease early monitoring",
-    });
+    trials.push(KIDNEY_TRIAL_CATEGORY);
   }
 
   if (panel.hemoglobin != null && panel.hemoglobin < 12) {
-    trials.push({
-      title: "Anemia and iron deficiency studies",
-      summary: "Low hemoglobin can map to anemia-related screening categories.",
-      query: "anemia OR iron deficiency",
-    });
+    trials.push(ANEMIA_TRIAL_CATEGORY);
   }
 
   if (trials.length === 0) {
-    trials.push({
-      title: "General preventive health studies",
-      summary: "No strong lab-driven category was detected, so use broader prevention search terms.",
-      query: "preventive health adults",
-    });
+    trials.push(GENERIC_TRIAL_CATEGORY);
   }
 
   return trials;

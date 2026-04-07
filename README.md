@@ -1,24 +1,27 @@
 # Zebra Synapse Repository
 
-This repository is structured for hackathon submission requirements.
+This repository contains the Zebra Synapse hackathon submission and the production-ready source package used for local development and deployment.
 
-## Submission Folder
+## Start Here
 
-The complete project is contained in [`zebra-synapse`](./zebra-synapse).
+The runnable application lives in [`zebra-synapse`](./zebra-synapse).
 
-That folder includes:
+Open [`zebra-synapse/README.md`](./zebra-synapse/README.md) for:
 
-- the runnable application source
-- the hackathon submission `README.md`
-- `architecture.md` with system design details
-- `demo.md` with the walkthrough and judging flow
+- project overview
+- local setup
+- Vercel deployment steps
+- required Supabase migrations
+- demo and submission context
 
 ## Repository Layout
 
 - `.github/`: CI workflow configuration
-- `zebra-synapse/`: final submission package
-- `requirements.txt`: environment prerequisites summary
+- `zebra-synapse/`: application source, Supabase migrations, submission docs, and assets
+- [`requirements.txt`](./requirements.txt): top-level toolchain summary
 
-## Start Here
+## Important Notes
 
-Open [`zebra-synapse/README.md`](./zebra-synapse/README.md) for the full project overview, setup steps, and submission details.
+- The Vercel root directory should be `zebra-synapse`.
+- The app depends on Supabase Auth, Postgres, Storage, and RLS-backed policies.
+- Doctor workflows that use care activity require [`008_care_actions.sql`](./zebra-synapse/supabase/migrations/008_care_actions.sql) to be applied in Supabase.
