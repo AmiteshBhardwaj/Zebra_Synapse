@@ -60,6 +60,7 @@ python zebra-synapse\ml\train_mimic.py `
 - `history.json`: epoch-by-epoch metrics
 - `metadata.json`: feature names and label vocabulary
 - `prepared/`: optional prepared JSON samples
+- `exports/rare_disease_screen_v1.json`: versioned runtime manifest for the deployed AI risk labels
 
 ## Assumptions
 

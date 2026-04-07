@@ -12,9 +12,10 @@ This document gives judges a fast path to evaluating Zebra Synapse.
 1. Open `zebra-synapse`.
 2. Run `npm install`.
 3. Configure environment variables from `.env.example`.
-4. Apply the ordered migrations in `supabase/migrations/001_profiles.sql` through `010_security_invariants.sql`.
+4. Apply the ordered migrations in `supabase/migrations/001_profiles.sql` through `012_medical_record_corpus.sql`.
 5. If you want the seeded demo network, run `supabase/migrations/seed_doctors_patients.sql` after the base migrations are applied.
-6. Start the app with `npm run dev`.
+6. If you want a deterministic AI-risk verification patient, run `supabase/seed_ai_risk_verification.sql`.
+7. Start the app with `npm run dev`.
 
 ## Seed Demo Accounts
 
@@ -54,6 +55,15 @@ Doctor to patient mapping:
 6. Open medical records, vitals, disease prediction, clinical trials, wellness tips, and prescriptions to show how the patient portal reuses the same structured data.
 7. Upload or review a lab report and walk through PDF extraction, structured biomarker output, and generated insights.
 8. Demonstrate how doctors and patients share the same underlying clinical record.
+
+## AI Risk Verification Flow
+
+Use this when you want to show the persisted AI-risk path without uploading a new PDF during the demo.
+
+1. Apply `supabase/seed_ai_risk_verification.sql` after the normal seed data.
+2. Sign in as `zebra-seed-patient-3@example.test` and open Disease Prediction.
+3. Confirm the patient has a structured panel, persisted corpus text, and an AI snapshot can be generated.
+4. Sign in as `zebra-seed-doctor-1@example.test`, open the same patient, and confirm the doctor AI insights tab shows the same persisted result with richer metadata.
 
 ## Run Commands
 

@@ -1,0 +1,16 @@
+{
+  "modelKey": "rare-disease-screen",
+  "modelVersion": "ml-adapted-v1",
+  "exportedAt": "2026-04-07T00:00:00Z",
+  "runtime": "supabase-edge-ts",
+  "source": "zebra-synapse/src/lib/diseaseRiskModel.ts",
+  "targets": [
+    { "conditionKey": "mds", "title": "Myelodysplastic Syndromes (MDS)" },
+    { "conditionKey": "multiple-myeloma", "title": "Multiple Myeloma" },
+    { "conditionKey": "sle", "title": "Systemic Lupus Erythematosus (SLE)" },
+    { "conditionKey": "anca-vasculitis", "title": "ANCA-Associated Vasculitis" },
+    { "conditionKey": "hemochromatosis", "title": "Hemochromatosis" },
+    { "conditionKey": "ahp", "title": "Acute Hepatic Porphyria (AHP)" },
+    { "conditionKey": "attr-cm", "title": "Transthyretin Amyloid Cardiomyopathy (ATTR-CM)" }
+  ]
+}

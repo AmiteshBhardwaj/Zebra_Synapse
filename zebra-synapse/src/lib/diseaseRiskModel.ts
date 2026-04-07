@@ -1,7 +1,7 @@
-import type { PatientMedicalRecordText } from "../hooks/usePatientMedicalRecordCorpus";
 import { getBiomarkerDefinition } from "./biomarkerCatalog";
 import type { LabPanelRow } from "./labPanels";
 import type { LabReportUploadRow } from "./labReports";
+import type { MedicalRecordText } from "./medicalRecordCorpus";
 
 type DiseaseFamily =
   | "Hematological & Oncological"
@@ -27,7 +27,7 @@ type TrendStats = {
 type AnalysisContext = {
   uploads: LabReportUploadRow[];
   panels: LabPanelRow[];
-  recordTexts: PatientMedicalRecordText[];
+  recordTexts: MedicalRecordText[];
   noteCorpus: string;
   latestPanel: LabPanelRow | null;
   longitudinalSpanDays: number;
@@ -261,7 +261,7 @@ function countAbnormalLatestMarkers(context: AnalysisContext): number {
 function buildContext(args: {
   panels: LabPanelRow[];
   uploads: LabReportUploadRow[];
-  recordTexts: PatientMedicalRecordText[];
+  recordTexts: MedicalRecordText[];
 }): AnalysisContext {
   const panels = sortPanelsAscending(args.panels);
   const latestPanel = panels.length > 0 ? panels[panels.length - 1] : null;
@@ -928,7 +928,7 @@ function buildFamilySummaries(assessments: DiseaseRiskAssessment[]): DiseaseFami
 export function analyzeDiseaseRiskProfile(args: {
   panels: LabPanelRow[];
   uploads: LabReportUploadRow[];
-  recordTexts: PatientMedicalRecordText[];
+  recordTexts: MedicalRecordText[];
 }): DiseaseRiskProfile {
   const context = buildContext(args);
   const assessments = [

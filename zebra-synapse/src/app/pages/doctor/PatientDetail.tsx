@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
+import { useAiRiskInsight } from "../../../hooks/useAiRiskInsight";
 import {
   CARE_RELATIONSHIPS_LIST_SELECT,
   formatBloodPressure,
@@ -68,10 +69,13 @@ import {
   portalPanelClass,
   portalPrimaryButtonClass,
   portalSecondaryButtonClass,
+  StatusPill,
 } from "../../components/patient/PortalTheme";
 
 type PatientLabUploadRow = {
   id: string;
+  patient_id: string;
+  storage_path: string;
   original_filename: string;
   created_at: string;
 };
@@ -360,7 +364,7 @@ export default function PatientDetail() {
     setLabLoading(true);
     const { data, error } = await sb
       .from("lab_report_uploads")
-      .select("id, original_filename, created_at")
+      .select("id, patient_id, storage_path, original_filename, created_at")
       .eq("patient_id", patientId)
       .order("created_at", { ascending: false });
     setLabLoading(false);
@@ -524,6 +528,33 @@ export default function PatientDetail() {
     bloodPressureDiastolic: rel?.blood_pressure_diastolic,
     riskFlags: rel?.risk_flags,
     status: patient.status,
+  });
+  const {
+    insight: aiRiskInsight,
+    loading: aiRiskLoading,
+    refreshing: aiRiskRefreshing,
+    error: aiRiskError,
+    isStale: aiRiskStale,
+    refetch: refetchAiRiskInsight,
+  } = useAiRiskInsight({
+    patientId,
+    panels: labPanels,
+    uploads: labUploads,
+    recordTexts: [],
+    careSnapshot: rel
+      ? {
+          last_visit: rel.last_visit,
+          primary_condition: rel.primary_condition,
+          heart_rate: rel.heart_rate,
+          blood_pressure_systolic: rel.blood_pressure_systolic,
+          blood_pressure_diastolic: rel.blood_pressure_diastolic,
+          glucose: rel.glucose,
+          health_status: rel.health_status,
+          risk_flags: rel.risk_flags,
+          created_at: rel.created_at,
+        }
+      : null,
+    enabled: Boolean(rel && patientId),
   });
   const activityFeed: TimelineItem[] = [
     ...careActions.map((action) => ({
@@ -1228,30 +1259,163 @@ export default function PatientDetail() {
             <Card className={portalPanelClass}>
               <CardHeader>
                 <CardTitle>AI insights</CardTitle>
-                <CardDescription>Grounded in current chart data and structured labs</CardDescription>
+                <CardDescription>Persisted model-driven risk output with chart-grounded fallback context</CardDescription>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {relationshipInsights.map((insight) => (
-                  <div key={insight.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="font-semibold text-white">{insight.title}</p>
-                    <p className="mt-2 text-sm text-white/60">{insight.summary}</p>
-                    <p className="mt-3 text-sm text-[#ffb788]">{insight.nextStep}</p>
-                  </div>
-                ))}
-                {latestLabStatus ? (
+              <CardContent className="space-y-4">
+                {aiRiskLoading ? (
+                  <p className="text-sm text-white/60">Loading AI risk snapshot...</p>
+                ) : aiRiskInsight ? (
+                  <>
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Model version</p>
+                        <p className="mt-2 font-semibold text-white">{aiRiskInsight.modelVersion}</p>
+                        <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/40">
+                          {aiRiskInsight.modelKey}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Status</p>
+                        <div className="mt-2 flex items-center gap-3">
+                          <StatusPill
+                            status={
+                              aiRiskInsight.status === "ready"
+                                ? "normal"
+                                : aiRiskInsight.status === "partial"
+                                  ? "moderate"
+                                  : "high"
+                            }
+                          />
+                          <p className="font-semibold capitalize text-white">{aiRiskInsight.status}</p>
+                        </div>
+                        <p className="mt-3 text-sm capitalize text-white/60">
+                          Source: {aiRiskInsight.source.replaceAll("_", " ")}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Generated</p>
+                        <p className="mt-2 font-semibold text-white">
+                          {formatCareActionDateTime(aiRiskInsight.generatedAt)}
+                        </p>
+                        {aiRiskRefreshing ? (
+                          <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#ffb788]">Refreshing</p>
+                        ) : aiRiskStale ? (
+                          <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[#ffcfaa]">Stale</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    {aiRiskError ? (
+                      <div className="rounded-2xl border border-[#ff9f7a]/20 bg-[#ff9f7a]/[0.08] p-4">
+                        <p className="text-sm leading-7 text-[#ffd0bf]">{aiRiskError}</p>
+                      </div>
+                    ) : null}
+                    <div className="rounded-2xl border border-[#3B82F6]/20 bg-[#3B82F6]/[0.08] p-4">
+                      <p className="text-sm leading-7 text-[#c7ddff]">{aiRiskInsight.disclaimer}</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                      {aiRiskInsight.risks.map((risk) => (
+                        <div key={risk.conditionKey} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-white">{risk.title}</p>
+                              <p className="mt-2 text-sm text-white/60">{risk.summary}</p>
+                            </div>
+                            <Badge className="border border-white/10 bg-white/[0.08] text-white">
+                              {risk.band} {risk.score}
+                            </Badge>
+                          </div>
+                          <div className="mt-4 grid grid-cols-2 gap-3">
+                            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Confidence</p>
+                              <p className="mt-2 text-lg font-semibold text-white">{risk.confidence}</p>
+                            </div>
+                            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                              <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Band</p>
+                              <div className="mt-2">
+                                <StatusPill status={risk.band} />
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-4 space-y-2">
+                            <p className="text-sm font-medium text-white">Primary drivers</p>
+                            {risk.drivers.length > 0 ? (
+                              risk.drivers.map((driver) => (
+                                <div key={driver} className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
+                                  {driver}
+                                </div>
+                              ))
+                            ) : (
+                              <div className="rounded-xl border border-white/10 bg-black/20 p-3 text-sm text-white/70">
+                                No detailed driver text was returned for this prediction.
+                              </div>
+                            )}
+                          </div>
+                          <p className="mt-4 text-sm text-[#ffb788]">{risk.recommendedNextStep}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="text-xs uppercase tracking-[0.18em] text-white/40">Input coverage</p>
+                      <p className="mt-2 text-sm text-white/70">{aiRiskInsight.inputCoverage.summary}</p>
+                      <p className="mt-3 text-sm text-white/50">
+                        {aiRiskInsight.inputCoverage.panelCount} panel(s), {aiRiskInsight.inputCoverage.textDocumentCount} extracted document(s), {aiRiskInsight.inputCoverage.longitudinalSpanDays} longitudinal day(s)
+                      </p>
+                      {aiRiskInsight.inputCoverage.usedLinkedCareFallback ? (
+                        <p className="mt-3 text-xs uppercase tracking-[0.18em] text-[#ffcfaa]">
+                          Linked-care fallback used
+                        </p>
+                      ) : null}
+                      {aiRiskStale ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`mt-4 ${portalSecondaryButtonClass}`}
+                          onClick={() => void refetchAiRiskInsight()}
+                          disabled={aiRiskRefreshing}
+                        >
+                          {aiRiskRefreshing ? "Refreshing..." : "Refresh AI snapshot"}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </>
+                ) : (
                   <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="font-semibold text-white">Latest structured panel</p>
+                    <p className="font-semibold text-white">Persisted AI output unavailable</p>
                     <p className="mt-2 text-sm text-white/60">
-                      {latestLabStatus.label} from the panel recorded {formatLabDate(latestLabPanel!.recorded_at)}.
+                      The chart can still fall back to relationship signals and rule-based lab interpretation while a persisted model snapshot is missing.
                     </p>
-                    <p className="mt-3 text-sm text-[#ffb788]">{latestLabStatus.summary}</p>
                   </div>
-                ) : null}
+                )}
               </CardContent>
             </Card>
 
-            {latestLabPanel ? (
-              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <Card className={portalPanelClass}>
+                <CardHeader>
+                  <CardTitle>Chart-grounded fallback</CardTitle>
+                  <CardDescription>Relationship signals and structured panel context kept alongside AI output</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  {relationshipInsights.map((insight) => (
+                    <div key={insight.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="font-semibold text-white">{insight.title}</p>
+                      <p className="mt-2 text-sm text-white/60">{insight.summary}</p>
+                      <p className="mt-3 text-sm text-[#ffb788]">{insight.nextStep}</p>
+                    </div>
+                  ))}
+                  {latestLabStatus ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="font-semibold text-white">Latest structured panel</p>
+                      <p className="mt-2 text-sm text-white/60">
+                        {latestLabStatus.label} from the panel recorded {formatLabDate(latestLabPanel!.recorded_at)}.
+                      </p>
+                      <p className="mt-3 text-sm text-[#ffb788]">{latestLabStatus.summary}</p>
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              {latestLabPanel ? (
                 <Card className={portalPanelClass}>
                   <CardHeader>
                     <CardTitle>Disease risk signals</CardTitle>
@@ -1272,29 +1436,51 @@ export default function PatientDetail() {
                     ))}
                   </CardContent>
                 </Card>
-
+              ) : (
                 <Card className={portalPanelClass}>
                   <CardHeader>
-                    <CardTitle>Recommended coaching themes</CardTitle>
-                    <CardDescription>Nutrition and wellness guidance inferred from the latest panel</CardDescription>
+                    <CardTitle>Missing signals</CardTitle>
+                    <CardDescription>What would improve the next AI pass</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    {nutritionPlans.slice(0, 2).map((plan) => (
-                      <div key={plan.headline} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                        <p className="font-semibold text-white">{plan.headline}</p>
-                        <p className="mt-2 text-sm text-white/60">{plan.focus}</p>
-                        <p className="mt-3 text-sm text-[#ffb788]">{plan.actions[0]}</p>
-                      </div>
-                    ))}
-                    {wellnessTips.slice(0, 2).map((tip) => (
-                      <div key={tip.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                        <p className="font-semibold text-white">{tip.title}</p>
-                        <p className="mt-2 text-sm text-white/60">{tip.detail}</p>
-                      </div>
-                    ))}
+                    {(aiRiskInsight?.inputCoverage.missingSignals ?? []).length > 0 ? (
+                      aiRiskInsight!.inputCoverage.missingSignals.map((item) => (
+                        <div key={item} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-sm text-white/70">
+                          {item}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-white/60">
+                        Structured labs are not available yet, so the tab is limited to linked-care context.
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
-              </div>
+              )}
+            </div>
+
+            {latestLabPanel ? (
+              <Card className={portalPanelClass}>
+                <CardHeader>
+                  <CardTitle>Recommended coaching themes</CardTitle>
+                  <CardDescription>Nutrition and wellness guidance inferred from the latest panel</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                  {nutritionPlans.slice(0, 2).map((plan) => (
+                    <div key={plan.headline} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="font-semibold text-white">{plan.headline}</p>
+                      <p className="mt-2 text-sm text-white/60">{plan.focus}</p>
+                      <p className="mt-3 text-sm text-[#ffb788]">{plan.actions[0]}</p>
+                    </div>
+                  ))}
+                  {wellnessTips.slice(0, 2).map((tip) => (
+                    <div key={tip.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                      <p className="font-semibold text-white">{tip.title}</p>
+                      <p className="mt-2 text-sm text-white/60">{tip.detail}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             ) : null}
           </div>
         </TabsContent>

@@ -2,14 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import { type LabReportUploadRow, LAB_REPORTS_BUCKET } from "../lib/labReports";
 import { extractTextFromPdfBlob } from "../lib/labReportExtraction";
+import {
+  buildMedicalRecordCorpusInsert,
+  mapMedicalRecordCorpusRow,
+  MEDICAL_RECORD_CORPUS_SELECT,
+  type MedicalRecordCorpusRow,
+  type MedicalRecordText,
+} from "../lib/medicalRecordCorpus";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
-
-export type PatientMedicalRecordText = {
-  uploadId: string;
-  fileName: string;
-  text: string;
-  charCount: number;
-};
 
 function isPdfUpload(upload: LabReportUploadRow): boolean {
   return upload.original_filename.toLowerCase().endsWith(".pdf");
@@ -17,7 +17,7 @@ function isPdfUpload(upload: LabReportUploadRow): boolean {
 
 export function usePatientMedicalRecordCorpus(uploads: LabReportUploadRow[]) {
   const { user, configured } = useAuth();
-  const [records, setRecords] = useState<PatientMedicalRecordText[]>([]);
+  const [records, setRecords] = useState<MedicalRecordText[]>([]);
   const [loading, setLoading] = useState(false);
   const [failedCount, setFailedCount] = useState(0);
 
@@ -26,7 +26,7 @@ export function usePatientMedicalRecordCorpus(uploads: LabReportUploadRow[]) {
   useEffect(() => {
     let cancelled = false;
 
-    if (!isSupabaseConfigured() || !configured || !user || pdfUploads.length === 0) {
+    if (!isSupabaseConfigured() || !configured || !user) {
       setRecords([]);
       setFailedCount(0);
       setLoading(false);
@@ -48,8 +48,28 @@ export function usePatientMedicalRecordCorpus(uploads: LabReportUploadRow[]) {
     setLoading(true);
 
     void (async () => {
+      const { data, error } = await sb
+        .from("medical_record_corpus")
+        .select(MEDICAL_RECORD_CORPUS_SELECT)
+        .eq("patient_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("[medical record corpus]", error.message);
+        setRecords([]);
+        setFailedCount(0);
+        setLoading(false);
+        return;
+      }
+
+      const persistedRows = ((data ?? []) as unknown) as MedicalRecordCorpusRow[];
+      const persistedByUploadId = new Map(persistedRows.map((row) => [row.upload_id, row]));
+      const missingUploads = pdfUploads.filter((upload) => !persistedByUploadId.has(upload.id));
+
       const settled = await Promise.allSettled(
-        pdfUploads.map(async (upload) => {
+        missingUploads.map(async (upload) => {
           const { data, error } = await sb.storage.from(LAB_REPORTS_BUCKET).download(upload.storage_path);
           if (error) throw new Error(error.message);
 
@@ -57,18 +77,28 @@ export function usePatientMedicalRecordCorpus(uploads: LabReportUploadRow[]) {
           const text = extracted.text.trim();
           if (text.length < 60) return null;
 
-          return {
+          const insertPayload = buildMedicalRecordCorpusInsert({
+            patientId: user.id,
             uploadId: upload.id,
             fileName: upload.original_filename,
             text,
-            charCount: text.length,
-          } satisfies PatientMedicalRecordText;
+          });
+
+          const { data: inserted, error: insertError } = await sb
+            .from("medical_record_corpus")
+            .upsert(insertPayload, { onConflict: "upload_id" })
+            .select(MEDICAL_RECORD_CORPUS_SELECT)
+            .single();
+
+          if (insertError) throw new Error(insertError.message);
+
+          return mapMedicalRecordCorpusRow((inserted as unknown) as MedicalRecordCorpusRow);
         }),
       );
 
       if (cancelled) return;
 
-      const nextRecords: PatientMedicalRecordText[] = [];
+      const nextRecords: MedicalRecordText[] = persistedRows.map(mapMedicalRecordCorpusRow);
       let nextFailedCount = 0;
 
       for (const result of settled) {

@@ -76,6 +76,19 @@ If you set `VITE_SITE_URL`, it must match an allowed Supabase redirect origin ex
 - `npm run build`
 - `npm run typecheck`
 
+## Local AI Risk Verification
+
+To validate the full AI-risk path locally with seeded data:
+
+1. Start local Supabase with `npm run supabase:start`
+2. Apply migrations through [`012_medical_record_corpus.sql`](e:\Projects\vs repo\Final Zebra Synapse Agentic Ai\codesquad2\zebra-synapse\supabase\migrations\012_medical_record_corpus.sql)
+3. Run [`seed_doctors_patients.sql`](e:\Projects\vs repo\Final Zebra Synapse Agentic Ai\codesquad2\zebra-synapse\supabase\migrations\seed_doctors_patients.sql)
+4. Run [`seed_ai_risk_verification.sql`](e:\Projects\vs repo\Final Zebra Synapse Agentic Ai\codesquad2\zebra-synapse\supabase\seed_ai_risk_verification.sql)
+5. Sign in as `zebra-seed-patient-3@example.test` or `zebra-seed-doctor-1@example.test`
+6. Open the patient disease prediction page or doctor patient detail AI insights tab
+
+The verification seed creates one reproducible patient-scoped upload, structured lab panel, and persisted medical record corpus entry so the AI inference path can generate and cache an `ai_risk_insights` row without manual upload steps.
+
 ## Security Baseline
 
 - Apply [`supabase/migrations/009_security_hardening.sql`](./supabase/migrations/009_security_hardening.sql) and [`supabase/migrations/010_security_invariants.sql`](./supabase/migrations/010_security_invariants.sql) after the existing migrations. Together they add forced RLS on PHI tables, immutable ownership controls, relationship validation, upload path validation, and an audit log for sensitive writes.
