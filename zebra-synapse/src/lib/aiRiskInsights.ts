@@ -1,7 +1,7 @@
-import { analyzeDiseaseRiskProfile } from "./diseaseRiskModel";
-import type { LabPanelRow } from "./labPanels";
-import type { LabReportUploadRow } from "./labReports";
-import type { MedicalRecordText } from "./medicalRecordCorpus";
+import { analyzeDiseaseRiskProfile } from "./diseaseRiskModel.ts";
+import type { LabPanelRow } from "./labPanels.ts";
+import type { LabReportUploadRow } from "./labReports.ts";
+import type { MedicalRecordText } from "./medicalRecordCorpus.ts";
 
 export const AI_RISK_MODEL_KEY = "rare-disease-screen";
 export const AI_RISK_MODEL_VERSION = "ml-adapted-v1";

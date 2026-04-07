@@ -37,6 +37,7 @@ export default function DiseasePrediction() {
     insight,
     loading: insightLoading,
     refreshing,
+    error,
     isStale,
   } = useAiRiskInsight({
     patientId: user?.id,
@@ -192,6 +193,12 @@ export default function DiseasePrediction() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
+                {error ? (
+                  <div className={`${portalInsetClass} border border-[#ff9f7a]/20 bg-[#ff9f7a]/[0.08] p-4`}>
+                    <p className="text-sm font-medium text-[#ffd0bf]">AI request error</p>
+                    <p className="mt-2 text-sm text-[#ffd0bf]/90">{error}</p>
+                  </div>
+                ) : null}
                 {deterministicPredictions.map((prediction) => (
                   <div key={prediction.title} className={`${portalInsetClass} p-4`}>
                     <div className="flex items-center justify-between gap-3">

@@ -64,7 +64,8 @@ See [demo.md](./demo.md) for demo flow, setup, and what judges should inspect. A
    - `Authentication -> URL Configuration -> Site URL`
    - `Authentication -> URL Configuration -> Redirect URLs`
 7. Apply the SQL migrations in [`supabase/migrations/`](./supabase/migrations/) to the target Supabase project before testing sign-up, login, prescriptions, or lab data flows.
-8. Trigger a production deployment.
+8. Deploy the Supabase Edge Function in [`supabase/functions/ai-risk-inference`](./supabase/functions/ai-risk-inference) to the same Supabase project before testing AI insights.
+9. Trigger a production deployment.
 
 Do not use commands such as `cd zebra-synapse && npm ci` in Vercel. Once the root directory is `zebra-synapse`, Vercel already runs inside that folder.
 
@@ -88,6 +89,12 @@ To validate the full AI-risk path locally with seeded data:
 6. Open the patient disease prediction page or doctor patient detail AI insights tab
 
 The verification seed creates one reproducible patient-scoped upload, structured lab panel, and persisted medical record corpus entry so the AI inference path can generate and cache an `ai_risk_insights` row without manual upload steps.
+
+If AI insight cards still do not appear, verify all three backend pieces exist in the same Supabase project:
+
+1. [`011_ai_risk_insights.sql`](e:\Projects\vs repo\Final Zebra Synapse Agentic Ai\codesquad2\zebra-synapse\supabase\migrations\011_ai_risk_insights.sql)
+2. [`012_medical_record_corpus.sql`](e:\Projects\vs repo\Final Zebra Synapse Agentic Ai\codesquad2\zebra-synapse\supabase\migrations\012_medical_record_corpus.sql)
+3. The deployed `ai-risk-inference` Edge Function
 
 ## Security Baseline
 

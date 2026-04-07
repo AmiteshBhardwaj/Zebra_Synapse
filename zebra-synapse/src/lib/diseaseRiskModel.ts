@@ -1,7 +1,7 @@
-import { getBiomarkerDefinition } from "./biomarkerCatalog";
-import type { LabPanelRow } from "./labPanels";
-import type { LabReportUploadRow } from "./labReports";
-import type { MedicalRecordText } from "./medicalRecordCorpus";
+import { getBiomarkerDefinition } from "./biomarkerCatalog.ts";
+import type { LabPanelRow } from "./labPanels.ts";
+import type { LabReportUploadRow } from "./labReports.ts";
+import type { MedicalRecordText } from "./medicalRecordCorpus.ts";
 
 type DiseaseFamily =
   | "Hematological & Oncological"
