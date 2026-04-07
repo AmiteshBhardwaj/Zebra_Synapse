@@ -8,7 +8,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AuthApiError, type Session, type User } from "@supabase/supabase-js";
+import {
+  AuthApiError,
+  type AuthChangeEvent,
+  type Session,
+  type User,
+} from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   clearSupabaseAuthStorage,
@@ -54,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured());
   const inactivityTimerRef = useRef<number | null>(null);
+  const bootstrapCompleteRef = useRef(false);
   const inactivityTimeoutMs = getAuthInactivityTimeoutMs();
 
   const clearInvalidSession = useCallback(
@@ -96,6 +102,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
 
+    const handleAuthStateChange = async (
+      event: AuthChangeEvent,
+      nextSession: Session | null,
+    ) => {
+      if (!bootstrapCompleteRef.current && event === "INITIAL_SESSION") {
+        return;
+      }
+
+      if (!nextSession) {
+        await sync(null);
+        return;
+      }
+
+      try {
+        const { error } = await sb.auth.getUser(nextSession.access_token);
+        if (error) {
+          throw error;
+        }
+        await sync(nextSession);
+      } catch (error) {
+        if (
+          error instanceof AuthApiError &&
+          isInvalidRefreshTokenError(error)
+        ) {
+          console.warn("[auth] clearing invalid auth state change session");
+          await clearInvalidSession(sb);
+          return;
+        }
+
+        console.error(
+          `[auth] state change ${event.toLowerCase()}:`,
+          error instanceof Error ? error.message : error,
+        );
+        await sync(null);
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = sb.auth.onAuthStateChange((event, s) => {
+      void handleAuthStateChange(event, s);
+    });
+
     void (async () => {
       try {
         const {
@@ -108,6 +157,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         if (!cachedSession) {
           await sync(null);
+          bootstrapCompleteRef.current = true;
           return;
         }
 
@@ -124,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ) {
           console.warn("[auth] clearing invalid persisted session");
           await clearInvalidSession(sb);
+          bootstrapCompleteRef.current = true;
           return;
         }
 
@@ -132,14 +183,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error instanceof Error ? error.message : error,
         );
         await sync(null);
+      } finally {
+        bootstrapCompleteRef.current = true;
       }
     })();
-
-    const {
-      data: { subscription },
-    } = sb.auth.onAuthStateChange((_event, s) => {
-      void sync(s);
-    });
 
     return () => {
       subscription.unsubscribe();
