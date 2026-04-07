@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let client: SupabaseClient | null = null;
 const AUTH_STORAGE_KEY = "zebra-synapse.auth";
+const AUTH_CODE_VERIFIER_STORAGE_KEY = `${AUTH_STORAGE_KEY}-code-verifier`;
 
 export function isSupabaseConfigured(): boolean {
   return Boolean(
@@ -29,6 +30,21 @@ export function getSupabase(): SupabaseClient | null {
     );
   }
   return client;
+}
+
+export function clearSupabaseAuthStorage(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  window.localStorage.removeItem(AUTH_CODE_VERIFIER_STORAGE_KEY);
+}
+
+export function isInvalidRefreshTokenError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("invalid refresh token") ||
+    message.includes("refresh token not found")
+  );
 }
 
 export function getAuthEmailRedirectUrl(path = "/"): string | undefined {

@@ -8,9 +8,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Session, User } from "@supabase/supabase-js";
+import { AuthApiError, type Session, type User } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
+import {
+  clearSupabaseAuthStorage,
+  getSupabase,
+  isInvalidRefreshTokenError,
+  isSupabaseConfigured,
+} from "../lib/supabase";
 import { getAuthInactivityTimeoutMs } from "../lib/security";
 import type { Profile } from "./types";
 
@@ -51,6 +56,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const inactivityTimerRef = useRef<number | null>(null);
   const inactivityTimeoutMs = getAuthInactivityTimeoutMs();
 
+  const clearInvalidSession = useCallback(
+    async (sb: SupabaseClient) => {
+      clearSupabaseAuthStorage();
+      await sb.auth.signOut({ scope: "local" });
+      setSession(null);
+      setProfile(null);
+      setLoading(false);
+    },
+    [],
+  );
+
   const refreshProfile = useCallback(async () => {
     const sb = getSupabase();
     const uid = session?.user?.id;
@@ -80,9 +96,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
 
-    void sb.auth.getSession().then(({ data: { session: s } }) => {
-      void sync(s);
-    });
+    void (async () => {
+      try {
+        const {
+          data: { session: cachedSession },
+          error: sessionError,
+        } = await sb.auth.getSession();
+
+        if (sessionError) {
+          throw sessionError;
+        }
+        if (!cachedSession) {
+          await sync(null);
+          return;
+        }
+
+        const { error: userError } = await sb.auth.getUser();
+        if (userError) {
+          throw userError;
+        }
+
+        await sync(cachedSession);
+      } catch (error) {
+        if (
+          error instanceof AuthApiError &&
+          isInvalidRefreshTokenError(error)
+        ) {
+          console.warn("[auth] clearing invalid persisted session");
+          await clearInvalidSession(sb);
+          return;
+        }
+
+        console.error(
+          "[auth] session bootstrap:",
+          error instanceof Error ? error.message : error,
+        );
+        await sync(null);
+      }
+    })();
 
     const {
       data: { subscription },
