@@ -3,7 +3,7 @@
 ## Project Submission
 
 **Project Name:** Zebra Synapse  
-**Team Members:** Amitesh Bhardwaj, Kartikeya Verma, Sarthak Kashyap, Chaitanya Mohan
+**Team Members:** Amitesh Bhardwaj, Kartikeya Verma, Tania Bhola, T Sanjana
 **Track:** Healthcare AI / Digital Health
 
 ## Project Overview
