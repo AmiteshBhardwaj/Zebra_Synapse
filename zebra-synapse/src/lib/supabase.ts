@@ -4,21 +4,34 @@ let client: SupabaseClient | null = null;
 const AUTH_STORAGE_KEY = "zebra-synapse.auth";
 const AUTH_CODE_VERIFIER_STORAGE_KEY = `${AUTH_STORAGE_KEY}-code-verifier`;
 
+function getSupabaseUrl(): string {
+  return import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
+}
+
+function getSupabaseAnonKey(): string {
+  return import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
+}
+
 export function isSupabaseConfigured(): boolean {
-  return Boolean(
-    import.meta.env.VITE_SUPABASE_URL?.length &&
-      import.meta.env.VITE_SUPABASE_ANON_KEY?.length,
-  );
+  return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
 }
 
 /** Returns the browser Supabase client, or null if env vars are missing. */
 export function getSupabase(): SupabaseClient | null {
   if (!isSupabaseConfigured()) return null;
   if (!client) {
+    const supabaseUrl = getSupabaseUrl();
+    const supabaseAnonKey = getSupabaseAnonKey();
+
     client = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY,
+      supabaseUrl,
+      supabaseAnonKey,
       {
+        global: {
+          headers: {
+            apikey: supabaseAnonKey,
+          },
+        },
         auth: {
           persistSession: true,
           autoRefreshToken: true,
