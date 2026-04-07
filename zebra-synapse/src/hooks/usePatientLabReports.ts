@@ -6,8 +6,6 @@ import {
   type LabReportUploadRow,
 } from "../lib/labReports";
 import { extractLabPanelFromPdf } from "../lib/labReportExtraction";
-import { extractTextFromPdfBlob } from "../lib/labReportExtraction";
-import { buildMedicalRecordCorpusInsert } from "../lib/medicalRecordCorpus";
 import { getLabReportFileError } from "../lib/security";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
 
@@ -83,28 +81,6 @@ export function usePatientLabReports() {
       }
 
       let result: UploadLabReportResult = { extracted: false };
-      if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
-        const extractedText = await extractTextFromPdfBlob(file).catch(() => null);
-        const normalizedText = extractedText?.text.trim() ?? "";
-
-        if (normalizedText.length >= 60) {
-          const corpusPayload = buildMedicalRecordCorpusInsert({
-            patientId: user.id,
-            uploadId: uploadRow.id,
-            fileName: file.name,
-            text: normalizedText,
-          });
-
-          const { error: corpusError } = await sb
-            .from("medical_record_corpus")
-            .upsert(corpusPayload, { onConflict: "upload_id" });
-
-          if (corpusError) {
-            console.error("[medical record corpus]", corpusError.message);
-          }
-        }
-      }
-
       const extraction = await extractLabPanelFromPdf(file).catch((error: unknown) => ({
         status: "unsupported" as const,
         reason: error instanceof Error ? error.message : "Could not read the PDF.",

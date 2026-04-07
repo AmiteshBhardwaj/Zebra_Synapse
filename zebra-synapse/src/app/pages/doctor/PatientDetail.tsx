@@ -904,7 +904,7 @@ export default function PatientDetail() {
           <TabsTrigger value="vitals">Vitals History</TabsTrigger>
           <TabsTrigger value="labs">Lab Results</TabsTrigger>
           <TabsTrigger value="medications">Medications</TabsTrigger>
-          <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
+          <TabsTrigger value="insights">Insights</TabsTrigger>
           <TabsTrigger value="actions">Actions</TabsTrigger>
         </TabsList>
 
@@ -1223,11 +1223,11 @@ export default function PatientDetail() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="ai-insights">
+        <TabsContent value="insights">
           <div className="space-y-6">
             <Card className={portalPanelClass}>
               <CardHeader>
-                <CardTitle>AI insights</CardTitle>
+                <CardTitle>Clinical insights</CardTitle>
                 <CardDescription>Grounded in current chart data and structured labs</CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -2,8 +2,11 @@ import { Info, ShieldAlert, TrendingUp } from "lucide-react";
 import { useMemo } from "react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { usePatientMedicalRecordCorpus } from "../../../hooks/usePatientMedicalRecordCorpus";
-import { analyzeDiseaseRiskProfile } from "../../../lib/diseaseRiskModel";
+import {
+  getDiseasePredictions,
+  getLatestLabPanel,
+  getOverallStatus,
+} from "../../../lib/labInsights";
 import { formatLabDate } from "../../../lib/labPanels";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import {
@@ -18,14 +21,18 @@ import { Badge } from "../../components/ui/badge";
 export default function DiseasePrediction() {
   const { hasLabReports, loading, uploads } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
-  const { records, loading: corpusLoading } = usePatientMedicalRecordCorpus(uploads);
-
-  const profile = useMemo(
-    () => analyzeDiseaseRiskProfile({ panels, uploads, recordTexts: records }),
-    [panels, uploads, records],
+  const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
+  const predictions = useMemo(
+    () => (latestPanel ? getDiseasePredictions(latestPanel) : []),
+    [latestPanel],
   );
+  const overall = useMemo(
+    () => (latestPanel ? getOverallStatus(latestPanel) : null),
+    [latestPanel],
+  );
+  const highestPrediction = predictions[0] ?? null;
 
-  if (loading || panelsLoading || corpusLoading) {
+  if (loading || panelsLoading) {
     return (
       <PatientPortalPage>
         <p className="text-sm text-[#A1A1AA]">Loading...</p>
@@ -79,13 +86,13 @@ export default function DiseasePrediction() {
       <PatientPageHero
         eyebrow="Predictive Intelligence"
         title="Disease Prediction"
-        description="Rare-disease and risk-pattern assessments grounded in your structured panels and readable document text."
+        description="Rule-based risk assessments grounded in your latest structured lab panel."
         icon={TrendingUp}
         meta={[
-          { label: "Risk models", value: profile.assessments.length },
-          { label: "Highest risk", value: profile.highestRisk?.disease ?? "None" },
-          { label: "Latest panel", value: panels[0] ? formatLabDate(panels[0].recorded_at) : "Awaiting panel" },
-          { label: "Text corpus", value: `${profile.textDocumentCount} docs` },
+          { label: "Risk models", value: predictions.length },
+          { label: "Highest risk", value: highestPrediction?.title ?? "None" },
+          { label: "Latest panel", value: latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting panel" },
+          { label: "Signal source", value: "Structured lab panel" },
         ]}
       />
 
@@ -97,8 +104,8 @@ export default function DiseasePrediction() {
           <div>
             <h2 className="text-lg font-semibold text-white">Decision support only</h2>
             <p className="mt-2 max-w-3xl text-sm leading-7 text-[#c7ddff]">
-              These scores rank pattern overlap in your records. They do not diagnose disease and
-              should be reviewed with your clinician.
+              These rule-based scores highlight biomarker patterns. They do not diagnose disease and
+              should always be reviewed with your clinician.
             </p>
           </div>
         </div>
@@ -106,42 +113,26 @@ export default function DiseasePrediction() {
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6">
-          {profile.assessments.map((assessment) => (
-            <Card key={assessment.id} className={portalPanelClass}>
+          {predictions.map((prediction) => (
+            <Card key={prediction.title} className={portalPanelClass}>
               <CardHeader>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <CardTitle className="text-white">{assessment.disease}</CardTitle>
-                    <CardDescription className="text-white/60">{assessment.subtitle}</CardDescription>
+                    <CardTitle className="text-white">{prediction.title}</CardTitle>
+                    <CardDescription className="text-white/60">
+                      Interpreted from the latest structured biomarker panel
+                    </CardDescription>
                   </div>
                   <Badge className="border border-white/10 bg-white/[0.08] text-white">
-                    {assessment.level} {assessment.riskScore}
+                    {prediction.level}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm text-white/75">{assessment.summary}</p>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className={`${portalInsetClass} p-4`}>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Lab</p>
-                    <p className="mt-2 text-lg font-semibold text-white">{assessment.branchScores.lab}</p>
-                  </div>
-                  <div className={`${portalInsetClass} p-4`}>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Text</p>
-                    <p className="mt-2 text-lg font-semibold text-white">{assessment.branchScores.text}</p>
-                  </div>
-                  <div className={`${portalInsetClass} p-4`}>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Trend</p>
-                    <p className="mt-2 text-lg font-semibold text-white">{assessment.branchScores.trend}</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-white">Evidence</p>
-                  {assessment.evidence.map((item) => (
-                    <div key={item} className={`${portalInsetClass} p-3 text-sm text-white/75`}>
-                      {item}
-                    </div>
-                  ))}
+                <p className="text-sm text-white/75">{prediction.rationale}</p>
+                <div className={`${portalInsetClass} p-4`}>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Recommended next step</p>
+                  <p className="mt-2 text-sm text-white">{prediction.nextStep}</p>
                 </div>
               </CardContent>
             </Card>
@@ -151,26 +142,25 @@ export default function DiseasePrediction() {
         <div className="space-y-6">
           <Card className={portalPanelClass}>
             <CardHeader>
-              <CardTitle className="text-white">Family overview</CardTitle>
+              <CardTitle className="text-white">Model context</CardTitle>
               <CardDescription className="text-white/60">
-                Highest-risk groupings across the current record set
+                Coverage and limitations for the current rule-based snapshot
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {profile.families.map((family) => (
-                <div key={family.family} className={`${portalInsetClass} p-4`}>
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-white">{family.family}</p>
-                      <p className="mt-1 text-sm text-white/60">{family.highlightedDisease}</p>
-                    </div>
-                    <Badge className="border border-white/10 bg-white/[0.08] text-white">
-                      {family.highestLevel}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
+              <div className={`${portalInsetClass} p-4`}>
+                <p className="font-medium text-white">{overall?.label ?? "Awaiting interpretation"}</p>
+                <p className="mt-1 text-sm text-white/60">
+                  {overall?.summary ?? "Upload and process a structured panel to unlock deterministic risk summaries."}
+                </p>
+              </div>
+              <div className={`${portalInsetClass} p-4`}>
+                <p className="font-medium text-white">Latest structured panel</p>
+                <p className="mt-1 text-sm text-white/60">
+                  {latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting panel"}
+                </p>
+              </div>
+          </CardContent>
           </Card>
 
           <Card className={portalPanelClass}>
@@ -181,11 +171,12 @@ export default function DiseasePrediction() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {profile.highestRisk?.missingSignals.map((item) => (
-                <div key={item} className={`${portalInsetClass} p-3 text-sm text-white/75`}>
-                  {item}
-                </div>
-              )) ?? <p className="text-sm text-white/60">No major gaps detected.</p>}
+              <div className={`${portalInsetClass} p-3 text-sm text-white/75`}>
+                Trend data across multiple structured panels would strengthen confidence.
+              </div>
+              <div className={`${portalInsetClass} p-3 text-sm text-white/75`}>
+                Clinical review is still required before turning any pattern into a diagnosis or treatment plan.
+              </div>
             </CardContent>
           </Card>
         </div>

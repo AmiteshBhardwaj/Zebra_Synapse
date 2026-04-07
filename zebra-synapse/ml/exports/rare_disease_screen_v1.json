@@ -2,8 +2,8 @@
   "modelKey": "rare-disease-screen",
   "modelVersion": "ml-adapted-v1",
   "exportedAt": "2026-04-07T00:00:00Z",
-  "runtime": "supabase-edge-ts",
-  "source": "zebra-synapse/src/lib/diseaseRiskModel.ts",
+  "runtime": "archived",
+  "source": "archived-offline-export",
   "targets": [
     { "conditionKey": "mds", "title": "Myelodysplastic Syndromes (MDS)" },
     { "conditionKey": "multiple-myeloma", "title": "Multiple Myeloma" },
