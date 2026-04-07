@@ -12,6 +12,23 @@ function getSupabaseAnonKey(): string {
   return import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
 }
 
+function buildSupabaseFetch(anonKey: string): typeof fetch {
+  return async (input, init) => {
+    const headers = new Headers(init?.headers);
+    if (!headers.has("apikey")) {
+      headers.set("apikey", anonKey);
+    }
+    if (!headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${anonKey}`);
+    }
+
+    return fetch(input, {
+      ...init,
+      headers,
+    });
+  };
+}
+
 export function isSupabaseConfigured(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
 }
@@ -28,6 +45,7 @@ export function getSupabase(): SupabaseClient | null {
       supabaseAnonKey,
       {
         global: {
+          fetch: buildSupabaseFetch(supabaseAnonKey),
           headers: {
             apikey: supabaseAnonKey,
           },
