@@ -4,14 +4,20 @@ import {
   LAB_REPORTS_BUCKET,
   buildLabReportStoragePath,
   createClientGeneratedId,
-  type LabReportUploadRow,
 } from "../lib/labReports";
-import { extractLabPanelFromPdf } from "../lib/labReportExtraction";
+import {
+  LAB_REPORT_UPLOAD_SELECT,
+  getUploadStatusMeta,
+  isPendingUploadStatus,
+  type LabReportUploadRow,
+} from "../lib/labReportAnalysis";
 import { getLabReportFileError } from "../lib/security";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
 
 type UploadLabReportResult = {
+  queued: boolean;
   extracted: boolean;
+  uploadId?: string;
   message?: string;
 };
 
@@ -35,7 +41,7 @@ export function usePatientLabReports() {
     setLoading(true);
     const { data, error } = await sb
       .from("lab_report_uploads")
-      .select("id, original_filename, created_at")
+      .select(LAB_REPORT_UPLOAD_SELECT)
       .eq("patient_id", user.id)
       .order("created_at", { ascending: false });
 
@@ -43,7 +49,7 @@ export function usePatientLabReports() {
       console.error("[lab reports]", error.message);
       setUploads([]);
     } else {
-      setUploads((data ?? []) as LabReportUploadRow[]);
+      setUploads(((data ?? []) as unknown) as LabReportUploadRow[]);
     }
     setLoading(false);
   }, [user, configured]);
@@ -51,6 +57,18 @@ export function usePatientLabReports() {
   useEffect(() => {
     void refetch();
   }, [refetch]);
+
+  useEffect(() => {
+    if (!uploads.some((upload) => isPendingUploadStatus(upload.analysis_status))) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void refetch();
+    }, 6000);
+
+    return () => window.clearTimeout(timeout);
+  }, [refetch, uploads]);
 
   const uploadLabReport = useCallback(
     async (file: File): Promise<UploadLabReportResult> => {
@@ -73,61 +91,29 @@ export function usePatientLabReports() {
           patient_id: user.id,
           storage_path: path,
           original_filename: file.name,
+          analysis_status: "uploaded",
+          analysis_version: "lab-pipeline-v1",
         });
       if (rowErr) {
         await sb.storage.from(LAB_REPORTS_BUCKET).remove([path]);
         throw rowErr;
       }
 
-      let result: UploadLabReportResult = { extracted: false };
-      const extraction = await extractLabPanelFromPdf(file).catch((error: unknown) => ({
-        status: "unsupported" as const,
-        reason: error instanceof Error ? error.message : "Could not read the PDF.",
-      }));
-
-      if (extraction.status === "success") {
-        const { values, biomarkers, recordedAt, matchedCount, notes } = extraction.panel;
-        const { error: panelErr } = await sb.from("lab_panels").upsert(
-          {
-            patient_id: user.id,
-            upload_id: uploadId,
-            recorded_at: recordedAt,
-            biomarkers,
-            hemoglobin_a1c: values.hemoglobinA1c ?? null,
-            fasting_glucose: values.fastingGlucose ?? null,
-            total_cholesterol: values.totalCholesterol ?? null,
-            ldl: values.ldl ?? null,
-            hdl: values.hdl ?? null,
-            triglycerides: values.triglycerides ?? null,
-            hemoglobin: values.hemoglobin ?? null,
-            wbc: values.wbc ?? null,
-            platelets: values.platelets ?? null,
-            creatinine: values.creatinine ?? null,
-            notes,
-          },
-          { onConflict: "upload_id" },
-        );
-        if (!panelErr) {
-          result = {
-            extracted: true,
-            message: `Extracted ${matchedCount} biomarker${matchedCount === 1 ? "" : "s"} from the PDF.`,
-          };
-        } else {
-          console.error("[lab panel extract]", panelErr.message);
-          result = {
-            extracted: false,
-            message: "The PDF uploaded, but saving the extracted biomarkers failed.",
-          };
-        }
-      } else if (extraction.status === "unsupported" || extraction.status === "no_data") {
-        result = {
-          extracted: false,
-          message: extraction.reason,
-        };
-      }
-
       await refetch();
-      return result;
+
+      void sb.functions.invoke("process-lab-report-queue", {
+        body: { uploadId },
+      }).catch((error: unknown) => {
+        console.error("[lab report queue]", error);
+      });
+
+      const statusLabel = getUploadStatusMeta("queued").label;
+      return {
+        queued: true,
+        extracted: false,
+        uploadId,
+        message: `Upload complete. ${statusLabel} for server-side analysis.`,
+      };
     },
     [user, refetch],
   );

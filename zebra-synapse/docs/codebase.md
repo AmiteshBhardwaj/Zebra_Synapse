@@ -1,108 +1,64 @@
 # Zebra Synapse Codebase Guide
 
-This document describes how Zebra Synapse is organized and where to make changes safely during continued development.
+This guide explains where to work safely. Canonical setup and deploy instructions stay in [`../README.md`](../README.md). Canonical system design stays in [`../architecture.md`](../architecture.md).
 
-## Application Structure
+## Top-Level Ownership
 
-Top-level folders:
-
-- `src/app`: routes, layouts, feature pages, and reusable UI wrappers
-- `src/auth`: authentication context and shared auth types
-- `src/hooks`: data hooks for uploads and lab panel reads
-- `src/lib`: Supabase helpers, domain models, and clinical business logic
-- `src/styles`: theme tokens, fonts, and global styling
-- `supabase/migrations`: schema migrations applied in order
-- `supabase`: local Supabase configuration and seed helpers
+- `src/`: product routes, UI, hooks, and business logic
+- `public/`: static assets used by product runtime
+- `supabase/`: database schema, migrations, local config, and Edge Functions
+- `scripts/`: repeatable tooling scripts
+- `docs/`: supplementary development docs
+- `research/`: archived experiments and research outputs, not runtime
+- `screenshots/`: demo and submission imagery
 
 ## Entry Points
 
-### `src/main.tsx`
+- `src/main.tsx`: React bootstrap and global styles
+- `src/app/App.tsx`: auth context, router, and toasts
+- `src/app/routes.tsx`: public, patient, and doctor route graph
 
-- boots the React app
-- imports shared styles
-
-### `src/app/App.tsx`
-
-- mounts auth context
-- mounts the router
-- mounts toast notifications
-
-### `src/app/routes.tsx`
-
-Defines the public, patient, and doctor routes for the application.
-
-## Core Feature Areas
+## Feature Areas
 
 ### Authentication
-
-Files:
 
 - `src/auth/AuthContext.tsx`
 - `src/auth/types.ts`
 - `src/lib/supabase.ts`
 - `src/lib/authErrors.ts`
 
-Responsibilities:
-
-- session bootstrap
-- role-aware portal routing
-- profile loading from `profiles`
-- auth redirect URL handling
+Use for session bootstrap, role-aware routing, profile loading, and auth redirect handling.
 
 ### Doctor Workflow
 
-Files:
-
-- `src/app/pages/doctor/DoctorDashboard.tsx`
-- `src/app/pages/doctor/PatientsList.tsx`
-- `src/app/pages/doctor/PatientDetail.tsx`
-- `src/app/pages/doctor/LinkPatientDialog.tsx`
+- `src/app/pages/doctor/`
 - `src/lib/careRelationships.ts`
 - `src/lib/prescriptions.ts`
 - `src/lib/careActions.ts`
 
-Responsibilities:
-
-- linked patient management
-- prescription authoring
-- clinical note capture
-- persisted quick actions such as follow-ups, lab requests, referrals, messages, and generated reports
+Use for linked patient management, prescriptions, notes, and persisted care activity.
 
 ### Patient Workflow
 
-Files:
-
-- `src/app/pages/patient/PatientDashboard.tsx`
-- `src/app/pages/patient/PatientHome.tsx`
-- `src/app/pages/patient/MedicalRecords.tsx`
-- `src/app/pages/patient/Prescription.tsx`
+- `src/app/pages/patient/`
 - `src/hooks/usePatientLabReports.ts`
+- `src/hooks/usePatientLabReportExtractions.ts`
 - `src/hooks/usePatientLabPanels.ts`
 
-Responsibilities:
+Use for report upload, extraction review, published panel review, prescriptions, and insight screens.
 
-- report upload and history
-- structured lab panel review
-- prescription visibility
-- insight-oriented dashboards
+### Lab Analysis and Insights
 
-### Lab Parsing and Insights
-
-Files:
-
-- `src/lib/labReportExtraction.ts`
-- `src/lib/biomarkerCatalog.ts`
+- `src/lib/labReportAnalysis.ts`
 - `src/lib/labPanels.ts`
 - `src/lib/labInsights.ts`
+- `supabase/functions/_shared/lab-report-analysis.ts`
+- `supabase/functions/process-lab-report/`
+- `supabase/functions/process-lab-report-queue/`
 
-Responsibilities:
+Use for PDF understanding, biomarker normalization, extraction review, panel persistence, and deterministic interpretation.
 
-- browser-side PDF text extraction
-- biomarker normalization
-- structured panel persistence
-- rule-based insight generation for doctor and patient views
-
-## Database Model
+## Data Surfaces
 
 Primary tables:
 
@@ -110,43 +66,31 @@ Primary tables:
 - `care_relationships`
 - `prescriptions`
 - `lab_report_uploads`
+- `lab_report_extractions`
 - `lab_panels`
 - `care_actions`
 
-Storage:
+Storage bucket:
 
-- Supabase Storage bucket `lab-reports`
+- `lab-reports`
 
-## Migrations
+## Safe Change Rules
 
-Migrations are applied in numeric order from `supabase/migrations`.
-
-Current sequence:
-
-1. `001_profiles.sql`
-2. `002_care_relationships.sql`
-3. `003_prescriptions.sql`
-4. `004_lab_reports.sql`
-5. `005_lab_panels.sql`
-6. `006_lab_panel_biomarkers.sql`
-7. `007_profiles_select_linked_users.sql`
-8. `008_care_actions.sql`
-9. `009_security_hardening.sql`
-10. `010_security_invariants.sql`
+- Do not move runtime code outside `zebra-synapse/`.
+- Do not place research artifacts in `src/`, `public/`, or `supabase/`.
+- Do not treat `research/` as deployment dependency.
+- Keep one concern per change when touching migrations or auth-sensitive code.
 
 ## Verification
-
-Useful checks before pushing:
 
 - `npm run typecheck`
 - `npm run build`
 - `npm run check`
 
-Manual smoke checks:
+Manual smoke focus:
 
-- patient signup and login
-- doctor signup and login
-- lab report upload
-- patient detail quick actions and care activity feed
-- patient insight pages populated from structured lab data
-- prescription create and patient-side visibility
+- auth for doctor and patient roles
+- lab upload and extraction lifecycle
+- doctor patient detail actions and timeline
+- patient insight screens populated from published lab data
+- prescription create and patient visibility

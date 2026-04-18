@@ -1,11 +1,14 @@
 # Documentation
 
-This folder contains project-level documentation for Zebra Synapse.
+This folder is for supplementary documentation only. Canonical setup, deployment, and operations live in [`../README.md`](../README.md). Canonical system design lives in [`../architecture.md`](../architecture.md).
 
 ## Contents
 
-- [architecture.md](./architecture.md): high-level system overview and data flow
-- [codebase.md](./codebase.md): file ownership and safe change map
-- [attributions.md](./attributions.md): third-party attribution notes
+- [codebase.md](./codebase.md): development map and change-safe ownership guide
+- [attributions.md](./attributions.md): third-party attributions
 
-For submission and local setup guidance, start with [../README.md](../README.md) and [../demo.md](../demo.md).
+## Rules
+
+- Do not duplicate setup, deploy, or architecture as parallel source-of-truth docs.
+- Extend the main documents instead of rewriting them.
+- Keep runbooks or troubleshooting notes here only when they are truly supplementary.

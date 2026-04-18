@@ -55,6 +55,10 @@ import {
   type LabPanelRow,
 } from "../../../lib/labPanels";
 import {
+  LAB_REPORT_UPLOAD_SELECT,
+  getUploadStatusMeta,
+} from "../../../lib/labReportAnalysis";
+import {
   getDiseasePredictions,
   getLatestLabPanel,
   getNutritionPlans,
@@ -74,6 +78,8 @@ type PatientLabUploadRow = {
   id: string;
   original_filename: string;
   created_at: string;
+  analysis_status: "uploaded" | "queued" | "processing" | "review_required" | "ready" | "failed";
+  last_error: string | null;
 };
 
 type TimelineItem = {
@@ -360,7 +366,7 @@ export default function PatientDetail() {
     setLabLoading(true);
     const { data, error } = await sb
       .from("lab_report_uploads")
-      .select("id, original_filename, created_at")
+      .select(LAB_REPORT_UPLOAD_SELECT)
       .eq("patient_id", patientId)
       .order("created_at", { ascending: false });
     setLabLoading(false);
@@ -369,7 +375,7 @@ export default function PatientDetail() {
       setLabUploads([]);
       return;
     }
-    setLabUploads((data ?? []) as PatientLabUploadRow[]);
+    setLabUploads(((data ?? []) as unknown) as PatientLabUploadRow[]);
   }, [patientId, rel]);
 
   useEffect(() => {
@@ -1102,28 +1108,42 @@ export default function PatientDetail() {
               ) : labUploads.length === 0 ? (
                 <p className="text-sm text-white/60">
                   No lab files uploaded yet. Ask the patient to upload reports from Health Overview.
-                  Parsed biomarkers are not shown until extraction is implemented.
+                  Published biomarker panels appear separately once the patient portal pipeline approves them.
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {labUploads.map((lab) => (
-                    <div
-                      key={lab.id}
-                      className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex w-10 h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
-                          <FileText className="w-5 h-5 text-[#ff9c61]" />
+                  {labUploads.map((lab) => {
+                    const status = getUploadStatusMeta(lab.analysis_status);
+                    return (
+                      <div
+                        key={lab.id}
+                        className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex w-10 h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                            <FileText className="w-5 h-5 text-[#ff9c61]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold truncate text-white">{lab.original_filename}</p>
+                            <p className="text-sm text-white/40">
+                              Uploaded {formatLabUploadedAt(lab.created_at)}
+                            </p>
+                            {lab.analysis_status === "review_required" ? (
+                              <p className="mt-1 text-xs text-[#f1d8a2]">
+                                Waiting for patient review before publication.
+                              </p>
+                            ) : null}
+                            {lab.last_error ? (
+                              <p className="mt-1 text-xs text-[#ffb58c]">{lab.last_error}</p>
+                            ) : null}
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-semibold truncate text-white">{lab.original_filename}</p>
-                          <p className="text-sm text-white/40">
-                            Uploaded {formatLabUploadedAt(lab.created_at)}
-                          </p>
-                        </div>
+                        <Badge className="border border-white/10 bg-white/[0.06] text-white/75">
+                          {status.label}
+                        </Badge>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

@@ -38,6 +38,7 @@ function buildMinimalPanelFromCareRow(patientId: string, row: PatientTrialCareRo
     id: `care-${patientId}`,
     patient_id: patientId,
     upload_id: null,
+    source_extraction_id: null,
     recorded_at: recordedAt,
     biomarkers: { fasting_glucose: row.glucose },
     hemoglobin_a1c: null,

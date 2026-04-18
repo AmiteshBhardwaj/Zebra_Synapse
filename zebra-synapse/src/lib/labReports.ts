@@ -1,9 +1,3 @@
-export type LabReportUploadRow = {
-  id: string;
-  original_filename: string;
-  created_at: string;
-};
-
 const BUCKET = "lab-reports";
 
 export function sanitizeStorageFileName(name: string): string {

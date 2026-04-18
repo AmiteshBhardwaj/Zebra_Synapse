@@ -2,6 +2,7 @@ export type LabPanelRow = {
   id: string;
   patient_id: string;
   upload_id: string | null;
+  source_extraction_id: string | null;
   recorded_at: string;
   biomarkers: Record<string, number> | null;
   hemoglobin_a1c: number | null;
@@ -22,6 +23,7 @@ export const LAB_PANEL_SELECT = `
   id,
   patient_id,
   upload_id,
+  source_extraction_id,
   recorded_at,
   biomarkers,
   hemoglobin_a1c,

@@ -112,8 +112,8 @@ export default function MedicalRecordsInsights() {
             <div>
               <h2 className="text-lg font-semibold text-white">No structured values recorded yet</h2>
               <p className="mt-2 max-w-3xl text-sm leading-7 text-[#f1d8a2]">
-                Your files are uploaded, but Medical Records needs the actual biomarkers from the
-                report. Go to Health Overview and enter the values for one of the uploaded reports.
+                Your files are uploaded, but no published panel is available yet. Open Medical Records
+                to review any low-confidence extraction before it becomes live portal data.
               </p>
             </div>
           </div>

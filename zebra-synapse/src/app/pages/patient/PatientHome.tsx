@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
+import { getUploadStatusMeta } from "../../../lib/labReportAnalysis";
 import { formatLabDate } from "../../../lib/labPanels";
 import {
   MetricPriorityBars,
@@ -52,6 +53,11 @@ export default function PatientHome() {
   );
   const topMetrics = latestPanel ? getMetricsForDashboard(latestPanel, 20) : [];
   const recentUploads = uploads.slice(0, 4);
+  const reviewRequiredCount = uploads.filter((upload) => upload.analysis_status === "review_required").length;
+  const readyCount = uploads.filter((upload) => upload.analysis_status === "ready").length;
+  const processingCount = uploads.filter(
+    (upload) => upload.analysis_status === "queued" || upload.analysis_status === "processing" || upload.analysis_status === "uploaded",
+  ).length;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -83,7 +89,7 @@ export default function PatientHome() {
       toast.success(
         result.extracted
           ? result.message ?? "Lab report uploaded and biomarkers extracted."
-          : "Lab report uploaded.",
+          : result.message ?? "Lab report uploaded.",
       );
       if (!result.extracted && result.message) {
         toast(result.message);
@@ -126,8 +132,10 @@ export default function PatientHome() {
               <p className="mt-4 max-w-xl text-sm leading-7 text-white/68 md:text-base">
                 {hasPanels
                   ? "Your latest structured lab results are now driving the analysis across the portal."
-                  : hasLabReports
-                    ? "Your report files are saved. If extraction missed anything, add values from the report below."
+                  : reviewRequiredCount > 0
+                    ? "One or more report extractions need your review before they can drive the portal."
+                    : hasLabReports
+                    ? "Your report files are saved and queued for server-side analysis."
                     : "Upload a lab report to unlock medical records, vitals summaries, and personalized insights."}
               </p>
 
@@ -174,7 +182,7 @@ export default function PatientHome() {
                     <Sparkles className="h-4 w-4 text-[#8f7cff]" />
                   </div>
                   <div className="space-y-2.5">
-                    {[
+                    {[ 
                       {
                         icon: ShieldCheck,
                         label: "Secure storage",
@@ -183,7 +191,13 @@ export default function PatientHome() {
                       {
                         icon: FlaskConical,
                         label: "Extraction",
-                        value: hasPanels ? "Biomarkers processed" : "No extracted panel yet",
+                        value: reviewRequiredCount > 0
+                          ? `${reviewRequiredCount} report${reviewRequiredCount === 1 ? "" : "s"} need review`
+                          : readyCount > 0
+                          ? `${readyCount} published panel${readyCount === 1 ? "" : "s"}`
+                          : processingCount > 0
+                          ? "Server-side analysis running"
+                          : "No extracted panel yet",
                       },
                       {
                         icon: ArrowUpRight,
@@ -216,8 +230,8 @@ export default function PatientHome() {
             <CardHeader className="pb-4">
               <CardTitle className="text-xl text-white">Upload lab test results</CardTitle>
               <CardDescription className="max-w-2xl text-white/58">
-                PDF or image files are stored securely. Supported PDF reports are extracted
-                automatically; use manual entry only when extraction misses values.
+                PDF or image files are stored securely. Lab PDFs are queued for server-side extraction
+                and either auto-published or sent to Medical Records for review.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -254,7 +268,7 @@ export default function PatientHome() {
               {selectedFile && (
                 <div className="mt-4 flex items-center gap-2 text-sm text-white/70">
                   <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
-                  <span>Ready to upload and extract biomarkers from the report.</span>
+                  <span>Ready to upload and queue server-side analysis for this report.</span>
                 </div>
               )}
               <Button
@@ -286,9 +300,12 @@ export default function PatientHome() {
                       <p className="mt-1 text-xs text-white/45">
                         Added {new Date(upload.created_at).toLocaleDateString()}
                       </p>
+                      {upload.last_error ? (
+                        <p className="mt-1 text-xs text-[#ffb58c]">{upload.last_error}</p>
+                      ) : null}
                     </div>
                     <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/65">
-                      Stored
+                      {getUploadStatusMeta(upload.analysis_status).label}
                     </span>
                   </div>
                 ))
@@ -301,7 +318,13 @@ export default function PatientHome() {
               <div className="rounded-[1.6rem] border border-[#8f7cff]/20 bg-[linear-gradient(135deg,rgba(143,124,255,0.12),rgba(255,255,255,0.03))] p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-[#b7abff]">Care readiness</p>
                 <p className="mt-3 text-lg font-medium text-white">
-                  {hasPanels ? "Insights are live across the portal." : "Upload and extract one panel to unlock deeper insights."}
+                  {hasPanels
+                    ? "Insights are live across the portal."
+                    : reviewRequiredCount > 0
+                    ? "Open Medical Records to review low-confidence extraction fields."
+                    : processingCount > 0
+                    ? "Analysis is running in the background."
+                    : "Upload one report to unlock deeper insights."}
                 </p>
               </div>
             </CardContent>
@@ -362,9 +385,9 @@ export default function PatientHome() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-white/58">
-                    Your files are stored correctly, but this app needs the key report values entered
-                    once before it can generate records, disease prediction, nutrition guidance, and
-                    wellness insights.
+                    Your files are stored correctly. The server-side pipeline has not published a
+                    panel yet, so the portal is waiting for either automatic extraction or your
+                    review of a low-confidence report.
                   </p>
                 </CardContent>
               </Card>
