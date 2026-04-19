@@ -12,6 +12,21 @@ create index if not exists lab_report_uploads_patient_id_idx on public.lab_repor
 
 alter table public.lab_report_uploads enable row level security;
 
+create or replace function public.is_patient_profile_unchecked(profile_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.profiles
+    where id = profile_id
+      and role = 'patient'
+  );
+$$;
+
 drop policy if exists "lab_report_uploads_select_own" on public.lab_report_uploads;
 create policy "lab_report_uploads_select_own"
   on public.lab_report_uploads for select
@@ -22,10 +37,7 @@ create policy "lab_report_uploads_insert_own"
   on public.lab_report_uploads for insert
   with check (
     auth.uid() = patient_id
-    and exists (
-      select 1 from public.profiles p
-      where p.id = patient_id and p.role = 'patient'
-    )
+    and public.is_patient_profile_unchecked(patient_id)
   );
 
 drop policy if exists "lab_report_uploads_delete_own" on public.lab_report_uploads;

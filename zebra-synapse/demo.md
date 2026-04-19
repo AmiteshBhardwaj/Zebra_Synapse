@@ -16,7 +16,8 @@ This file is judge-facing demo guidance only. For setup and deployment, use [`RE
 
 1. Follow local setup in [`README.md`](./README.md).
 2. If you want seeded local demo data, apply base migrations first, then run `supabase/migrations/seed_doctors_patients.sql`.
-3. Start the app with `npm run dev`.
+3. That seed script also adds the demo `cn2.pdf` lab upload metadata and its published biomarker panel for patient 1.
+4. Start the app with `npm run dev`.
 
 ## Seed Demo Accounts
 

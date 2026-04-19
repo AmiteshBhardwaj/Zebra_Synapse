@@ -108,6 +108,8 @@ create trigger touch_lab_report_extractions_updated_at
 create or replace function public.enqueue_lab_report_analysis_job()
 returns trigger
 language plpgsql
+security definer
+set search_path = public
 as $$
 begin
   insert into public.lab_report_analysis_jobs (upload_id, status, available_at)
@@ -125,8 +127,14 @@ create trigger enqueue_lab_report_analysis_job
 drop policy if exists "lab_report_uploads_update_own" on public.lab_report_uploads;
 create policy "lab_report_uploads_update_own"
   on public.lab_report_uploads for update
-  using (auth.uid() = patient_id)
-  with check (auth.uid() = patient_id);
+  using (
+    auth.uid() = patient_id
+    and public.is_patient_profile_unchecked(patient_id)
+  )
+  with check (
+    auth.uid() = patient_id
+    and public.is_patient_profile_unchecked(patient_id)
+  );
 
 drop policy if exists "lab_report_extractions_select_own" on public.lab_report_extractions;
 create policy "lab_report_extractions_select_own"

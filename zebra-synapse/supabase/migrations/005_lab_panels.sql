@@ -36,10 +36,7 @@ create policy "lab_panels_insert_own"
   on public.lab_panels for insert
   with check (
     auth.uid() = patient_id
-    and exists (
-      select 1 from public.profiles p
-      where p.id = patient_id and p.role = 'patient'
-    )
+    and public.is_patient_profile_unchecked(patient_id)
     and (
       upload_id is null
       or exists (

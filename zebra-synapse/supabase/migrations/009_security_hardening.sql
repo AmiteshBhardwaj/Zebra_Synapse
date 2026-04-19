@@ -106,15 +106,28 @@ security definer
 set search_path = public
 as $$
 declare
+  row_data jsonb;
   record_id text;
   payload jsonb;
 begin
   if tg_op = 'DELETE' then
-    record_id := coalesce(old.id::text, old.patient_id::text, old.doctor_id::text, 'unknown');
-    payload := jsonb_build_object('before', to_jsonb(old));
+    row_data := to_jsonb(old);
+    record_id := coalesce(
+      row_data ->> 'id',
+      row_data ->> 'patient_id',
+      row_data ->> 'doctor_id',
+      'unknown'
+    );
+    payload := jsonb_build_object('before', row_data);
   else
-    record_id := coalesce(new.id::text, new.patient_id::text, new.doctor_id::text, 'unknown');
-    payload := jsonb_build_object('after', to_jsonb(new));
+    row_data := to_jsonb(new);
+    record_id := coalesce(
+      row_data ->> 'id',
+      row_data ->> 'patient_id',
+      row_data ->> 'doctor_id',
+      'unknown'
+    );
+    payload := jsonb_build_object('after', row_data);
     if tg_op = 'UPDATE' then
       payload := payload || jsonb_build_object('before', to_jsonb(old));
     end if;

@@ -1,7 +1,7 @@
 import { claimQueuedJobs, processClaimedJob } from "../_shared/lab-report-analysis.ts";
 import { jsonResponse, optionsResponse } from "../_shared/http.ts";
 
-Deno.serve(async (request: Request) => {
+  Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") {
     return optionsResponse();
   }
