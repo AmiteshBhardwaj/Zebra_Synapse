@@ -95,6 +95,46 @@ const STATUS_META: Record<UploadAnalysisStatus, { label: string; tone: "neutral"
   failed: { label: "Failed", tone: "danger" },
 };
 
+const STATUS_PROGRESS_META: Record<
+  UploadAnalysisStatus,
+  {
+    percent: number;
+    stageLabel: string;
+    summary: string;
+  }
+> = {
+  uploaded: {
+    percent: 25,
+    stageLabel: "Stage 1 of 4",
+    summary: "File stored securely. Analysis not started yet.",
+  },
+  queued: {
+    percent: 45,
+    stageLabel: "Stage 2 of 4",
+    summary: "Upload accepted. Waiting for worker pickup.",
+  },
+  processing: {
+    percent: 70,
+    stageLabel: "Stage 3 of 4",
+    summary: "Server-side extraction running now.",
+  },
+  review_required: {
+    percent: 85,
+    stageLabel: "Stage 3 of 4",
+    summary: "Extraction finished. Manual review needed before publish.",
+  },
+  ready: {
+    percent: 100,
+    stageLabel: "Stage 4 of 4",
+    summary: "Structured panel published to portal.",
+  },
+  failed: {
+    percent: 100,
+    stageLabel: "Stopped",
+    summary: "Pipeline stopped with error.",
+  },
+};
+
 const LEGACY_FIELD_BY_KEY = new Map(
   BIOMARKER_DEFINITIONS.flatMap((definition) =>
     definition.legacyField ? [[definition.key, definition.legacyField satisfies LegacyField]] : [],
@@ -103,6 +143,10 @@ const LEGACY_FIELD_BY_KEY = new Map(
 
 export function getUploadStatusMeta(status: UploadAnalysisStatus) {
   return STATUS_META[status] ?? STATUS_META.uploaded;
+}
+
+export function getUploadProgressMeta(status: UploadAnalysisStatus) {
+  return STATUS_PROGRESS_META[status] ?? STATUS_PROGRESS_META.uploaded;
 }
 
 export function isPendingUploadStatus(status: UploadAnalysisStatus): boolean {

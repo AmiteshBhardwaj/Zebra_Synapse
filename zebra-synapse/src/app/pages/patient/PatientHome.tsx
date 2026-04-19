@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
+import { Progress } from "../../components/ui/progress";
 import {
   Activity,
   AlertCircle,
@@ -15,7 +16,7 @@ import {
 } from "lucide-react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { getUploadStatusMeta } from "../../../lib/labReportAnalysis";
+import { getUploadProgressMeta, getUploadStatusMeta } from "../../../lib/labReportAnalysis";
 import { formatLabDate } from "../../../lib/labPanels";
 import {
   MetricPriorityBars,
@@ -58,6 +59,8 @@ export default function PatientHome() {
   const processingCount = uploads.filter(
     (upload) => upload.analysis_status === "queued" || upload.analysis_status === "processing" || upload.analysis_status === "uploaded",
   ).length;
+  const latestUpload = recentUploads[0] ?? null;
+  const readinessProgress = latestUpload ? getUploadProgressMeta(latestUpload.analysis_status) : null;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -293,20 +296,35 @@ export default function PatientHome() {
                 recentUploads.map((upload) => (
                   <div
                     key={upload.id}
-                    className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/20 px-4 py-3"
+                    className="rounded-2xl border border-white/8 bg-black/20 px-4 py-3"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-white">{upload.original_filename}</p>
-                      <p className="mt-1 text-xs text-white/45">
-                        Added {new Date(upload.created_at).toLocaleDateString()}
-                      </p>
-                      {upload.last_error ? (
-                        <p className="mt-1 text-xs text-[#ffb58c]">{upload.last_error}</p>
-                      ) : null}
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-white">{upload.original_filename}</p>
+                        <p className="mt-1 text-xs text-white/45">
+                          Added {new Date(upload.created_at).toLocaleDateString()}
+                        </p>
+                        {upload.last_error ? (
+                          <p className="mt-1 text-xs text-[#ffb58c]">{upload.last_error}</p>
+                        ) : null}
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/65">
+                        {getUploadStatusMeta(upload.analysis_status).label}
+                      </span>
                     </div>
-                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs text-white/65">
-                      {getUploadStatusMeta(upload.analysis_status).label}
-                    </span>
+                    <div className="mt-3">
+                      <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-white/42">
+                        <span>{getUploadProgressMeta(upload.analysis_status).stageLabel}</span>
+                        <span>{getUploadProgressMeta(upload.analysis_status).percent}%</span>
+                      </div>
+                      <Progress
+                        value={getUploadProgressMeta(upload.analysis_status).percent}
+                        className="h-2.5 bg-white/8 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-[#fb7b34] [&_[data-slot=progress-indicator]]:to-[#8f7cff]"
+                      />
+                      <p className="mt-2 text-xs text-white/55">
+                        {getUploadProgressMeta(upload.analysis_status).summary}
+                      </p>
+                    </div>
                   </div>
                 ))
               ) : (
@@ -317,6 +335,18 @@ export default function PatientHome() {
 
               <div className="rounded-[1.6rem] border border-[#8f7cff]/20 bg-[linear-gradient(135deg,rgba(143,124,255,0.12),rgba(255,255,255,0.03))] p-5">
                 <p className="text-xs uppercase tracking-[0.2em] text-[#b7abff]">Care readiness</p>
+                {readinessProgress ? (
+                  <div className="mt-3">
+                    <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-white/55">
+                      <span>{readinessProgress.stageLabel}</span>
+                      <span>{readinessProgress.percent}%</span>
+                    </div>
+                    <Progress
+                      value={readinessProgress.percent}
+                      className="h-2.5 bg-white/10 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-[#fb7b34] [&_[data-slot=progress-indicator]]:via-[#ffad63] [&_[data-slot=progress-indicator]]:to-[#8f7cff]"
+                    />
+                  </div>
+                ) : null}
                 <p className="mt-3 text-lg font-medium text-white">
                   {hasPanels
                     ? "Insights are live across the portal."
