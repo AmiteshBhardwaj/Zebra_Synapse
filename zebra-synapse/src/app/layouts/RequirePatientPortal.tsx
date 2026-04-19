@@ -8,16 +8,11 @@ export default function RequirePatientPortal() {
 
   if (!configured) return <ConfigRequired />;
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground text-sm">
-        Loading…
-      </div>
-    );
+    return <div className="flex min-h-screen items-center justify-center text-sm text-[#92a8c7]">Loading...</div>;
   }
   if (!user) return <Navigate to="/login/patient" replace />;
   if (!profile) return <ProfileMissing />;
-  if (profile.role === "doctor")
-    return <Navigate to="/doctor" replace />;
+  if (profile.role === "doctor") return <Navigate to="/doctor" replace />;
   if (profile.role !== "patient") return <Navigate to="/" replace />;
 
   return <PatientDashboard />;

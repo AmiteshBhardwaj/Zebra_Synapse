@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { Stethoscope } from "lucide-react";
 import { toast } from "sonner";
 import { getAuthRequestErrorMessage } from "../../../lib/authErrors";
 import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
 import { getPasswordPolicyError } from "../../../lib/security";
+import AuthExperienceShell from "../../components/auth/AuthExperienceShell";
 import { Button } from "../../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { ArrowLeft, Stethoscope } from "lucide-react";
+import { portalInputClass, portalPrimaryButtonClass } from "../../components/patient/PortalTheme";
 
 export default function DoctorSignup() {
   const navigate = useNavigate();
@@ -76,111 +77,113 @@ export default function DoctorSignup() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <Button
-          variant="ghost"
-          className="mb-6"
-          onClick={() => navigate("/")}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Home
+    <AuthExperienceShell
+      title="Doctor Sign Up"
+      description="Create your clinician workspace to monitor linked patients, review risk trends, and act from a cleaner command center."
+      eyebrow="Clinical Access"
+      icon={Stethoscope}
+      iconAccent="#8fe7ff"
+      onBack={() => navigate("/")}
+    >
+      {!isSupabaseConfigured() && (
+        <p className="mb-5 rounded-[22px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          Configure <code className="text-xs">.env</code> with Supabase URL and anon key first.
+        </p>
+      )}
+      <form onSubmit={handleSignup} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name" className="text-white/80">
+            Full Name
+          </Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="Dr. Jane Smith"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            required
+            autoComplete="name"
+            className={portalInputClass}
+          />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-white/80">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="doctor@example.com"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
+              autoComplete="email"
+              className={portalInputClass}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="licenseNumber" className="text-white/80">
+              Medical License Number
+            </Label>
+            <Input
+              id="licenseNumber"
+              type="text"
+              placeholder="MD123456"
+              value={formData.licenseNumber}
+              onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
+              required
+              className={portalInputClass}
+            />
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-white/80">
+              Password
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="At least 12 characters"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              required
+              autoComplete="new-password"
+              minLength={12}
+              className={portalInputClass}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="text-white/80">
+              Confirm Password
+            </Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="Repeat password"
+              value={formData.confirmPassword}
+              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+              required
+              autoComplete="new-password"
+              className={portalInputClass}
+            />
+          </div>
+        </div>
+        <Button type="submit" className={`h-12 w-full rounded-2xl ${portalPrimaryButtonClass}`} disabled={submitting}>
+          {submitting ? "Creating account..." : "Create Account"}
         </Button>
-
-        <Card>
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-6">
-              <div className="w-12 h-12 bg-muted flex items-center justify-center">
-                <Stethoscope className="w-6 h-6 text-foreground" strokeWidth={1.5} />
-              </div>
-            </div>
-            <CardTitle>Doctor Sign Up</CardTitle>
-            <CardDescription>Create your account to start managing patients</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!isSupabaseConfigured() && (
-              <p className="text-sm text-amber-600 dark:text-amber-500 mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-                Configure <code className="text-xs">.env</code> with Supabase URL and anon key first.
-              </p>
-            )}
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  placeholder="Dr. Jane Smith"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  autoComplete="name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="doctor@example.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  autoComplete="email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="licenseNumber">Medical License Number</Label>
-                <Input
-                  id="licenseNumber"
-                  type="text"
-                  placeholder="MD123456"
-                  value={formData.licenseNumber}
-                  onChange={(e) => setFormData({ ...formData, licenseNumber: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  autoComplete="new-password"
-                  minLength={12}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                  autoComplete="new-password"
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={submitting}>
-                {submitting ? "Creating account…" : "Create Account"}
-              </Button>
-              <div className="text-center text-sm text-muted-foreground">
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => navigate("/login/doctor")}
-                  className="text-primary hover:underline"
-                >
-                  Login
-                </button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+        <div className="text-center text-sm text-[#92a8c7]">
+          Already have an account?{" "}
+          <button
+            type="button"
+            onClick={() => navigate("/login/doctor")}
+            className="font-medium text-[#8fe7ff] hover:underline"
+          >
+            Login
+          </button>
+        </div>
+      </form>
+    </AuthExperienceShell>
   );
 }

@@ -8,6 +8,11 @@ import AuthExperienceShell from "../../components/auth/AuthExperienceShell";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import {
+  portalInputClass,
+  portalPrimaryButtonClass,
+  portalSecondaryButtonClass,
+} from "../../components/patient/PortalTheme";
 
 export default function PatientLogin() {
   const navigate = useNavigate();
@@ -109,27 +114,27 @@ export default function PatientLogin() {
   return (
     <AuthExperienceShell
       title="Patient Login"
-      description="Enter your credentials to access your health dashboard, lab intelligence, and AI-guided care insights."
+      description="Sign in to review recent uploads, structured biomarker insights, and next care actions from one patient-focused dashboard."
       eyebrow="Patient Access"
       icon={User}
-      iconAccent="#6C5BD4"
+      iconAccent="#ffb17e"
       onBack={() => navigate("/")}
     >
       {!isSupabaseConfigured() && (
-        <p className="mb-4 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+        <p className="mb-5 rounded-[22px] border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
           Configure <code className="text-xs">.env</code> with Supabase URL and anon key to enable
           login.
         </p>
       )}
       {showConfirmReminder && (
-        <p className="mb-4 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/70">
+        <p className="mb-5 rounded-[22px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-[#c8d8ec]">
           You need to <strong className="text-white">confirm your email</strong> using the link we
           sent before password login will work. Check spam if you do not see it.
         </p>
       )}
       <form onSubmit={handleLogin} className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="email" className="text-white/78">
+          <Label htmlFor="email" className="text-white/80">
             Email
           </Label>
           <Input
@@ -140,46 +145,42 @@ export default function PatientLogin() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="h-12 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-white/30 focus-visible:border-[#6C5BD4] focus-visible:ring-[rgba(108,91,212,0.45)]"
+            className={portalInputClass}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="password" className="text-white/78">
+          <Label htmlFor="password" className="text-white/80">
             Password
           </Label>
           <Input
             id="password"
             type="password"
-            placeholder="********"
+            placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="h-12 rounded-2xl border-white/10 bg-white/[0.05] text-white placeholder:text-white/30 focus-visible:border-[#6C5BD4] focus-visible:ring-[rgba(108,91,212,0.45)]"
+            className={portalInputClass}
           />
         </div>
-        <Button
-          type="submit"
-          className="h-12 w-full rounded-2xl border-0 bg-[linear-gradient(135deg,#6C5BD4_0%,#FF6000_100%)] text-white shadow-[0_18px_40px_rgba(108,91,212,0.22)] transition duration-300 hover:brightness-110"
-          disabled={submitting}
-        >
+        <Button type="submit" className={`h-12 w-full rounded-2xl ${portalPrimaryButtonClass}`} disabled={submitting}>
           {submitting ? "Signing in..." : "Login"}
         </Button>
         <Button
           type="button"
           variant="outline"
-          className="h-12 w-full rounded-2xl border-white/12 bg-black/20 text-white/80 transition duration-300 hover:bg-white/[0.06] hover:text-white"
+          className={`h-12 w-full rounded-2xl ${portalSecondaryButtonClass}`}
           disabled={resending}
           onClick={handleResendConfirmation}
         >
           {resending ? "Sending..." : "Resend confirmation email"}
         </Button>
-        <div className="text-center text-sm text-white/58">
-          Don't have an account?{" "}
+        <div className="text-center text-sm text-[#92a8c7]">
+          Don&apos;t have an account?{" "}
           <button
             type="button"
             onClick={() => navigate("/signup/patient")}
-            className="font-medium text-[#d9d4ff] transition hover:text-white hover:underline"
+            className="font-medium text-[#8fe7ff] transition hover:text-white hover:underline"
           >
             Sign up
           </button>
