@@ -1,8 +1,7 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { claimQueuedJobs, processClaimedJob } from "../_shared/lab-report-analysis.ts";
 import { jsonResponse, optionsResponse } from "../_shared/http.ts";
 
-serve(async (request) => {
+Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") {
     return optionsResponse();
   }
