@@ -12,7 +12,13 @@ import {
   type LabReportUploadRow,
 } from "../lib/labReportAnalysis";
 import { getLabReportFileError } from "../lib/security";
-import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
+import {
+  clearBrowserSupabaseSession,
+  getSupabase,
+  isAuthSessionError,
+  isRlsPermissionError,
+  isSupabaseConfigured,
+} from "../lib/supabase";
 
 type UploadLabReportResult = {
   queued: boolean;
@@ -96,6 +102,13 @@ export function usePatientLabReports() {
         });
       if (rowErr) {
         await sb.storage.from(LAB_REPORTS_BUCKET).remove([path]);
+        if (isAuthSessionError(rowErr)) {
+          await clearBrowserSupabaseSession(sb);
+          throw new Error("Your session expired. Sign in again, then retry the upload.");
+        }
+        if (isRlsPermissionError(rowErr)) {
+          throw new Error("Upload blocked by Supabase permissions. Sign in with a patient account and verify your profile row has role = 'patient'.");
+        }
         throw rowErr;
       }
 

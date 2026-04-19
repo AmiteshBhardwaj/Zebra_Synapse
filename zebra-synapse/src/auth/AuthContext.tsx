@@ -16,7 +16,7 @@ import {
 } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  clearSupabaseAuthStorage,
+  clearBrowserSupabaseSession,
   getSupabase,
   isInvalidRefreshTokenError,
   isSupabaseConfigured,
@@ -64,8 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearInvalidSession = useCallback(
     async (sb: SupabaseClient) => {
-      clearSupabaseAuthStorage();
-      await sb.auth.signOut({ scope: "local" });
+      await clearBrowserSupabaseSession(sb);
       setSession(null);
       setProfile(null);
       setLoading(false);

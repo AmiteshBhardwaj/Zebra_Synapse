@@ -69,12 +69,65 @@ export function clearSupabaseAuthStorage(): void {
   window.localStorage.removeItem(AUTH_CODE_VERIFIER_STORAGE_KEY);
 }
 
+export async function clearBrowserSupabaseSession(sb: SupabaseClient): Promise<void> {
+  clearSupabaseAuthStorage();
+  await sb.auth.signOut({ scope: "local" });
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+    return error.message;
+  }
+  return "";
+}
+
+function getErrorStatus(error: unknown): number | null {
+  if (!error || typeof error !== "object") return null;
+  if ("status" in error && typeof error.status === "number") return error.status;
+  if ("statusCode" in error && typeof error.statusCode === "number") return error.statusCode;
+  return null;
+}
+
+function getErrorCode(error: unknown): string {
+  if (!error || typeof error !== "object" || !("code" in error) || typeof error.code !== "string") {
+    return "";
+  }
+  return error.code;
+}
+
 export function isInvalidRefreshTokenError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const message = error.message.toLowerCase();
+  const message = getErrorMessage(error).toLowerCase();
   return (
     message.includes("invalid refresh token") ||
     message.includes("refresh token not found")
+  );
+}
+
+export function isAuthSessionError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  const status = getErrorStatus(error);
+
+  return (
+    isInvalidRefreshTokenError(error) ||
+    message.includes("jwt expired") ||
+    message.includes("invalid jwt") ||
+    message.includes("auth session missing") ||
+    message.includes("session not found") ||
+    (status === 401 && message.length > 0)
+  );
+}
+
+export function isRlsPermissionError(error: unknown): boolean {
+  const message = getErrorMessage(error).toLowerCase();
+  const status = getErrorStatus(error);
+  const code = getErrorCode(error).toLowerCase();
+
+  return (
+    status === 403 ||
+    code === "42501" ||
+    message.includes("row-level security") ||
+    message.includes("permission denied")
   );
 }
 
