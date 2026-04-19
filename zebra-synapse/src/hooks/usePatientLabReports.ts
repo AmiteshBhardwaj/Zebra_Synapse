@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../auth/AuthContext";
 import {
   LAB_REPORTS_BUCKET,
@@ -31,6 +31,7 @@ export function usePatientLabReports() {
   const { user, configured } = useAuth();
   const [uploads, setUploads] = useState<LabReportUploadRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const queueKickTimestampsRef = useRef<Record<string, number>>({});
 
   const refetch = useCallback(async () => {
     if (!isSupabaseConfigured() || !configured || !user) {
@@ -76,6 +77,43 @@ export function usePatientLabReports() {
     return () => window.clearTimeout(timeout);
   }, [refetch, uploads]);
 
+  const invokeQueueProcessor = useCallback(
+    async (uploadId?: string) => {
+      if (!user) return;
+      const sb = getSupabase();
+      if (!sb) return;
+
+      const key = uploadId ?? "__global__";
+      const now = Date.now();
+      const lastKickAt = queueKickTimestampsRef.current[key] ?? 0;
+      if (now - lastKickAt < 15000) {
+        return;
+      }
+      queueKickTimestampsRef.current[key] = now;
+
+      const { error } = await sb.functions.invoke("process-lab-report-queue", {
+        body: uploadId ? { uploadId } : {},
+      });
+      if (error) {
+        console.error("[lab report queue]", error);
+      }
+    },
+    [user],
+  );
+
+  useEffect(() => {
+    const nextPendingUpload = uploads.find((upload) => isPendingUploadStatus(upload.analysis_status));
+    if (!nextPendingUpload) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void invokeQueueProcessor(nextPendingUpload.id);
+    }, 1200);
+
+    return () => window.clearTimeout(timeout);
+  }, [invokeQueueProcessor, uploads]);
+
   const uploadLabReport = useCallback(
     async (file: File): Promise<UploadLabReportResult> => {
       if (!user) throw new Error("Not signed in");
@@ -114,11 +152,7 @@ export function usePatientLabReports() {
 
       await refetch();
 
-      void sb.functions.invoke("process-lab-report-queue", {
-        body: { uploadId },
-      }).catch((error: unknown) => {
-        console.error("[lab report queue]", error);
-      });
+      void invokeQueueProcessor(uploadId);
 
       const statusLabel = getUploadStatusMeta("queued").label;
       return {
@@ -128,7 +162,7 @@ export function usePatientLabReports() {
         message: `Upload complete. ${statusLabel} for server-side analysis.`,
       };
     },
-    [user, refetch],
+    [user, refetch, invokeQueueProcessor],
   );
 
   return {
