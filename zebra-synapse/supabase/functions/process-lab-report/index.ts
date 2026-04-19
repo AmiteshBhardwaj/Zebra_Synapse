@@ -1,10 +1,10 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { claimQueuedJobs, processClaimedJob } from "../_shared/lab-report-analysis.ts";
-import { corsHeaders, jsonResponse } from "../_shared/http.ts";
+import { jsonResponse, optionsResponse } from "../_shared/http.ts";
 
 serve(async (request) => {
   if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return optionsResponse();
   }
 
   try {
