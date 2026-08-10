@@ -1,4 +1,4 @@
-import { BIOMARKER_DEFINITIONS, getBiomarkerDefinition } from "./biomarkerCatalog";
+import { BIOMARKER_DEFINITIONS, getBiomarkerDefinition } from "./biomarkerCatalog.ts";
 import type { LabPanelRow } from "./labPanels";
 
 type MetricStatus = "normal" | "borderline" | "high" | "low";

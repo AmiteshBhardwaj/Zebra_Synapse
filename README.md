@@ -14,7 +14,6 @@ This repository keeps a thin submission wrapper at the root and the actual produ
 .
 |-- .github/             CI and repository automation
 |-- README.md            submission wrapper and navigation entry
-|-- requirements.txt     top-level toolchain note for wrapper context
 |-- vercel.json          wrapper build forwarding into zebra-synapse/
 `-- zebra-synapse/       sole product root
     |-- src/             application code

@@ -1,6 +1,6 @@
 import { GlobalWorkerOptions, getDocument } from "pdfjs-dist";
 import pdfWorkerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { BIOMARKER_DEFINITIONS } from "./biomarkerCatalog";
+import { BIOMARKER_DEFINITIONS } from "./biomarkerCatalog.ts";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerSrc;
 

@@ -78,11 +78,17 @@ Do not prepend `cd zebra-synapse &&` inside Vercel commands once the root direct
 - Review `.github/workflows/security.yml` and CodeQL findings before production release.
 - If longer browser sessions are needed, set `VITE_AUTH_INACTIVITY_TIMEOUT_MS`; default inactivity expiry is 15 minutes.
 
+## Prerequisites & Toolchain
+
+- Node.js `20.19.0`
+- npm `11.6.2`
+- Supabase CLI `2.84.10`
+- Docker Desktop (optional, for local Supabase containers)
+
 ## Related Documents
 
 - Demo flow and judge path: [`demo.md`](./demo.md)
 - Contribution workflow: [`CONTRIBUTING.md`](./CONTRIBUTING.md)
-- Toolchain versions: [`tooling-requirements.md`](./tooling-requirements.md)
 - Supplementary developer docs: [`docs/`](./docs)
 - Research archive: [`research/`](./research)
 - Submission assets: [`screenshots/`](./screenshots)

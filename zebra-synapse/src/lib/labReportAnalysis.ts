@@ -1,4 +1,4 @@
-import { BIOMARKER_DEFINITION_MAP, BIOMARKER_DEFINITIONS, type BiomarkerDefinition } from "./biomarkerCatalog";
+import { BIOMARKER_DEFINITION_MAP, BIOMARKER_DEFINITIONS, type BiomarkerDefinition } from "./biomarkerCatalog.ts";
 
 export type UploadAnalysisStatus =
   | "uploaded"
