@@ -69,8 +69,16 @@ export default function WelcomePage() {
               <h1 className="text-base font-semibold text-white">Zebra Synapse</h1>
             </div>
           </div>
-          <div className="hidden rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs uppercase tracking-[0.24em] text-white/55 sm:inline-flex">
-            Shared patient + doctor workspace
+          <div className="flex items-center gap-3">
+            <div className="hidden rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs uppercase tracking-[0.24em] text-white/55 md:inline-flex">
+              Shared patient + doctor workspace
+            </div>
+            <Button
+              className="rounded-full bg-[#ff8e53] text-[#361100] hover:bg-[#ff9c63] font-semibold text-xs px-5 py-2 shadow-[0_0_15px_rgba(255,142,83,0.3)] transition-all"
+              onClick={() => navigate("/login")}
+            >
+              Login
+            </Button>
           </div>
         </header>
 

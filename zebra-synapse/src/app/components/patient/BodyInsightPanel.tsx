@@ -3,12 +3,39 @@ import { cn } from "../ui/utils";
 import { type MetricAssessment, getMetricValueLabel } from "../../../lib/labInsights";
 
 const REGION_MAP = {
-  head: ["Vitamin B12"],
-  chest: ["Homocysteine", "Cholesterol"],
-  abdomen: ["Hemoglobin A1c", "Fasting Glucose"],
-  kidneys: ["Urea", "Blood Urea Nitrogen"],
-  immune: ["IgE", "Lymphocytes"],
-  bones: ["Vitamin D"],
+  head: ["Vitamin B12", "TSH", "Thyroxine (T4)", "Free T3", "Vitamin Folate"],
+  chest: [
+    "Homocysteine",
+    "Cholesterol",
+    "Total Cholesterol",
+    "LDL Cholesterol",
+    "HDL Cholesterol",
+    "Triglycerides",
+    "hs-CRP",
+    "Troponin",
+  ],
+  abdomen: [
+    "Hemoglobin A1c",
+    "Fasting Glucose",
+    "Glucose",
+    "ALT",
+    "AST",
+    "Bilirubin",
+    "Alkaline Phosphatase",
+    "Albumin",
+  ],
+  kidneys: ["Urea", "Blood Urea Nitrogen", "Creatinine", "eGFR", "Sodium", "Potassium", "Uric Acid"],
+  immune: [
+    "IgE",
+    "Lymphocytes",
+    "WBC",
+    "White Blood Cells",
+    "Neutrophils",
+    "Monocytes",
+    "Eosinophils",
+    "Basophils",
+  ],
+  bones: ["Vitamin D", "25(OH) Vitamin D", "Calcium", "Phosphorus"],
 } as const;
 
 type RegionId = keyof typeof REGION_MAP;
@@ -21,197 +48,260 @@ type RegionShape = {
 
 const BIOMARKER_LABEL_ALIASES: Record<string, string[]> = {
   Cholesterol: ["Total Cholesterol", "LDL Cholesterol", "HDL Cholesterol", "Triglycerides"],
-  Lymphocytes: ["Lymphocytes", "Absolute Lymphocyte Count"],
+  Lymphocytes: ["Lymphocytes", "Absolute Lymphocyte Count", "WBC"],
   "Vitamin D": ["25(OH) Vitamin D"],
+  "Fasting Glucose": ["Glucose", "Blood Sugar"],
 };
 
+// ANATOMICALLY ACCURATE SVG REGION HIGHLIGHTS OVER THE BODY SILHOUETTE (ViewBox 0 0 300 340)
+// Body Silhouette Anchors:
+// Head: cx=150, cy=48, r=26
+// Upper Torso/Chest: cx=150, cy=96, width=56, y=74-120
+// Lower Torso/Abdomen: cx=150, cy=136, width=56, y=120-156
+// Kidneys: cx=134 & 166, cy=136
+// Arms: x=90-112 and 188-210
+// Legs: x=126-146 and 154-174, y=156-278
 const REGION_SHAPES: RegionShape[] = [
   {
     id: "head",
-    label: "Head",
-    renderHitArea: (active, hasAbnormal) => (
-      <>
-        <circle
-          cx="150"
-          cy="48"
-          r="28"
-          fill={active ? "rgba(255, 77, 77, 0.12)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <circle cx="150" cy="48" r="34" fill="transparent" stroke="transparent" strokeWidth="18" pointerEvents="all" />
-      </>
-    ),
+    label: "Head & Neurological",
+    renderHitArea: (active, hasAbnormal) => {
+      const strokeColor = active ? "#ff4d4d" : hasAbnormal ? "#FFC857" : "transparent";
+      const fillColor = active
+        ? "rgba(255, 77, 77, 0.22)"
+        : hasAbnormal
+          ? "rgba(255, 200, 87, 0.15)"
+          : "transparent";
+      return (
+        <g pointerEvents="all">
+          <circle
+            cx="150"
+            cy="48"
+            r="22"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2.5 : hasAbnormal ? 2 : 0}
+            className="transition-all duration-300"
+          />
+          {active || hasAbnormal ? (
+            <circle
+              cx="150"
+              cy="48"
+              r="26"
+              fill="transparent"
+              stroke={strokeColor}
+              strokeWidth="1"
+              strokeDasharray="4 2"
+              className="animate-spin-slow opacity-60"
+            />
+          ) : null}
+        </g>
+      );
+    },
   },
   {
     id: "chest",
-    label: "Chest",
-    renderHitArea: (active, hasAbnormal) => (
-      <>
-        <rect
-          x="118"
-          y="104"
-          width="64"
-          height="74"
-          rx="28"
-          fill={active ? "rgba(255, 77, 77, 0.12)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <rect x="112" y="98" width="76" height="86" rx="32" fill="transparent" stroke="transparent" strokeWidth="18" pointerEvents="all" />
-      </>
-    ),
+    label: "Chest & Cardiovascular",
+    renderHitArea: (active, hasAbnormal) => {
+      const strokeColor = active ? "#ff4d4d" : hasAbnormal ? "#FFC857" : "transparent";
+      const fillColor = active
+        ? "rgba(255, 77, 77, 0.22)"
+        : hasAbnormal
+          ? "rgba(255, 200, 87, 0.15)"
+          : "transparent";
+      return (
+        <g pointerEvents="all">
+          <ellipse
+            cx="150"
+            cy="96"
+            rx="20"
+            ry="16"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2.5 : hasAbnormal ? 2 : 0}
+            className="transition-all duration-300"
+          />
+          {active || hasAbnormal ? (
+            <ellipse
+              cx="150"
+              cy="96"
+              rx="24"
+              ry="20"
+              fill="transparent"
+              stroke={strokeColor}
+              strokeWidth="1"
+              strokeDasharray="4 2"
+              className="opacity-60"
+            />
+          ) : null}
+        </g>
+      );
+    },
   },
   {
     id: "abdomen",
-    label: "Abdomen",
-    renderHitArea: (active, hasAbnormal) => (
-      <>
-        <rect
-          x="120"
-          y="178"
-          width="60"
-          height="58"
-          rx="24"
-          fill={active ? "rgba(255, 77, 77, 0.12)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <rect x="114" y="172" width="72" height="70" rx="28" fill="transparent" stroke="transparent" strokeWidth="18" pointerEvents="all" />
-      </>
-    ),
+    label: "Abdomen & Metabolic",
+    renderHitArea: (active, hasAbnormal) => {
+      const strokeColor = active ? "#ff4d4d" : hasAbnormal ? "#FFC857" : "transparent";
+      const fillColor = active
+        ? "rgba(255, 77, 77, 0.22)"
+        : hasAbnormal
+          ? "rgba(255, 200, 87, 0.15)"
+          : "transparent";
+      return (
+        <g pointerEvents="all">
+          <ellipse
+            cx="150"
+            cy="136"
+            rx="21"
+            ry="15"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2.5 : hasAbnormal ? 2 : 0}
+            className="transition-all duration-300"
+          />
+          {active || hasAbnormal ? (
+            <ellipse
+              cx="150"
+              cy="136"
+              rx="25"
+              ry="18"
+              fill="transparent"
+              stroke={strokeColor}
+              strokeWidth="1"
+              strokeDasharray="4 2"
+              className="opacity-60"
+            />
+          ) : null}
+        </g>
+      );
+    },
   },
   {
     id: "kidneys",
-    label: "Kidneys",
-    renderHitArea: (active, hasAbnormal) => (
-      <>
-        <ellipse
-          cx="132"
-          cy="248"
-          rx="16"
-          ry="24"
-          fill={active ? "rgba(255, 77, 77, 0.12)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <ellipse
-          cx="168"
-          cy="248"
-          rx="16"
-          ry="24"
-          fill={active ? "rgba(255, 77, 77, 0.12)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <ellipse cx="132" cy="248" rx="22" ry="30" fill="transparent" stroke="transparent" strokeWidth="18" pointerEvents="all" />
-        <ellipse cx="168" cy="248" rx="22" ry="30" fill="transparent" stroke="transparent" strokeWidth="18" pointerEvents="all" />
-      </>
-    ),
+    label: "Kidneys & Renal",
+    renderHitArea: (active, hasAbnormal) => {
+      const strokeColor = active ? "#ff4d4d" : hasAbnormal ? "#FFC857" : "transparent";
+      const fillColor = active
+        ? "rgba(255, 77, 77, 0.22)"
+        : hasAbnormal
+          ? "rgba(255, 200, 87, 0.15)"
+          : "transparent";
+      return (
+        <g pointerEvents="all">
+          {/* Left Kidney */}
+          <ellipse
+            cx="134"
+            cy="136"
+            rx="8"
+            ry="12"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2.5 : hasAbnormal ? 2 : 0}
+            className="transition-all duration-300"
+          />
+          {/* Right Kidney */}
+          <ellipse
+            cx="166"
+            cy="136"
+            rx="8"
+            ry="12"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2.5 : hasAbnormal ? 2 : 0}
+            className="transition-all duration-300"
+          />
+        </g>
+      );
+    },
   },
   {
     id: "immune",
-    label: "Immune System",
-    renderHitArea: (active, hasAbnormal) => (
-      <>
-        <circle
-          cx="150"
-          cy="92"
-          r="12"
-          fill={active ? "rgba(255, 77, 77, 0.12)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <circle
-          cx="110"
-          cy="128"
-          r="12"
-          fill={active ? "rgba(255, 77, 77, 0.12)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <circle
-          cx="190"
-          cy="128"
-          r="12"
-          fill={active ? "rgba(255, 77, 77, 0.12)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <circle cx="150" cy="92" r="18" fill="transparent" stroke="transparent" strokeWidth="18" pointerEvents="all" />
-        <circle cx="110" cy="128" r="18" fill="transparent" stroke="transparent" strokeWidth="18" pointerEvents="all" />
-        <circle cx="190" cy="128" r="18" fill="transparent" stroke="transparent" strokeWidth="18" pointerEvents="all" />
-      </>
-    ),
+    label: "Immune System & Lymphatics",
+    renderHitArea: (active, hasAbnormal) => {
+      const strokeColor = active ? "#ff4d4d" : hasAbnormal ? "#FFC857" : "transparent";
+      const fillColor = active
+        ? "rgba(255, 77, 77, 0.22)"
+        : hasAbnormal
+          ? "rgba(255, 200, 87, 0.15)"
+          : "transparent";
+      return (
+        <g pointerEvents="all">
+          {/* Neck Lymph Node Hub */}
+          <circle
+            cx="150"
+            cy="72"
+            r="7"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 0}
+          />
+          {/* Left Axilla Hub */}
+          <circle
+            cx="116"
+            cy="92"
+            r="7"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 0}
+          />
+          {/* Right Axilla Hub */}
+          <circle
+            cx="184"
+            cy="92"
+            r="7"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 0}
+          />
+        </g>
+      );
+    },
   },
   {
     id: "bones",
-    label: "Bones",
-    renderHitArea: (active, hasAbnormal) => (
-      <>
-        <circle
-          cx="150"
-          cy="48"
-          r="16"
-          fill={active ? "rgba(255, 77, 77, 0.08)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <rect
-          x="130"
-          y="130"
-          width="40"
-          height="26"
-          rx="12"
-          fill={active ? "rgba(255, 77, 77, 0.08)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <rect
-          x="130"
-          y="206"
-          width="40"
-          height="26"
-          rx="12"
-          fill={active ? "rgba(255, 77, 77, 0.08)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <rect
-          x="128"
-          y="272"
-          width="18"
-          height="46"
-          rx="9"
-          fill={active ? "rgba(255, 77, 77, 0.08)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-        <rect
-          x="154"
-          y="272"
-          width="18"
-          height="46"
-          rx="9"
-          fill={active ? "rgba(255, 77, 77, 0.08)" : "transparent"}
-          stroke={active ? "#ff4d4d" : hasAbnormal ? "rgba(255,200,87,0.7)" : "transparent"}
-          strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 1}
-          pointerEvents="all"
-        />
-      </>
-    ),
+    label: "Bones & Skeletal System",
+    renderHitArea: (active, hasAbnormal) => {
+      const strokeColor = active ? "#ff4d4d" : hasAbnormal ? "#FFC857" : "transparent";
+      const fillColor = active
+        ? "rgba(255, 77, 77, 0.22)"
+        : hasAbnormal
+          ? "rgba(255, 200, 87, 0.15)"
+          : "transparent";
+      return (
+        <g pointerEvents="all">
+          {/* Spine Segment */}
+          <rect
+            x="147"
+            y="78"
+            width="6"
+            height="72"
+            rx="3"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 0}
+          />
+          {/* Left Knee Joint */}
+          <circle
+            cx="136"
+            cy="216"
+            r="9"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 0}
+          />
+          {/* Right Knee Joint */}
+          <circle
+            cx="164"
+            cy="216"
+            r="9"
+            fill={fillColor}
+            stroke={strokeColor}
+            strokeWidth={active ? 2 : hasAbnormal ? 1.5 : 0}
+          />
+        </g>
+      );
+    },
   },
 ];
 
@@ -254,9 +344,10 @@ export function BodyInsightPanel({
 
     (Object.keys(REGION_MAP) as RegionId[]).forEach((regionId) => {
       const strictLabels = getStrictRegionLabels(regionId);
-      const all = strictLabels.length === 0
-        ? []
-        : metrics.filter((metric) => strictLabels.includes(metric.label) && metric.status !== "missing");
+      const all =
+        strictLabels.length === 0
+          ? []
+          : metrics.filter((metric) => strictLabels.includes(metric.label) && metric.status !== "missing");
       const abnormal = all.filter(
         (metric) => metric.status === "high" || metric.status === "low" || metric.status === "borderline",
       );
@@ -279,27 +370,35 @@ export function BodyInsightPanel({
     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-5">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-white/70">Body Insight Panel</h3>
-        {!hasAbnormal ? <span className="text-xs text-emerald-300">Within normal range</span> : null}
+        {!hasAbnormal ? <span className="text-xs font-medium text-emerald-300">Within normal range</span> : null}
       </div>
 
       <div className="relative mx-auto h-[340px] w-[300px] max-w-full">
         <svg viewBox="0 0 300 340" className="h-full w-full">
           <defs>
             <linearGradient id="bodyGlow" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0.2)" />
+              <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0.15)" />
             </linearGradient>
           </defs>
 
-          <g opacity="0.75">
+          {/* SVG Human Body Silhouette */}
+          <g opacity="0.65">
+            {/* Head */}
             <circle cx="150" cy="48" r="26" fill="url(#bodyGlow)" />
+            {/* Torso */}
             <rect x="122" y="74" width="56" height="86" rx="24" fill="url(#bodyGlow)" />
+            {/* Left Arm */}
             <rect x="90" y="84" width="22" height="100" rx="11" fill="url(#bodyGlow)" />
+            {/* Right Arm */}
             <rect x="188" y="84" width="22" height="100" rx="11" fill="url(#bodyGlow)" />
+            {/* Left Leg */}
             <rect x="126" y="156" width="20" height="122" rx="10" fill="url(#bodyGlow)" />
+            {/* Right Leg */}
             <rect x="154" y="156" width="20" height="122" rx="10" fill="url(#bodyGlow)" />
           </g>
 
+          {/* Anatomically Accurate Hotspots & Rings */}
           {REGION_SHAPES.map((region) => {
             const regionMetrics = regionMetricMap.get(region.id) ?? { abnormal: [], all: [], metricKeys: [] };
             const isActive = activeRegion === region.id;
@@ -309,11 +408,10 @@ export function BodyInsightPanel({
               <g
                 key={region.id}
                 id={region.id}
-                className={cn("cursor-pointer transition-all duration-200", isFocused ? "scale-[1.01]" : "")}
+                className={cn("cursor-pointer transition-all duration-200", isFocused ? "scale-[1.03]" : "")}
                 onMouseEnter={() => {
                   setActiveRegion(region.id);
                   onFocusMetricKeys(regionMetrics.metricKeys);
-                  console.log("Hovered region:", region.id);
                 }}
                 onMouseLeave={() => {
                   setActiveRegion(null);

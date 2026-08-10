@@ -94,6 +94,10 @@ export default function PortalAppShell({
   const location = useLocation();
   const navigate = useNavigate();
 
+  const [isHovered, setIsHovered] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const isExpanded = isPinned || isHovered;
+
   const currentItem = useMemo(
     () => navItems.find((item) => isNavItemActive(location.pathname, item)) ?? navItems[0],
     [location.pathname, navItems],
@@ -108,39 +112,56 @@ export default function PortalAppShell({
       </div>
 
       <div className="relative z-10 flex min-h-screen">
-        <aside className="hidden w-[300px] shrink-0 border-r border-white/8 bg-[rgba(7,14,25,0.78)] px-5 py-6 backdrop-blur-2xl lg:flex lg:flex-col">
-          <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-5">
+        <aside
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className={cn(
+            "group hidden shrink-0 border-r border-white/8 bg-[rgba(7,14,25,0.85)] px-4 py-5 backdrop-blur-2xl transition-all duration-300 ease-in-out lg:flex lg:flex-col",
+            isExpanded ? "w-[280px]" : "w-[72px]"
+          )}
+        >
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-3.5">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#ff7a33,#56d9ff)] shadow-[0_18px_36px_rgba(10,18,32,0.4)]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#ff7a33,#56d9ff)] shadow-[0_18px_36px_rgba(10,18,32,0.4)]">
                 <Activity className="h-5 w-5 text-white" strokeWidth={1.9} />
               </div>
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.34em] text-[#7fdcff]">{portalLabel}</p>
-                <h2 className="text-lg font-semibold text-white">Zebra Synapse</h2>
+              <div className={cn("transition-all duration-300 overflow-hidden whitespace-nowrap", isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden")}>
+                <p className="text-[10px] uppercase tracking-[0.34em] text-[#7fdcff]">{portalLabel}</p>
+                <h2 className="text-base font-semibold text-white">Zebra Synapse</h2>
               </div>
             </div>
 
-            <div className="mt-5 rounded-[24px] border border-white/8 bg-[#0f1828]/80 p-4">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-white/38">Workspace</p>
-              <p className="mt-3 text-lg font-semibold text-white">{workspaceTitle}</p>
-              <p className="mt-2 text-sm leading-6 text-[#92a8c7]">{workspaceDescription}</p>
-            </div>
+            {isExpanded && (
+              <div className="mt-4 rounded-[20px] border border-white/8 bg-[#0f1828]/80 p-3">
+                <p className="text-[10px] uppercase tracking-[0.28em] text-white/38">Workspace</p>
+                <p className="mt-1.5 text-sm font-semibold text-white">{workspaceTitle}</p>
+                <p className="mt-1 text-xs leading-5 text-[#92a8c7]">{workspaceDescription}</p>
+              </div>
+            )}
           </div>
 
-          <div className="mt-6 flex-1 overflow-y-auto pr-1">
-            <NavList items={navItems} pathname={location.pathname} onNavigate={navigate} />
+          <div className="mt-5 flex-1 overflow-y-auto pr-1">
+            <NavList items={navItems} pathname={location.pathname} onNavigate={navigate} compact={!isExpanded} />
           </div>
 
-          <div className="mt-6 rounded-[28px] border border-white/10 bg-white/[0.03] p-4">
-            <p className="text-sm font-semibold text-white">{profileName ?? "Workspace user"}</p>
-            {profileMeta ? <p className="mt-1 text-sm text-[#92a8c7]">{profileMeta}</p> : null}
+          <div className="mt-4 rounded-[24px] border border-white/10 bg-white/[0.03] p-3">
+            {isExpanded && (
+              <>
+                <p className="text-xs font-semibold text-white truncate">{profileName ?? "Workspace user"}</p>
+                {profileMeta ? <p className="mt-0.5 text-xs text-[#92a8c7] truncate">{profileMeta}</p> : null}
+              </>
+            )}
             <Button
               variant="outline"
-              className="mt-4 h-11 w-full justify-start rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white"
+              className={cn(
+                "h-10 border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white transition-all",
+                isExpanded ? "w-full justify-start rounded-xl mt-3 px-3" : "w-10 h-10 justify-center rounded-xl p-0 mx-auto"
+              )}
               onClick={onSignOut}
+              title={!isExpanded ? "Logout" : undefined}
             >
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
+              <LogOut className="h-4 w-4 shrink-0" />
+              {isExpanded && <span className="ml-2 text-xs">Logout</span>}
             </Button>
           </div>
         </aside>

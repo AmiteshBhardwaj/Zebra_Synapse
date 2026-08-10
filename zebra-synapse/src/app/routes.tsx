@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 import WelcomePage from "./pages/WelcomePage";
+import DualLogin from "./pages/auth/DualLogin";
 import PatientLogin from "./pages/auth/PatientLogin";
 import PatientSignup from "./pages/auth/PatientSignup";
 import DoctorLogin from "./pages/auth/DoctorLogin";
@@ -22,7 +23,11 @@ import RequireDoctorPortal from "./layouts/RequireDoctorPortal";
 export const router = createBrowserRouter([
   {
     path: "/",
-    Component: WelcomePage,
+    Component: DualLogin,
+  },
+  {
+    path: "/login",
+    Component: DualLogin,
   },
   {
     path: "/login/patient",

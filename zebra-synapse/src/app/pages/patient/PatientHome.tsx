@@ -2,21 +2,27 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   Activity,
-  AlertCircle,
-  ArrowUpRight,
   CheckCircle,
-  Clock3,
+  FileText,
   FlaskConical,
+  Heart,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
   Upload,
+  Zap,
 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "../../components/ui/alert";
 import { Button } from "../../components/ui/button";
-import { Progress } from "../../components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { getUploadProgressMeta, getUploadStatusMeta } from "../../../lib/labReportAnalysis";
 import { formatLabDate } from "../../../lib/labPanels";
 import {
   MetricPriorityBars,
@@ -28,65 +34,78 @@ import {
   getMetricAssessments,
   getLatestLabPanel,
   getMetricsForDashboard,
-  getMetricValueLabel,
-  getOverallStatus,
 } from "../../../lib/labInsights";
 import { BiomarkerInsightsBoard } from "../../components/patient/BiomarkerInsights";
 import { BodyInsightPanel } from "../../components/patient/BodyInsightPanel";
 import {
-  EmptyStateCard,
-  MetricCard,
-  PatientPageHero,
   PatientPortalPage,
   SectionHeading,
-  StatusPill,
   portalInsetClass,
   portalPanelClass,
   portalPrimaryButtonClass,
 } from "../../components/patient/PortalTheme";
 
 export default function PatientHome() {
-  const { hasLabReports, loading, uploads, uploadLabReport } = usePatientLabReports();
-  const { panels, loading: panelsLoading, hasPanels, refetch: refetchPanels } = usePatientLabPanels();
+  const { profile } = useAuth();
+  const { uploads, uploadLabReport } = usePatientLabReports();
+  const { panels, refetch: refetchPanels } = usePatientLabPanels();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [focusedMetricKeys, setFocusedMetricKeys] = useState<string[]>([]);
 
+  // Medical report selection state - defaults to "none" so area below stays empty until selected
+  const [selectedReportId, setSelectedReportId] = useState<string>("none");
+
+  // Available medical reports list for dropdown
+  const availableReports = useMemo(() => {
+    const list: Array<{ id: string; name: string; date: string }> = [];
+    if (uploads.length > 0) {
+      uploads.forEach((u) => {
+        list.push({
+          id: u.id,
+          name: u.original_filename,
+          date: new Date(u.created_at).toLocaleDateString(),
+        });
+      });
+    } else if (panels.length > 0) {
+      panels.forEach((p) => {
+        list.push({
+          id: p.id,
+          name: `Structured Lab Panel`,
+          date: formatLabDate(p.recorded_at),
+        });
+      });
+    } else {
+      // Demo report options so the user can test & select immediately
+      list.push({
+        id: "demo-report-1",
+        name: "cn2.pdf (Apr 1, 2026)",
+        date: "Apr 1, 2026",
+      });
+      list.push({
+        id: "demo-report-2",
+        name: "Comprehensive Metabolic Panel & CBC.pdf",
+        date: "Mar 15, 2026",
+      });
+    }
+    return list;
+  }, [uploads, panels]);
+
   const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
-  const overall = latestPanel ? getOverallStatus(latestPanel) : null;
   const allMetrics = useMemo(
     () => (latestPanel ? getMetricAssessments(latestPanel).filter((metric) => metric.status !== "missing") : []),
     [latestPanel],
   );
   const topMetrics = latestPanel ? getMetricsForDashboard(latestPanel, 20) : [];
-  const recentUploads = uploads.slice(0, 4);
-  const reviewRequiredCount = uploads.filter((upload) => upload.analysis_status === "review_required").length;
-  const readyCount = uploads.filter((upload) => upload.analysis_status === "ready").length;
-  const processingCount = uploads.filter(
-    (upload) =>
-      upload.analysis_status === "queued" ||
-      upload.analysis_status === "processing" ||
-      upload.analysis_status === "uploaded",
-  ).length;
-  const latestUpload = recentUploads[0] ?? null;
-  const readinessProgress = latestUpload ? getUploadProgressMeta(latestUpload.analysis_status) : null;
 
-  const heroDescription = hasPanels
-    ? "Your latest structured panel is now powering trend charts, summaries, and follow-up views across the portal."
-    : reviewRequiredCount > 0
-    ? "One or more report extractions need review before they can drive the rest of the workspace."
-    : hasLabReports
-    ? "Files are stored. The extraction pipeline is preparing structured values for the rest of the portal."
-    : "Upload a lab report to unlock the structured insight views across your patient workspace.";
-
-  const readinessMessage = hasPanels
-    ? "Insights are live across the portal."
-    : reviewRequiredCount > 0
-    ? "Open Medical Records to review low-confidence extraction fields."
-    : processingCount > 0
-    ? "Analysis is running in the background."
-    : "Upload one report to unlock deeper insights.";
+  // Dynamic time-of-day greeting
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -136,63 +155,66 @@ export default function PatientHome() {
 
   return (
     <PatientPortalPage>
-      <PatientPageHero
-        eyebrow="Today&apos;s Status"
-        title="Your clinical picture, made easier to read."
-        description={heroDescription}
-        icon={Activity}
-        meta={[
-          {
-            label: "Portal status",
-            value: hasPanels ? "Analysis active" : hasLabReports ? "Files stored" : "Awaiting upload",
-          },
-          {
-            label: "Latest panel",
-            value: latestPanel ? formatLabDate(latestPanel.recorded_at) : "No panel yet",
-          },
-          {
-            label: "Reports",
-            value: `${uploads.length} file${uploads.length === 1 ? "" : "s"}`,
-          },
-          {
-            label: "Review queue",
-            value: reviewRequiredCount > 0 ? `${reviewRequiredCount} require review` : "Clear",
-          },
-        ]}
-      />
+      {/* 1. STITCH PATIENT WELCOME HERO BANNER */}
+      <div className="relative overflow-hidden rounded-[32px] border border-white/12 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,138,61,0.22),_transparent_65%),radial-gradient(ellipse_at_bottom_right,_rgba(114,76,255,0.18),_transparent_60%),linear-gradient(135deg,rgba(16,16,22,0.95),rgba(10,10,14,0.98))] p-6 sm:p-8 shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-[#ff8a3d]/15 blur-3xl" />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Tracked biomarkers"
-          value={latestPanel ? Object.keys(latestPanel.biomarkers ?? {}).length : 0}
-          detail="Structured values currently available from your latest lab panel."
-          icon={FlaskConical}
-          tone="orange"
-        />
-        <MetricCard
-          label="Outside range"
-          value={allMetrics.filter((metric) => metric.status === "high" || metric.status === "low").length}
-          detail="Markers that likely need the fastest follow-up."
-          icon={AlertCircle}
-          tone="rose"
-        />
-        <MetricCard
-          label="Published panels"
-          value={readyCount}
-          detail="Panels already extracted and ready for the rest of the portal."
-          icon={CheckCircle}
-          tone="green"
-        />
-        <MetricCard
-          label="Pipeline stage"
-          value={readinessProgress ? `${readinessProgress.percent}%` : "Idle"}
-          detail="Readiness of the most recent upload in the extraction flow."
-          icon={Clock3}
-          tone="blue"
-        />
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff9c61]">
+                <Sparkles className="h-3 w-3" />
+                Patient Workspace
+              </span>
+              <span className="text-xs text-white/30">•</span>
+              <span className="text-xs font-medium text-white/60">
+                {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+              </span>
+            </div>
+
+            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-white">
+              {greeting},{" "}
+              <span className="bg-gradient-to-r from-[#ff9c61] via-[#ffb88c] to-white bg-clip-text text-transparent">
+                {profile?.full_name ?? "Patient"}
+              </span>
+            </h1>
+
+            <p className="max-w-xl text-sm text-[#92a8c7] leading-relaxed">
+              Welcome to your personal health dashboard. Upload a new lab report or select a report below to explore your biomarker trends, body system signals, and clinical insights.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center shrink-0">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-xl">
+              <p className="text-[10px] uppercase tracking-wider text-white/45">Health Vault</p>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <p className="text-xs font-semibold text-white">
+                  {latestPanel ? "Active & Synced" : "Ready for Lab Data"}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-xl">
+              <p className="text-[10px] uppercase tracking-wider text-white/45">Biomarkers</p>
+              <p className="mt-1 text-xs font-semibold text-[#ff9c61]">
+                {latestPanel ? `${Object.keys(latestPanel.biomarkers ?? {}).length} Tracked` : "0 Tracked"}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-xl col-span-2 sm:col-span-1">
+              <p className="text-[10px] uppercase tracking-wider text-white/45">Latest Panel</p>
+              <p className="mt-1 text-xs font-semibold text-white">
+                {latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting Upload"}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* 2. CORE HOMEPAGE ACTION & HIGHLIGHTS GRID */}
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        {/* Upload Box */}
         <section className={`${portalPanelClass} p-5 sm:p-6`}>
           <SectionHeading
             eyebrow="Upload"
@@ -200,11 +222,10 @@ export default function PatientHome() {
             description="PDF and image uploads are stored securely, then pushed into the extraction pipeline that powers your structured insights."
           />
           <div
-            className={`mt-6 rounded-[28px] border border-dashed p-8 text-center transition-colors ${
-              dragActive
+            className={`mt-6 rounded-[28px] border border-dashed p-8 text-center transition-colors ${dragActive
                 ? "border-[#ff9b61]/70 bg-[#ff9b61]/10"
                 : "border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-[#ff9b61]/40"
-            }`}
+              }`}
             onDragOver={(e) => {
               e.preventDefault();
               setDragActive(true);
@@ -244,207 +265,143 @@ export default function PatientHome() {
           </Button>
         </section>
 
-        <section className={`${portalPanelClass} p-5 sm:p-6`}>
+        {/* Patient Clinical Highlights & Quick Shortcuts */}
+        <section className={`${portalPanelClass} p-5 sm:p-6 flex flex-col justify-between`}>
           <SectionHeading
-            eyebrow="Flow"
-            title="What the portal is doing now"
-            description="Recent uploads and current readiness, surfaced without making you inspect each workflow step manually."
+            eyebrow="Overview"
+            title="Today's Health Highlights"
+            description="Your key clinical metrics and portal readiness at a glance."
           />
-          <div className="mt-6 space-y-4">
-            {recentUploads.length > 0 ? (
-              recentUploads.map((upload) => {
-                const progress = getUploadProgressMeta(upload.analysis_status);
-                return (
-                  <div key={upload.id} className={`${portalInsetClass} p-4`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-white">{upload.original_filename}</p>
-                        <p className="mt-1 text-xs text-[#92a8c7]">
-                          Added {new Date(upload.created_at).toLocaleDateString()}
-                        </p>
-                        {upload.last_error ? (
-                          <p className="mt-1 text-xs text-[#ffd0a8]">{upload.last_error}</p>
-                        ) : null}
-                      </div>
-                      <StatusPill status={getUploadStatusMeta(upload.analysis_status).label} />
-                    </div>
-                    <div className="mt-3">
-                      <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-white/40">
-                        <span>{progress.stageLabel}</span>
-                        <span>{progress.percent}%</span>
-                      </div>
-                      <Progress
-                        value={progress.percent}
-                        className="h-2.5 bg-white/8 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-[#ff7a33] [&_[data-slot=progress-indicator]]:via-[#ffb17e] [&_[data-slot=progress-indicator]]:to-[#60d4ff]"
-                      />
-                      <p className="mt-2 text-xs text-[#92a8c7]">{progress.summary}</p>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <EmptyStateCard
-                icon={Upload}
-                title="No reports uploaded yet"
-                description="Your first uploaded report will appear here as soon as it is stored and sent to the extraction flow."
-              />
-            )}
 
-            <div className="rounded-[28px] border border-[#60d4ff]/16 bg-[linear-gradient(135deg,rgba(96,212,255,0.1),rgba(255,255,255,0.02))] p-5">
-              <p className="text-[11px] uppercase tracking-[0.24em] text-[#9be8ff]">Care readiness</p>
-              {readinessProgress ? (
-                <div className="mt-3">
-                  <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-white/40">
-                    <span>{readinessProgress.stageLabel}</span>
-                    <span>{readinessProgress.percent}%</span>
-                  </div>
-                  <Progress
-                    value={readinessProgress.percent}
-                    className="h-2.5 bg-white/10 [&_[data-slot=progress-indicator]]:bg-gradient-to-r [&_[data-slot=progress-indicator]]:from-[#ff7a33] [&_[data-slot=progress-indicator]]:to-[#60d4ff]"
-                  />
+          <div className="mt-6 space-y-3.5 flex-1">
+            <div className={`${portalInsetClass} flex items-center justify-between p-4`}>
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-[#ff9c61]/15 text-[#ff9c61]">
+                  <Activity className="h-5 w-5" />
                 </div>
-              ) : null}
-              <p className="mt-3 text-lg font-medium text-white">{readinessMessage}</p>
+                <div>
+                  <p className="text-xs font-semibold text-white">Biomarker Intelligence</p>
+                  <p className="text-[11px] text-[#92a8c7]">
+                    {latestPanel ? "Structured panel is actively powering body system maps." : "Ready for your first report upload."}
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-200 uppercase tracking-wider">
+                {latestPanel ? "Active" : "Standby"}
+              </span>
+            </div>
+
+            <div className={`${portalInsetClass} flex items-center justify-between p-4`}>
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-purple-500/15 text-purple-300">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white">Longitudinal Trends</p>
+                  <p className="text-[11px] text-[#92a8c7]">
+                    {panels.length > 0 ? `${panels.length} historical panel(s) available for comparison.` : "Upload reports to start building trend charts."}
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-semibold text-white/70 uppercase tracking-wider">
+                {panels.length} Panels
+              </span>
+            </div>
+
+            <div className={`${portalInsetClass} flex items-center justify-between p-4`}>
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-sky-500/15 text-sky-300">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white">Patient Privacy & Vault</p>
+                  <p className="text-[11px] text-[#92a8c7]">
+                    All lab documents and extracted data are encrypted & protected.
+                  </p>
+                </div>
+              </div>
+              <span className="rounded-full border border-sky-500/30 bg-sky-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-sky-200 uppercase tracking-wider">
+                Protected
+              </span>
             </div>
           </div>
         </section>
       </div>
 
-      <section className={`${portalPanelClass} p-5 sm:p-6`}>
-        <SectionHeading
-          eyebrow="Latest analysis"
-          title={latestPanel ? "Most recent panel summary" : "Latest analysis status"}
-          description={
-            latestPanel
-              ? `Based on the values recorded for ${formatLabDate(latestPanel.recorded_at)}.`
-              : "The workspace is waiting for structured values before deeper summaries can light up."
-          }
-        />
+      {/* 3. REPORT SELECTION SECTION - EMPTIES AREA BELOW UNTIL REPORT IS CHOSEN */}
+      {selectedReportId === "none" ? (
+        <div className="flex flex-col items-center justify-center text-center px-4 py-12 rounded-[32px] border border-white/10 bg-white/[0.02] backdrop-blur-xl mt-6 shadow-2xl">
+          <div className="mx-auto mb-5 flex h-18 w-18 items-center justify-center rounded-[24px] bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_20px_50px_rgba(255,122,51,0.22)]">
+            <FileText className="h-8 w-8 text-[#ff9b61]" />
+          </div>
 
-        <div className="mt-6 space-y-5">
-          {loading ? <p className="text-sm text-[#92a8c7]">Loading your reports...</p> : null}
-          {!loading && panelsLoading ? <p className="text-sm text-[#92a8c7]">Loading your lab analysis...</p> : null}
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-2">
+            Please choose a medical report
+          </h2>
 
-          {!loading && !panelsLoading && latestPanel ? (
-            <>
-              <Alert
-                className={
-                  overall?.tone === "attention"
-                    ? "border-amber-500/25 bg-amber-500/10 text-amber-50"
-                    : "border-emerald-500/25 bg-emerald-500/10 text-emerald-50"
-                }
-              >
-                {overall?.tone === "attention" ? <AlertCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-                <AlertTitle>{overall?.label}</AlertTitle>
-                <AlertDescription>{overall?.summary}</AlertDescription>
-              </Alert>
+          <p className="max-w-md text-xs sm:text-sm text-[#92a8c7] leading-relaxed mb-6">
+            Select a medical report from your records below to inspect body system signals, biomarker boards, and clinical trends.
+          </p>
 
-              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {topMetrics.slice(0, 4).map((metric) => (
-                  <div key={metric.key} className={`${portalInsetClass} p-4`}>
-                    <div className="mb-2 flex items-center gap-2">
-                      <Activity className="h-4 w-4 text-[#ffb17e]" />
-                      <p className="text-sm font-medium text-white">{metric.label}</p>
-                    </div>
-                    <p className="text-2xl font-semibold text-white">{getMetricValueLabel(metric)}</p>
-                    <p className="mt-1 text-xs text-[#92a8c7]">Range: {metric.range}</p>
-                    <p className="mt-2 text-sm text-[#c8d8ec]">{metric.summary}</p>
-                  </div>
+          <div className="w-full max-w-sm sm:max-w-md">
+            <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+              <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-4 text-xs sm:text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+                <SelectValue placeholder="Select a medical report..." />
+              </SelectTrigger>
+              <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-2xl p-1.5">
+                <SelectItem value="none" className="py-2.5 text-white/40 cursor-pointer">
+                  -- Select a Medical Report --
+                </SelectItem>
+                {availableReports.map((report) => (
+                  <SelectItem
+                    key={report.id}
+                    value={report.id}
+                    className="py-2.5 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl text-xs sm:text-sm"
+                  >
+                    📄 {report.name} ({report.date})
+                  </SelectItem>
                 ))}
-              </div>
-            </>
-          ) : null}
-
-          {!loading && !panelsLoading && !latestPanel && hasLabReports ? (
-            <div className={`${portalInsetClass} p-5 text-sm leading-7 text-[#92a8c7]`}>
-              Your files are stored correctly. The server-side pipeline has not published a panel yet,
-              so the portal is waiting for either automatic extraction or your review of a low-confidence report.
-            </div>
-          ) : null}
-
-          {!loading && !panelsLoading && !hasLabReports ? (
-            <EmptyStateCard
-              icon={FlaskConical}
-              title="No structured panel yet"
-              description="Upload one report to start generating the structured biomarker summary, status mix, and trend charts that power the portal."
-            />
-          ) : null}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </section>
-
-      {latestPanel ? (
-        <>
-          <section className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-            <div className={`${portalPanelClass} p-5 sm:p-6`}>
-              <SectionHeading
-                eyebrow="Signals"
-                title="Body systems and marker focus"
-                description="A top-level clinical read to help you understand where attention is clustering."
-              />
-              <div className="mt-6">
-                <BodyInsightPanel
-                  metrics={allMetrics}
-                  focusedMetricKeys={focusedMetricKeys}
-                  onFocusMetricKeys={setFocusedMetricKeys}
-                />
+      ) : (
+        /* UNLOCKED CLINICAL SIGNALS & BIOMARKERS DASHBOARD WHEN A REPORT IS SELECTED */
+        <div className="mt-6 space-y-6">
+          {/* Top Active Report Switcher Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff9c61]/15 border border-[#ff9c61]/30">
+                <FileText className="h-4.5 w-4.5 text-[#ff9c61]" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-white/45">Active Medical Record</p>
+                <p className="text-xs font-semibold text-white">
+                  {availableReports.find((r) => r.id === selectedReportId)?.name ?? "Selected Record"}
+                </p>
               </div>
             </div>
 
-            <div className={`${portalPanelClass} p-5 sm:p-6`}>
-              <SectionHeading
-                eyebrow="Actions"
-                title="Why the portal says this matters"
-                description="A compact set of current signals around storage, extraction, and next movement."
-              />
-              <div className="mt-6 space-y-3">
-                {[
-                  {
-                    icon: ShieldCheck,
-                    label: "Secure storage",
-                    value: hasLabReports ? "Reports saved" : "Waiting for first upload",
-                  },
-                  {
-                    icon: FlaskConical,
-                    label: "Extraction",
-                    value:
-                      reviewRequiredCount > 0
-                        ? `${reviewRequiredCount} report${reviewRequiredCount === 1 ? "" : "s"} need review`
-                        : readyCount > 0
-                        ? `${readyCount} published panel${readyCount === 1 ? "" : "s"}`
-                        : processingCount > 0
-                        ? "Server-side analysis running"
-                        : "No extracted panel yet",
-                  },
-                  {
-                    icon: ArrowUpRight,
-                    label: "Recent files",
-                    value: `${uploads.length} file${uploads.length === 1 ? "" : "s"} in portal`,
-                  },
-                  {
-                    icon: Sparkles,
-                    label: "AI support",
-                    value: hasPanels ? "Insights active" : "Waiting for structured values",
-                  },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.label} className={`${portalInsetClass} flex items-center justify-between gap-3 p-4`}>
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/8 bg-white/[0.04]">
-                          <Icon className="h-4 w-4 text-[#8fe7ff]" />
-                        </span>
-                        <div>
-                          <p className="text-sm font-medium text-white">{item.label}</p>
-                          <p className="text-xs text-[#92a8c7]">{item.value}</p>
-                        </div>
-                      </div>
-                      <ArrowUpRight className="h-4 w-4 text-white/28" />
-                    </div>
-                  );
-                })}
-              </div>
+            <div className="w-full sm:w-auto min-w-[260px]">
+              <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+                <SelectTrigger className="h-10 w-full rounded-xl border-white/14 bg-[#0d1829]/90 text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
+                  <SelectValue placeholder="Change medical report..." />
+                </SelectTrigger>
+                <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-xl p-1">
+                  <SelectItem value="none" className="py-2 text-white/40 cursor-pointer">
+                    -- Clear Selection --
+                  </SelectItem>
+                  {availableReports.map((report) => (
+                    <SelectItem key={report.id} value={report.id} className="py-2 text-white text-xs cursor-pointer">
+                      📄 {report.name} ({report.date})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </section>
+          </div>
+
+
 
           <section className="space-y-6">
             <div className={`${portalPanelClass} p-5 sm:p-6`}>
@@ -466,7 +423,7 @@ export default function PatientHome() {
               stats={[
                 {
                   label: "Tracked Biomarkers",
-                  value: Object.keys(latestPanel.biomarkers ?? {}).length,
+                  value: Object.keys(latestPanel?.biomarkers ?? {}).length,
                   detail: "Live markers extracted from your latest uploaded report.",
                   tone: "teal",
                 },
@@ -512,8 +469,8 @@ export default function PatientHome() {
               description="Small trend cards make repeat panels easier to compare at a glance."
             />
           </section>
-        </>
-      ) : null}
+        </div>
+      )}
     </PatientPortalPage>
   );
 }

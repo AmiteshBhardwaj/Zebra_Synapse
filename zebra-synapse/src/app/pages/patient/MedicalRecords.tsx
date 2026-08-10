@@ -1,15 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AlertCircle, Clock3, FileText, FolderKanban, Microscope } from "lucide-react";
+import { FileText } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Textarea } from "../../components/ui/textarea";
 import { Badge } from "../../components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { usePatientLabReportExtractions } from "../../../hooks/usePatientLabReportExtractions";
-import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import {
   buildPublishedPanelSummary,
   coerceBiomarkerMap,
@@ -55,19 +61,47 @@ function toneClass(status: ReturnType<typeof getUploadStatusMeta>["tone"]) {
 }
 
 export default function MedicalRecords() {
-  const { hasLabReports, loading, uploads, refetch: refetchUploads } = usePatientLabReports();
-  const {
-    panels,
-    loading: panelsLoading,
-    hasPanels,
-    refetch: refetchPanels,
-  } = usePatientLabPanels();
-  const {
-    extractions,
-    loading: extractionsLoading,
-    publishReviewedExtraction,
-    refetch: refetchExtractions,
-  } = usePatientLabReportExtractions();
+  const { uploads, refetch: refetchUploads } = usePatientLabReports();
+  const { panels, refetch: refetchPanels } = usePatientLabPanels();
+  const { extractions, publishReviewedExtraction, refetch: refetchExtractions } = usePatientLabReportExtractions();
+
+  // Report selection state - defaults to "none" so the empty state is displayed first
+  const [selectedReportId, setSelectedReportId] = useState<string>("none");
+
+  // Available reports dropdown options
+  const availableReports = useMemo(() => {
+    const list: Array<{ id: string; name: string; date: string }> = [];
+    if (uploads.length > 0) {
+      uploads.forEach((u) => {
+        list.push({
+          id: u.id,
+          name: u.original_filename,
+          date: new Date(u.created_at).toLocaleDateString(),
+        });
+      });
+    } else if (panels.length > 0) {
+      panels.forEach((p) => {
+        list.push({
+          id: p.id,
+          name: `Published Lab Panel`,
+          date: formatLabDate(p.recorded_at),
+        });
+      });
+    } else {
+      // Demo medical reports so the user can select & test immediately
+      list.push({
+        id: "demo-report-1",
+        name: "Comprehensive Metabolic Panel (CMP) - Apr 2026.pdf",
+        date: "Apr 1, 2026",
+      });
+      list.push({
+        id: "demo-report-2",
+        name: "Complete Blood Count (CBC) & Lipid Profile.pdf",
+        date: "Mar 15, 2026",
+      });
+    }
+    return list;
+  }, [uploads, panels]);
 
   const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
   const latestMetrics = useMemo(
@@ -75,10 +109,6 @@ export default function MedicalRecords() {
     [latestPanel],
   );
   const uploadsById = useMemo(() => new Map(uploads.map((upload) => [upload.id, upload])), [uploads]);
-  const extractionsByUploadId = useMemo(
-    () => new Map(extractions.map((extraction) => [extraction.upload_id, extraction])),
-    [extractions],
-  );
   const pendingExtractions = useMemo(
     () =>
       extractions.filter((extraction) => {
@@ -114,23 +144,6 @@ export default function MedicalRecords() {
       ),
     );
   }, [selectedExtraction]);
-
-  if (loading || panelsLoading || extractionsLoading) {
-    return (
-      <PatientPortalPage>
-        <p className="text-sm text-[#A1A1AA]">Loading...</p>
-      </PatientPortalPage>
-    );
-  }
-
-  if (!hasLabReports) {
-    return (
-      <LabReportsRequiredPlaceholder
-        title="Medical Records"
-        description="View uploaded reports, extraction status, and published biomarker panels."
-      />
-    );
-  }
 
   const handlePublishReview = async () => {
     if (!selectedExtraction) return;
@@ -171,309 +184,277 @@ export default function MedicalRecords() {
 
   return (
     <PatientPortalPage>
-      <PatientPageHero
-        eyebrow="Clinical Archive"
-        title="Medical Records"
-        description="Track upload status, review low-confidence extractions, and publish only the biomarker panels you trust."
-        icon={FileText}
-        meta={[
-          { label: "Uploaded Files", value: uploads.length },
-          { label: "Published Panels", value: panels.length },
-          { label: "Review Queue", value: pendingExtractions.length },
-        ]}
-      />
+      {/* 1. EMPTY STATE UNTIL A MEDICAL REPORT IS SELECTED */}
+      {selectedReportId === "none" ? (
+        <div className="flex min-h-[70vh] flex-col items-center justify-center text-center px-4 py-12">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_20px_50px_rgba(255,122,51,0.22)]">
+            <FileText className="h-9 w-9 text-[#ff9b61]" />
+          </div>
 
-      {latestPanel ? (
-        <Card className={portalPanelClass}>
-          <CardHeader>
-            <CardTitle className="text-white">Published report summary</CardTitle>
-            <CardDescription className="text-[#A1A1AA]">
-              Latest live panel for {formatLabDate(latestPanel.recorded_at)}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className={`${portalInsetClass} p-5`}>
-              <p className="text-sm leading-7 text-[#D4D4D8]">
-                {buildPublishedPanelSummary(latestPanel.biomarkers ?? {})}
-              </p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Flagged markers</p>
-                <p className="mt-2 text-2xl font-semibold text-white">
-                  {latestMetrics.filter((metric) => metric.status === "high" || metric.status === "low").length}
-                </p>
-              </div>
-              <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Published biomarkers</p>
-                <p className="mt-2 text-2xl font-semibold text-white">
-                  {Object.keys(latestPanel.biomarkers ?? {}).length}
-                </p>
-              </div>
-              <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Source trace</p>
-                <p className="mt-2 text-sm leading-6 text-white">
-                  {latestPanel.source_extraction_id ? "Published from reviewed or auto-published extraction." : "Legacy panel without extraction provenance."}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="rounded-[1.5rem] border border-[#FFC857]/15 bg-[#FFC857]/8 p-5 shadow-[0_18px_50px_rgba(0,0,0,0.22)]">
-          <div className="flex items-start gap-4">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#FFC857]/15 bg-[#FFC857]/12">
-              <AlertCircle className="h-5 w-5 text-[#ffe09d]" />
-            </div>
-            <div>
-              <h2 className="text-base font-semibold text-white">No published panel yet</h2>
-              <p className="mt-2 text-sm leading-7 text-[#f1d8a2]">
-                The pipeline has not published a structured panel yet. If a report lands in the review queue,
-                confirm its values below and publish it.
-              </p>
-            </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">
+            Please choose a medical report
+          </h1>
+
+          <p className="max-w-md text-sm text-[#92a8c7] leading-relaxed mb-8">
+            Select a medical report from your records below to view extraction details, low-confidence fields, and published biomarker panels.
+          </p>
+
+          <div className="w-full max-w-sm sm:max-w-md">
+            <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+              <SelectTrigger className="h-13 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-5 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+                <SelectValue placeholder="Select a medical report..." />
+              </SelectTrigger>
+              <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-2xl p-1.5">
+                <SelectItem value="none" className="py-3 text-white/40 cursor-pointer">
+                  -- Select a Medical Report --
+                </SelectItem>
+                {availableReports.map((report) => (
+                  <SelectItem
+                    key={report.id}
+                    value={report.id}
+                    className="py-3 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl"
+                  >
+                    📄 {report.name} ({report.date})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      )}
-
-      {selectedExtraction ? (
-        <Card className={portalPanelClass}>
-          <CardHeader>
-            <CardTitle className="text-white">Extraction review queue</CardTitle>
-            <CardDescription className="text-[#A1A1AA]">
-              Low-confidence fields stay here until you confirm them. Nothing in this queue drives the portal until you publish it.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="flex flex-wrap gap-2">
-              {pendingExtractions.map((extraction) => {
-                const upload = uploadsById.get(extraction.upload_id);
-                const active = extraction.id === selectedExtraction.id;
-                return (
-                  <button
-                    key={extraction.id}
-                    type="button"
-                    onClick={() => setSelectedReviewId(extraction.id)}
-                    className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
-                      active
-                        ? "border-[#FF6A00]/40 bg-[#FF6A00]/15 text-white"
-                        : "border-white/10 bg-white/[0.04] text-white/65 hover:border-white/20"
-                    }`}
-                  >
-                    {upload?.original_filename ?? "Pending extraction"}
-                  </button>
-                );
-              })}
+      ) : (
+        /* 2. FULL MEDICAL RECORDS WORKSPACE WHEN A REPORT IS SELECTED */
+        <>
+          {/* Top Report Selection Switcher Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl mb-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff9c61]/15 border border-[#ff9c61]/30">
+                <FileText className="h-4.5 w-4.5 text-[#ff9c61]" />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-white/45">Active Medical Record</p>
+                <p className="text-xs font-semibold text-white">
+                  {availableReports.find((r) => r.id === selectedReportId)?.name ?? "Selected Record"}
+                </p>
+              </div>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-              <div className="space-y-4">
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Review source</p>
-                  <p className="mt-2 font-medium text-white">
-                    {uploadsById.get(selectedExtraction.upload_id)?.original_filename ?? "Unknown upload"}
-                  </p>
-                  <p className="mt-1 text-sm text-[#A1A1AA]">
-                    Uploaded {formatUploadedAt(uploadsById.get(selectedExtraction.upload_id)?.created_at ?? "")}
+            <div className="w-full sm:w-auto min-w-[260px]">
+              <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+                <SelectTrigger className="h-10 w-full rounded-xl border-white/14 bg-[#0d1829]/90 text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
+                  <SelectValue placeholder="Change medical report..." />
+                </SelectTrigger>
+                <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-xl p-1">
+                  <SelectItem value="none" className="py-2 text-white/40 cursor-pointer">
+                    -- Clear Selection --
+                  </SelectItem>
+                  {availableReports.map((report) => (
+                    <SelectItem key={report.id} value={report.id} className="py-2 text-white text-xs cursor-pointer">
+                      📄 {report.name} ({report.date})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+
+
+          {latestPanel ? (
+            <Card className={portalPanelClass}>
+              <CardHeader>
+                <CardTitle className="text-white">Published report summary</CardTitle>
+                <CardDescription className="text-[#A1A1AA]">
+                  Latest live panel for {formatLabDate(latestPanel.recorded_at)}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className={`${portalInsetClass} p-5`}>
+                  <p className="text-sm leading-7 text-[#D4D4D8]">
+                    {buildPublishedPanelSummary(latestPanel.biomarkers ?? {})}
                   </p>
                 </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {latestMetrics.slice(0, 3).map((metric) => (
+                    <div key={metric.key} className={`${portalInsetClass} p-4`}>
+                      <p className="text-xs text-[#A1A1AA]">{metric.label}</p>
+                      <p className="mt-1 text-xl font-semibold text-white">
+                        {metric.value} {metric.unit}
+                      </p>
+                      <p className="mt-1 text-xs text-[#A1A1AA]">Range: {metric.range}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
 
-                <div className="grid gap-3">
-                  {sortBiomarkerKeys(Object.keys(coerceBiomarkerMap(selectedExtraction.biomarkers_json))).map((key) => {
-                    const definition = getBiomarkerDefinition(key);
-                    const fieldConfidence = coerceFieldConfidenceMap(selectedExtraction.field_confidence_json)[key];
-                    const fieldSource = coerceFieldSourcesMap(selectedExtraction.field_sources_json)[key];
-
+          {pendingExtractions.length > 0 ? (
+            <Card className="border-amber-500/20 bg-amber-500/5 text-white backdrop-blur-xl">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-amber-200">Review required for extracted report</CardTitle>
+                    <CardDescription className="text-amber-100/70">
+                      Select an extraction needing review, inspect the detected values, and publish to update your panels.
+                    </CardDescription>
+                  </div>
+                  <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-200">
+                    {pendingExtractions.length} pending
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {pendingExtractions.map((extraction) => {
+                    const upload = uploadsById.get(extraction.upload_id);
+                    const isSelected = selectedExtraction?.id === extraction.id;
                     return (
-                      <div key={key} className={`${portalInsetClass} p-4`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-white">{definition?.label ?? key}</p>
-                            <p className="mt-1 text-xs text-white/45">
-                              Confidence {fieldConfidence != null ? `${Math.round(fieldConfidence * 100)}%` : "n/a"}
-                              {fieldSource?.page ? ` · page ${fieldSource.page}` : ""}
-                            </p>
-                          </div>
-                          <Input
-                            value={reviewValues[key] ?? ""}
-                            onChange={(event) =>
-                              setReviewValues((current) => ({ ...current, [key]: event.target.value }))
-                            }
-                            className="w-28 border-white/10 bg-black/20 text-right text-white"
-                            inputMode="decimal"
-                          />
-                        </div>
-                        {fieldSource?.snippet ? (
-                          <p className="mt-3 text-sm leading-6 text-[#D4D4D8]">“{fieldSource.snippet}”</p>
-                        ) : null}
-                      </div>
+                      <button
+                        key={extraction.id}
+                        type="button"
+                        onClick={() => setSelectedReviewId(extraction.id)}
+                        className={`rounded-2xl border px-4 py-3 text-left transition-all ${
+                          isSelected
+                            ? "border-amber-400 bg-amber-400/15 text-white"
+                            : "border-white/10 bg-white/5 text-[#A1A1AA] hover:bg-white/10"
+                        }`}
+                      >
+                        <p className="text-xs font-semibold text-white">
+                          {upload?.original_filename ?? "Lab Report"}
+                        </p>
+                        <p className="mt-1 text-[11px] text-amber-200/80">
+                          {extraction.low_confidence_fields.length} low-confidence field(s)
+                        </p>
+                      </button>
                     );
                   })}
                 </div>
-              </div>
 
-              <div className="space-y-4">
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Recorded date</p>
-                  <Input
-                    type="date"
-                    value={reviewDate}
-                    onChange={(event) => setReviewDate(event.target.value)}
-                    className="mt-3 border-white/10 bg-black/20 text-white"
-                  />
-                </div>
-
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Warnings</p>
-                  <div className="mt-3 space-y-2">
-                    {(selectedExtraction.warnings_json ?? []).length ? (
-                      (selectedExtraction.warnings_json ?? []).map((warning, index) => (
-                        <p key={`${warning}-${index}`} className="text-sm leading-6 text-[#f1d8a2]">
-                          {warning}
-                        </p>
-                      ))
-                    ) : (
-                      <p className="text-sm text-white/65">No explicit extraction warnings were recorded.</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Review notes</p>
-                  <Textarea
-                    value={reviewNotes}
-                    onChange={(event) => setReviewNotes(event.target.value)}
-                    className="mt-3 min-h-32 border-white/10 bg-black/20 text-white"
-                    placeholder="Document what you changed, verified, or left as-is."
-                  />
-                </div>
-
-                <Button
-                  className="w-full rounded-2xl bg-gradient-to-r from-[#fb7b34] to-[#ef5f2c] text-white hover:from-[#ff8b49] hover:to-[#f36a35]"
-                  disabled={publishing}
-                  onClick={() => void handlePublishReview()}
-                >
-                  {publishing ? "Publishing..." : "Publish reviewed panel"}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Card className={portalPanelClass}>
-        <CardHeader>
-          <CardTitle className="text-white">Uploaded lab reports</CardTitle>
-          <CardDescription className="text-[#A1A1AA]">
-            These files are stored for your account. Only uploads with status Ready drive the downstream record views.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-2">
-            {uploads.map((upload) => {
-              const status = getUploadStatusMeta(upload.analysis_status);
-              const extraction = extractionsByUploadId.get(upload.id);
-              return (
-                <div
-                  key={upload.id}
-                  className="rounded-[1.25rem] border border-white/8 bg-[#111111]/80 p-4 shadow-[0_18px_36px_rgba(0,0,0,0.25)]"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C5BD4] to-[#3B82F6] shadow-[0_12px_28px_rgba(59,130,246,0.22)]">
-                      <FileText className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-medium text-white">{upload.original_filename}</p>
-                        <Badge className={toneClass(status.tone)}>{status.label}</Badge>
+                {selectedExtraction ? (
+                  <div className="space-y-5 rounded-2xl border border-white/10 bg-[#09090b]/80 p-5 backdrop-blur-xl">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="text-xs font-medium text-[#A1A1AA]">Recorded Date</label>
+                        <Input
+                          type="date"
+                          value={reviewDate}
+                          onChange={(e) => setReviewDate(e.target.value)}
+                          className="mt-1.5 border-white/10 bg-white/5 text-white"
+                        />
                       </div>
-                      <p className="mt-1 text-sm text-[#A1A1AA]">Uploaded {formatUploadedAt(upload.created_at)}</p>
-                      {upload.last_error ? (
-                        <p className="mt-2 text-sm leading-6 text-[#f1b48a]">{upload.last_error}</p>
-                      ) : null}
-                      {extraction?.updated_at ? (
-                        <p className="mt-2 text-xs text-white/45">
-                          Last extraction update {formatUploadedAt(extraction.updated_at)}
-                        </p>
-                      ) : null}
+                      <div>
+                        <label className="text-xs font-medium text-[#A1A1AA]">Reviewer Notes</label>
+                        <Textarea
+                          value={reviewNotes}
+                          onChange={(e) => setReviewNotes(e.target.value)}
+                          placeholder="Add notes about manual edits or provider context..."
+                          className="mt-1.5 min-h-[42px] border-white/10 bg-white/5 text-white"
+                        />
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card className={`${portalPanelClass} h-full`}>
-          <CardHeader>
-            <CardTitle className="text-white">
-              {latestPanel ? "Latest biomarker panel" : "Biomarker publication flow"}
-            </CardTitle>
-            <CardDescription className="text-[#A1A1AA]">
-              {latestPanel
-                ? `Published values recorded for ${formatLabDate(latestPanel.recorded_at)}`
-                : "Upload -> extract -> review if needed -> publish -> portal insights"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm leading-7 text-[#D4D4D8]">
-              The portal never reads draft extraction data. Only published `lab_panels` drive Disease Prediction,
-              Nutrition, Wellness, Vitals, Clinical Trials, and Medical Records Insights.
-            </p>
-          </CardContent>
-        </Card>
-
-        <div className={`${portalPanelClass} p-6`}>
-          <div className="space-y-2">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-white/42">Archive Signals</p>
-            <h2 className="text-xl font-semibold text-white">Record pipeline status</h2>
-            <p className="text-sm leading-7 text-[#A1A1AA]">
-              This workspace shows exactly where each upload sits before it becomes live structured data.
-            </p>
-          </div>
-          <div className="mt-5 grid gap-3">
-            {[
-              {
-                icon: FolderKanban,
-                label: "File storage",
-                value: `${uploads.length} uploaded file${uploads.length === 1 ? "" : "s"} currently stored in your account.`,
-              },
-              {
-                icon: Microscope,
-                label: "Extraction review",
-                value: pendingExtractions.length
-                  ? `${pendingExtractions.length} extraction${pendingExtractions.length === 1 ? "" : "s"} waiting for patient review.`
-                  : "No extraction is waiting for review right now.",
-              },
-              {
-                icon: Clock3,
-                label: "Published history",
-                value: hasPanels
-                  ? `${panels.length} published panel${panels.length === 1 ? "" : "s"} available for downstream analysis.`
-                  : "No published panel is available yet.",
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-
-              return (
-                <div key={item.label} className={`${portalInsetClass} p-4`}>
-                  <div className="flex items-start gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#ff9c61]">
-                      <Icon className="h-5 w-5" />
-                    </span>
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">{item.label}</p>
-                      <p className="mt-2 text-sm leading-6 text-white">{item.value}</p>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-amber-200/80">
+                        Extracted Biomarkers
+                      </p>
+                      <div className="mt-3 grid gap-3 md:grid-cols-2">
+                        {sortBiomarkerKeys(Object.keys(reviewValues)).map((key) => {
+                          const def = getBiomarkerDefinition(key);
+                          const confidences = coerceFieldConfidenceMap(selectedExtraction.field_confidences_json);
+                          const sources = coerceFieldSourcesMap(selectedExtraction.field_sources_json);
+                          const conf = confidences[key] ?? 1.0;
+                          const isLowConf = conf < 0.85;
+
+                          return (
+                            <div
+                              key={key}
+                              className={`rounded-xl border p-3.5 transition-all ${
+                                isLowConf
+                                  ? "border-amber-500/30 bg-amber-500/10"
+                                  : "border-white/10 bg-white/5"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-white">
+                                  {def?.name ?? key}
+                                </span>
+                                {isLowConf ? (
+                                  <Badge className="border-amber-500/30 bg-amber-500/20 text-[10px] text-amber-200">
+                                    Low Confidence ({Math.round(conf * 100)}%)
+                                  </Badge>
+                                ) : null}
+                              </div>
+                              <Input
+                                value={reviewValues[key] ?? ""}
+                                onChange={(e) =>
+                                  setReviewValues({ ...reviewValues, [key]: e.target.value })
+                                }
+                                className="mt-2 border-white/10 bg-white/5 text-sm font-semibold text-white"
+                              />
+                              {sources[key] ? (
+                                <p className="mt-1 text-[10px] text-[#A1A1AA]">
+                                  Source text: &quot;{sources[key]}&quot;
+                                </p>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
+
+                    <Button
+                      disabled={publishing}
+                      onClick={() => void handlePublishReview()}
+                      className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-medium hover:from-amber-600 hover:to-orange-600"
+                    >
+                      {publishing ? "Publishing..." : "Confirm & Publish Panel"}
+                    </Button>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {/* Uploaded Files Table */}
+          <Card className={portalPanelClass}>
+            <CardHeader>
+              <CardTitle className="text-white">Uploaded Files Archive</CardTitle>
+              <CardDescription className="text-[#A1A1AA]">
+                All reports submitted to the extraction pipeline.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-[#D4D4D8]">
+                  <thead className="border-b border-white/10 text-xs font-semibold uppercase tracking-wider text-[#A1A1AA]">
+                    <tr>
+                      <th className="pb-3 px-2">Filename</th>
+                      <th className="pb-3 px-2">Date Added</th>
+                      <th className="pb-3 px-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {uploads.map((upload) => {
+                      const meta = getUploadStatusMeta(upload.analysis_status);
+                      return (
+                        <tr key={upload.id} className="hover:bg-white/5 transition-colors">
+                          <td className="py-3 px-2 font-medium text-white">{upload.original_filename}</td>
+                          <td className="py-3 px-2 text-[#A1A1AA]">{formatUploadedAt(upload.created_at)}</td>
+                          <td className="py-3 px-2">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${toneClass(meta.tone)}`}>
+                              {meta.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
     </PatientPortalPage>
   );
 }
