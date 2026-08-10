@@ -83,18 +83,31 @@ export default function DiseasePrediction() {
 
   return (
     <PatientPortalPage>
-      <PatientPageHero
-        eyebrow="Predictive Intelligence"
-        title="Disease Prediction"
-        description="Rule-based risk assessments grounded in your latest structured lab panel."
-        icon={TrendingUp}
-        meta={[
-          { label: "Risk models", value: predictions.length },
-          { label: "Highest risk", value: highestPrediction?.title ?? "None" },
-          { label: "Latest panel", value: latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting panel" },
-          { label: "Signal source", value: "Structured lab panel" },
-        ]}
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
+            <TrendingUp className="h-6 w-6 text-[#ff9c61]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Disease Prediction</h1>
+              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+                Predictive Intelligence
+              </span>
+            </div>
+            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+              Rule-based clinical risk assessments grounded in your latest structured lab panels.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            {predictions.length} Risk Models Active
+          </span>
+        </div>
+      </div>
 
       <section className={`${portalPanelClass} border-[#3B82F6]/15 bg-[#3B82F6]/[0.08] p-6`}>
         <div className="flex items-start gap-4">

@@ -157,7 +157,7 @@ export default function DoctorDashboard() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 overflow-y-auto bg-transparent">
+      <main className="min-w-0 flex-1 overflow-y-auto bg-transparent p-6 sm:p-8 lg:p-10">
         <Outlet />
       </main>
     </div>

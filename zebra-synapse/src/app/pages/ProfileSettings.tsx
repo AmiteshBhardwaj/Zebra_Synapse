@@ -5,10 +5,9 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Copy, Check, ShieldCheck, UserCircle2 } from "lucide-react";
+import { Copy, Check, ShieldCheck, UserCircle2, KeyRound, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import {
-  PatientPageHero,
   PatientPortalPage,
   portalInputClass,
   portalPanelClass,
@@ -78,115 +77,139 @@ export default function ProfileSettings() {
 
   return (
     <PatientPortalPage>
-      <PatientPageHero
-        eyebrow="Account Controls"
-        title="Account settings"
-        description={`Update how your name appears in the portal${profile.role === "doctor" ? " and keep your license details current" : ""} without leaving the shared dark workspace.`}
-        icon={UserCircle2}
-        meta={[
-          { label: "Profile Role", value: profile.role },
-          { label: "Sync Status", value: "Connected" },
-          { label: "Profile ID", value: copied ? "Copied" : "Available" },
-        ]}
-      />
-
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-        <Card className={portalPanelClass}>
-          <CardHeader>
-            <CardTitle className="text-base text-white">Your profile ID</CardTitle>
-            <CardDescription className="text-[#A1A1AA]">
-              {profile.role === "patient"
-                ? "Share this with your doctor so they can link your account in My Patients."
-                : "Your unique id in the system (same as your auth user id)."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <code className="flex-1 break-all rounded-xl border border-white/10 bg-[#111111] px-3 py-3 text-xs text-[#E5E7EB]">
-              {user.id}
-            </code>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={portalSecondaryButtonClass}
-              onClick={() => void copyId()}
-            >
-              {copied ? (
-                <Check className="w-4 h-4 mr-1" />
-              ) : (
-                <Copy className="w-4 h-4 mr-1" />
-              )}
-              Copy
-            </Button>
-          </CardContent>
-        </Card>
-
-        <div className={`${portalPanelClass} p-6`}>
-          <div className="space-y-2">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-white/42">Privacy & Identity</p>
-            <h2 className="text-xl font-semibold text-white">Account visibility</h2>
-            <p className="text-sm leading-7 text-[#A1A1AA]">
-              Settings stay intentionally focused so your identity details are easy to confirm in one place.
+      {/* Sleek Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
+            <UserCircle2 className="h-6 w-6 text-[#ff9c61]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Account Settings</h1>
+              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+                {profile.role}
+              </span>
+            </div>
+            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+              Manage your display name, physician connection ID, and portal identity preferences.
             </p>
           </div>
-          <div className="mt-5 rounded-[1.2rem] border border-white/8 bg-[#111111]/80 p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#3B82F6]/20 bg-[#3B82F6]/12">
-                <ShieldCheck className="h-5 w-5 text-[#93c5fd]" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-white">Portal identity</p>
-                <p className="mt-2 text-sm leading-7 text-[#D4D4D8]">
-                  Your saved profile details are used across the patient and doctor experiences without changing any account permissions here.
-                </p>
-              </div>
-            </div>
-          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            Connected
+          </span>
         </div>
       </div>
 
-      <Card className={`${portalPanelClass} max-w-3xl`}>
-        <CardHeader>
-          <CardTitle className="text-base text-white">Profile</CardTitle>
-          <CardDescription className="text-[#A1A1AA]">
-            Update the fields below and keep the presentation aligned across the portal.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name" className="text-white">
-                Display name
-              </Label>
-              <Input
-                id="full_name"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your name"
-                autoComplete="name"
-                className={portalInputClass}
-              />
+      {/* Vertical Stacked Cards Layout */}
+      <div className="space-y-6 max-w-4xl">
+        {/* Left Card: Profile Information */}
+        <Card className={`${portalPanelClass} p-2`}>
+          <CardHeader>
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="h-4.5 w-4.5 text-[#ff9c61]" />
+              <CardTitle className="text-base text-white">Profile Information</CardTitle>
             </div>
-            {profile.role === "doctor" ? (
-              <div className="space-y-2">
-                <Label htmlFor="license" className="text-white">
-                  License number
+            <CardDescription className="text-xs text-[#92a8c7]">
+              Update your display name and credentials used across the portal.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="full_name" className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                  Display Name
                 </Label>
                 <Input
-                  id="license"
-                  value={licenseNumber}
-                  onChange={(e) => setLicenseNumber(e.target.value)}
-                  placeholder="Medical license"
+                  id="full_name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your full name"
+                  autoComplete="name"
                   className={portalInputClass}
                 />
               </div>
-            ) : null}
-            <Button type="submit" disabled={saving} className={portalPrimaryButtonClass}>
-              {saving ? "Saving…" : "Save changes"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+
+              {profile.role === "doctor" ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="license" className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                    Medical License Number
+                  </Label>
+                  <Input
+                    id="license"
+                    value={licenseNumber}
+                    onChange={(e) => setLicenseNumber(e.target.value)}
+                    placeholder="License number"
+                    className={portalInputClass}
+                  />
+                </div>
+              ) : null}
+
+              <div className="pt-2">
+                <Button type="submit" disabled={saving} className={`w-full h-11 rounded-xl ${portalPrimaryButtonClass}`}>
+                  {saving ? "Saving Changes…" : "Save Profile Changes"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Right Card: Security & Physician Connection ID */}
+        <Card className={`${portalPanelClass} p-2`}>
+          <CardHeader>
+            <div className="flex items-center gap-2.5">
+              <KeyRound className="h-4.5 w-4.5 text-sky-400" />
+              <CardTitle className="text-base text-white">Security & Connection ID</CardTitle>
+            </div>
+            <CardDescription className="text-xs text-[#92a8c7]">
+              {profile.role === "patient"
+                ? "Share this unique Profile ID with your physician to link your records."
+                : "Your unique system identification code."}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                Your Connection Profile ID
+              </Label>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 truncate rounded-xl border border-white/10 bg-[#090e17] px-3.5 py-2.5 text-xs font-mono text-[#E5E7EB]">
+                  {user.id}
+                </code>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={`${portalSecondaryButtonClass} h-10 px-4 shrink-0 rounded-xl text-xs`}
+                  onClick={() => void copyId()}
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+                  {copied ? "Copied" : "Copy ID"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#3B82F6]/25 bg-[#3B82F6]/12">
+                  <ShieldCheck className="h-4.5 w-4.5 text-[#93c5fd]" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-white">Portal Identity & Privacy</p>
+                  <p className="mt-0.5 text-[11px] text-[#92a8c7] leading-relaxed">
+                    Your profile details are encrypted end-to-end and synced securely across patient and doctor workspaces.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </PatientPortalPage>
   );
 }

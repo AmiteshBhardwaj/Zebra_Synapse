@@ -10,8 +10,14 @@ import {
 import { Card, CardContent } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
-import { Pill, AlertCircle, Calendar } from "lucide-react";
+import { Pill, Calendar, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
+import {
+  PatientPortalPage,
+  portalInsetClass,
+  portalPanelClass,
+  portalSecondaryButtonClass,
+} from "../../components/patient/PortalTheme";
 
 export default function Prescription() {
   const { user } = useAuth();
@@ -52,143 +58,129 @@ export default function Prescription() {
     rx.prescriber?.full_name?.trim() || "Your doctor";
 
   const handleRequestRefill = (rx: PrescriptionRow) => {
-    console.log("Request refill:", rx);
-    toast(`Refill request started for ${prescriptionHeading(rx.details)}`);
+    toast.success(`Refill request submitted for ${prescriptionHeading(rx.details)}`);
   };
 
   const handleContactDoctor = (rx: PrescriptionRow) => {
-    console.log("Contact doctor:", rx);
-    toast(`Opening contact options for ${prescriberLabel(rx)}`);
+    toast(`Contact details available for ${prescriberLabel(rx)}`);
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Prescriptions</h1>
-        <p className="text-gray-600 mt-1">Medications prescribed by your care team</p>
+    <PatientPortalPage>
+      {/* Sleek Executive Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
+            <Pill className="h-6 w-6 text-[#ff9c61]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Prescriptions</h1>
+              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+                Medication Vault
+              </span>
+            </div>
+            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+              Medications prescribed by your care team, dosage schedules, and active refill requests.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            {active.length} Active Rx
+          </span>
+        </div>
       </div>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading prescriptions…</p>
+        <p className="text-sm text-[#A1A1AA]">Loading prescriptions…</p>
       ) : null}
 
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Active Prescriptions</h2>
-        {!loading && active.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No active prescriptions yet. Your doctor will add them from their dashboard.
-          </p>
-        ) : null}
-        <div className="space-y-4">
-          {active.map((rx) => (
-            <Card key={rx.id}>
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-start gap-4 min-w-0">
-                    <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
-                      <Pill className="w-6 h-6 text-indigo-600" />
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold text-white mb-4">Active Prescriptions</h2>
+          {!loading && active.length === 0 ? (
+            <div className={`${portalPanelClass} p-6 text-center text-sm text-[#92a8c7]`}>
+              No active prescriptions yet. Your doctor will add them from their dashboard.
+            </div>
+          ) : null}
+          <div className="space-y-4">
+            {active.map((rx) => (
+              <Card key={rx.id} className={portalPanelClass}>
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start gap-4 min-w-0">
+                      <div className="w-12 h-12 bg-[#ff9c61]/15 border border-[#ff9c61]/30 rounded-2xl flex items-center justify-center shrink-0">
+                        <Pill className="w-6 h-6 text-[#ff9c61]" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-lg font-semibold text-white">{prescriptionHeading(rx.details)}</h3>
+                        <p className="text-xs text-[#92a8c7] mt-1">Prescribed by {prescriberLabel(rx)}</p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <h3 className="text-xl font-semibold">{prescriptionHeading(rx.details)}</h3>
-                    </div>
+                    <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-200 shrink-0">
+                      Active
+                    </Badge>
                   </div>
-                  <Badge className="bg-green-100 text-green-800 shrink-0">Active</Badge>
-                </div>
 
-                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                  <Calendar className="w-4 h-4 shrink-0" />
-                  <span>Prescribed: {formatPrescriptionDate(rx.created_at)}</span>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="font-medium text-blue-900 text-sm">Details</p>
-                      <p className="text-sm text-blue-800 whitespace-pre-wrap">{rx.details}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-sm text-gray-500">Prescribed by</p>
-                  <p className="font-medium">{prescriberLabel(rx)}</p>
-                </div>
-
-                <div className="flex gap-2 mt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="active:scale-95 transition"
-                    onClick={() => {
-                      console.log("clicked");
-                      handleRequestRefill(rx);
-                    }}
-                  >
-                    Request Refill
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="active:scale-95 transition"
-                    onClick={() => {
-                      console.log("clicked");
-                      handleContactDoctor(rx);
-                    }}
-                  >
-                    Contact Doctor
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Completed Prescriptions</h2>
-        {!loading && completed.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No completed prescriptions yet.</p>
-        ) : null}
-        <div className="space-y-4">
-          {completed.map((rx) => (
-            <Card key={rx.id} className="opacity-75">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-start gap-4 min-w-0">
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                      <Pill className="w-6 h-6 text-gray-600" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-xl font-semibold">{prescriptionHeading(rx.details)}</h3>
-                    </div>
-                  </div>
-                  <Badge className="bg-gray-100 text-gray-800 shrink-0">Completed</Badge>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-xs text-[#92a8c7] mb-4">
+                    <Calendar className="w-4 h-4 shrink-0" />
                     <span>Prescribed: {formatPrescriptionDate(rx.created_at)}</span>
                   </div>
-                  {rx.completed_at ? (
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="w-4 h-4" />
-                      <span>Completed: {formatPrescriptionDate(rx.completed_at)}</span>
-                    </div>
-                  ) : null}
-                </div>
 
-                <div className="mt-4">
-                  <p className="text-sm text-gray-500">Prescribed by</p>
-                  <p className="font-medium">{prescriberLabel(rx)}</p>
-                </div>
-                <p className="text-sm text-gray-600 mt-3 whitespace-pre-wrap">{rx.details}</p>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-[#ff7a33] to-[#ff9b61] text-white rounded-xl"
+                      onClick={() => handleRequestRefill(rx)}
+                    >
+                      Request Refill
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={portalSecondaryButtonClass}
+                      onClick={() => handleContactDoctor(rx)}
+                    >
+                      Contact Doctor
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
+
+        {completed.length > 0 ? (
+          <div>
+            <h2 className="text-lg font-semibold text-white mb-4">Past Prescriptions</h2>
+            <div className="space-y-4">
+              {completed.map((rx) => (
+                <Card key={rx.id} className={portalPanelClass}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4 min-w-0">
+                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center shrink-0">
+                          <Pill className="w-6 h-6 text-[#92a8c7]" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-lg font-semibold text-white">{prescriptionHeading(rx.details)}</h3>
+                          <p className="text-xs text-[#92a8c7] mt-1">Prescribed by {prescriberLabel(rx)}</p>
+                        </div>
+                      </div>
+                      <Badge className="border-white/10 bg-white/5 text-white/60 shrink-0">
+                        Completed
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </div>
-    </div>
+    </PatientPortalPage>
   );
 }

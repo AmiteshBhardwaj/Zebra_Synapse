@@ -27,12 +27,12 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import {
-  PatientPageHero,
   PatientPortalPage,
   StatusPill,
   portalDialogClass,
   portalInputClass,
   portalMutedPanelClass,
+  portalPanelClass,
   portalPrimaryButtonClass,
   portalSecondaryButtonClass,
   portalSelectContentClass,
@@ -98,50 +98,54 @@ export default function Appointments() {
   const [isSavingSchedule, setIsSavingSchedule] = useState(false);
   const [isSavingReschedule, setIsSavingReschedule] = useState(false);
 
+  // Tab state: "upcoming" selected by default
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
+
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([
     {
       id: 1,
       doctor: "Dr. Sarah Johnson",
       specialty: "Cardiologist",
-      date: "2026-04-10",
+      date: "2026-04-15",
       time: "10:00 AM",
-      type: "video",
-      status: "confirmed",
+      type: "in-person",
+      location: "Heart & Vascular Center, Suite 402",
+      status: "Confirmed",
     },
     {
       id: 2,
       doctor: "Dr. Michael Chen",
       specialty: "Endocrinologist",
-      date: "2026-04-15",
+      date: "2026-04-22",
       time: "2:30 PM",
-      type: "in-person",
-      location: "Zebra Medical Center, Floor 3",
-      status: "confirmed",
+      type: "video",
+      status: "Confirmed",
     },
   ]);
 
-  const pastAppointments: Appointment[] = [
+  const [pastAppointments] = useState<Appointment[]>([
     {
       id: 3,
       doctor: "Dr. Emily Williams",
       specialty: "General Physician",
-      date: "2026-03-20",
-      time: "11:00 AM",
+      date: "2026-03-10",
+      time: "11:15 AM",
       type: "in-person",
-      status: "completed",
-      notes: "Discussed energy levels, sleep quality, and a three-month follow-up for routine lab monitoring.",
+      location: "Main Clinic, Room 105",
+      status: "Completed",
+      notes: "Annual checkup completed. Vital signs optimal. Recommended routine lipid panel recheck in 6 months.",
     },
     {
       id: 4,
       doctor: "Dr. Sarah Johnson",
       specialty: "Cardiologist",
-      date: "2026-02-14",
+      date: "2026-01-18",
       time: "9:30 AM",
       type: "video",
-      status: "completed",
-      notes: "Reviewed lipid markers, reinforced nutrition goals, and planned repeat screening for cardiovascular risk tracking.",
+      status: "Completed",
+      notes: "Follow-up on blood pressure monitoring. BP medication dosage remains unchanged. Continue log entries.",
     },
-  ];
+  ]);
 
   const resetScheduleForm = () => {
     setSelectedDoctor("");
@@ -153,28 +157,29 @@ export default function Appointments() {
   const handleScheduleAppointment = () => {
     if (!selectedDoctor || !selectedDate || !selectedTime || !selectedType) return;
 
-    const doctor = doctorOptions.find((option) => option.value === selectedDoctor);
-    if (!doctor) return;
+    const matchedOption = doctorOptions.find((option) => option.value === selectedDoctor);
+    if (!matchedOption) return;
 
     setIsSavingSchedule(true);
     window.setTimeout(() => {
-      setUpcomingAppointments((current) => [
-        {
-          id: Date.now(),
-          doctor: doctor.doctor,
-          specialty: doctor.specialty,
-          date: selectedDate,
-          time: formatTimeLabel(selectedTime),
-          type: selectedType,
-          location: selectedType === "in-person" ? "Zebra Medical Center, Floor 3" : undefined,
-          status: "confirmed",
-        },
-        ...current,
-      ]);
+      const nextAppointment: Appointment = {
+        id: Date.now(),
+        doctor: matchedOption.doctor,
+        specialty: matchedOption.specialty,
+        date: selectedDate,
+        time: formatTimeLabel(selectedTime),
+        type: selectedType,
+        location: selectedType === "in-person" ? "Medical Plaza, Suite 210" : undefined,
+        status: "Confirmed",
+      };
+
+      setUpcomingAppointments((current) => [nextAppointment, ...current]);
       setIsSavingSchedule(false);
       setScheduleOpen(false);
       resetScheduleForm();
-    }, 450);
+      // Ensure we switch to upcoming view to show the newly scheduled appointment
+      setActiveTab("upcoming");
+    }, 500);
   };
 
   const handleReschedule = (appointment: Appointment) => {
@@ -237,24 +242,31 @@ export default function Appointments() {
   return (
     <PatientPortalPage>
       <Dialog open={scheduleOpen} onOpenChange={handleScheduleOpenChange}>
-        <PatientPageHero
-          eyebrow="Care Coordination"
-          title="Appointments"
-          description="Manage upcoming visits, keep your follow-ups visible, and keep every appointment in the same premium workspace as the rest of your health portal."
-          icon={Calendar}
-          meta={[
-            { label: "Upcoming", value: upcomingAppointments.length },
-            { label: "Completed", value: pastAppointments.length },
-          ]}
-          actions={
-            <DialogTrigger asChild>
-              <Button className={portalPrimaryButtonClass}>
-                <Plus className="mr-2 h-4 w-4" />
-                Schedule Appointment
-              </Button>
-            </DialogTrigger>
-          }
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
+              <Calendar className="h-6 w-6 text-[#ff9c61]" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Appointments</h1>
+                <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+                  Care Coordination
+                </span>
+              </div>
+              <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+                Manage upcoming visits, schedule video consultations, and review completed medical appointments.
+              </p>
+            </div>
+          </div>
+
+          <DialogTrigger asChild>
+            <Button className={`h-11 px-5 rounded-xl ${portalPrimaryButtonClass}`}>
+              <Plus className="mr-2 h-4 w-4" />
+              Schedule Appointment
+            </Button>
+          </DialogTrigger>
+        </div>
 
         <DialogContent className={portalDialogClass}>
           <DialogHeader>
@@ -416,131 +428,177 @@ export default function Appointments() {
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Upcoming Appointments</h2>
-              <p className="mt-1 text-sm text-[#A1A1AA]">Next visits that still need your attention.</p>
-            </div>
-          </div>
+      {/* Side-by-Side Tab Buttons: Upcoming vs Past */}
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          type="button"
+          onClick={() => setActiveTab("upcoming")}
+          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === "upcoming"
+              ? "bg-gradient-to-r from-[#ff7a33] to-[#ff9b61] text-white shadow-[0_8px_20px_rgba(255,122,51,0.3)]"
+              : "border border-white/10 bg-white/[0.04] text-[#92a8c7] hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          <Calendar className="h-4 w-4" />
+          <span>Upcoming</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "upcoming" ? "bg-white/20 text-white" : "bg-white/10 text-white/70"
+            }`}
+          >
+            {upcomingAppointments.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("past")}
+          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === "past"
+              ? "bg-gradient-to-r from-[#ff7a33] to-[#ff9b61] text-white shadow-[0_8px_20px_rgba(255,122,51,0.3)]"
+              : "border border-white/10 bg-white/[0.04] text-[#92a8c7] hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          <Clock className="h-4 w-4" />
+          <span>Past</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "past" ? "bg-white/20 text-white" : "bg-white/10 text-white/70"
+            }`}
+          >
+            {pastAppointments.length}
+          </span>
+        </button>
+      </div>
+
+      {/* Tab View Display */}
+      {activeTab === "upcoming" ? (
+        <section className="space-y-4 max-w-4xl">
           <div className="space-y-4">
-            {upcomingAppointments.map((appointment) => (
-              <article
-                key={appointment.id}
-                className="rounded-[1.5rem] border border-white/8 bg-[rgba(255,255,255,0.03)] p-6 text-white shadow-[0_22px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#ff6a00]/30 hover:shadow-[0_28px_80px_rgba(255,106,0,0.12)]"
-              >
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C5BD4] to-[#3b82f6] shadow-[0_12px_32px_rgba(108,91,212,0.28)]">
-                      <Stethoscope className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-xl font-semibold text-white">{appointment.doctor}</h3>
-                        <StatusPill status={appointment.status} />
+            {upcomingAppointments.length > 0 ? (
+              upcomingAppointments.map((appointment) => (
+                <article
+                  key={appointment.id}
+                  className="rounded-[1.5rem] border border-white/8 bg-[rgba(255,255,255,0.03)] p-6 text-white shadow-[0_22px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#ff6a00]/30 hover:shadow-[0_28px_80px_rgba(255,106,0,0.12)]"
+                >
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C5BD4] to-[#3b82f6] shadow-[0_12px_32px_rgba(108,91,212,0.28)]">
+                        <Stethoscope className="h-6 w-6 text-white" />
                       </div>
-                      <p className="mt-1 text-sm text-[#A1A1AA]">{appointment.specialty}</p>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-xl font-semibold text-white">{appointment.doctor}</h3>
+                          <StatusPill status={appointment.status} />
+                        </div>
+                        <p className="mt-1 text-sm text-[#A1A1AA]">{appointment.specialty}</p>
+                      </div>
+                    </div>
+                    <div className={portalMutedPanelClass}>
+                      <div className="grid gap-3 px-4 py-3 text-sm text-[#E5E7EB] sm:grid-cols-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-[#ff9c61]" />
+                          <span>{formatDisplayDate(appointment.date)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-[#ff9c61]" />
+                          <span>{appointment.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {appointment.type === "video" ? (
+                            <>
+                              <Video className="h-4 w-4 text-[#8f83ff]" />
+                              <span>Video Consultation</span>
+                            </>
+                          ) : (
+                            <>
+                              <MapPin className="h-4 w-4 text-[#8f83ff]" />
+                              <span>{appointment.location}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className={portalMutedPanelClass}>
-                    <div className="grid gap-3 px-4 py-3 text-sm text-[#E5E7EB] sm:grid-cols-3">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-[#ff9c61]" />
-                        <span>{formatDisplayDate(appointment.date)}</span>
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <Button
+                      variant="outline"
+                      className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                      onClick={() => handleReschedule(appointment)}
+                    >
+                      Reschedule
+                    </Button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className={`${portalPanelClass} p-8 text-center text-sm text-[#92a8c7]`}>
+                No upcoming appointments scheduled. Click &quot;Schedule Appointment&quot; above to book your next visit.
+              </div>
+            )}
+          </div>
+        </section>
+      ) : (
+        <section className="space-y-4 max-w-4xl">
+          <div className="space-y-4">
+            {pastAppointments.length > 0 ? (
+              pastAppointments.map((appointment) => (
+                <article
+                  key={appointment.id}
+                  className="rounded-[1.5rem] border border-white/8 bg-[#171717]/90 p-6 text-white shadow-[0_18px_45px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/15"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.05]">
+                        <Stethoscope className="h-5 w-5 text-white/70" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-[#ff9c61]" />
-                        <span>{appointment.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {appointment.type === "video" ? (
-                          <>
-                            <Video className="h-4 w-4 text-[#8f83ff]" />
-                            <span>Video Consultation</span>
-                          </>
-                        ) : (
-                          <>
-                            <MapPin className="h-4 w-4 text-[#8f83ff]" />
-                            <span>{appointment.location}</span>
-                          </>
-                        )}
+                      <div>
+                        <h3 className="text-lg font-semibold text-white">{appointment.doctor}</h3>
+                        <p className="mt-1 text-sm text-[#A1A1AA]">{appointment.specialty}</p>
                       </div>
                     </div>
+                    <StatusPill status={appointment.status} />
                   </div>
-                </div>
-                <div className="mt-5 flex flex-wrap gap-3">
+                  <div className="mt-4 grid gap-3 text-sm text-[#D4D4D8] sm:grid-cols-3">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-[#ff9c61]" />
+                      <span>{formatDisplayDate(appointment.date)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-[#ff9c61]" />
+                      <span>{appointment.time}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {appointment.type === "video" ? (
+                        <>
+                          <Video className="h-4 w-4 text-[#8f83ff]" />
+                          <span>Video Consultation</span>
+                        </>
+                      ) : (
+                        <>
+                          <MapPin className="h-4 w-4 text-[#8f83ff]" />
+                          <span>In-Person</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
                   <Button
                     variant="outline"
-                    className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}
-                    onClick={() => handleReschedule(appointment)}
+                    className={`mt-5 active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                    onClick={() => handleViewNotes(appointment)}
                   >
-                    Reschedule
+                    View Notes
                   </Button>
-                </div>
-              </article>
-            ))}
+                </article>
+              ))
+            ) : (
+              <div className={`${portalPanelClass} p-8 text-center text-sm text-[#92a8c7]`}>
+                No past appointments on record.
+              </div>
+            )}
           </div>
         </section>
-
-        <section className="space-y-4">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Past Appointments</h2>
-            <p className="mt-1 text-sm text-[#A1A1AA]">Completed visits and visit history.</p>
-          </div>
-          <div className="space-y-4">
-            {pastAppointments.map((appointment) => (
-              <article
-                key={appointment.id}
-                className="rounded-[1.5rem] border border-white/8 bg-[#171717]/90 p-6 text-white shadow-[0_18px_45px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/15"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.05]">
-                      <Stethoscope className="h-5 w-5 text-white/70" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">{appointment.doctor}</h3>
-                      <p className="mt-1 text-sm text-[#A1A1AA]">{appointment.specialty}</p>
-                    </div>
-                  </div>
-                  <StatusPill status={appointment.status} />
-                </div>
-                <div className="mt-4 grid gap-3 text-sm text-[#D4D4D8] sm:grid-cols-3">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-[#ff9c61]" />
-                    <span>{formatDisplayDate(appointment.date)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-[#ff9c61]" />
-                    <span>{appointment.time}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {appointment.type === "video" ? (
-                      <>
-                        <Video className="h-4 w-4 text-[#8f83ff]" />
-                        <span>Video Consultation</span>
-                      </>
-                    ) : (
-                      <>
-                        <MapPin className="h-4 w-4 text-[#8f83ff]" />
-                        <span>In-Person</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  className={`mt-5 active:scale-[0.98] ${portalSecondaryButtonClass}`}
-                  onClick={() => handleViewNotes(appointment)}
-                >
-                  View Notes
-                </Button>
-              </article>
-            ))}
-          </div>
-        </section>
-      </div>
+      )}
     </PatientPortalPage>
   );
 }

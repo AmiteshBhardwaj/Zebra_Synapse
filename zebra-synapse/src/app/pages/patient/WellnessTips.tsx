@@ -56,17 +56,31 @@ export default function WellnessTips() {
 
   return (
     <PatientPortalPage>
-      <PatientPageHero
-        eyebrow="Lifestyle Guidance"
-        title="Wellness Tips"
-        description="Personalized recovery, movement, and symptom-aware suggestions generated from your latest structured panel."
-        icon={Sparkles}
-        meta={[
-          { label: "Tip count", value: tips.length },
-          { label: "Latest panel", value: formatLabDate(latestPanel.recorded_at) },
-          { label: "Tone", value: "Personalized only" },
-        ]}
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
+            <Sparkles className="h-6 w-6 text-[#ff9c61]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Wellness Tips</h1>
+              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+                Lifestyle Guidance
+              </span>
+            </div>
+            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+              Personalized recovery, movement, and habit suggestions generated from your latest structured panel.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs">
+          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            {tips.length} Custom Tips
+          </span>
+        </div>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
         <Card className={portalPanelClass}>

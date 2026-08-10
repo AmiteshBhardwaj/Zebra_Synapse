@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { cn } from "../ui/utils";
 
-export const portalShellClass = "min-h-full text-white";
+export const portalShellClass = "min-h-full text-white p-6 sm:p-8 lg:p-10 max-w-[1600px] mx-auto";
 
 export const portalContentClass = "flex flex-col gap-6 lg:gap-8";
 

@@ -212,121 +212,56 @@ export default function PatientHome() {
         </div>
       </div>
 
-      {/* 2. CORE HOMEPAGE ACTION & HIGHLIGHTS GRID */}
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        {/* Upload Box */}
-        <section className={`${portalPanelClass} p-5 sm:p-6`}>
-          <SectionHeading
-            eyebrow="Upload"
-            title="Drop in a report. Keep the rest automatic."
-            description="PDF and image uploads are stored securely, then pushed into the extraction pipeline that powers your structured insights."
+      {/* 2. UPLOAD REPORT SECTION */}
+      <section className={`${portalPanelClass} p-5 sm:p-6`}>
+        <SectionHeading
+          eyebrow="Upload"
+          title="Drop in a report. Keep the rest automatic."
+          description="PDF and image uploads are stored securely, then pushed into the extraction pipeline that powers your structured insights."
+        />
+        <div
+          className={`mt-6 rounded-[28px] border border-dashed p-8 text-center transition-colors ${dragActive
+            ? "border-[#ff9b61]/70 bg-[#ff9b61]/10"
+            : "border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-[#ff9b61]/40"
+            }`}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            id="lab-upload"
+            className="hidden"
+            accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+            onChange={handleFileChange}
           />
-          <div
-            className={`mt-6 rounded-[28px] border border-dashed p-8 text-center transition-colors ${dragActive
-                ? "border-[#ff9b61]/70 bg-[#ff9b61]/10"
-                : "border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-[#ff9b61]/40"
-              }`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragActive(true);
-            }}
-            onDragLeave={() => setDragActive(false)}
-            onDrop={handleDrop}
-          >
-            <input
-              type="file"
-              id="lab-upload"
-              className="hidden"
-              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-              onChange={handleFileChange}
-            />
-            <label htmlFor="lab-upload" className="cursor-pointer">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[24px] bg-[linear-gradient(135deg,#ff7a33,#ff9b61)] shadow-[0_18px_36px_rgba(255,122,51,0.24)]">
-                <Upload className="h-7 w-7 text-white" />
-              </div>
-              <p className="mb-2 text-sm font-medium text-white">
-                {selectedFile ? selectedFile.name : "Drag and drop a lab report or click to choose a file"}
-              </p>
-              <p className="text-xs text-[#92a8c7]">PDF, PNG, or JPG up to 10MB</p>
-            </label>
+          <label htmlFor="lab-upload" className="cursor-pointer">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[24px] bg-[linear-gradient(135deg,#ff7a33,#ff9b61)] shadow-[0_18px_36px_rgba(255,122,51,0.24)]">
+              <Upload className="h-7 w-7 text-white" />
+            </div>
+            <p className="mb-2 text-sm font-medium text-white">
+              {selectedFile ? selectedFile.name : "Drag and drop a lab report or click to choose a file"}
+            </p>
+            <p className="text-xs text-[#92a8c7]">PDF, PNG, or JPG up to 10MB</p>
+          </label>
+        </div>
+        {selectedFile ? (
+          <div className="mt-4 flex items-center gap-2 text-sm text-[#cfe9ff]">
+            <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
+            <span>Ready to upload and queue server-side analysis.</span>
           </div>
-          {selectedFile ? (
-            <div className="mt-4 flex items-center gap-2 text-sm text-[#cfe9ff]">
-              <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
-              <span>Ready to upload and queue server-side analysis.</span>
-            </div>
-          ) : null}
-          <Button
-            className={`mt-5 h-12 w-full rounded-2xl ${portalPrimaryButtonClass}`}
-            disabled={!selectedFile || submitting}
-            onClick={() => void handleSubmit()}
-          >
-            {submitting ? "Uploading..." : "Upload lab report"}
-          </Button>
-        </section>
-
-        {/* Patient Clinical Highlights & Quick Shortcuts */}
-        <section className={`${portalPanelClass} p-5 sm:p-6 flex flex-col justify-between`}>
-          <SectionHeading
-            eyebrow="Overview"
-            title="Today's Health Highlights"
-            description="Your key clinical metrics and portal readiness at a glance."
-          />
-
-          <div className="mt-6 space-y-3.5 flex-1">
-            <div className={`${portalInsetClass} flex items-center justify-between p-4`}>
-              <div className="flex items-center gap-3.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-[#ff9c61]/15 text-[#ff9c61]">
-                  <Activity className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-white">Biomarker Intelligence</p>
-                  <p className="text-[11px] text-[#92a8c7]">
-                    {latestPanel ? "Structured panel is actively powering body system maps." : "Ready for your first report upload."}
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-200 uppercase tracking-wider">
-                {latestPanel ? "Active" : "Standby"}
-              </span>
-            </div>
-
-            <div className={`${portalInsetClass} flex items-center justify-between p-4`}>
-              <div className="flex items-center gap-3.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-purple-500/15 text-purple-300">
-                  <TrendingUp className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-white">Longitudinal Trends</p>
-                  <p className="text-[11px] text-[#92a8c7]">
-                    {panels.length > 0 ? `${panels.length} historical panel(s) available for comparison.` : "Upload reports to start building trend charts."}
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-[10px] font-semibold text-white/70 uppercase tracking-wider">
-                {panels.length} Panels
-              </span>
-            </div>
-
-            <div className={`${portalInsetClass} flex items-center justify-between p-4`}>
-              <div className="flex items-center gap-3.5">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-sky-500/15 text-sky-300">
-                  <ShieldCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-white">Patient Privacy & Vault</p>
-                  <p className="text-[11px] text-[#92a8c7]">
-                    All lab documents and extracted data are encrypted & protected.
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-full border border-sky-500/30 bg-sky-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-sky-200 uppercase tracking-wider">
-                Protected
-              </span>
-            </div>
-          </div>
-        </section>
-      </div>
+        ) : null}
+        <Button
+          className={`mt-5 h-12 w-full rounded-2xl ${portalPrimaryButtonClass}`}
+          disabled={!selectedFile || submitting}
+          onClick={() => void handleSubmit()}
+        >
+          {submitting ? "Uploading..." : "Upload lab report"}
+        </Button>
+      </section>
 
       {/* 3. REPORT SELECTION SECTION - EMPTIES AREA BELOW UNTIL REPORT IS CHOSEN */}
       {selectedReportId === "none" ? (
