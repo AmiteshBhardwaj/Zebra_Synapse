@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
   ExternalLink,
@@ -15,6 +15,10 @@ import {
 import { Button } from "../components/ui/button";
 import { DnaCanvas3D } from "../components/DnaCanvas3D";
 import { GlassmorphicLoginCard } from "../components/GlassmorphicLoginCard";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const signalCards = [
   {
@@ -54,36 +58,44 @@ export default function WelcomePage() {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     // Check reduced motion preference
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(mediaQuery.matches);
 
-    const handleScroll = () => {
-      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
-      if (totalScroll > 0) {
-        const currentProgress = Math.min(
-          1,
-          Math.max(0, window.scrollY / totalScroll)
-        );
-        setScrollProgress(currentProgress);
-      }
-    };
+    if (mediaQuery.matches) return;
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll();
+    const scrollObj = { progress: 0 };
 
-    return () => window.removeEventListener("scroll", handleScroll);
+    const ctx = gsap.context(() => {
+      gsap.to(scrollObj, {
+        progress: 1,
+        ease: "power2.inOut",
+        scrollTrigger: {
+          trigger: containerRef.current,
+          start: "top top",
+          end: "bottom bottom",
+          scrub: 1,
+          onUpdate: () => {
+            setScrollProgress(scrollObj.progress);
+          },
+        },
+      });
+    });
+
+    return () => ctx.revert();
   }, []);
 
-  // Compute key transition opacity/transform parameters (or fallback for reduced motion)
+  // Compute key transition opacity/transform parameters
   const heroOpacity = prefersReducedMotion ? 1 : Math.max(0, 1 - scrollProgress * 2.2);
   const heroScale = prefersReducedMotion ? 1 : 1 - scrollProgress * 0.15;
   const loginOpacity = prefersReducedMotion ? 1 : Math.min(1, Math.max(0, (scrollProgress - 0.45) * 2.2));
   const loginScale = prefersReducedMotion ? 1 : 0.88 + Math.min(0.12, scrollProgress * 0.12);
 
   return (
-    <div className="relative min-h-[250vh] bg-[#06070a] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300">
+    <div ref={containerRef} className="relative min-h-[250vh] bg-[#06070a] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300">
       
       {/* Sticky Viewport Container */}
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between">
@@ -134,7 +146,7 @@ export default function WelcomePage() {
           </div>
         </header>
 
-        {/* Main Hero & Workspace Content Area — Two-Column Desktop Grid */}
+        {/* Main Hero Content Area — Two-Column Desktop Grid */}
         <main className="relative z-20 flex-1 flex flex-col justify-center px-6 lg:px-12 max-w-7xl mx-auto min-h-0 py-2 w-full">
           
           {/* STATE 1: Hero Content */}
@@ -147,28 +159,24 @@ export default function WelcomePage() {
               display: !prefersReducedMotion && heroOpacity <= 0.05 ? "none" : "grid",
             }}
           >
-            {/* LEFT COLUMN: Editorial Hero Copy & Actions (lg:col-span-7) */}
+            {/* LEFT COLUMN: Editorial Hero Copy & Actions */}
             <div className="lg:col-span-7 flex flex-col items-start text-left">
-              {/* Eyebrow Badge */}
               <div className="text-cyan-400 font-mono text-[11px] tracking-[0.2em] uppercase mb-2.5 font-semibold">
                 CLINICAL INTELLIGENCE PLATFORM
               </div>
 
-              {/* Main Editorial Headline — WCAG AA High Contrast */}
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-100 leading-[1.08] font-['Manrope']">
                 Clinical intelligence, <br />
                 <span className="text-cyan-400 font-extrabold">from lab data to care.</span>
               </h1>
 
-              {/* Supporting Description */}
               <p className="mt-3.5 text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
                 Transform complex lab data into structured biomarkers, longitudinal insights, and actionable clinical workflows.
               </p>
 
-              {/* Left-Aligned Portal Entry Buttons — Tightened Rhythm */}
               <div className="flex flex-row items-center justify-start gap-3.5 my-5 w-full">
                 <Button
-                  className="h-10 sm:h-11 px-5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a]"
+                  className="h-10 sm:h-11 px-5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a]"
                   onClick={() => navigate("/login/patient")}
                 >
                   <UserCheck className="h-4 w-4" />
@@ -186,7 +194,7 @@ export default function WelcomePage() {
                 </Button>
               </div>
 
-              {/* Clinical Trust & Compliance Signal Row — Warm Sans-Serif with Thin Dividers */}
+              {/* Clinical Trust Badge Row */}
               <div className="flex items-center flex-wrap gap-3.5 text-[11px] font-sans text-slate-300 mb-5 select-none font-medium">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
@@ -204,7 +212,7 @@ export default function WelcomePage() {
                 </span>
               </div>
 
-              {/* Varied Feature Capability Strip — Distinct Hierarchy */}
+              {/* Feature Capability Strip */}
               <div className="grid gap-3.5 sm:grid-cols-3 w-full text-left pt-1">
                 {signalCards.map((item) => {
                   const Icon = item.icon;
@@ -231,11 +239,11 @@ export default function WelcomePage() {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: Dedicated 3D Stage Space Placeholder (lg:col-span-5) */}
+            {/* RIGHT COLUMN: Dedicated 3D Stage Space Placeholder */}
             <div className="hidden lg:block lg:col-span-5 h-[480px] pointer-events-none relative" />
           </div>
 
-          {/* STATE 2: Revealed Embedded Glassmorphic Login Card (Emerges on Scroll) */}
+          {/* STATE 2: Revealed Embedded Glassmorphic Login Card */}
           {!prefersReducedMotion && (
             <div
               className="absolute inset-0 flex items-center justify-center px-4 transition-all duration-300 pointer-events-none"
@@ -255,7 +263,6 @@ export default function WelcomePage() {
         <footer className="relative z-30 border-t border-slate-800/40 bg-[#06070a]/80 backdrop-blur-md py-2.5 px-6 text-center text-[11px] text-[#64748b] font-mono shrink-0 flex items-center justify-between">
           <div>© 2026 Zebra Synapse Health. Enterprise Clinical Infrastructure.</div>
 
-          {/* Dynamic Scroll Prompt */}
           {!prefersReducedMotion && (
             <>
               <div
