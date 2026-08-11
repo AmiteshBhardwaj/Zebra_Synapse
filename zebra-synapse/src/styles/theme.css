@@ -210,10 +210,11 @@
   }
 
   .clinical-surface {
-    background:
-      linear-gradient(180deg, rgba(17, 28, 48, 0.92), rgba(10, 18, 32, 0.96));
-    border: 1px solid rgba(166, 191, 221, 0.14);
-    box-shadow: 0 24px 70px rgba(3, 8, 18, 0.34);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015));
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   }
 
   .clinical-text-gradient {
@@ -224,11 +225,11 @@
   }
 
   .glass-panel {
-    background: rgba(13, 25, 43, 0.65);
+    background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 183, 149, 0.2);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
   }
 
   .neon-glow {

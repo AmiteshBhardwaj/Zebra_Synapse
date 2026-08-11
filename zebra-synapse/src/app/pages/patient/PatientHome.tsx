@@ -156,7 +156,7 @@ export default function PatientHome() {
   return (
     <PatientPortalPage>
       {/* 1. STITCH PATIENT WELCOME HERO BANNER */}
-      <div className="relative overflow-hidden rounded-[32px] border border-white/12 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,138,61,0.22),_transparent_65%),radial-gradient(ellipse_at_bottom_right,_rgba(114,76,255,0.18),_transparent_60%),linear-gradient(135deg,rgba(16,16,22,0.95),rgba(10,10,14,0.98))] p-6 sm:p-8 shadow-[0_24px_60px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+      <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,138,61,0.16),_transparent_65%),radial-gradient(ellipse_at_bottom_right,_rgba(114,76,255,0.12),_transparent_60%),rgba(255,255,255,0.03)] p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-2xl">
         <div className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-[#ff8a3d]/15 blur-3xl" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -179,13 +179,13 @@ export default function PatientHome() {
               </span>
             </h1>
 
-            <p className="max-w-xl text-sm text-[#92a8c7] leading-relaxed">
+            <p className="max-w-xl text-sm text-[#b4c9e8] leading-relaxed font-medium">
               Welcome to your personal health dashboard. Upload a new lab report or select a report below to explore your biomarker trends, body system signals, and clinical insights.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center shrink-0">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-xl">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-xl">
               <p className="text-[10px] uppercase tracking-wider text-white/45">Health Vault</p>
               <div className="mt-1 flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -195,14 +195,14 @@ export default function PatientHome() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-xl">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-xl">
               <p className="text-[10px] uppercase tracking-wider text-white/45">Biomarkers</p>
               <p className="mt-1 text-xs font-semibold text-[#ff9c61]">
                 {latestPanel ? `${Object.keys(latestPanel.biomarkers ?? {}).length} Tracked` : "0 Tracked"}
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 backdrop-blur-xl col-span-2 sm:col-span-1">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-xl col-span-2 sm:col-span-1">
               <p className="text-[10px] uppercase tracking-wider text-white/45">Latest Panel</p>
               <p className="mt-1 text-xs font-semibold text-white">
                 {latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting Upload"}
@@ -222,7 +222,7 @@ export default function PatientHome() {
         <div
           className={`mt-6 rounded-[28px] border border-dashed p-8 text-center transition-colors ${dragActive
             ? "border-[#ff9b61]/70 bg-[#ff9b61]/10"
-            : "border-white/14 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] hover:border-[#ff9b61]/40"
+            : "border-white/10 bg-white/[0.02] hover:border-[#ff9b61]/40"
             }`}
           onDragOver={(e) => {
             e.preventDefault();

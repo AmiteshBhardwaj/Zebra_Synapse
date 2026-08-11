@@ -11,10 +11,10 @@ export const portalPanelClass =
   "clinical-surface rounded-[28px] text-white backdrop-blur-xl transition-all duration-200";
 
 export const portalMutedPanelClass =
-  "rounded-[24px] border border-white/8 bg-white/[0.03] backdrop-blur-xl";
+  "rounded-[24px] border border-white/10 bg-white/[0.02] backdrop-blur-2xl";
 
 export const portalInsetClass =
-  "rounded-[22px] border border-white/8 bg-[#0b1525]/80 backdrop-blur-xl";
+  "rounded-[22px] border border-white/10 bg-white/[0.025] backdrop-blur-2xl";
 
 export const portalPrimaryButtonClass =
   "border-transparent bg-[linear-gradient(135deg,#ff7a33,#ff9b61)] text-white shadow-[0_18px_40px_rgba(255,122,51,0.22)] hover:brightness-110";
@@ -26,22 +26,22 @@ export const portalDangerButtonClass =
   "border-[#ff6f91]/30 bg-[#ff6f91]/12 text-[#ffdbe4] hover:border-[#ff6f91]/45 hover:bg-[#ff6f91]/18 hover:text-white";
 
 export const portalInputClass =
-  "h-12 rounded-2xl border border-white/10 bg-[#0d1829]/85 px-4 text-white placeholder:text-[#6f85a3] focus-visible:border-[#60d4ff] focus-visible:ring-[3px] focus-visible:ring-[#60d4ff]/18";
+  "h-12 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-white placeholder:text-[#6f85a3] focus-visible:border-[#ff9c61] focus-visible:ring-[3px] focus-visible:ring-[#ff9c61]/20";
 
 export const portalSelectTriggerClass =
-  "h-12 rounded-2xl border-white/10 bg-[#0d1829]/85 text-white data-[placeholder]:text-[#6f85a3] focus-visible:border-[#60d4ff] focus-visible:ring-[#60d4ff]/20";
+  "h-12 rounded-2xl border-white/10 bg-white/[0.03] text-white data-[placeholder]:text-[#6f85a3] focus-visible:border-[#ff9c61] focus-visible:ring-[#ff9c61]/20";
 
 export const portalSelectContentClass =
-  "border-white/10 bg-[#0a1323] text-white shadow-[0_18px_48px_rgba(3,8,18,0.5)]";
+  "border-white/10 bg-[#0a1323]/95 text-white shadow-[0_18px_48px_rgba(3,8,18,0.5)] backdrop-blur-2xl";
 
 export const portalSelectItemClass =
   "rounded-lg text-white focus:bg-white/[0.08] focus:text-white";
 
 export const portalDialogClass =
-  "border-white/10 bg-[#0b1324]/95 text-white shadow-[0_30px_80px_rgba(3,8,18,0.6)] backdrop-blur-2xl";
+  "border-white/10 bg-[#0b1324]/90 text-white shadow-[0_30px_80px_rgba(3,8,18,0.6)] backdrop-blur-2xl";
 
 export const portalTableWrapClass =
-  "overflow-hidden rounded-[24px] border border-white/8 bg-[#0c1626]/90";
+  "overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.02] backdrop-blur-2xl";
 
 export const portalTableClass = "text-sm text-[#dce8f8]";
 

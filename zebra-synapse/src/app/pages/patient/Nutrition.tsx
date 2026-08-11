@@ -3,7 +3,6 @@ import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import {
-  PatientPageHero,
   PatientPortalPage,
   portalInsetClass,
   portalPanelClass,
@@ -36,21 +35,36 @@ export default function Nutrition() {
     );
   }
 
-  if (!hasPanels || !latestPanel) {
-    return (
-      <PatientPortalPage>
-        <PatientPageHero
-          eyebrow="Nutrition Intelligence"
-          title="Nutrition Plan"
-          description="View food guidance, meal priorities, and macro suggestions in a dark planning workspace that stays tied to your real clinical markers."
-          icon={Apple}
-          meta={[
-            { label: "Meal plans", value: "Awaiting biomarkers" },
-            { label: "Macro guidance", value: "Not generated" },
-            { label: "Personalization", value: "Lab-driven only" },
-          ]}
-        />
+  return (
+    <PatientPortalPage>
+      {/* Executive Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+        <div className="flex items-center gap-3.5">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
+            <Apple className="h-6 w-6 text-[#ff9c61]" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Nutrition Plan</h1>
+              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+                Nutrition Intelligence
+              </span>
+            </div>
+            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+              Personalized dietary guidance, macro recommendations, and meal plans driven by your lab results.
+            </p>
+          </div>
+        </div>
 
+        <div className="flex items-center gap-2 text-xs">
+          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            {hasPanels && latestPanel ? `${plans.length} Custom Meal Plans` : "Awaiting Biomarkers"}
+          </span>
+        </div>
+      </div>
+
+      {!hasPanels || !latestPanel ? (
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <Card className={portalPanelClass}>
             <CardHeader>
@@ -111,109 +125,79 @@ export default function Nutrition() {
             </CardContent>
           </Card>
         </div>
-      </PatientPortalPage>
-    );
-  }
-
-  return (
-    <PatientPortalPage>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
-            <Apple className="h-6 w-6 text-[#ff9c61]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Nutrition Plan</h1>
-              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
-                Nutrition Intelligence
-              </span>
-            </div>
-            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
-              Personalized dietary guidance, macro recommendations, and meal plans driven by your lab results.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            {plans.length} Custom Meal Plans
-          </span>
-        </div>
-      </div>
-
-      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-6">
-          {plans.map((plan) => (
-            <Card key={plan.headline} className={portalPanelClass}>
-              <CardHeader>
-                <CardTitle className="text-white">{plan.headline}</CardTitle>
-                <CardDescription className="text-white/60">{plan.focus}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {plan.actions.map((action) => (
-                  <div key={action} className={`${portalInsetClass} p-4`}>
-                    <div className="flex items-start gap-3">
-                      <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
-                        <Utensils className="h-4 w-4 text-[#ff9c61]" />
-                      </span>
-                      <p className="text-sm leading-7 text-white/80">{action}</p>
+      ) : (
+        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-6">
+            {plans.map((plan) => (
+              <Card key={plan.headline} className={portalPanelClass}>
+                <CardHeader>
+                  <CardTitle className="text-white">{plan.headline}</CardTitle>
+                  <CardDescription className="text-white/60">{plan.focus}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {plan.actions.map((action) => (
+                    <div key={action} className={`${portalInsetClass} p-4`}>
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+                          <Utensils className="h-4 w-4 text-[#ff9c61]" />
+                        </span>
+                        <p className="text-sm leading-7 text-white/80">{action}</p>
+                      </div>
                     </div>
-                  </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="space-y-6">
+            <Card className={portalPanelClass}>
+              <CardHeader>
+                <CardTitle className="text-white">Plan context</CardTitle>
+                <CardDescription className="text-white/60">
+                  These recommendations are based on your latest structured lab panel.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className={`${portalInsetClass} p-4`}>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Panel Date</p>
+                  <p className="mt-2 text-sm font-medium text-white">{formatLabDate(latestPanel.recorded_at)}</p>
+                </div>
+                <div className={`${portalInsetClass} p-4`}>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Structured Source</p>
+                  <p className="mt-2 text-sm font-medium text-white">Latest uploaded lab panel</p>
+                </div>
+                <div className={`${portalInsetClass} p-4`}>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Focus</p>
+                  <p className="mt-2 text-sm font-medium text-white">
+                    Nutrition actions adapt to glucose, lipid, and hemoglobin trends when available.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className={portalPanelClass}>
+              <CardHeader>
+                <CardTitle className="text-white">Plan tags</CardTitle>
+                <CardDescription className="text-white/60">
+                  Quick view of the main areas covered by your current nutrition plan.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-2">
+                {plans.map((plan) => (
+                  <Badge
+                    key={plan.headline}
+                    variant="outline"
+                    className="border-white/10 bg-white/[0.04] px-3 py-1 text-white/80"
+                  >
+                    {plan.headline}
+                  </Badge>
                 ))}
               </CardContent>
             </Card>
-          ))}
+          </div>
         </div>
-
-        <div className="space-y-6">
-          <Card className={portalPanelClass}>
-            <CardHeader>
-              <CardTitle className="text-white">Plan context</CardTitle>
-              <CardDescription className="text-white/60">
-                These recommendations are based on your latest structured lab panel.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Panel Date</p>
-                <p className="mt-2 text-sm font-medium text-white">{formatLabDate(latestPanel.recorded_at)}</p>
-              </div>
-              <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Structured Source</p>
-                <p className="mt-2 text-sm font-medium text-white">Latest uploaded lab panel</p>
-              </div>
-              <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Focus</p>
-                <p className="mt-2 text-sm font-medium text-white">
-                  Nutrition actions adapt to glucose, lipid, and hemoglobin trends when available.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className={portalPanelClass}>
-            <CardHeader>
-              <CardTitle className="text-white">Plan tags</CardTitle>
-              <CardDescription className="text-white/60">
-                Quick view of the main areas covered by your current nutrition plan.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
-              {plans.map((plan) => (
-                <Badge
-                  key={plan.headline}
-                  variant="outline"
-                  className="border-white/10 bg-white/[0.04] px-3 py-1 text-white/80"
-                >
-                  {plan.headline}
-                </Badge>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      )}
     </PatientPortalPage>
   );
 }
