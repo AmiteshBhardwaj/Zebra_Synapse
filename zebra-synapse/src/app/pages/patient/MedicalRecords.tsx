@@ -323,7 +323,7 @@ export default function MedicalRecords() {
                           {upload?.original_filename ?? "Lab Report"}
                         </p>
                         <p className="mt-1 text-[11px] text-amber-200/80">
-                          {extraction.warnings_json?.length ?? 0} low-confidence field(s)
+                          {extraction.warnings_json?.length ?? 0} warning(s)
                         </p>
                       </button>
                     );
@@ -391,9 +391,9 @@ export default function MedicalRecords() {
                                 }
                                 className="mt-2 border-white/10 bg-white/5 text-sm font-semibold text-white"
                               />
-                              {sources[key]?.snippet ? (
+                              {sources[key]?.snippet || sources[key]?.originalValue ? (
                                 <p className="mt-1 text-[10px] text-[#A1A1AA]">
-                                  Source text: &quot;{sources[key].snippet}&quot;
+                                  Source text: &quot;{sources[key]?.snippet ?? sources[key]?.originalValue}&quot;
                                 </p>
                               ) : null}
                             </div>

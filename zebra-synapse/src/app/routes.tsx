@@ -23,7 +23,7 @@ import RequireDoctorPortal from "./layouts/RequireDoctorPortal";
 export const router = createBrowserRouter([
   {
     path: "/",
-    Component: DualLogin,
+    Component: WelcomePage,
   },
   {
     path: "/login",
