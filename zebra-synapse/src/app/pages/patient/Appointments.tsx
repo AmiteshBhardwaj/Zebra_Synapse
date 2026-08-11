@@ -101,12 +101,12 @@ export default function Appointments() {
   // Tab state: "upcoming" selected by default
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
 
-  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([
     {
       id: 1,
       doctor: "Dr. Sarah Johnson",
       specialty: "Cardiologist",
-      date: "2026-04-15",
+      date: "2026-08-25",
       time: "10:00 AM",
       type: "in-person",
       location: "Heart & Vascular Center, Suite 402",
@@ -116,16 +116,34 @@ export default function Appointments() {
       id: 2,
       doctor: "Dr. Michael Chen",
       specialty: "Endocrinologist",
-      date: "2026-04-22",
+      date: "2026-09-02",
       time: "2:30 PM",
       type: "video",
       status: "Confirmed",
     },
-  ]);
-
-  const [pastAppointments] = useState<Appointment[]>([
     {
       id: 3,
+      doctor: "Dr. Sarah Johnson",
+      specialty: "Cardiologist",
+      date: "2026-04-15",
+      time: "10:00 AM",
+      type: "in-person",
+      location: "Heart & Vascular Center, Suite 402",
+      status: "Completed",
+      notes: "Cardiology follow-up completed. ECG trace normal. Blood pressure controlled. Continue current medication.",
+    },
+    {
+      id: 4,
+      doctor: "Dr. Michael Chen",
+      specialty: "Endocrinologist",
+      date: "2026-04-22",
+      time: "2:30 PM",
+      type: "video",
+      status: "Completed",
+      notes: "Routine endocrine assessment. HbA1c target reached. Adjusted dietary recommendations.",
+    },
+    {
+      id: 5,
       doctor: "Dr. Emily Williams",
       specialty: "General Physician",
       date: "2026-03-10",
@@ -135,17 +153,23 @@ export default function Appointments() {
       status: "Completed",
       notes: "Annual checkup completed. Vital signs optimal. Recommended routine lipid panel recheck in 6 months.",
     },
-    {
-      id: 4,
-      doctor: "Dr. Sarah Johnson",
-      specialty: "Cardiologist",
-      date: "2026-01-18",
-      time: "9:30 AM",
-      type: "video",
-      status: "Completed",
-      notes: "Follow-up on blood pressure monitoring. BP medication dosage remains unchanged. Continue log entries.",
-    },
   ]);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const isPastAppointment = (apt: Appointment) => {
+    if (apt.status === "Completed" || apt.status === "Cancelled") return true;
+    try {
+      const aptDate = new Date(`${apt.date}T23:59:59`);
+      return aptDate < today;
+    } catch {
+      return false;
+    }
+  };
+
+  const upcomingAppointments = allAppointments.filter((apt) => !isPastAppointment(apt));
+  const pastAppointments = allAppointments.filter((apt) => isPastAppointment(apt));
 
   const resetScheduleForm = () => {
     setSelectedDoctor("");
@@ -173,7 +197,7 @@ export default function Appointments() {
         status: "Confirmed",
       };
 
-      setUpcomingAppointments((current) => [nextAppointment, ...current]);
+      setAllAppointments((current) => [nextAppointment, ...current]);
       setIsSavingSchedule(false);
       setScheduleOpen(false);
       resetScheduleForm();
@@ -194,7 +218,7 @@ export default function Appointments() {
 
     setIsSavingReschedule(true);
     window.setTimeout(() => {
-      setUpcomingAppointments((current) =>
+      setAllAppointments((current) =>
         current.map((appointment) =>
           appointment.id === selectedAppointment.id
             ? {

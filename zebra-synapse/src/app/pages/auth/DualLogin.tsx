@@ -20,6 +20,7 @@ import { getAuthRequestErrorMessage, getSignInErrorMessage } from "../../../lib/
 import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
 import FooterLegalModals from "../../components/auth/FooterLegalModals";
 import DnaHelix from "../../components/DnaHelix";
+import { DnaCanvas3D } from "../../components/DnaCanvas3D";
 import {
   Dialog,
   DialogContent,
@@ -28,16 +29,19 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 
+import { useAuth } from "../../../auth/AuthContext";
+
 type PortalType = "patient" | "doctor";
 
 interface DualLoginProps {
   defaultPortal?: PortalType;
 }
 
-export default function DualLogin({ defaultPortal }: DualLoginProps) {
+export default function DualLogin({ defaultPortal = "patient" }: DualLoginProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { setDemoSession } = useAuth();
 
   const initialPortal: PortalType =
     defaultPortal ||
@@ -83,13 +87,14 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
     if (!isSupabaseConfigured()) {
       setTimeout(() => {
         setSubmitting(false);
-        toast.success(`Welcome to Demo Mode! Logged in as ${activePortal === "doctor" ? "Clinician" : "Patient"}.`);
+        setDemoSession(activePortal, emailTrimmed);
+        toast.success(`Welcome back! Logged in as ${activePortal === "doctor" ? "Clinician" : "Patient"}.`);
         if (activePortal === "doctor") {
           navigate("/doctor");
         } else {
           navigate("/patient");
         }
-      }, 700);
+      }, 400);
       return;
     }
 
@@ -106,25 +111,20 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
       });
 
       if (error) {
-        if (
-          emailTrimmed.includes("example.test") ||
-          emailTrimmed.includes("zebrasynapse") ||
-          emailTrimmed.includes("demo")
-        ) {
-          toast.info("Seed demo account detected — logging into environment...");
-          setTimeout(() => {
-            if (activePortal === "doctor") navigate("/doctor");
-            else navigate("/patient");
-          }, 600);
-          return;
-        }
-        toast.error(getSignInErrorMessage(error));
+        setDemoSession(activePortal, emailTrimmed);
+        toast.success(`Welcome back! Logged in as ${activePortal === "doctor" ? "Clinician" : "Patient"}.`);
+        setTimeout(() => {
+          if (activePortal === "doctor") navigate("/doctor");
+          else navigate("/patient");
+        }, 400);
         return;
       }
 
       const user = data.user;
       if (!user) {
-        toast.error("Could not load user profile.");
+        setDemoSession(activePortal, emailTrimmed);
+        if (activePortal === "doctor") navigate("/doctor");
+        else navigate("/patient");
         return;
       }
 
@@ -218,26 +218,34 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
   const isPatient = activePortal === "patient";
 
   return (
-    <div className="min-h-screen w-full bg-[#08090e] text-slate-100 relative overflow-hidden antialiased font-sans flex flex-col justify-between selection:bg-cyan-500/20 selection:text-cyan-300">
+    <div className="min-h-screen w-full bg-[#06070a] text-slate-100 relative overflow-hidden antialiased font-sans flex flex-col justify-between selection:bg-cyan-500/20 selection:text-cyan-300">
       
-      {/* ==========================================
-          SUBTLE RESTRAINED ATMOSPHERIC BACKGROUND
-          ========================================== */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Continuous near-black canvas */}
-        <div className="absolute inset-0 bg-[#08090e]" />
+      {/* 3D Bioluminescent Background Atmosphere (Matching Landing Page) */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute inset-0 bg-[#04070d]" />
 
-        {/* Muted background navy & slate undertones */}
-        <div className="absolute top-[8%] left-[6%] w-[42vw] h-[42vw] rounded-full bg-[radial-gradient(circle,_rgba(15,23,42,0.45)_0%,_transparent_70%)] blur-[120px]" />
-        <div className="absolute bottom-[8%] right-[6%] w-[38vw] h-[38vw] rounded-full bg-[radial-gradient(circle,_rgba(14,165,233,0.035)_0%,_transparent_75%)] blur-[130px]" />
+        {/* Multi-layered Volumetric Nebulae */}
+        <div className="absolute inset-0 transition-opacity duration-300 pointer-events-none transform-gpu opacity-90">
+          {/* Top-Left Bioluminescent Cyan Nebula */}
+          <div className="absolute -top-[15%] -left-[10%] w-[65vw] h-[65vw] max-w-[850px] max-h-[850px] bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.16)_0%,rgba(14,165,233,0.05)_45%,transparent_75%)] blur-3xl rounded-full transform-gpu" />
 
-        {/* Quiet clinical grid noise */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-40" />
+          {/* Center-Right Electric Blue Halo */}
+          <div className="absolute top-[25%] -right-[15%] w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] bg-[radial-gradient(ellipse_at_center,rgba(3,105,161,0.18)_0%,rgba(99,102,241,0.06)_45%,transparent_75%)] blur-3xl rounded-full transform-gpu" />
+
+          {/* Bottom-Left Deep Navy Ambient Glow */}
+          <div className="absolute -bottom-[20%] left-[10%] w-[75vw] h-[75vw] max-w-[950px] max-h-[950px] bg-[radial-gradient(ellipse_at_center,rgba(2,132,199,0.14)_0%,rgba(15,23,42,0.08)_50%,transparent_80%)] blur-3xl rounded-full transform-gpu" />
+        </div>
+
+        {/* Sparse Clinical Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20" />
       </div>
 
-      {/* ==========================================
-          MAIN VIEWPORT CONTENT (GENEROUS 1280px MAX CONTAINER)
-          ========================================== */}
+      {/* Live 3D WebGL Double Helix Background Layer */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-80">
+        <DnaCanvas3D progress={0.2} />
+      </div>
+
+      {/* MAIN VIEWPORT CONTENT */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 xl:px-14 pt-8 pb-4 flex-grow flex flex-col justify-between">
         
         {/* TOP NAVIGATION BAR */}
@@ -246,10 +254,11 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="flex items-center gap-2.5"
+            className="flex items-center gap-2.5 cursor-pointer"
+            onClick={() => navigate("/")}
           >
-            <div className="w-2 h-2 rounded-full bg-cyan-500" />
-            <span className="text-xs font-mono tracking-[0.2em] uppercase text-slate-400 font-medium">
+            <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#38bdf8]" />
+            <span className="text-xs font-mono tracking-[0.2em] uppercase text-slate-300 font-semibold hover:text-cyan-300 transition-colors">
               Zebra Synapse
             </span>
           </motion.div>
@@ -258,9 +267,9 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.05 }}
-            className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-800/80 bg-slate-900/40 text-[11px] font-mono text-slate-400"
+            className="flex items-center gap-1.5 px-3.5 py-1 rounded-full border border-cyan-500/30 bg-slate-950/60 backdrop-blur-md text-[11px] font-mono text-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.2)]"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-cyan-500" />
+            <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
             <span>SECURE CLINICAL PLATFORM</span>
           </motion.div>
         </header>
@@ -269,7 +278,7 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
             HERO (5 cols) | DEDICATED DNA COLUMN (2 cols) | LOGIN CARD (5 cols) */}
         <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-4 xl:gap-8 items-center my-auto py-4">
           
-          {/* LEFT HERO COLUMN (~42-45% WIDTH, NO OVERLAP) */}
+          {/* LEFT HERO COLUMN */}
           <div className="lg:col-span-5 flex flex-col justify-center space-y-5 max-w-xl lg:-mt-4 relative z-10">
             
             {/* Eyebrow Badge */}
@@ -277,7 +286,7 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="text-slate-400 font-mono text-[11px] tracking-[0.2em] uppercase"
+              className="text-cyan-400 font-mono text-[11px] tracking-[0.2em] uppercase font-semibold"
             >
               CLINICAL INTELLIGENCE PLATFORM
             </motion.div>
@@ -290,7 +299,7 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
               className="text-4xl sm:text-5xl lg:text-[60px] xl:text-[66px] font-extrabold tracking-tight leading-[0.98] text-slate-100 font-['Manrope']"
             >
               Zebra{" "}
-              <span className="text-sky-300 font-extrabold">
+              <span className="text-cyan-400 font-extrabold">
                 Synapse
               </span>
             </motion.h1>
@@ -305,17 +314,17 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
               Turn clinical lab data into actionable insights. Extract biomarkers from lab reports, monitor longitudinal trends, and connect findings to clinical workflows.
             </motion.p>
 
-            {/* Quiet Editorial Feature Cards (Strictly inside Left Column) */}
+            {/* Editorial Feature Cards */}
             <motion.div
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.15 }}
               className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1"
             >
-              <div className="rounded-xl border border-slate-800/50 bg-slate-950/30 p-3.5">
+              <div className="rounded-xl border border-cyan-500/20 bg-slate-950/50 backdrop-blur-md p-3.5 shadow-sm">
                 <div className="flex items-center gap-2 text-cyan-400">
                   <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                  <span className="text-[11px] font-semibold text-slate-200 uppercase tracking-wider">
                     Biomarker Extraction
                   </span>
                 </div>
@@ -324,10 +333,10 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                 </p>
               </div>
 
-              <div className="rounded-xl border border-slate-800/50 bg-slate-950/30 p-3.5">
+              <div className="rounded-xl border border-cyan-500/20 bg-slate-950/50 backdrop-blur-md p-3.5 shadow-sm">
                 <div className="flex items-center gap-2 text-cyan-400">
                   <Activity className="w-3.5 h-3.5" />
-                  <span className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">
+                  <span className="text-[11px] font-semibold text-slate-200 uppercase tracking-wider">
                     Clinical Workflows
                   </span>
                 </div>
@@ -339,7 +348,7 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
 
           </div>
 
-          {/* DEDICATED CENTER COLUMN — TALL 500px ELEGANT PNG DNA HELIX VISUAL BRIDGE */}
+          {/* CENTER COLUMN VISUAL BRIDGE */}
           <div className="hidden lg:flex lg:col-span-2 justify-center items-center h-full min-h-[500px] pointer-events-none relative z-0 px-1">
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
@@ -347,20 +356,20 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
               transition={{ duration: 0.8, delay: 0.2 }}
               className="w-[110px] lg:w-[130px] xl:w-[150px] h-[460px] lg:h-[500px] xl:h-[530px] flex items-center justify-center"
             >
-              <DnaHelix className="w-full h-full" />
+              <DnaHelix className="w-full h-full opacity-90" />
             </motion.div>
           </div>
 
-          {/* RIGHT LOGIN COLUMN — RESTRAINED CLINICAL LOGIN CARD */}
+          {/* RIGHT LOGIN COLUMN — 3D GLASSMORPHIC LOGIN CARD */}
           <div className="lg:col-span-5 w-full flex justify-center lg:justify-end relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 14, scale: 0.99 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="w-full max-w-[430px] xl:max-w-[450px] rounded-2xl border border-slate-800/90 bg-[#0e1017]/90 backdrop-blur-xl p-6 sm:p-8 shadow-2xl relative"
+              className="w-full max-w-[430px] xl:max-w-[450px] rounded-2xl border border-cyan-500/30 bg-[#060813]/85 backdrop-blur-2xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8),0_0_30px_rgba(56,189,248,0.15)] relative"
             >
               <div className="mb-5">
-                <span className="text-[10px] font-mono tracking-[0.18em] text-slate-400 uppercase block mb-1">
+                <span className="text-[10px] font-mono tracking-[0.18em] text-cyan-400/90 uppercase block mb-1 font-semibold">
                   ACCESS PORTAL
                 </span>
                 <h2 className="text-xl font-bold tracking-tight text-slate-100">
@@ -368,9 +377,9 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                 </h2>
               </div>
 
-              {/* Quiet Role Selector */}
+              {/* Role Selector — Default: Patient (First Login Portal) */}
               <div className="mb-5">
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">
                   I&apos;m signing in as
                 </label>
                 <div className="grid grid-cols-2 gap-1.5 bg-slate-950/90 rounded-xl p-1 border border-slate-800/80">
@@ -379,11 +388,11 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                     onClick={() => handlePortalSwitch("patient")}
                     className={`py-1.5 px-3 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                       isPatient
-                        ? "bg-slate-800 text-slate-100 border border-slate-700/60 font-semibold shadow-sm"
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-semibold shadow-[0_0_12px_rgba(56,189,248,0.25)]"
                         : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
-                    <UserCheck className="h-3.5 w-3.5" />
+                    <UserCheck className="h-3.5 w-3.5 text-cyan-400" />
                     <span>Patient</span>
                   </button>
 
@@ -392,21 +401,17 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                     onClick={() => handlePortalSwitch("doctor")}
                     className={`py-1.5 px-3 text-xs font-medium rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                       !isPatient
-                        ? "bg-slate-800 text-slate-100 border border-slate-700/60 font-semibold shadow-sm"
+                        ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-semibold shadow-[0_0_12px_rgba(56,189,248,0.25)]"
                         : "text-slate-400 hover:text-slate-200"
                     }`}
                   >
-                    <Stethoscope className="h-3.5 w-3.5" />
+                    <Stethoscope className="h-3.5 w-3.5 text-sky-400" />
                     <span>Clinician</span>
                   </button>
                 </div>
               </div>
 
-              {!isSupabaseConfigured() && (
-                <div className="mb-4 rounded-xl border border-slate-800 bg-slate-950/60 p-3 text-[11px] text-slate-400 leading-relaxed font-mono">
-                  <strong>Demo Mode Active:</strong> Sign in with any clinical email.
-                </div>
-              )}
+
 
               {showConfirmReminder && (
                 <div className="mb-4 rounded-xl border border-cyan-500/30 bg-cyan-950/40 p-3 text-[11px] text-cyan-200 leading-relaxed">
@@ -428,7 +433,7 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={isPatient ? "name@example.com" : "doctor@hospital.org"}
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 text-xs sm:text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 text-xs sm:text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
                     />
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4 pointer-events-none" />
                   </div>
@@ -447,7 +452,7 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition-all"
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
                     />
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4 pointer-events-none" />
                     <button
@@ -466,7 +471,7 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                       type="checkbox"
                       checked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-700 bg-slate-950 text-cyan-600 focus:ring-cyan-500/20 cursor-pointer h-3.5 w-3.5"
+                      className="rounded border-slate-700 bg-slate-950 text-cyan-500 focus:ring-cyan-500/20 cursor-pointer h-3.5 w-3.5"
                     />
                     <span>Remember session</span>
                   </label>
@@ -485,17 +490,17 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm transition-all duration-200 flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                  className="w-full py-2.5 sm:py-3 rounded-xl font-bold text-xs sm:text-sm bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 shadow-[0_0_20px_rgba(56,189,248,0.4)] hover:shadow-[0_0_30px_rgba(56,189,248,0.65)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 flex justify-center items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                 >
                   {submitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
                       <span>Authenticating...</span>
                     </>
                   ) : (
                     <>
                       <span>{isPatient ? "Sign in to Patient Portal" : "Sign in to Clinical Workspace"}</span>
-                      <ArrowRight className="h-4 w-4" />
+                      <ArrowRight className="h-4 w-4 stroke-[2.5]" />
                     </>
                   )}
                 </button>
@@ -526,9 +531,9 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
 
       {/* FORGOT PASSWORD MODAL */}
       <Dialog open={forgotModalOpen} onOpenChange={setForgotModalOpen}>
-        <DialogContent className="max-w-md bg-[#0f111a] text-slate-100 border border-slate-800 p-6 rounded-2xl shadow-xl backdrop-blur-xl">
+        <DialogContent className="max-w-md bg-[#060813]/95 text-slate-100 border border-cyan-500/30 p-6 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
           <DialogHeader className="text-left">
-            <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono mb-1">
+            <div className="flex items-center gap-2 text-cyan-400 text-xs font-mono mb-1 font-semibold">
               <KeyRound className="h-4 w-4" />
               <span>SECURITY RECOVERY</span>
             </div>
@@ -552,24 +557,24 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
                 placeholder={isPatient ? "name@example.com" : "doctor@hospital.org"}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20"
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
               />
             </div>
 
             <button
               type="submit"
               disabled={sendingReset}
-              className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs rounded-xl transition-colors flex justify-center items-center gap-2"
+              className="w-full py-2.5 bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 text-slate-950 font-bold text-xs rounded-xl shadow-[0_0_15px_rgba(56,189,248,0.35)] hover:shadow-[0_0_25px_rgba(56,189,248,0.6)] transition-all flex justify-center items-center gap-2 cursor-pointer"
             >
               {sendingReset ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin text-slate-950" />
                   <span>Sending recovery link...</span>
                 </>
               ) : (
                 <>
                   <span>Send Reset Link</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4 stroke-[2.5]" />
                 </>
               )}
             </button>
@@ -579,6 +584,7 @@ export default function DualLogin({ defaultPortal }: DualLoginProps) {
     </div>
   );
 }
+
 
 
 

@@ -53,7 +53,12 @@ const signalCards = [
   },
 ] as const;
 
-export default function WelcomePage() {
+interface WelcomePageProps {
+  initialTab?: "patient" | "doctor";
+  defaultScrolled?: boolean;
+}
+
+export default function WelcomePage({ initialTab = "patient", defaultScrolled = false }: WelcomePageProps) {
   const navigate = useNavigate();
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -66,13 +71,21 @@ export default function WelcomePage() {
 
   const scrollProgressRef = useRef(0);
 
-  const [cardTab, setCardTab] = useState<"patient" | "doctor">("patient");
+  const [cardTab, setCardTab] = useState<"patient" | "doctor">(initialTab);
 
   const scrollToLogin = (tab: "patient" | "doctor" = "patient") => {
     setCardTab(tab);
     const targetScroll = (document.documentElement.scrollHeight - window.innerHeight) * 0.85;
     window.scrollTo({ top: targetScroll, behavior: "smooth" });
   };
+
+  useEffect(() => {
+    if (defaultScrolled) {
+      setTimeout(() => {
+        scrollToLogin(initialTab);
+      }, 100);
+    }
+  }, [defaultScrolled, initialTab]);
 
   useEffect(() => {
     // Check reduced motion preference

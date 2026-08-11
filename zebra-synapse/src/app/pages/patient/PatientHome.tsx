@@ -156,58 +156,38 @@ export default function PatientHome() {
   return (
     <PatientPortalPage>
       {/* 1. STITCH PATIENT WELCOME HERO BANNER */}
-      <div className="relative overflow-hidden rounded-[32px] border border-white/10 bg-[radial-gradient(ellipse_at_top_left,_rgba(255,138,61,0.16),_transparent_65%),radial-gradient(ellipse_at_bottom_right,_rgba(114,76,255,0.12),_transparent_60%),rgba(255,255,255,0.03)] p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-2xl">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-64 w-64 rounded-full bg-[#ff8a3d]/15 blur-3xl" />
+      <div className="relative overflow-hidden rounded-[28px] border border-cyan-500/25 bg-gradient-to-r from-[#061224]/85 via-[#091b35]/70 to-[#040914]/90 p-7 sm:p-9 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_35px_rgba(56,189,248,0.12),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-2xl">
+        {/* Ambient Glow Atmosphere */}
+        <div className="pointer-events-none absolute -right-12 -top-12 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
+        <div className="pointer-events-none absolute left-1/3 -bottom-12 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
 
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff9c61]">
-                <Sparkles className="h-3 w-3" />
+        <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-3.5 max-w-3xl">
+            {/* Perfectly Aligned Eyebrow Badge Row */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/40 bg-cyan-950/70 px-3.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.25)] backdrop-blur-md">
+                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
                 Patient Workspace
               </span>
-              <span className="text-xs text-white/30">•</span>
-              <span className="text-xs font-medium text-white/60">
+              <span className="h-1 w-1 rounded-full bg-cyan-400/50" />
+              <span className="text-xs font-mono text-cyan-200/80 tracking-wide">
                 {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
               </span>
             </div>
 
-            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-white">
+            {/* Main Greeting Headline */}
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white font-['Manrope'] leading-tight">
               {greeting},{" "}
-              <span className="bg-gradient-to-r from-[#ff9c61] via-[#ffb88c] to-white bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-cyan-300 via-sky-200 to-teal-300 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(56,189,248,0.4)]">
                 {profile?.full_name ?? "Patient"}
               </span>
             </h1>
 
-            <p className="max-w-xl text-sm text-[#b4c9e8] leading-relaxed font-medium">
-              Welcome to your personal health dashboard. Upload a new lab report or select a report below to explore your biomarker trends, body system signals, and clinical insights.
+            {/* Refined Descriptive Copy */}
+            <p className="max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed font-normal">
+              Welcome to your personal health intelligence vault. Upload a new lab report or review existing diagnostic panels below to analyze biomarker trends, body system stability, and clinical recommendations.
             </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center shrink-0">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-xl">
-              <p className="text-[10px] uppercase tracking-wider text-white/45">Health Vault</p>
-              <div className="mt-1 flex items-center gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <p className="text-xs font-semibold text-white">
-                  {latestPanel ? "Active & Synced" : "Ready for Lab Data"}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-xl">
-              <p className="text-[10px] uppercase tracking-wider text-white/45">Biomarkers</p>
-              <p className="mt-1 text-xs font-semibold text-[#ff9c61]">
-                {latestPanel ? `${Object.keys(latestPanel.biomarkers ?? {}).length} Tracked` : "0 Tracked"}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 backdrop-blur-xl col-span-2 sm:col-span-1">
-              <p className="text-[10px] uppercase tracking-wider text-white/45">Latest Panel</p>
-              <p className="mt-1 text-xs font-semibold text-white">
-                {latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting Upload"}
-              </p>
-            </div>
           </div>
         </div>
       </div>

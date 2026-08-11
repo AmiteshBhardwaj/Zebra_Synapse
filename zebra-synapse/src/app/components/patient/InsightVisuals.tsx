@@ -39,13 +39,13 @@ const STATUS_META = {
 type StatTone = "teal" | "amber" | "rose" | "blue" | "slate" | "orange" | "violet";
 
 const STAT_TONE_CLASSES: Record<StatTone, string> = {
-  teal: "border-[#1a7f74]/35 bg-[linear-gradient(135deg,rgba(14,116,110,0.22)_0%,rgba(11,18,24,0.92)_100%)] text-white",
-  amber: "border-[#c37a16]/35 bg-[linear-gradient(135deg,rgba(217,119,6,0.24)_0%,rgba(11,18,24,0.92)_100%)] text-white",
-  rose: "border-[#ca4a62]/35 bg-[linear-gradient(135deg,rgba(217,72,95,0.24)_0%,rgba(11,18,24,0.92)_100%)] text-white",
-  blue: "border-[#3870ff]/35 bg-[linear-gradient(135deg,rgba(37,99,235,0.22)_0%,rgba(11,18,24,0.92)_100%)] text-white",
-  slate: "border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.06)_0%,rgba(12,12,15,0.96)_100%)] text-white",
-  orange: "border-[#f57c33]/35 bg-[linear-gradient(135deg,rgba(245,124,51,0.28)_0%,rgba(17,10,8,0.96)_100%)] text-white",
-  violet: "border-[#7b68ff]/35 bg-[linear-gradient(135deg,rgba(123,104,255,0.24)_0%,rgba(12,10,24,0.96)_100%)] text-white",
+  teal: "border-teal-500/30 bg-[linear-gradient(135deg,rgba(14,165,233,0.14)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
+  amber: "border-amber-500/30 bg-[linear-gradient(135deg,rgba(245,158,11,0.14)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
+  rose: "border-rose-500/30 bg-[linear-gradient(135deg,rgba(244,63,94,0.14)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
+  blue: "border-cyan-500/30 bg-[linear-gradient(135deg,rgba(56,189,248,0.15)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
+  slate: "border-slate-800/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.04)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
+  orange: "border-sky-500/30 bg-[linear-gradient(135deg,rgba(14,165,233,0.15)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
+  violet: "border-indigo-500/30 bg-[linear-gradient(135deg,rgba(99,102,241,0.15)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
 };
 
 function severityScore(metric: MetricAssessment): number {

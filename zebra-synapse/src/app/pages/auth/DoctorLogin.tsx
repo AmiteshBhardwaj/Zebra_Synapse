@@ -1,6 +1,7 @@
-import DualLogin from "./DualLogin";
+import WelcomePage from "../WelcomePage";
 
 export default function DoctorLogin() {
-  return <DualLogin defaultPortal="doctor" />;
+  return <WelcomePage initialTab="doctor" defaultScrolled={true} />;
 }
+
 

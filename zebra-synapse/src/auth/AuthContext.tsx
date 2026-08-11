@@ -26,12 +26,13 @@ import type { Profile } from "./types";
 
 type AuthContextValue = {
   session: Session | null;
-  user: User | null;
+  user: User | { id: string; email?: string } | null;
   profile: Profile | null;
   loading: boolean;
   configured: boolean;
   refreshProfile: () => Promise<void>;
   signOut: () => Promise<void>;
+  setDemoSession: (role: "patient" | "doctor", email: string) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -54,19 +55,67 @@ async function fetchProfile(
   return data as Profile;
 }
 
+const DEMO_STORAGE_KEY = "zebra-synapse.demo_session";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+
+  // Fallback demo state when Supabase auth is not active
+  const [demoUser, setDemoUser] = useState<{ id: string; email?: string } | null>(() => {
+    try {
+      const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.user ?? null;
+      }
+    } catch {}
+    return null;
+  });
+
+  const [demoProfile, setDemoProfile] = useState<Profile | null>(() => {
+    try {
+      const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.profile ?? null;
+      }
+    } catch {}
+    return null;
+  });
+
   const [loading, setLoading] = useState(isSupabaseConfigured());
   const inactivityTimerRef = useRef<number | null>(null);
   const bootstrapCompleteRef = useRef(false);
   const inactivityTimeoutMs = getAuthInactivityTimeoutMs();
+
+  const setDemoSession = useCallback((role: "patient" | "doctor", email: string) => {
+    const demoData = {
+      user: { id: `demo-${role}-id`, email },
+      profile: {
+        id: `demo-${role}-id`,
+        role,
+        full_name: role === "patient" ? "Patient User" : "Dr. Alex Smith",
+        license_number: role === "doctor" ? "MD-98421" : null,
+      },
+    };
+    try {
+      localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(demoData));
+    } catch {}
+    setDemoUser(demoData.user);
+    setDemoProfile(demoData.profile);
+  }, []);
 
   const clearInvalidSession = useCallback(
     async (sb: SupabaseClient) => {
       await clearBrowserSupabaseSession(sb);
       setSession(null);
       setProfile(null);
+      setDemoUser(null);
+      setDemoProfile(null);
+      try {
+        localStorage.removeItem(DEMO_STORAGE_KEY);
+      } catch {}
       setLoading(false);
     },
     [],
@@ -193,6 +242,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    try {
+      localStorage.removeItem(DEMO_STORAGE_KEY);
+    } catch {}
+    setDemoUser(null);
+    setDemoProfile(null);
+    setSession(null);
+    setProfile(null);
     const sb = getSupabase();
     if (sb) await sb.auth.signOut();
   }, []);
@@ -209,12 +265,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const resetTimer = () => {
       clearTimer();
-      if (!session?.user) return;
+      if (!session?.user && !demoUser) return;
 
       inactivityTimerRef.current = window.setTimeout(() => {
-        const sb = getSupabase();
-        if (!sb) return;
-        void sb.auth.signOut();
+        void signOut();
       }, inactivityTimeoutMs);
     };
 
@@ -239,19 +293,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       document.removeEventListener("visibilitychange", resetTimer);
     };
-  }, [inactivityTimeoutMs, session?.user]);
+  }, [inactivityTimeoutMs, session?.user, demoUser, signOut]);
+
+  const activeUser = session?.user ?? demoUser;
+  const activeProfile = profile ?? demoProfile;
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
-      user: session?.user ?? null,
-      profile,
+      user: activeUser as User | null,
+      profile: activeProfile,
       loading,
       configured: isSupabaseConfigured(),
       refreshProfile,
       signOut,
+      setDemoSession,
     }),
-    [session, profile, loading, refreshProfile, signOut],
+    [session, activeUser, activeProfile, loading, refreshProfile, signOut, setDemoSession],
   );
 
   return (
