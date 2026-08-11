@@ -5,12 +5,12 @@ import {
   UserCheck,
   Stethoscope,
   ArrowRight,
-  Activity,
   BrainCircuit,
   ShieldCheck,
   Lock,
   FileCheck,
   ChevronDown,
+  FileText,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { DnaCanvas3D } from "../components/DnaCanvas3D";
@@ -23,31 +23,31 @@ gsap.registerPlugin(ScrollTrigger);
 const signalCards = [
   {
     code: "01",
-    label: "STRUCTURED PANELS",
-    value: "Lab uploads become usable biomarkers",
-    icon: Activity,
-    cardStyle: "bg-slate-950/40 border-slate-800/80 hover:border-cyan-500/40 hover:bg-slate-900/60",
-    containerStyle: "rounded-xl bg-gradient-to-br from-cyan-950/70 to-slate-900/80 border border-cyan-500/25",
+    label: "BIOMARKER ENGINE",
+    value: "Automated lab report extraction & biomarker tracking",
+    icon: FileText,
+    cardStyle: "bg-slate-950/50 border-slate-800/90 hover:border-cyan-500/50 hover:bg-slate-900/80 backdrop-blur-md shadow-sm transition-all duration-300",
+    containerStyle: "rounded-xl bg-gradient-to-br from-cyan-950/80 to-slate-900/90 border border-cyan-500/30 shadow-[0_0_12px_rgba(56,189,248,0.2)]",
     iconStyle: "text-cyan-400",
     isFeatured: false,
   },
   {
     code: "02",
-    label: "AI SIGNAL",
-    value: "Insights stay visible, not buried",
+    label: "CLINICAL AI SYNAPSE",
+    value: "Real-time anomaly detection & medical intelligence",
     icon: BrainCircuit,
-    cardStyle: "bg-[#090b12] border-sky-400/40 shadow-md shadow-sky-950/30 hover:border-sky-300/60 hover:bg-slate-900/80 sm:scale-[1.02]",
-    containerStyle: "rounded-full bg-gradient-to-br from-sky-950/90 to-indigo-950/70 border border-sky-400/40 shadow-[0_0_12px_rgba(56,189,248,0.3)]",
+    cardStyle: "bg-[#060812]/80 border-sky-400/50 shadow-md shadow-sky-950/40 hover:border-sky-300/70 hover:bg-slate-900/90 backdrop-blur-md sm:scale-[1.02] transition-all duration-300",
+    containerStyle: "rounded-xl bg-gradient-to-br from-sky-950/90 to-indigo-950/80 border border-sky-400/50 shadow-[0_0_15px_rgba(56,189,248,0.35)]",
     iconStyle: "text-sky-300",
     isFeatured: true,
   },
   {
     code: "03",
-    label: "TRUST LAYER",
-    value: "Shared patient-doctor workspace",
+    label: "COLLABORATIVE CARE",
+    value: "Encrypted patient-clinician workspace & care timeline",
     icon: ShieldCheck,
-    cardStyle: "bg-slate-950/40 border-slate-800/80 hover:border-teal-500/40 hover:bg-slate-900/60",
-    containerStyle: "rounded-xl bg-gradient-to-br from-teal-950/60 to-slate-900/80 border border-teal-500/25",
+    cardStyle: "bg-slate-950/50 border-slate-800/90 hover:border-teal-500/50 hover:bg-slate-900/80 backdrop-blur-md shadow-sm transition-all duration-300",
+    containerStyle: "rounded-xl bg-gradient-to-br from-teal-950/70 to-slate-900/90 border border-teal-500/30 shadow-[0_0_12px_rgba(45,212,191,0.2)]",
     iconStyle: "text-teal-400",
     isFeatured: false,
   },
@@ -86,45 +86,75 @@ export default function WelcomePage() {
       return x * x * (3 - 2 * x);
     };
 
+    let animationFrameId: number | null = null;
+    let heroState = { visible: true, pointer: true };
+    let loginState = { visible: false, pointer: false };
+
     const updateDOMTransforms = (progress: number) => {
       scrollProgressRef.current = progress;
 
-      // 1. Hero fade-out, scale & subtle lift up
-      if (heroRef.current) {
-        const heroFactor = 1 - smoothstep(0.0, 0.42, progress);
-        const heroScale = 1 - (1 - heroFactor) * 0.08;
-        const heroY = (1 - heroFactor) * -35;
+      if (animationFrameId) return;
 
-        heroRef.current.style.opacity = heroFactor.toFixed(3);
-        heroRef.current.style.transform = `translateY(${heroY.toFixed(1)}px) scale(${heroScale.toFixed(3)})`;
-        heroRef.current.style.pointerEvents = heroFactor > 0.3 ? "auto" : "none";
-        heroRef.current.style.visibility = heroFactor < 0.005 ? "hidden" : "visible";
-      }
+      animationFrameId = requestAnimationFrame(() => {
+        animationFrameId = null;
 
-      // 2. Login card smooth reveal over extended scroll track
-      if (loginRef.current) {
-        const loginFactor = smoothstep(0.32, 0.90, progress);
-        const loginScale = 0.90 + loginFactor * 0.10;
-        const loginY = (1 - loginFactor) * 45;
+        // 1. Hero fade-out, scale & subtle lift up
+        if (heroRef.current) {
+          const heroFactor = 1 - smoothstep(0.0, 0.42, progress);
+          const heroScale = 1 - (1 - heroFactor) * 0.08;
+          const heroY = (1 - heroFactor) * -35;
 
-        loginRef.current.style.opacity = loginFactor.toFixed(3);
-        loginRef.current.style.transform = `translateY(${loginY.toFixed(1)}px) scale(${loginScale.toFixed(3)})`;
-        loginRef.current.style.pointerEvents = loginFactor > 0.4 ? "auto" : "none";
-        loginRef.current.style.visibility = loginFactor < 0.005 ? "hidden" : "visible";
-      }
+          heroRef.current.style.opacity = heroFactor.toFixed(3);
+          heroRef.current.style.transform = `translate3d(0, ${heroY.toFixed(1)}px, 0) scale(${heroScale.toFixed(3)})`;
 
-      // 3. Aura opacity
-      if (auraRef.current) {
-        auraRef.current.style.opacity = (1 - progress * 0.4).toFixed(3);
-      }
+          const nextPointer = heroFactor > 0.3;
+          const nextVisible = heroFactor >= 0.005;
 
-      // 4. Prompts opacity
-      if (prompt1Ref.current) {
-        prompt1Ref.current.style.opacity = (1 - smoothstep(0.0, 0.35, progress)).toFixed(3);
-      }
-      if (prompt2Ref.current) {
-        prompt2Ref.current.style.opacity = smoothstep(0.55, 0.90, progress).toFixed(3);
-      }
+          if (heroState.pointer !== nextPointer) {
+            heroState.pointer = nextPointer;
+            heroRef.current.style.pointerEvents = nextPointer ? "auto" : "none";
+          }
+          if (heroState.visible !== nextVisible) {
+            heroState.visible = nextVisible;
+            heroRef.current.style.visibility = nextVisible ? "visible" : "hidden";
+          }
+        }
+
+        // 2. Login card smooth reveal over extended scroll track
+        if (loginRef.current) {
+          const loginFactor = smoothstep(0.32, 0.90, progress);
+          const loginScale = 0.90 + loginFactor * 0.10;
+          const loginY = (1 - loginFactor) * 45;
+
+          loginRef.current.style.opacity = loginFactor.toFixed(3);
+          loginRef.current.style.transform = `translate3d(0, ${loginY.toFixed(1)}px, 0) scale(${loginScale.toFixed(3)})`;
+
+          const nextPointer = loginFactor > 0.4;
+          const nextVisible = loginFactor >= 0.005;
+
+          if (loginState.pointer !== nextPointer) {
+            loginState.pointer = nextPointer;
+            loginRef.current.style.pointerEvents = nextPointer ? "auto" : "none";
+          }
+          if (loginState.visible !== nextVisible) {
+            loginState.visible = nextVisible;
+            loginRef.current.style.visibility = nextVisible ? "visible" : "hidden";
+          }
+        }
+
+        // 3. Aura opacity
+        if (auraRef.current) {
+          auraRef.current.style.opacity = (1 - progress * 0.4).toFixed(3);
+        }
+
+        // 4. Prompts opacity
+        if (prompt1Ref.current) {
+          prompt1Ref.current.style.opacity = (1 - smoothstep(0.0, 0.35, progress)).toFixed(3);
+        }
+        if (prompt2Ref.current) {
+          prompt2Ref.current.style.opacity = smoothstep(0.55, 0.90, progress).toFixed(3);
+        }
+      });
     };
 
     const scrollObj = { progress: 0 };
@@ -137,7 +167,7 @@ export default function WelcomePage() {
           trigger: containerRef.current,
           start: "top top",
           end: "bottom bottom",
-          scrub: 0.6,
+          scrub: 0.4,
           onUpdate: () => {
             updateDOMTransforms(scrollObj.progress);
           },
@@ -145,7 +175,10 @@ export default function WelcomePage() {
       });
     });
 
-    return () => ctx.revert();
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      ctx.revert();
+    };
   }, []);
 
   return (
@@ -161,17 +194,17 @@ export default function WelcomePage() {
           {/* Multi-layered Volumetric Nebulae (Matching Reference Image) */}
           <div
             ref={auraRef}
-            className="absolute inset-0 transition-opacity duration-300 pointer-events-none"
+            className="absolute inset-0 transition-opacity duration-300 pointer-events-none will-change-opacity transform-gpu"
             style={{ opacity: prefersReducedMotion ? 0.7 : 1 }}
           >
             {/* Top-Left Bioluminescent Cyan Nebula */}
-            <div className="absolute -top-[15%] -left-[10%] w-[65vw] h-[65vw] max-w-[850px] max-h-[850px] bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.16)_0%,rgba(14,165,233,0.05)_45%,transparent_75%)] blur-3xl rounded-full" />
+            <div className="absolute -top-[15%] -left-[10%] w-[65vw] h-[65vw] max-w-[850px] max-h-[850px] bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.16)_0%,rgba(14,165,233,0.05)_45%,transparent_75%)] blur-3xl rounded-full transform-gpu" />
 
             {/* Center-Right Electric Blue Halo */}
-            <div className="absolute top-[25%] -right-[15%] w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] bg-[radial-gradient(ellipse_at_center,rgba(3,105,161,0.18)_0%,rgba(99,102,241,0.06)_45%,transparent_75%)] blur-3xl rounded-full" />
+            <div className="absolute top-[25%] -right-[15%] w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] bg-[radial-gradient(ellipse_at_center,rgba(3,105,161,0.18)_0%,rgba(99,102,241,0.06)_45%,transparent_75%)] blur-3xl rounded-full transform-gpu" />
 
             {/* Bottom-Left Deep Navy Ambient Glow */}
-            <div className="absolute -bottom-[20%] left-[10%] w-[75vw] h-[75vw] max-w-[950px] max-h-[950px] bg-[radial-gradient(ellipse_at_center,rgba(2,132,199,0.14)_0%,rgba(15,23,42,0.08)_50%,transparent_80%)] blur-3xl rounded-full" />
+            <div className="absolute -bottom-[20%] left-[10%] w-[75vw] h-[75vw] max-w-[950px] max-h-[950px] bg-[radial-gradient(ellipse_at_center,rgba(2,132,199,0.14)_0%,rgba(15,23,42,0.08)_50%,transparent_80%)] blur-3xl rounded-full transform-gpu" />
           </div>
 
           {/* Sparse Clinical Grid Background */}
@@ -216,10 +249,10 @@ export default function WelcomePage() {
           {/* STATE 1: Hero Content */}
           <div
             ref={heroRef}
-            className="w-full grid lg:grid-cols-12 gap-8 lg:gap-12 items-center"
+            className="w-full grid lg:grid-cols-12 gap-8 lg:gap-12 items-center will-change-transform transform-gpu"
             style={{
               opacity: 1,
-              transform: "translateY(0px) scale(1)",
+              transform: "translate3d(0px, 0px, 0px) scale(1)",
               pointerEvents: "auto",
               visibility: "visible",
             }}
@@ -241,20 +274,10 @@ export default function WelcomePage() {
 
               <div className="flex flex-row items-center justify-start gap-3.5 my-5 w-full">
                 <Button
-                  className="h-10 sm:h-11 px-5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a]"
+                  className="h-10 sm:h-11 px-6 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a] shadow-[0_0_20px_rgba(8,145,178,0.4)] hover:shadow-[0_0_30px_rgba(8,145,178,0.6)]"
                   onClick={() => scrollToLogin("patient")}
                 >
-                  <UserCheck className="h-4 w-4" />
-                  <span>Patient Portal</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-
-                <Button
-                  className="h-10 sm:h-11 px-5 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-500/40 text-cyan-300 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a]"
-                  onClick={() => scrollToLogin("doctor")}
-                >
-                  <Stethoscope className="h-4 w-4" />
-                  <span>Doctor Portal</span>
+                  <span>Proceed to Login</span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -311,10 +334,10 @@ export default function WelcomePage() {
           {/* STATE 2: Revealed Embedded Glassmorphic Login Card */}
           <div
             ref={loginRef}
-            className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none"
+            className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none will-change-transform transform-gpu"
             style={{
               opacity: prefersReducedMotion ? 1 : 0,
-              transform: prefersReducedMotion ? "translateY(0px) scale(1)" : "translateY(35px) scale(0.92)",
+              transform: prefersReducedMotion ? "translate3d(0px, 0px, 0px) scale(1)" : "translate3d(0px, 35px, 0px) scale(0.92)",
               pointerEvents: prefersReducedMotion ? "auto" : "none",
               visibility: prefersReducedMotion ? "visible" : "hidden",
             }}

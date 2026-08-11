@@ -42,22 +42,22 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
 
     container.appendChild(renderer.domElement);
 
-    // Post-Processing Pipeline (EffectComposer + Bloom at 0.5x resolution for 120fps GPU performance)
+    // Post-Processing Pipeline (EffectComposer + Bloom at 0.35x resolution for silky 120fps GPU performance)
     const composer = new EffectComposer(renderer);
     const renderPass = new RenderPass(scene, camera);
     composer.addPass(renderPass);
 
     const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(Math.floor(container.clientWidth * 0.5), Math.floor(container.clientHeight * 0.5)),
-      0.75, // Bloom strength for bioluminescent spark
-      0.45, // Bloom radius
-      0.20  // Bloom threshold
+      new THREE.Vector2(Math.floor(container.clientWidth * 0.35), Math.floor(container.clientHeight * 0.35)),
+      0.70, // Bloom strength for bioluminescent spark
+      0.40, // Bloom radius
+      0.22  // Bloom threshold
     );
     composer.addPass(bloomPass);
 
@@ -136,13 +136,13 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
     dnaGroup.add(leftStrandGroup);
     dnaGroup.add(rightStrandGroup);
 
-    const basePairCount = 38;
+    const basePairCount = 32;
     const strandLength = 20;
     const helixRadius = 2.4;
     const totalTurns = 2.5 * Math.PI * 2;
 
-    const nodeSphereGeo = new THREE.SphereGeometry(0.24, 16, 16);
-    const outerRungGeo = new THREE.CylinderGeometry(0.06, 0.06, helixRadius, 10);
+    const nodeSphereGeo = new THREE.SphereGeometry(0.24, 12, 12);
+    const outerRungGeo = new THREE.CylinderGeometry(0.06, 0.06, helixRadius, 8);
     outerRungGeo.rotateZ(Math.PI / 2);
     const innerRungCoreGeo = new THREE.CylinderGeometry(0.02, 0.02, helixRadius * 0.95, 6);
     innerRungCoreGeo.rotateZ(Math.PI / 2);
@@ -209,9 +209,9 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
     const leftCurve = new THREE.CatmullRomCurve3(leftCurvePoints);
     const rightCurve = new THREE.CatmullRomCurve3(rightCurvePoints);
 
-    // Main Glass Tube Geometry for Helix Strands
-    const ribbonGeoLeft = new THREE.TubeGeometry(leftCurve, 140, 0.09, 12, false);
-    const ribbonGeoRight = new THREE.TubeGeometry(rightCurve, 140, 0.09, 12, false);
+    // Main Glass Tube Geometry for Helix Strands (Optimized segment count)
+    const ribbonGeoLeft = new THREE.TubeGeometry(leftCurve, 90, 0.09, 8, false);
+    const ribbonGeoRight = new THREE.TubeGeometry(rightCurve, 90, 0.09, 8, false);
 
     leftStrandGroup.add(new THREE.Mesh(ribbonGeoLeft, glassMaterialLeft));
     rightStrandGroup.add(new THREE.Mesh(ribbonGeoRight, glassMaterialRight));
