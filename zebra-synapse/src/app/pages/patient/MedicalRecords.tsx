@@ -323,7 +323,7 @@ export default function MedicalRecords() {
                           {upload?.original_filename ?? "Lab Report"}
                         </p>
                         <p className="mt-1 text-[11px] text-amber-200/80">
-                          {extraction.low_confidence_fields.length} low-confidence field(s)
+                          {extraction.warnings_json?.length ?? 0} low-confidence field(s)
                         </p>
                       </button>
                     );
@@ -360,7 +360,7 @@ export default function MedicalRecords() {
                       <div className="mt-3 grid gap-3 md:grid-cols-2">
                         {sortBiomarkerKeys(Object.keys(reviewValues)).map((key) => {
                           const def = getBiomarkerDefinition(key);
-                          const confidences = coerceFieldConfidenceMap(selectedExtraction.field_confidences_json);
+                          const confidences = coerceFieldConfidenceMap(selectedExtraction.field_confidence_json);
                           const sources = coerceFieldSourcesMap(selectedExtraction.field_sources_json);
                           const conf = confidences[key] ?? 1.0;
                           const isLowConf = conf < 0.85;
@@ -376,7 +376,7 @@ export default function MedicalRecords() {
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-xs font-medium text-white">
-                                  {def?.name ?? key}
+                                  {def?.label ?? key}
                                 </span>
                                 {isLowConf ? (
                                   <Badge className="border-amber-500/30 bg-amber-500/20 text-[10px] text-amber-200">
@@ -391,9 +391,9 @@ export default function MedicalRecords() {
                                 }
                                 className="mt-2 border-white/10 bg-white/5 text-sm font-semibold text-white"
                               />
-                              {sources[key] ? (
+                              {sources[key]?.snippet ? (
                                 <p className="mt-1 text-[10px] text-[#A1A1AA]">
-                                  Source text: &quot;{sources[key]}&quot;
+                                  Source text: &quot;{sources[key].snippet}&quot;
                                 </p>
                               ) : null}
                             </div>
