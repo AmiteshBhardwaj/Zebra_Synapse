@@ -16,39 +16,49 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
     if (!container) return;
 
     // --- 1. Scene Setup ---
+    const width = container.clientWidth || window.innerWidth || 800;
+    const height = container.clientHeight || window.innerHeight || 600;
+
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.025);
+    scene.fog = new THREE.FogExp2(0x000000, 0.008);
 
     const camera = new THREE.PerspectiveCamera(
       50,
-      container.clientWidth / container.clientHeight,
+      width / height,
       0.1,
       100
     );
     camera.position.set(0, 0, 18);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.3;
+
+    renderer.domElement.style.position = "absolute";
+    renderer.domElement.style.top = "0";
+    renderer.domElement.style.left = "0";
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.domElement.style.pointerEvents = "none";
 
     container.appendChild(renderer.domElement);
 
     // --- 2. Lighting ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
 
-    const cyanPointLight = new THREE.PointLight(0x60d4ff, 4, 30);
-    cyanPointLight.position.set(-6, 4, 10);
+    const cyanPointLight = new THREE.PointLight(0x00f0ff, 8, 45);
+    cyanPointLight.position.set(-8, 6, 12);
     scene.add(cyanPointLight);
 
-    const amberPointLight = new THREE.PointLight(0xff7a33, 4, 30);
-    amberPointLight.position.set(6, -4, 10);
+    const amberPointLight = new THREE.PointLight(0xff5500, 8, 45);
+    amberPointLight.position.set(8, -6, 12);
     scene.add(amberPointLight);
 
-    const frontWhiteLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    frontWhiteLight.position.set(0, 10, 15);
+    const frontWhiteLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    frontWhiteLight.position.set(0, 10, 18);
     scene.add(frontWhiteLight);
 
     // --- 3. DNA Model Construction ---
@@ -107,6 +117,8 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
     const basePairsData: {
       leftHalf: THREE.Mesh;
       rightHalf: THREE.Mesh;
+      baseLX: number;
+      baseRX: number;
       baseY: number;
       angle: number;
       index: number;
@@ -140,21 +152,26 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
       rightNodes.push(rightNode);
 
       // Base Pair Nucleotide Rung Halves
+      const baseLX = lx / 2;
+      const baseRX = rx / 2;
+
       // Left Half Rung (Cyan)
-      const leftRung = new THREE.Mesh(halfRungGeo, rungCyanMaterial);
-      leftRung.position.set(lx / 2, y, lz / 2);
+      const leftRung = new THREE.Mesh(halfRungGeo, rungCyanMaterial.clone());
+      leftRung.position.set(baseLX, y, lz / 2);
       leftRung.rotation.y = -angle;
       leftStrandGroup.add(leftRung);
 
       // Right Half Rung (Amber)
-      const rightRung = new THREE.Mesh(halfRungGeo, rungAmberMaterial);
-      rightRung.position.set(rx / 2, y, rz / 2);
+      const rightRung = new THREE.Mesh(halfRungGeo, rungAmberMaterial.clone());
+      rightRung.position.set(baseRX, y, rz / 2);
       rightRung.rotation.y = -(angle + Math.PI);
       rightStrandGroup.add(rightRung);
 
       basePairsData.push({
         leftHalf: leftRung,
         rightHalf: rightRung,
+        baseLX,
+        baseRX,
         baseY: y,
         angle,
         index: i,
@@ -165,13 +182,11 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
     const particleCount = 150;
     const particleGeo = new THREE.BufferGeometry();
     const particlePositions = new Float32Array(particleCount * 3);
-    const particleScales = new Float32Array(particleCount);
 
     for (let p = 0; p < particleCount; p++) {
       particlePositions[p * 3] = (Math.random() - 0.5) * 35;
       particlePositions[p * 3 + 1] = (Math.random() - 0.5) * 35;
       particlePositions[p * 3 + 2] = (Math.random() - 0.5) * 35;
-      particleScales[p] = Math.random() * 0.4 + 0.1;
     }
 
     particleGeo.setAttribute(
@@ -181,9 +196,9 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
 
     const particleMat = new THREE.PointsMaterial({
       color: 0x60d4ff,
-      size: 0.25,
+      size: 0.35,
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.8,
       blending: THREE.AdditiveBlending,
     });
 
@@ -193,9 +208,13 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
     // --- 5. Resize Handler ---
     const handleResize = () => {
       if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
+      const w = container.clientWidth || window.innerWidth;
+      const h = container.clientHeight || window.innerHeight;
+      if (h > 0) {
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        renderer.setSize(w, h);
+      }
     };
     window.addEventListener("resize", handleResize);
 
@@ -207,13 +226,13 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
       const elapsedTime = clock.getElapsedTime();
       const p = progressRef.current; // current scroll ratio (0.0 to 1.0)
 
-      // Continuous DNA rotation at top, slowing down as scroll unzips it
-      const spinSpeed = (1 - p * 0.85) * 0.35;
+      // Continuous DNA rotation & gentle floating float wave
+      const spinSpeed = (1 - p * 0.85) * 0.45;
       dnaGroup.rotation.y = elapsedTime * spinSpeed;
+      dnaGroup.position.y = Math.sin(elapsedTime * 0.8) * 0.35;
 
       // Split / Unzip Physics
-      // Center portion bows outward more dramatically
-      const maxSplitDistance = 9.0;
+      const maxSplitDistance = 11.0;
 
       // Separate Left & Right Strand Groups along X-axis & bow outwards
       leftStrandGroup.position.x = -p * maxSplitDistance;
@@ -223,34 +242,33 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
       leftStrandGroup.rotation.z = -p * 0.35;
       rightStrandGroup.rotation.z = p * 0.35;
 
-      // Base pairs separation fade & unbind offset
-      basePairsData.forEach(({ leftHalf, rightHalf, baseY }) => {
+      // Base pairs separation fade & unbind offset relative to base position
+      basePairsData.forEach(({ leftHalf, rightHalf, baseLX, baseRX, baseY }) => {
         // Center height base pairs split first and widest
-        const heightFactor = Math.max(0, 1 - Math.abs(baseY) / 12);
-        const splitOffset = p * 2.8 * heightFactor;
+        const heightFactor = Math.max(0, 1 - Math.abs(baseY) / 14);
+        const splitOffset = p * 3.4 * heightFactor;
 
-        leftHalf.position.x = (leftNodes[0] ? leftHalf.position.x : 0) - splitOffset * 0.5;
-        rightHalf.position.x = (rightNodes[0] ? rightHalf.position.x : 0) + splitOffset * 0.5;
+        leftHalf.position.x = baseLX - splitOffset * 0.5;
+        rightHalf.position.x = baseRX + splitOffset * 0.5;
 
         // Fade opacity of base pair rungs as they unbind
         const rungMatL = leftHalf.material as THREE.MeshStandardMaterial;
         const rungMatR = rightHalf.material as THREE.MeshStandardMaterial;
-        rungMatL.opacity = Math.max(0.1, 1 - p * 1.2 * heightFactor);
-        rungMatR.opacity = Math.max(0.1, 1 - p * 1.2 * heightFactor);
+        rungMatL.opacity = Math.max(0.05, 1 - p * 1.2 * heightFactor);
+        rungMatR.opacity = Math.max(0.05, 1 - p * 1.2 * heightFactor);
         rungMatL.transparent = true;
         rungMatR.transparent = true;
       });
 
       // Camera Z-Axis Zoom & Fly-Through
-      // Move from default Z=18 down to Z=2.5 inside the opening pore
       const targetZ = 18 - p * 15.5;
       const targetY = -p * 0.5;
       camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, 0.1);
       camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, 0.1);
 
       // Particle subtle drifting animation
-      particles.rotation.y = elapsedTime * 0.04;
-      particles.rotation.x = Math.sin(elapsedTime * 0.03) * 0.1;
+      particles.rotation.y = elapsedTime * 0.05;
+      particles.rotation.x = Math.sin(elapsedTime * 0.04) * 0.12;
 
       renderer.render(scene, camera);
       animationFrameId = requestAnimationFrame(render);
@@ -273,7 +291,7 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress }) => {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full absolute inset-0 pointer-events-none z-0"
+      className="w-full h-full absolute inset-0 pointer-events-none z-[1]"
     />
   );
 };

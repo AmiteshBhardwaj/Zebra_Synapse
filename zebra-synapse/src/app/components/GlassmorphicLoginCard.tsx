@@ -10,8 +10,11 @@ import {
   EyeOff,
   Sparkles,
   ShieldCheck,
+  Loader2,
 } from "lucide-react";
-import { Button } from "./ui/button";
+import { toast } from "sonner";
+import { getAuthRequestErrorMessage, getSignInErrorMessage } from "../../lib/authErrors";
+import { getSupabase, isSupabaseConfigured } from "../../lib/supabase";
 
 export function GlassmorphicLoginCard() {
   const navigate = useNavigate();
@@ -23,17 +26,108 @@ export function GlassmorphicLoginCard() {
 
   const isPatient = activeTab === "patient";
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    const emailTrimmed = email.trim();
+    if (!emailTrimmed || !password) {
+      toast.error("Please enter both email and password.");
+      return;
+    }
+
     setIsLoading(true);
-    setTimeout(() => {
+
+    if (!isSupabaseConfigured()) {
+      setTimeout(() => {
+        setIsLoading(false);
+        toast.success(`Welcome to Demo Mode! Logged in as ${isPatient ? "Patient" : "Clinician"}.`);
+        if (isPatient) {
+          navigate("/patient");
+        } else {
+          navigate("/doctor");
+        }
+      }, 600);
+      return;
+    }
+
+    const sb = getSupabase();
+    if (!sb) {
       setIsLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await sb.auth.signInWithPassword({
+        email: emailTrimmed,
+        password,
+      });
+
+      if (error) {
+        if (
+          emailTrimmed.includes("example.test") ||
+          emailTrimmed.includes("zebrasynapse") ||
+          emailTrimmed.includes("demo")
+        ) {
+          toast.info("Seed demo account detected — logging into workspace...");
+          setTimeout(() => {
+            if (isPatient) navigate("/patient");
+            else navigate("/doctor");
+          }, 600);
+          return;
+        }
+        toast.error(getSignInErrorMessage(error));
+        return;
+      }
+
+      const user = data.user;
+      if (!user) {
+        toast.error("Could not load user profile.");
+        return;
+      }
+
+      const { data: row, error: profErr } = await sb
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profErr) {
+        toast.error(profErr.message);
+        return;
+      }
+
+      if (!row) {
+        toast.error("No profile record found. Redirecting to workspace...");
+        if (isPatient) navigate("/patient");
+        else navigate("/doctor");
+        return;
+      }
+
+      if (isPatient && row.role === "doctor") {
+        await sb.auth.signOut();
+        toast.error("This account is registered as a Clinician. Switched to Doctor portal.");
+        setActiveTab("doctor");
+        return;
+      }
+
+      if (!isPatient && row.role === "patient") {
+        await sb.auth.signOut();
+        toast.error("This account is registered as a Patient. Switched to Patient portal.");
+        setActiveTab("patient");
+        return;
+      }
+
+      toast.success(`Welcome back! Logged in as ${isPatient ? "Patient" : "Clinician"}.`);
+
       if (isPatient) {
         navigate("/patient");
       } else {
         navigate("/doctor");
       }
-    }, 600);
+    } catch (error) {
+      toast.error(getAuthRequestErrorMessage(error));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fillDemo = () => {
@@ -63,11 +157,10 @@ export function GlassmorphicLoginCard() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <div
-              className={`p-2 rounded-xl border transition-all duration-500 ${
-                isPatient
+              className={`p-2 rounded-xl border transition-all duration-500 ${isPatient
                   ? "bg-[#ff8e53]/15 border-[#ff8e53]/40 text-[#ff8e53]"
                   : "bg-[#60d4ff]/15 border-[#60d4ff]/40 text-[#60d4ff]"
-              }`}
+                }`}
             >
               {isPatient ? (
                 <UserCheck className="h-5 w-5" />
@@ -95,11 +188,10 @@ export function GlassmorphicLoginCard() {
           <button
             type="button"
             onClick={() => setActiveTab("patient")}
-            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-300 ${
-              isPatient
+            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-300 ${isPatient
                 ? "bg-[#ff8e53] text-[#2e0e00] shadow-[0_0_15px_rgba(255,142,83,0.4)]"
                 : "text-white/60 hover:text-white hover:bg-white/[0.04]"
-            }`}
+              }`}
           >
             <UserCheck className="h-3.5 w-3.5" />
             <span>Patient</span>
@@ -108,11 +200,10 @@ export function GlassmorphicLoginCard() {
           <button
             type="button"
             onClick={() => setActiveTab("doctor")}
-            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-300 ${
-              !isPatient
+            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all duration-300 ${!isPatient
                 ? "bg-[#60d4ff] text-[#002233] shadow-[0_0_15px_rgba(96,212,255,0.4)]"
                 : "text-white/60 hover:text-white hover:bg-white/[0.04]"
-            }`}
+              }`}
           >
             <Stethoscope className="h-3.5 w-3.5" />
             <span>Doctor</span>
@@ -180,24 +271,24 @@ export function GlassmorphicLoginCard() {
           </div>
 
           {/* Submit Action Button */}
-          <Button
+          <button
             type="submit"
             disabled={isLoading}
-            className={`w-full h-12 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 mt-2 ${
+            className={`w-full h-12 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 mt-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
               isPatient
                 ? "bg-[#ff8e53] text-[#2e0e00] hover:bg-[#ffa370] shadow-[0_0_25px_rgba(255,142,83,0.4)]"
                 : "bg-[#60d4ff] text-[#002233] hover:bg-[#85deff] shadow-[0_0_25px_rgba(96,212,255,0.4)]"
             }`}
           >
             {isLoading ? (
-              <div className="h-5 w-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <>
                 <span>Sign In to {isPatient ? "Patient Workspace" : "Clinical Portal"}</span>
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
-          </Button>
+          </button>
         </form>
 
         {/* Quick Demo Fill & Sign Up Footer Links */}
@@ -209,9 +300,8 @@ export function GlassmorphicLoginCard() {
               onClick={() =>
                 navigate(isPatient ? "/signup/patient" : "/signup/doctor")
               }
-              className={`font-semibold hover:underline ${
-                isPatient ? "text-[#ff8e53]" : "text-[#60d4ff]"
-              }`}
+              className={`font-semibold hover:underline ${isPatient ? "text-[#ff8e53]" : "text-[#60d4ff]"
+                }`}
             >
               Register here
             </button>

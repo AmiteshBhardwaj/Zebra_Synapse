@@ -59,6 +59,13 @@ export default function WelcomePage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const scrollToLogin = () => {
+    window.scrollTo({
+      top: document.documentElement.scrollHeight,
+      behavior: "smooth",
+    });
+  };
+
   // Compute key transition opacity/transform parameters
   const heroOpacity = Math.max(0, 1 - scrollProgress * 2.2);
   const heroScale = 1 - scrollProgress * 0.15;
@@ -69,7 +76,7 @@ export default function WelcomePage() {
     <div className="relative min-h-[260vh] bg-black text-white font-['Manrope',sans-serif] selection:bg-[#60d4ff]/30">
       {/* Sticky Viewport Container */}
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between">
-        
+
         {/* Dynamic Background Grid & Ambient Aura */}
         <div className="absolute inset-0 pointer-events-none z-0">
           <div className="absolute inset-0 bg-black" />
@@ -111,22 +118,12 @@ export default function WelcomePage() {
             </div>
           </div>
 
-          {/* Top Right Direct Login Shortcut */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/login")}
-              className="p-2.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/15 text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/40 flex items-center justify-center gap-2 text-xs font-semibold"
-              title="Open Direct Portal Gateway"
-            >
-              <span className="hidden sm:inline">Direct Portal</span>
-              <ExternalLink className="h-3.5 w-3.5 text-white/90" />
-            </button>
-          </div>
+          <div className="w-10 sm:w-24 flex justify-end" />
         </header>
 
         {/* Main Content Area - Transitions between Hero Info & Login Reveal */}
         <main className="relative z-20 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 max-w-5xl mx-auto text-center min-h-0 py-2 w-full">
-          
+
           {/* STATE 1: Hero Content (Visible at top scroll) */}
           <div
             className="flex flex-col items-center justify-center transition-all duration-300 w-full"
@@ -168,24 +165,14 @@ export default function WelcomePage() {
               </div>
             </div>
 
-            {/* Quick Action Portal Entry Buttons */}
+            {/* Single Unified Action Button */}
             <div className="flex flex-row items-center justify-center gap-3 w-full max-w-md shrink-0 mb-4">
               <Button
-                className="h-10 sm:h-11 px-5 rounded-xl bg-[#ff8e53] text-[#3d1300] hover:bg-[#ff9d66] font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(255,142,83,0.35)] transition-all flex items-center justify-center gap-1.5"
-                onClick={() => navigate("/login/patient")}
+                className="h-11 sm:h-12 px-7 rounded-2xl bg-[linear-gradient(135deg,#ff8e53,#60d4ff)] text-black font-bold text-xs sm:text-sm shadow-[0_0_25px_rgba(96,212,255,0.35)] hover:scale-105 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                onClick={scrollToLogin}
               >
-                <UserCheck className="h-3.5 w-3.5" />
-                <span>Patient Portal</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
-
-              <Button
-                className="h-10 sm:h-11 px-5 rounded-xl bg-[#60d4ff] text-[#002b3d] hover:bg-[#85deff] font-bold text-xs sm:text-sm shadow-[0_0_20px_rgba(96,212,255,0.35)] transition-all flex items-center justify-center gap-1.5"
-                onClick={() => navigate("/login/doctor")}
-              >
-                <Stethoscope className="h-3.5 w-3.5" />
-                <span>Doctor Portal</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                <span>Scroll to Enter Portal</span>
+                <ChevronDown className="h-4 w-4 animate-bounce" />
               </Button>
             </div>
 
