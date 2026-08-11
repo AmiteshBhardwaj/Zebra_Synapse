@@ -16,9 +16,13 @@ import { toast } from "sonner";
 import { getAuthRequestErrorMessage, getSignInErrorMessage } from "../../lib/authErrors";
 import { getSupabase, isSupabaseConfigured } from "../../lib/supabase";
 
-export function GlassmorphicLoginCard() {
+interface GlassmorphicLoginCardProps {
+  initialTab?: "patient" | "doctor";
+}
+
+export function GlassmorphicLoginCard({ initialTab = "patient" }: GlassmorphicLoginCardProps) {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<"patient" | "doctor">("patient");
+  const [activeTab, setActiveTab] = useState<"patient" | "doctor">(initialTab);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

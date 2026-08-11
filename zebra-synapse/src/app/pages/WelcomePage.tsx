@@ -55,10 +55,24 @@ const signalCards = [
 
 export default function WelcomePage() {
   const navigate = useNavigate();
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLDivElement>(null);
+  const loginRef = useRef<HTMLDivElement>(null);
+  const auraRef = useRef<HTMLDivElement>(null);
+  const prompt1Ref = useRef<HTMLDivElement>(null);
+  const prompt2Ref = useRef<HTMLDivElement>(null);
+
+  const scrollProgressRef = useRef(0);
+
+  const [cardTab, setCardTab] = useState<"patient" | "doctor">("patient");
+
+  const scrollToLogin = (tab: "patient" | "doctor" = "patient") => {
+    setCardTab(tab);
+    const targetScroll = (document.documentElement.scrollHeight - window.innerHeight) * 0.85;
+    window.scrollTo({ top: targetScroll, behavior: "smooth" });
+  };
 
   useEffect(() => {
     // Check reduced motion preference
@@ -67,19 +81,65 @@ export default function WelcomePage() {
 
     if (mediaQuery.matches) return;
 
+    const smoothstep = (min: number, max: number, value: number) => {
+      const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+      return x * x * (3 - 2 * x);
+    };
+
+    const updateDOMTransforms = (progress: number) => {
+      scrollProgressRef.current = progress;
+
+      // 1. Hero fade-out, scale & subtle lift up
+      if (heroRef.current) {
+        const heroFactor = 1 - smoothstep(0.0, 0.42, progress);
+        const heroScale = 1 - (1 - heroFactor) * 0.08;
+        const heroY = (1 - heroFactor) * -35;
+
+        heroRef.current.style.opacity = heroFactor.toFixed(3);
+        heroRef.current.style.transform = `translateY(${heroY.toFixed(1)}px) scale(${heroScale.toFixed(3)})`;
+        heroRef.current.style.pointerEvents = heroFactor > 0.3 ? "auto" : "none";
+        heroRef.current.style.visibility = heroFactor < 0.005 ? "hidden" : "visible";
+      }
+
+      // 2. Login card smooth reveal over extended scroll track
+      if (loginRef.current) {
+        const loginFactor = smoothstep(0.32, 0.90, progress);
+        const loginScale = 0.90 + loginFactor * 0.10;
+        const loginY = (1 - loginFactor) * 45;
+
+        loginRef.current.style.opacity = loginFactor.toFixed(3);
+        loginRef.current.style.transform = `translateY(${loginY.toFixed(1)}px) scale(${loginScale.toFixed(3)})`;
+        loginRef.current.style.pointerEvents = loginFactor > 0.4 ? "auto" : "none";
+        loginRef.current.style.visibility = loginFactor < 0.005 ? "hidden" : "visible";
+      }
+
+      // 3. Aura opacity
+      if (auraRef.current) {
+        auraRef.current.style.opacity = (1 - progress * 0.4).toFixed(3);
+      }
+
+      // 4. Prompts opacity
+      if (prompt1Ref.current) {
+        prompt1Ref.current.style.opacity = (1 - smoothstep(0.0, 0.35, progress)).toFixed(3);
+      }
+      if (prompt2Ref.current) {
+        prompt2Ref.current.style.opacity = smoothstep(0.55, 0.90, progress).toFixed(3);
+      }
+    };
+
     const scrollObj = { progress: 0 };
 
     const ctx = gsap.context(() => {
       gsap.to(scrollObj, {
         progress: 1,
-        ease: "power2.inOut",
+        ease: "none",
         scrollTrigger: {
           trigger: containerRef.current,
           start: "top top",
           end: "bottom bottom",
-          scrub: 1,
+          scrub: 0.6,
           onUpdate: () => {
-            setScrollProgress(scrollObj.progress);
+            updateDOMTransforms(scrollObj.progress);
           },
         },
       });
@@ -88,34 +148,38 @@ export default function WelcomePage() {
     return () => ctx.revert();
   }, []);
 
-  // Compute key transition opacity/transform parameters
-  const heroOpacity = prefersReducedMotion ? 1 : Math.max(0, 1 - scrollProgress * 2.2);
-  const heroScale = prefersReducedMotion ? 1 : 1 - scrollProgress * 0.15;
-  const loginOpacity = prefersReducedMotion ? 1 : Math.min(1, Math.max(0, (scrollProgress - 0.45) * 2.2));
-  const loginScale = prefersReducedMotion ? 1 : 0.88 + Math.min(0.12, scrollProgress * 0.12);
-
   return (
-    <div ref={containerRef} className="relative min-h-[250vh] bg-[#06070a] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300">
+    <div ref={containerRef} className="relative min-h-[320vh] bg-[#06070a] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300">
       
       {/* Sticky Viewport Container */}
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between">
         
-        {/* Dynamic Restrained Background Aura */}
+        {/* Dynamic Multi-Layered Bioluminescent Background Atmosphere */}
         <div className="absolute inset-0 pointer-events-none z-0">
-          <div className="absolute inset-0 bg-[#06070a]" />
+          <div className="absolute inset-0 bg-[#04070d]" />
 
-          {/* Muted Radial Light Halos */}
+          {/* Multi-layered Volumetric Nebulae (Matching Reference Image) */}
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[750px] h-[550px] bg-[radial-gradient(ellipse_at_center,rgba(14,165,233,0.08)_0%,rgba(99,102,241,0.02)_45%,transparent_75%)] blur-3xl rounded-full transition-opacity duration-500"
-            style={{ opacity: prefersReducedMotion ? 0.7 : 1 - scrollProgress * 0.5 }}
-          />
+            ref={auraRef}
+            className="absolute inset-0 transition-opacity duration-300 pointer-events-none"
+            style={{ opacity: prefersReducedMotion ? 0.7 : 1 }}
+          >
+            {/* Top-Left Bioluminescent Cyan Nebula */}
+            <div className="absolute -top-[15%] -left-[10%] w-[65vw] h-[65vw] max-w-[850px] max-h-[850px] bg-[radial-gradient(ellipse_at_center,rgba(56,189,248,0.16)_0%,rgba(14,165,233,0.05)_45%,transparent_75%)] blur-3xl rounded-full" />
+
+            {/* Center-Right Electric Blue Halo */}
+            <div className="absolute top-[25%] -right-[15%] w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] bg-[radial-gradient(ellipse_at_center,rgba(3,105,161,0.18)_0%,rgba(99,102,241,0.06)_45%,transparent_75%)] blur-3xl rounded-full" />
+
+            {/* Bottom-Left Deep Navy Ambient Glow */}
+            <div className="absolute -bottom-[20%] left-[10%] w-[75vw] h-[75vw] max-w-[950px] max-h-[950px] bg-[radial-gradient(ellipse_at_center,rgba(2,132,199,0.14)_0%,rgba(15,23,42,0.08)_50%,transparent_80%)] blur-3xl rounded-full" />
+          </div>
 
           {/* Sparse Clinical Grid Background */}
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-25" />
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20" />
         </div>
 
         {/* 3D WebGL Double Helix Layer */}
-        <DnaCanvas3D progress={scrollProgress} />
+        <DnaCanvas3D progressRef={scrollProgressRef} />
 
         {/* Top Navigation Bar — Asymmetric Minimal Header */}
         <header className="relative z-30 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto w-full shrink-0">
@@ -133,7 +197,7 @@ export default function WelcomePage() {
           {/* Top-Right Direct Portal Shortcut */}
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => scrollToLogin("patient")}
               className="px-3.5 py-1.5 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-all flex items-center gap-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a]"
               title="Gateway for registered patient & clinician sessions"
             >
@@ -151,12 +215,13 @@ export default function WelcomePage() {
           
           {/* STATE 1: Hero Content */}
           <div
-            className="w-full grid lg:grid-cols-12 gap-8 lg:gap-12 items-center transition-all duration-300"
+            ref={heroRef}
+            className="w-full grid lg:grid-cols-12 gap-8 lg:gap-12 items-center"
             style={{
-              opacity: heroOpacity,
-              transform: `scale(${heroScale})`,
-              pointerEvents: heroOpacity > 0.4 ? "auto" : "none",
-              display: !prefersReducedMotion && heroOpacity <= 0.05 ? "none" : "grid",
+              opacity: 1,
+              transform: "translateY(0px) scale(1)",
+              pointerEvents: "auto",
+              visibility: "visible",
             }}
           >
             {/* LEFT COLUMN: Editorial Hero Copy & Actions */}
@@ -177,7 +242,7 @@ export default function WelcomePage() {
               <div className="flex flex-row items-center justify-start gap-3.5 my-5 w-full">
                 <Button
                   className="h-10 sm:h-11 px-5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a]"
-                  onClick={() => navigate("/login/patient")}
+                  onClick={() => scrollToLogin("patient")}
                 >
                   <UserCheck className="h-4 w-4" />
                   <span>Patient Portal</span>
@@ -186,7 +251,7 @@ export default function WelcomePage() {
 
                 <Button
                   className="h-10 sm:h-11 px-5 rounded-xl bg-cyan-950/40 hover:bg-cyan-900/50 border border-cyan-500/40 text-cyan-300 font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a]"
-                  onClick={() => navigate("/login/doctor")}
+                  onClick={() => scrollToLogin("doctor")}
                 >
                   <Stethoscope className="h-4 w-4" />
                   <span>Doctor Portal</span>
@@ -244,19 +309,18 @@ export default function WelcomePage() {
           </div>
 
           {/* STATE 2: Revealed Embedded Glassmorphic Login Card */}
-          {!prefersReducedMotion && (
-            <div
-              className="absolute inset-0 flex items-center justify-center px-4 transition-all duration-300 pointer-events-none"
-              style={{
-                opacity: loginOpacity,
-                transform: `scale(${loginScale})`,
-                pointerEvents: loginOpacity > 0.6 ? "auto" : "none",
-                display: loginOpacity <= 0.02 ? "none" : "flex",
-              }}
-            >
-              <GlassmorphicLoginCard />
-            </div>
-          )}
+          <div
+            ref={loginRef}
+            className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none"
+            style={{
+              opacity: prefersReducedMotion ? 1 : 0,
+              transform: prefersReducedMotion ? "translateY(0px) scale(1)" : "translateY(35px) scale(0.92)",
+              pointerEvents: prefersReducedMotion ? "auto" : "none",
+              visibility: prefersReducedMotion ? "visible" : "hidden",
+            }}
+          >
+            <GlassmorphicLoginCard initialTab={cardTab} key={cardTab} />
+          </div>
         </main>
 
         {/* Scroll Indicator Prompt & Footer */}
@@ -266,16 +330,18 @@ export default function WelcomePage() {
           {!prefersReducedMotion && (
             <>
               <div
+                ref={prompt1Ref}
                 className="flex items-center gap-1.5 text-cyan-400 font-mono text-[10px] uppercase tracking-wider transition-opacity duration-300"
-                style={{ opacity: Math.max(0, 1 - scrollProgress * 1.5) }}
+                style={{ opacity: 1 }}
               >
                 <span className="hidden sm:inline">SCROLL TO EXPLORE</span>
                 <ChevronDown className="h-3.5 w-3.5 animate-bounce text-cyan-400" />
               </div>
 
               <div
+                ref={prompt2Ref}
                 className="flex items-center gap-1.5 text-cyan-300 font-mono text-[10px] uppercase tracking-wider transition-opacity duration-300"
-                style={{ opacity: Math.min(1, Math.max(0, (scrollProgress - 0.7) * 3.3)) }}
+                style={{ opacity: 0 }}
               >
                 <span>DNA UNLOCKED • GATEWAY ACTIVE</span>
               </div>

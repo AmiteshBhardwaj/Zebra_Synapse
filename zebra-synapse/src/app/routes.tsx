@@ -27,7 +27,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/login",
-    Component: DualLogin,
+    Component: WelcomePage,
   },
   {
     path: "/login/patient",
