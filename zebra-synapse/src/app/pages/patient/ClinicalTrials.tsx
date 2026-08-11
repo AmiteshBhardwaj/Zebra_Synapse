@@ -97,7 +97,7 @@ export default function ClinicalTrials() {
   const loadCareRow = useCallback(async () => {
     const sb = getSupabase();
     const patientId = user?.id;
-    if (!patientId) {
+    if (!patientId || !sb) {
       setCareLoading(false);
       return;
     }
