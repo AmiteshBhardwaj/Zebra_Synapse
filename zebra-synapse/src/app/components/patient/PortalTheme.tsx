@@ -64,6 +64,9 @@ export function statusPillClass(status: string) {
       return "border-emerald-500/30 bg-emerald-500/15 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]";
     case "completed":
       return "border-cyan-500/30 bg-cyan-500/15 text-cyan-300 shadow-[0_0_10px_rgba(56,189,248,0.2)]";
+    case "cancelled":
+    case "canceled":
+      return "border-rose-500/30 bg-rose-500/15 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.2)]";
     case "high":
     case "risk":
       return "border-rose-500/30 bg-rose-500/15 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.2)]";

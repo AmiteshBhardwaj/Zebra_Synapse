@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  AlertTriangle,
   Calendar,
   Clock,
   FileText,
@@ -7,7 +8,9 @@ import {
   Plus,
   Stethoscope,
   Video,
+  XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -97,6 +100,10 @@ export default function Appointments() {
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [isSavingSchedule, setIsSavingSchedule] = useState(false);
   const [isSavingReschedule, setIsSavingReschedule] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Tab state: "upcoming" selected by default
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
@@ -247,6 +254,46 @@ export default function Appointments() {
     if (!open) {
       resetScheduleForm();
       setIsSavingSchedule(false);
+    }
+  };
+
+  const handleCancelClick = (appointment: Appointment) => {
+    setAppointmentToCancel(appointment);
+    setCancelReason("");
+    setCancelOpen(true);
+  };
+
+  const handleConfirmCancel = () => {
+    if (!appointmentToCancel) return;
+
+    setIsCancelling(true);
+    window.setTimeout(() => {
+      setAllAppointments((current) =>
+        current.map((apt) =>
+          apt.id === appointmentToCancel.id
+            ? {
+                ...apt,
+                status: "Cancelled",
+                notes: cancelReason
+                  ? `Appointment cancelled by patient. Reason: ${cancelReason}`
+                  : "Appointment cancelled by patient.",
+              }
+            : apt,
+        ),
+      );
+      setIsCancelling(false);
+      setCancelOpen(false);
+      toast.success(`Appointment with ${appointmentToCancel.doctor} has been cancelled.`);
+      setAppointmentToCancel(null);
+    }, 400);
+  };
+
+  const handleCancelOpenChange = (open: boolean) => {
+    setCancelOpen(open);
+    if (!open) {
+      setAppointmentToCancel(null);
+      setCancelReason("");
+      setIsCancelling(false);
     }
   };
 
@@ -452,6 +499,61 @@ export default function Appointments() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={cancelOpen} onOpenChange={handleCancelOpenChange}>
+        <DialogContent className={portalDialogClass}>
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-rose-400 text-xs font-mono font-semibold mb-1">
+              <AlertTriangle className="h-4 w-4 text-rose-400" />
+              <span>CANCEL APPOINTMENT</span>
+            </div>
+            <DialogTitle className="text-white text-xl font-bold">
+              Cancel Visit with {appointmentToCancel?.doctor}?
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 text-xs mt-1">
+              Are you sure you want to cancel your scheduled appointment on{" "}
+              {appointmentToCancel ? formatDisplayDate(appointmentToCancel.date) : ""} at {appointmentToCancel?.time}?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason" className="text-xs font-medium text-slate-200">
+                Reason for cancellation (optional)
+              </Label>
+              <Select value={cancelReason} onValueChange={setCancelReason}>
+                <SelectTrigger id="cancel-reason" className={portalSelectTriggerClass}>
+                  <SelectValue placeholder="Select a reason" />
+                </SelectTrigger>
+                <SelectContent className={portalSelectContentClass}>
+                  <SelectItem value="Schedule Conflict" className={portalSelectItemClass}>Schedule Conflict</SelectItem>
+                  <SelectItem value="Feeling Better / Resolved" className={portalSelectItemClass}>Feeling Better / Resolved</SelectItem>
+                  <SelectItem value="Need to Reschedule Later" className={portalSelectItemClass}>Need to Reschedule Later</SelectItem>
+                  <SelectItem value="Other" className={portalSelectItemClass}>Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                className={portalSecondaryButtonClass}
+                onClick={() => setCancelOpen(false)}
+                disabled={isCancelling}
+              >
+                Keep Appointment
+              </Button>
+              <Button
+                className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-bold text-xs h-10 px-5 rounded-xl shadow-[0_0_20px_rgba(244,63,94,0.4)] hover:shadow-[0_0_30px_rgba(244,63,94,0.65)] hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
+                onClick={handleConfirmCancel}
+                disabled={isCancelling}
+              >
+                {isCancelling ? "Cancelling..." : "Confirm Cancellation"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Side-by-Side Tab Buttons: Upcoming vs Past */}
       <div className="flex items-center gap-3 mb-6">
         <button
@@ -544,13 +646,21 @@ export default function Appointments() {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-5 flex flex-wrap gap-3">
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
                     <Button
                       variant="outline"
                       className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}
                       onClick={() => handleReschedule(appointment)}
                     >
                       Reschedule
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-rose-500/30 bg-rose-950/20 text-rose-300 hover:bg-rose-950/50 hover:border-rose-500/50 text-xs font-semibold rounded-xl h-10 px-4 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                      onClick={() => handleCancelClick(appointment)}
+                    >
+                      <XCircle className="mr-1.5 h-4 w-4 text-rose-400" />
+                      Cancel Appointment
                     </Button>
                   </div>
                 </article>
