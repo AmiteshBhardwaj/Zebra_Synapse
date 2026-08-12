@@ -24,30 +24,14 @@ export default function PatientDashboard() {
   const location = useLocation();
   const { signOut } = useAuth();
 
-  // Sidebar expand / pin state
-  const [isPinned, setIsPinned] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
-  const [suppressHover, setSuppressHover] = useState(false);
-
-  const isExpanded = isPinned || (isHovered && !suppressHover);
-
-  const togglePin = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (isExpanded) {
-      setIsPinned(false);
-      setSuppressHover(true);
-      setIsHovered(false);
-    } else {
-      setIsPinned(true);
-      setSuppressHover(false);
-      setIsHovered(true);
-    }
-  };
+  // Pin state for sidebar
+  const [isPinned, setIsPinned] = useState(false);
 
   const primaryMenuItems = [
     { path: "/patient", icon: Home, label: "Health Overview" },
     { path: "/patient/medical-records", icon: FileText, label: "Medical Records" },
     { path: "/patient/appointments", icon: Calendar, label: "Appointments" },
+    { path: "/patient/vitals", icon: Heart, label: "Vitals" },
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },
     { path: "/patient/disease-prediction", icon: TrendingUp, label: "Disease Prediction" },
     { path: "/patient/nutrition", icon: Apple, label: "Nutrition" },
@@ -90,15 +74,8 @@ export default function PatientDashboard() {
 
       {/* GPU Composited Cyber Glassmorphic Sidebar */}
       <aside
-        onMouseEnter={() => {
-          if (!suppressHover) setIsHovered(true);
-        }}
-        onMouseLeave={() => {
-          setIsHovered(false);
-          setSuppressHover(false);
-        }}
-        className={`sticky top-0 z-30 flex shrink-0 flex-col h-screen border-r border-slate-800/80 bg-[#060812]/85 backdrop-blur-2xl transform-gpu transition-[width] duration-200 ease-out will-change-[width] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shadow-[5px_0_30px_rgba(0,0,0,0.6)] ${
-          isExpanded ? "lg:w-60" : "lg:w-[54px]"
+        className={`group/sidebar sticky top-0 z-30 flex shrink-0 flex-col h-screen border-r border-slate-800/80 bg-[#060812]/85 backdrop-blur-2xl transform-gpu transition-[width] duration-200 ease-out will-change-[width] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shadow-[5px_0_30px_rgba(0,0,0,0.6)] ${
+          isPinned ? "lg:w-60" : "lg:w-[54px] lg:hover:w-60"
         }`}
       >
         {/* Brand Header */}
@@ -109,7 +86,9 @@ export default function PatientDashboard() {
             </div>
             <div
               className={`transition-opacity duration-150 overflow-hidden whitespace-nowrap ${
-                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
+                isPinned
+                  ? "opacity-100"
+                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
               }`}
             >
               <h2 className="text-xs font-mono font-bold tracking-wider text-slate-100 leading-none">Zebra Synapse</h2>
@@ -140,7 +119,9 @@ export default function PatientDashboard() {
                 </span>
                 <span
                   className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                    isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
+                    isPinned
+                      ? "opacity-100"
+                      : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
                   }`}
                 >
                   {item.label}
@@ -167,7 +148,9 @@ export default function PatientDashboard() {
             </span>
             <span
               className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
+                isPinned
+                  ? "opacity-100"
+                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
               }`}
             >
               Account settings
@@ -187,7 +170,9 @@ export default function PatientDashboard() {
             </span>
             <span
               className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
+                isPinned
+                  ? "opacity-100"
+                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
               }`}
             >
               Logout
@@ -196,19 +181,21 @@ export default function PatientDashboard() {
 
           {/* Pin Toggle Button */}
           <button
-            onClick={togglePin}
-            title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+            onClick={() => setIsPinned(!isPinned)}
+            title={isPinned ? "Collapse sidebar" : "Expand & pin sidebar"}
             className="hidden lg:flex w-full h-9 rounded-xl items-center transition-colors duration-150 text-slate-500 hover:bg-slate-900/70 hover:text-slate-200 border border-transparent"
           >
             <span className="flex h-9 w-9 shrink-0 items-center justify-center">
-              {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              {isPinned ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </span>
             <span
               className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
+                isPinned
+                  ? "opacity-100"
+                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
               }`}
             >
-              {isExpanded ? "Collapse" : "Expand"}
+              {isPinned ? "Collapse" : "Expand"}
             </span>
           </button>
         </div>
