@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
 import { getSupabase } from "../../../lib/supabase";
 import { Button } from "../../components/ui/button";
@@ -24,8 +24,9 @@ import {
   portalSelectTriggerClass,
 } from "../../components/patient/PortalTheme";
 
+// Standard UUID format regex (case-insensitive 8-4-4-4-12 hex)
 const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Props = {
   onLinked: () => void;
@@ -46,6 +47,38 @@ export default function LinkPatientDialog({ onLinked }: Props) {
   );
   const [riskFlags, setRiskFlags] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const [availablePatients, setAvailablePatients] = useState<Array<{ id: string; name: string }>>([]);
+  const [loadingPatients, setLoadingPatients] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const sb = getSupabase();
+    if (!sb || !user) return;
+
+    let isMounted = true;
+    setLoadingPatients(true);
+
+    sb.from("profiles")
+      .select("id, full_name")
+      .eq("role", "patient")
+      .then(({ data, error }) => {
+        if (!isMounted) return;
+        setLoadingPatients(false);
+        if (!error && data) {
+          setAvailablePatients(
+            data.map((p) => ({
+              id: p.id,
+              name: p.full_name || `Patient (${p.id.slice(0, 8)})`,
+            }))
+          );
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [open, user]);
 
   const resetForm = () => {
     setPatientId("");
@@ -74,7 +107,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
     }
     const pid = patientId.trim();
     if (!UUID_RE.test(pid)) {
-      toast.error("Enter a valid patient profile UUID");
+      toast.error("Enter a valid patient profile UUID (e.g. 8-4-4-4-12 hex format)");
       return;
     }
     if (pid === doctorId) {
@@ -113,7 +146,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
       return;
     }
 
-    toast.success("Patient linked");
+    toast.success("Patient linked successfully");
     resetForm();
     setOpen(false);
     onLinked();
@@ -132,13 +165,37 @@ export default function LinkPatientDialog({ onLinked }: Props) {
           <DialogHeader>
             <DialogTitle className="text-white">Link a patient</DialogTitle>
             <DialogDescription className="text-[#A1A1AA]">
-              Ask the patient for their profile ID from{" "}
-              <span className="font-medium text-white">Account settings</span> in the patient
-              portal, then paste it below. Optional fields populate the patient
-              card.
+              Select a patient from the list or paste their profile ID from their{" "}
+              <span className="font-medium text-white">Account settings</span>.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {availablePatients.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-white font-medium text-xs text-orange-400">
+                  Select Registered Patient
+                </Label>
+                <select
+                  className={`${portalSelectTriggerClass} flex h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm text-white shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl focus-visible:outline-none`}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      setPatientId(e.target.value);
+                    }
+                  }}
+                  value={availablePatients.some((p) => p.id === patientId) ? patientId : ""}
+                >
+                  <option value="" disabled className={portalSelectItemClass}>
+                    {loadingPatients ? "Loading patient profiles..." : "— Select an available patient —"}
+                  </option>
+                  {availablePatients.map((p) => (
+                    <option key={p.id} value={p.id} className={portalSelectItemClass}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="link_patient_id" className="text-white">Patient profile ID</Label>
               <Input
