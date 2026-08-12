@@ -29,7 +29,7 @@ as $$
   );
 $$;
 
--- 2. Update profiles SELECT policy so doctors can read patient profiles when verifying / searching patients to link
+-- 2. Update profiles SELECT policy using security definer helper to avoid infinite RLS recursion on public.profiles
 drop policy if exists "profiles_select_linked_care_team" on public.profiles;
 create policy "profiles_select_linked_care_team"
   on public.profiles for select
@@ -37,10 +37,7 @@ create policy "profiles_select_linked_care_team"
     auth.uid() = id
     or (
       role = 'patient'
-      and exists (
-        select 1 from public.profiles d
-        where d.id = auth.uid() and d.role = 'doctor'
-      )
+      and public.is_doctor_profile(auth.uid())
     )
     or exists (
       select 1
