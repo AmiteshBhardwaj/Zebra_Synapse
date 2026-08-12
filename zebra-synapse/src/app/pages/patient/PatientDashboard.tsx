@@ -6,11 +6,8 @@ import {
   Activity,
   Apple,
   Calendar,
-  ChevronLeft,
-  ChevronRight,
   FileText,
   FlaskConical,
-  Heart,
   Home,
   LogOut,
   Pill,
@@ -31,7 +28,6 @@ export default function PatientDashboard() {
     { path: "/patient", icon: Home, label: "Health Overview" },
     { path: "/patient/medical-records", icon: FileText, label: "Medical Records" },
     { path: "/patient/appointments", icon: Calendar, label: "Appointments" },
-    { path: "/patient/vitals", icon: Heart, label: "Vitals" },
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },
     { path: "/patient/disease-prediction", icon: TrendingUp, label: "Disease Prediction" },
     { path: "/patient/nutrition", icon: Apple, label: "Nutrition" },
@@ -176,26 +172,6 @@ export default function PatientDashboard() {
               }`}
             >
               Logout
-            </span>
-          </button>
-
-          {/* Pin Toggle Button */}
-          <button
-            onClick={() => setIsPinned(!isPinned)}
-            title={isPinned ? "Collapse sidebar" : "Expand & pin sidebar"}
-            className="hidden lg:flex w-full h-9 rounded-xl items-center transition-colors duration-150 text-slate-500 hover:bg-slate-900/70 hover:text-slate-200 border border-transparent"
-          >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center">
-              {isPinned ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </span>
-            <span
-              className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
-              }`}
-            >
-              {isPinned ? "Collapse" : "Expand"}
             </span>
           </button>
         </div>

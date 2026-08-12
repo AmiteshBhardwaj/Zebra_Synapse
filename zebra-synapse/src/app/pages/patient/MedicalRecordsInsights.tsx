@@ -109,7 +109,7 @@ export default function MedicalRecordsInsights() {
 
           <div className="w-full max-w-sm sm:max-w-md">
             <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-              <SelectTrigger className="h-13 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-5 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+              <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-5 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
                 <SelectValue placeholder="Select a medical report..." />
               </SelectTrigger>
               <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-2xl p-1.5">

@@ -907,7 +907,6 @@ export default function PatientDetail() {
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="vitals">Vitals History</TabsTrigger>
           <TabsTrigger value="labs">Lab Results</TabsTrigger>
           <TabsTrigger value="medications">Medications</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
@@ -969,124 +968,6 @@ export default function PatientDetail() {
                             : rx.prescriber?.full_name?.trim() || "Doctor"}{" "}
                           on {formatPrescriptionDate(rx.created_at)}
                         </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="vitals">
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <Card className={portalPanelClass}>
-                <CardHeader>
-                  <CardTitle>Current clinical snapshot</CardTitle>
-                  <CardDescription>Latest linked-care vitals and chart context</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-sm text-white/40">Heart Rate</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">
-                      {formatNullableMetric(vitalsSummary.heartRate, " bpm")}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-sm text-white/40">Blood Pressure</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">
-                      {vitalsSummary.bloodPressure ?? "-"}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-sm text-white/40">Glucose</p>
-                    <p className="mt-2 text-2xl font-semibold text-white">
-                      {formatNullableMetric(vitalsSummary.glucose, " mg/dL")}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-sm text-white/40">Last Visit</p>
-                    <p className="mt-2 text-lg font-semibold text-white">{patient.lastVisit}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className={portalPanelClass}>
-                <CardHeader>
-                  <CardTitle>Trend coverage</CardTitle>
-                  <CardDescription>Structured history available for this patient</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-sm text-white/40">Lab panels on file</p>
-                    <p className="mt-2 text-3xl font-semibold text-white">{labPanels.length}</p>
-                    <p className="mt-2 text-sm text-white/60">
-                      {latestLabPanel
-                        ? `Latest structured panel recorded ${formatLabDate(latestLabPanel.recorded_at)}.`
-                        : "No structured lab panel yet. The doctor portal is currently limited to the latest care snapshot."}
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="text-sm text-white/40">Uploaded reports</p>
-                    <p className="mt-2 text-3xl font-semibold text-white">{labUploads.length}</p>
-                    <p className="mt-2 text-sm text-white/60">
-                      Uploads create longitudinal context for glucose, A1c, and related insights.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className={portalPanelClass}>
-              <CardHeader>
-                <CardTitle>Vitals history timeline</CardTitle>
-                <CardDescription>Recorded observations available to the doctor portal</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {labPanelsLoading ? (
-                  <p className="text-sm text-white/60">Loading vitals history...</p>
-                ) : labPanels.length === 0 ? (
-                  <p className="text-sm text-white/60">
-                    No longitudinal lab-backed history is stored yet. The cards above show the latest
-                    linked-care snapshot. Upload reports or record additional structured panels to
-                    unlock a true timeline.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {labPanels.map((panel) => (
-                      <div key={panel.id} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <div>
-                            <p className="font-semibold text-white">{formatLabDate(panel.recorded_at)}</p>
-                            <p className="mt-1 text-sm text-white/60">
-                              Structured panel values recorded for this patient.
-                            </p>
-                          </div>
-                          {panel.notes ? (
-                            <p className="max-w-xl text-sm text-white/60">{panel.notes}</p>
-                          ) : null}
-                        </div>
-                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                          <div className="rounded-xl border border-white/8 bg-black/20 p-3">
-                            <p className="text-xs text-white/40">Fasting Glucose</p>
-                            <p className="mt-2 text-lg font-semibold text-white">
-                              {formatNullableMetric(panel.fasting_glucose, " mg/dL")}
-                            </p>
-                          </div>
-                          <div className="rounded-xl border border-white/8 bg-black/20 p-3">
-                            <p className="text-xs text-white/40">Hemoglobin A1c</p>
-                            <p className="mt-2 text-lg font-semibold text-white">
-                              {formatNullableMetric(panel.hemoglobin_a1c, "%")}
-                            </p>
-                          </div>
-                          <div className="rounded-xl border border-white/8 bg-black/20 p-3">
-                            <p className="text-xs text-white/40">Creatinine</p>
-                            <p className="mt-2 text-lg font-semibold text-white">
-                              {formatNullableMetric(panel.creatinine, " mg/dL")}
-                            </p>
-                          </div>
-                        </div>
                       </div>
                     ))}
                   </div>

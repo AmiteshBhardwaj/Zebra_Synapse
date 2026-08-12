@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
-import { Activity, Users, LogOut, Settings, ChevronLeft, ChevronRight, Stethoscope } from "lucide-react";
+import { Activity, Users, LogOut, Settings, Stethoscope } from "lucide-react";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
@@ -133,25 +133,6 @@ export default function DoctorDashboard() {
               }`}
             >
               Logout
-            </span>
-          </button>
-
-          <button
-            onClick={() => setIsPinned(!isPinned)}
-            title={isPinned ? "Collapse sidebar" : "Expand & pin sidebar"}
-            className="hidden lg:flex w-full h-8 rounded-md items-center transition-colors duration-150 text-white/40 hover:bg-white/[0.06] hover:text-white border border-transparent"
-          >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center">
-              {isPinned ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </span>
-            <span
-              className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
-              }`}
-            >
-              {isPinned ? "Collapse" : "Expand"}
             </span>
           </button>
         </div>

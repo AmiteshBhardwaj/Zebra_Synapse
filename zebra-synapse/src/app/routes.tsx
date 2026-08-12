@@ -8,7 +8,6 @@ import DoctorSignup from "./pages/auth/DoctorSignup";
 import PatientHome from "./pages/patient/PatientHome";
 import MedicalRecords from "./pages/patient/MedicalRecordsInsights";
 import Appointments from "./pages/patient/Appointments";
-import Vitals from "./pages/patient/VitalsInsights";
 import Prescription from "./pages/patient/Prescription";
 import DiseasePrediction from "./pages/patient/DiseasePredictionInsights";
 import Nutrition from "./pages/patient/NutritionInsights";
@@ -52,7 +51,6 @@ export const router = createBrowserRouter([
       { index: true, Component: PatientHome },
       { path: "medical-records", Component: MedicalRecords },
       { path: "appointments", Component: Appointments },
-      { path: "vitals", Component: Vitals },
       { path: "prescription", Component: Prescription },
       { path: "disease-prediction", Component: DiseasePrediction },
       { path: "nutrition", Component: Nutrition },
