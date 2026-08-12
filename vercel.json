@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd zebra-synapse && npm ci",
+  "installCommand": "cd zebra-synapse && npm ci --ignore-scripts",
   "buildCommand": "cd zebra-synapse && npm run build",
   "outputDirectory": "zebra-synapse/dist"
 }
