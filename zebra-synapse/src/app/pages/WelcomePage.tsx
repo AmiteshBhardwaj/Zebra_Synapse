@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import {
-  ExternalLink,
   UserCheck,
   Stethoscope,
   ArrowRight,
@@ -9,7 +8,6 @@ import {
   ShieldCheck,
   Lock,
   FileCheck,
-  ChevronDown,
   FileText,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -66,8 +64,6 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
   const heroRef = useRef<HTMLDivElement>(null);
   const loginRef = useRef<HTMLDivElement>(null);
   const auraRef = useRef<HTMLDivElement>(null);
-  const prompt1Ref = useRef<HTMLDivElement>(null);
-  const prompt2Ref = useRef<HTMLDivElement>(null);
 
   const scrollProgressRef = useRef(0);
 
@@ -158,14 +154,6 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
         // 3. Aura opacity
         if (auraRef.current) {
           auraRef.current.style.opacity = (1 - progress * 0.4).toFixed(3);
-        }
-
-        // 4. Prompts opacity
-        if (prompt1Ref.current) {
-          prompt1Ref.current.style.opacity = (1 - smoothstep(0.0, 0.35, progress)).toFixed(3);
-        }
-        if (prompt2Ref.current) {
-          prompt2Ref.current.style.opacity = smoothstep(0.55, 0.90, progress).toFixed(3);
         }
       });
     };
