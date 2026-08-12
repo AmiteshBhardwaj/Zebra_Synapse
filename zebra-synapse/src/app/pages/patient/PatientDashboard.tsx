@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useLayoutEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
 import { DnaCanvas3D } from "../../components/DnaCanvas3D";
@@ -20,9 +20,15 @@ export default function PatientDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { signOut } = useAuth();
+  const mainRef = useRef<HTMLDivElement>(null);
 
-  // Pin state for sidebar
-  const [isPinned, setIsPinned] = useState(false);
+  // Reset scroll to top whenever route/page changes or on initial login mount
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+    if (mainRef.current) {
+      mainRef.current.scrollTop = 0;
+    }
+  }, [location.pathname]);
 
   const primaryMenuItems = [
     { path: "/patient", icon: Home, label: "Health Overview" },
@@ -41,7 +47,7 @@ export default function PatientDashboard() {
   };
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#06070a] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300 lg:flex-row overflow-hidden">
+    <div className="relative flex h-screen w-screen bg-[#06070a] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300 lg:flex-row overflow-hidden">
       
       {/* 3D Bioluminescent Background Atmosphere (Identical to Landing Page) */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -70,9 +76,7 @@ export default function PatientDashboard() {
 
       {/* GPU Composited Cyber Glassmorphic Sidebar */}
       <aside
-        className={`group/sidebar sticky top-0 z-30 flex shrink-0 flex-col h-screen border-r border-slate-800/80 bg-[#060812]/85 backdrop-blur-2xl transform-gpu transition-[width] duration-200 ease-out will-change-[width] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shadow-[5px_0_30px_rgba(0,0,0,0.6)] ${
-          isPinned ? "lg:w-60" : "lg:w-[54px] lg:hover:w-60"
-        }`}
+        className="group/sidebar sticky top-0 z-30 flex shrink-0 flex-col h-screen border-r border-slate-800/80 bg-[#060812]/85 backdrop-blur-2xl transform-gpu transition-[width] duration-200 ease-out will-change-[width] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden shadow-[5px_0_30px_rgba(0,0,0,0.6)] lg:w-[54px] lg:hover:w-60"
       >
         {/* Brand Header */}
         <div className="flex h-14 shrink-0 items-center border-b border-slate-800/80 px-2.5">
@@ -80,13 +84,7 @@ export default function PatientDashboard() {
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-sky-600 text-slate-950 shadow-[0_0_15px_rgba(56,189,248,0.4)]">
               <Activity className="h-4 w-4 stroke-[2.5]" />
             </div>
-            <div
-              className={`transition-opacity duration-150 overflow-hidden whitespace-nowrap ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
-              }`}
-            >
+            <div className="transition-opacity duration-150 overflow-hidden whitespace-nowrap opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150">
               <h2 className="text-xs font-mono font-bold tracking-wider text-slate-100 leading-none">Zebra Synapse</h2>
               <p className="mt-0.5 text-[9px] font-mono uppercase tracking-widest text-cyan-400/80">Patient Portal 3D</p>
             </div>
@@ -113,13 +111,7 @@ export default function PatientDashboard() {
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center">
                   <Icon className="h-4 w-4" strokeWidth={1.8} />
                 </span>
-                <span
-                  className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                    isPinned
-                      ? "opacity-100"
-                      : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
-                  }`}
-                >
+                <span className="text-xs whitespace-nowrap transition-opacity overflow-hidden opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150">
                   {item.label}
                 </span>
               </button>
@@ -142,13 +134,7 @@ export default function PatientDashboard() {
             <span className="flex h-9 w-9 shrink-0 items-center justify-center">
               <Settings className="h-4 w-4" strokeWidth={1.8} />
             </span>
-            <span
-              className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
-              }`}
-            >
+            <span className="text-xs whitespace-nowrap transition-opacity overflow-hidden opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150">
               Account settings
             </span>
           </button>
@@ -164,13 +150,7 @@ export default function PatientDashboard() {
             <span className="flex h-9 w-9 shrink-0 items-center justify-center">
               <LogOut className="h-4 w-4" strokeWidth={1.8} />
             </span>
-            <span
-              className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
-              }`}
-            >
+            <span className="text-xs whitespace-nowrap transition-opacity overflow-hidden opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150">
               Logout
             </span>
           </button>
@@ -178,10 +158,9 @@ export default function PatientDashboard() {
       </aside>
 
       {/* Main Page Content */}
-      <main className="relative z-10 min-w-0 flex-1 overflow-y-auto">
+      <main ref={mainRef} className="relative z-10 min-w-0 flex-1 h-screen overflow-y-auto">
         <Outlet />
       </main>
     </div>
   );
 }
-
