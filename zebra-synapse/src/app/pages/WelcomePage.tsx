@@ -240,20 +240,7 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
             </span>
           </div>
 
-          {/* Top-Right Direct Portal Shortcut */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => scrollToLogin("patient")}
-              className="px-3.5 py-1.5 rounded-xl bg-slate-900/70 hover:bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-all flex items-center gap-2 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a]"
-              title="Gateway for registered patient & clinician sessions"
-            >
-              <span>Direct Portal</span>
-              <span className="hidden sm:inline-block text-[10px] bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 px-1.5 py-0.2 rounded font-mono">
-                Session
-              </span>
-              <ExternalLink className="h-3.5 w-3.5 text-cyan-400" />
-            </button>
-          </div>
+          {/* Top-Right Direct Portal Shortcut removed */}
         </header>
 
         {/* Main Hero Content Area — Two-Column Desktop Grid */}
@@ -359,30 +346,9 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
           </div>
         </main>
 
-        {/* Scroll Indicator Prompt & Footer */}
+        {/* Footer */}
         <footer className="relative z-30 border-t border-slate-800/40 bg-[#06070a]/80 backdrop-blur-md py-2.5 px-6 text-center text-[11px] text-[#64748b] font-mono shrink-0 flex items-center justify-between">
           <div>© 2026 Zebra Synapse Health. Enterprise Clinical Infrastructure.</div>
-
-          {!prefersReducedMotion && (
-            <>
-              <div
-                ref={prompt1Ref}
-                className="flex items-center gap-1.5 text-cyan-400 font-mono text-[10px] uppercase tracking-wider transition-opacity duration-300"
-                style={{ opacity: 1 }}
-              >
-                <span className="hidden sm:inline">SCROLL TO EXPLORE</span>
-                <ChevronDown className="h-3.5 w-3.5 animate-bounce text-cyan-400" />
-              </div>
-
-              <div
-                ref={prompt2Ref}
-                className="flex items-center gap-1.5 text-cyan-300 font-mono text-[10px] uppercase tracking-wider transition-opacity duration-300"
-                style={{ opacity: 0 }}
-              >
-                <span>DNA UNLOCKED • GATEWAY ACTIVE</span>
-              </div>
-            </>
-          )}
         </footer>
       </div>
     </div>
