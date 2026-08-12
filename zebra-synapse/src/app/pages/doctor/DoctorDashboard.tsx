@@ -8,8 +8,25 @@ export default function DoctorDashboard() {
   const location = useLocation();
   const { signOut, profile } = useAuth();
 
-  // Pin state for sidebar (hover expansion is handled via GPU-accelerated CSS)
-  const [isPinned, setIsPinned] = useState(false);
+  // Sidebar expand / pin state
+  const [isPinned, setIsPinned] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+  const [suppressHover, setSuppressHover] = useState(false);
+
+  const isExpanded = isPinned || (isHovered && !suppressHover);
+
+  const togglePin = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isExpanded) {
+      setIsPinned(false);
+      setSuppressHover(true);
+      setIsHovered(false);
+    } else {
+      setIsPinned(true);
+      setSuppressHover(false);
+      setIsHovered(true);
+    }
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -20,8 +37,15 @@ export default function DoctorDashboard() {
     <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_10%_20%,_rgba(26,26,46,0.96),_rgba(10,10,15,0.98)_60%),radial-gradient(circle_at_top_right,_rgba(255,106,0,0.14),_transparent_26%),radial-gradient(circle_at_top_left,_rgba(108,91,212,0.16),_transparent_28%)] text-white lg:flex-row">
       {/* GPU Composited Instant-Retract Sidebar */}
       <aside
-        className={`group/sidebar sticky top-0 z-30 flex shrink-0 flex-col h-screen border-r border-white/10 bg-[#121215] transform-gpu transition-[width] duration-200 ease-out will-change-[width] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${
-          isPinned ? "lg:w-60" : "lg:w-[52px] lg:hover:w-60"
+        onMouseEnter={() => {
+          if (!suppressHover) setIsHovered(true);
+        }}
+        onMouseLeave={() => {
+          setIsHovered(false);
+          setSuppressHover(false);
+        }}
+        className={`sticky top-0 z-30 flex shrink-0 flex-col h-screen border-r border-white/10 bg-[#121215] transform-gpu transition-[width] duration-200 ease-out will-change-[width] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden ${
+          isExpanded ? "lg:w-60" : "lg:w-[52px]"
         }`}
       >
         {/* Supabase Top Brand Logo */}
@@ -32,9 +56,7 @@ export default function DoctorDashboard() {
             </div>
             <div
               className={`transition-opacity duration-150 overflow-hidden whitespace-nowrap ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
+                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
               }`}
             >
               <h2 className="text-xs font-semibold tracking-wide text-white leading-none">Zebra Synapse</h2>
@@ -46,9 +68,9 @@ export default function DoctorDashboard() {
         {/* Doctor Profile Banner */}
         <div
           className={`border-b border-white/10 transition-all duration-200 overflow-hidden ${
-            isPinned
+            isExpanded
               ? "max-h-24 p-2 opacity-100"
-              : "max-h-0 p-0 opacity-0 border-0 group-hover/sidebar:max-h-24 group-hover/sidebar:p-2 group-hover/sidebar:opacity-100 group-hover/sidebar:border-b group-hover/sidebar:border-white/10"
+              : "max-h-0 p-0 opacity-0 border-0"
           }`}
         >
           <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-1.5 backdrop-blur-xl">
@@ -82,9 +104,7 @@ export default function DoctorDashboard() {
             </span>
             <span
               className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
+                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
               }`}
             >
               My Patients
@@ -105,9 +125,7 @@ export default function DoctorDashboard() {
             </span>
             <span
               className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
+                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
               }`}
             >
               Account settings
@@ -127,9 +145,7 @@ export default function DoctorDashboard() {
             </span>
             <span
               className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
+                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
               }`}
             >
               Logout
@@ -137,21 +153,19 @@ export default function DoctorDashboard() {
           </button>
 
           <button
-            onClick={() => setIsPinned(!isPinned)}
-            title={isPinned ? "Collapse sidebar" : "Expand & pin sidebar"}
+            onClick={togglePin}
+            title={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
             className="hidden lg:flex w-full h-8 rounded-md items-center transition-colors duration-150 text-white/40 hover:bg-white/[0.06] hover:text-white border border-transparent"
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center">
-              {isPinned ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              {isExpanded ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             </span>
             <span
               className={`text-xs whitespace-nowrap transition-opacity overflow-hidden ${
-                isPinned
-                  ? "opacity-100"
-                  : "opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150"
+                isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
               }`}
             >
-              {isPinned ? "Collapse" : "Expand"}
+              {isExpanded ? "Collapse" : "Expand"}
             </span>
           </button>
         </div>
