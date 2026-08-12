@@ -1,4 +1,4 @@
-import { ShieldCheck, Sparkles } from "lucide-react";
+import { ShieldCheck, Sparkles, HelpCircle, CheckCircle2 } from "lucide-react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { formatLabDate } from "../../../lib/labPanels";
@@ -65,24 +65,27 @@ export default function WellnessTips() {
       </div>
 
       {!hasPanels || !latestPanel ? (
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <Card className={portalPanelClass}>
+        <div className="space-y-6 max-w-4xl">
+          <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
-                <Sparkles className="h-5 w-5 text-[#ff9c61]" />
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="h-4.5 w-4.5 text-[#ff9c61]" />
+                <CardTitle className="text-base text-white">No wellness tips yet</CardTitle>
               </div>
-              <CardTitle className="text-white">No wellness tips yet</CardTitle>
-              <CardDescription className="text-white/60">
+              <CardDescription className="text-xs text-[#92a8c7]">
                 Your account has uploads, but no structured lab values are available yet to drive personalized recovery,
                 sleep, movement, and habit suggestions. Those will appear here after your reports are processed.
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className={portalPanelClass}>
+          <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>
-              <CardTitle className="text-white">What unlocks this section</CardTitle>
-              <CardDescription className="text-white/60">
+              <div className="flex items-center gap-2.5">
+                <HelpCircle className="h-4.5 w-4.5 text-sky-400" />
+                <CardTitle className="text-base text-white">What unlocks this section</CardTitle>
+              </div>
+              <CardDescription className="text-xs text-[#92a8c7]">
                 This view turns on when structured biomarkers are available from your latest lab panels.
               </CardDescription>
             </CardHeader>
@@ -109,14 +112,14 @@ export default function WellnessTips() {
               ].map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.label} className={`${portalInsetClass} p-4`}>
+                  <div key={item.label} className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                     <div className="flex items-start gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
                         <Icon className={`h-4 w-4 ${item.tone}`} />
                       </span>
                       <div>
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">{item.label}</p>
-                        <p className="mt-2 text-sm leading-6 text-white/75">{item.value}</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">{item.label}</p>
+                        <p className="mt-1 text-xs sm:text-sm text-[#92a8c7] leading-relaxed">{item.value}</p>
                       </div>
                     </div>
                   </div>
@@ -126,23 +129,26 @@ export default function WellnessTips() {
           </Card>
         </div>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-          <Card className={portalPanelClass}>
+        <div className="space-y-6 max-w-4xl">
+          <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>
-              <CardTitle className="text-white">Personalized tips</CardTitle>
-              <CardDescription className="text-white/60">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="h-4.5 w-4.5 text-[#ff9c61]" />
+                <CardTitle className="text-base text-white">Personalized tips</CardTitle>
+              </div>
+              <CardDescription className="text-xs text-[#92a8c7]">
                 These suggestions stay tied to the markers currently most worth watching.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               {tips.map((tip, index) => (
-                <div key={tip.title} className={`${portalInsetClass} p-4`}>
+                <div key={tip.title} className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-white">{tip.title}</p>
-                      <p className="mt-2 text-sm text-white/77 leading-relaxed">{tip.detail}</p>
+                      <p className="text-xs sm:text-sm font-semibold text-white">{tip.title}</p>
+                      <p className="mt-1 text-xs sm:text-sm text-[#92a8c7] leading-relaxed">{tip.detail}</p>
                     </div>
-                    <Badge className="border border-white/10 bg-white/[0.08] text-white">
+                    <Badge className="border border-white/10 bg-white/[0.08] text-xs text-white shrink-0">
                       Tip {index + 1}
                     </Badge>
                   </div>
@@ -151,23 +157,26 @@ export default function WellnessTips() {
             </CardContent>
           </Card>
 
-          <Card className={portalPanelClass}>
+          <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>
-              <CardTitle className="text-white">How to use these tips</CardTitle>
-              <CardDescription className="text-white/60">
+              <div className="flex items-center gap-2.5">
+                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+                <CardTitle className="text-base text-white">How to use these tips</CardTitle>
+              </div>
+              <CardDescription className="text-xs text-[#92a8c7]">
                 Lifestyle coaching complements clinical care, it does not replace it.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Current source</p>
-                <p className="mt-2 text-sm text-white/75">
+            <CardContent className="space-y-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Current source</p>
+                <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
                   Your latest structured panel from {formatLabDate(latestPanel.recorded_at)}.
                 </p>
               </div>
-              <div className={`${portalInsetClass} p-4`}>
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Best practice</p>
-                <p className="mt-2 text-sm text-white/75">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Best practice</p>
+                <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
                   Apply one or two suggestions at a time and compare how your next panel trends.
                 </p>
               </div>

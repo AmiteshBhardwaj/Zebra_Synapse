@@ -1,4 +1,4 @@
-import { Info, ShieldAlert, TrendingUp } from "lucide-react";
+import { Info, ShieldAlert, TrendingUp, HelpCircle, AlertTriangle } from "lucide-react";
 import { useMemo } from "react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
@@ -77,145 +77,134 @@ export default function DiseasePrediction() {
       </div>
 
       {!hasPanels || !latestPanel ? (
-        <div className="space-y-6">
-          <section className={`${portalPanelClass} border-[#3B82F6]/15 bg-[#3B82F6]/[0.08] p-6`}>
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#3B82F6]/20 bg-[#3B82F6]/12">
-                <Info className="h-5 w-5 text-[#93c5fd]" />
+        <div className="space-y-6 max-w-4xl">
+          <Card className={`${portalPanelClass} p-2`}>
+            <CardHeader>
+              <div className="flex items-center gap-2.5">
+                <TrendingUp className="h-4.5 w-4.5 text-[#ff9c61]" />
+                <CardTitle className="text-base text-white">Awaiting Structured Biomarkers</CardTitle>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">Not a diagnosis</h2>
-                <p className="mt-2 max-w-3xl text-sm leading-7 text-[#c7ddff]">
-                  Risk scoring activates when your uploads are parsed into structured biomarkers.
+              <CardDescription className="text-xs text-[#92a8c7]">
+                We are waiting for structured panel extraction from your lab files. Risk prediction analysis will activate once structured values are available.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className={`${portalPanelClass} p-2`}>
+            <CardHeader>
+              <div className="flex items-center gap-2.5">
+                <Info className="h-4.5 w-4.5 text-sky-400" />
+                <CardTitle className="text-base text-white">Model context</CardTitle>
+              </div>
+              <CardDescription className="text-xs text-[#92a8c7]">
+                Coverage and limitations for the current rule-based snapshot
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                <p className="text-xs sm:text-sm font-semibold text-white">Awaiting interpretation</p>
+                <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
+                  Upload and process a structured panel to unlock deterministic risk summaries.
                 </p>
               </div>
-            </div>
-          </section>
-
-          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <Card className={portalPanelClass}>
-              <CardHeader>
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
-                  <TrendingUp className="h-5 w-5 text-[#ff9c61]" />
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                <p className="text-xs sm:text-sm font-semibold text-white">Latest structured panel</p>
+                <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">Awaiting panel</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="space-y-6 max-w-4xl">
+          <Card className={`${portalPanelClass} border-amber-500/20 bg-amber-500/[0.04] p-2`}>
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/15">
+                  <ShieldAlert className="h-4.5 w-4.5 text-amber-400" />
                 </div>
-                <CardTitle className="text-white">Awaiting Structured Biomarkers</CardTitle>
-                <CardDescription className="text-white/60">
-                  We are waiting for structured panel extraction from your lab files. Risk prediction analysis will activate once structured values are available.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+                <div>
+                  <p className="text-xs sm:text-sm font-semibold text-white">Decision support only</p>
+                  <p className="mt-0.5 text-xs text-[#b4c9e8] leading-relaxed">
+                    These rule-based scores highlight biomarker patterns. They do not diagnose disease and should always be reviewed with your clinician.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card className={portalPanelClass}>
+          {predictions.map((prediction) => (
+            <Card key={prediction.title} className={`${portalPanelClass} p-2`}>
               <CardHeader>
-                <CardTitle className="text-white">Model context</CardTitle>
-                <CardDescription className="text-white/60">
-                  Coverage and limitations for the current rule-based snapshot
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <TrendingUp className="h-4.5 w-4.5 text-[#ff9c61]" />
+                    <CardTitle className="text-base text-white">{prediction.title}</CardTitle>
+                  </div>
+                  <Badge className="border border-white/10 bg-white/[0.08] text-xs text-white shrink-0">
+                    {prediction.level}
+                  </Badge>
+                </div>
+                <CardDescription className="text-xs text-[#92a8c7]">
+                  Interpreted from the latest structured biomarker panel
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="font-medium text-white">Awaiting interpretation</p>
-                  <p className="mt-1 text-sm text-white/60">
-                    Upload and process a structured panel to unlock deterministic risk summaries.
-                  </p>
+                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                  <p className="text-xs sm:text-sm text-[#E5E7EB] leading-relaxed">{prediction.rationale}</p>
                 </div>
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="font-medium text-white">Latest structured panel</p>
-                  <p className="mt-1 text-sm text-white/60">
-                    Awaiting panel
-                  </p>
+                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Recommended next step</p>
+                  <p className="mt-1 text-xs sm:text-sm font-medium text-white">{prediction.nextStep}</p>
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <section className={`${portalPanelClass} border-[#3B82F6]/15 bg-[#3B82F6]/[0.08] p-6`}>
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/12">
-                <ShieldAlert className="h-5 w-5 text-[#ff8a3d]" />
+          ))}
+
+          <Card className={`${portalPanelClass} p-2`}>
+            <CardHeader>
+              <div className="flex items-center gap-2.5">
+                <Info className="h-4.5 w-4.5 text-sky-400" />
+                <CardTitle className="text-base text-white">Model context</CardTitle>
               </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">Decision support only</h2>
-                <p className="mt-2 max-w-3xl text-sm leading-7 text-[#c7ddff]">
-                  These rule-based scores highlight biomarker patterns. They do not diagnose disease and
-                  should always be reviewed with your clinician.
+              <CardDescription className="text-xs text-[#92a8c7]">
+                Coverage and limitations for the current rule-based snapshot
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                <p className="text-xs sm:text-sm font-semibold text-white">{overall?.label ?? "Awaiting interpretation"}</p>
+                <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
+                  {overall?.summary ?? "Upload and process a structured panel to unlock deterministic risk summaries."}
                 </p>
               </div>
-            </div>
-          </section>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Latest structured panel</p>
+                <p className="mt-1 text-xs sm:text-sm text-white">
+                  {latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting panel"}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-            <div className="space-y-6">
-              {predictions.map((prediction) => (
-                <Card key={prediction.title} className={portalPanelClass}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <CardTitle className="text-white">{prediction.title}</CardTitle>
-                        <CardDescription className="text-white/60">
-                          Interpreted from the latest structured biomarker panel
-                        </CardDescription>
-                      </div>
-                      <Badge className="border border-white/10 bg-white/[0.08] text-white">
-                        {prediction.level}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-white/75">{prediction.rationale}</p>
-                    <div className={`${portalInsetClass} p-4`}>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Recommended next step</p>
-                      <p className="mt-2 text-sm text-white">{prediction.nextStep}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            <div className="space-y-6">
-              <Card className={portalPanelClass}>
-                <CardHeader>
-                  <CardTitle className="text-white">Model context</CardTitle>
-                  <CardDescription className="text-white/60">
-                    Coverage and limitations for the current rule-based snapshot
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className={`${portalInsetClass} p-4`}>
-                    <p className="font-medium text-white">{overall?.label ?? "Awaiting interpretation"}</p>
-                    <p className="mt-1 text-sm text-white/60">
-                      {overall?.summary ?? "Upload and process a structured panel to unlock deterministic risk summaries."}
-                    </p>
-                  </div>
-                  <div className={`${portalInsetClass} p-4`}>
-                    <p className="font-medium text-white">Latest structured panel</p>
-                    <p className="mt-1 text-sm text-white/60">
-                      {latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting panel"}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className={portalPanelClass}>
-                <CardHeader>
-                  <CardTitle className="text-white">Missing signals</CardTitle>
-                  <CardDescription className="text-white/60">
-                    Data that would improve confidence on the next pass
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className={`${portalInsetClass} p-3 text-sm text-white/77`}>
-                    Trend data across multiple structured panels would strengthen confidence.
-                  </div>
-                  <div className={`${portalInsetClass} p-3 text-sm text-white/77`}>
-                    Clinical review is still required before turning any pattern into a diagnosis or treatment plan.
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <Card className={`${portalPanelClass} p-2`}>
+            <CardHeader>
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="h-4.5 w-4.5 text-[#b4abff]" />
+                <CardTitle className="text-base text-white">Missing signals</CardTitle>
+              </div>
+              <CardDescription className="text-xs text-[#92a8c7]">
+                Data that would improve confidence on the next pass
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4 text-xs sm:text-sm text-[#92a8c7]">
+                Trend data across multiple structured panels would strengthen confidence.
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4 text-xs sm:text-sm text-[#92a8c7]">
+                Clinical review is still required before turning any pattern into a diagnosis or treatment plan.
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </PatientPortalPage>

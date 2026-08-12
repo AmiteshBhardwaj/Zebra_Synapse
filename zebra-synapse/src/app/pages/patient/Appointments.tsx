@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router";
 import {
   AlertTriangle,
   Calendar,
@@ -88,6 +89,7 @@ function formatTimeLabel(value: string) {
 }
 
 export default function Appointments() {
+  const navigate = useNavigate();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -647,6 +649,15 @@ export default function Appointments() {
                     </div>
                   </div>
                   <div className="mt-5 flex flex-wrap items-center gap-3">
+                    {appointment.type === "video" && (
+                      <Button
+                        className="border-transparent bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 text-slate-950 font-semibold shadow-[0_0_20px_rgba(56,189,248,0.35)] hover:shadow-[0_0_30px_rgba(56,189,248,0.6)] text-xs rounded-xl h-10 px-4 transition-all cursor-pointer active:scale-[0.98]"
+                        onClick={() => navigate(`/patient/teleconsult?id=${appointment.id}&doctor=${encodeURIComponent(appointment.doctor)}&specialty=${encodeURIComponent(appointment.specialty)}`)}
+                      >
+                        <Video className="mr-1.5 h-4 w-4" />
+                        Join Video Call
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}

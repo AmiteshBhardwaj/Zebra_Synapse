@@ -19,6 +19,9 @@ import PatientDetail from "./pages/doctor/PatientDetail";
 import RequirePatientPortal from "./layouts/RequirePatientPortal";
 import RequireDoctorPortal from "./layouts/RequireDoctorPortal";
 
+import PatientTeleconsult from "./pages/patient/PatientTeleconsult";
+import DoctorTeleconsult from "./pages/doctor/DoctorTeleconsult";
+
 export const router = createBrowserRouter([
   {
     path: "/",
@@ -51,6 +54,7 @@ export const router = createBrowserRouter([
       { index: true, Component: PatientHome },
       { path: "medical-records", Component: MedicalRecords },
       { path: "appointments", Component: Appointments },
+      { path: "teleconsult", Component: PatientTeleconsult },
       { path: "prescription", Component: Prescription },
       { path: "disease-prediction", Component: DiseasePrediction },
       { path: "nutrition", Component: Nutrition },
@@ -64,6 +68,7 @@ export const router = createBrowserRouter([
     Component: RequireDoctorPortal,
     children: [
       { index: true, Component: PatientsList },
+      { path: "teleconsult", Component: DoctorTeleconsult },
       { path: "settings", Component: ProfileSettings },
       { path: "patient/:patientId", Component: PatientDetail },
     ],
