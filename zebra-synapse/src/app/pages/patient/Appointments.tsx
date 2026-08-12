@@ -57,9 +57,11 @@ type Appointment = {
 };
 
 const doctorOptions = [
-  { value: "sarah", label: "Dr. Sarah Johnson - Cardiologist", doctor: "Dr. Sarah Johnson", specialty: "Cardiologist" },
-  { value: "michael", label: "Dr. Michael Chen - Endocrinologist", doctor: "Dr. Michael Chen", specialty: "Endocrinologist" },
-  { value: "emily", label: "Dr. Emily Williams - General Physician", doctor: "Dr. Emily Williams", specialty: "General Physician" },
+  { value: "amelia-hart", label: "Dr. Amelia Hart - Internal Medicine & Primary Care", doctor: "Dr. Amelia Hart", specialty: "Internal Medicine & Primary Care" },
+  { value: "benjamin-ortiz", label: "Dr. Benjamin Ortiz - Endocrinology", doctor: "Dr. Benjamin Ortiz", specialty: "Endocrinologist" },
+  { value: "chloe-menon", label: "Dr. Chloe Menon - Cardiology", doctor: "Dr. Chloe Menon", specialty: "Cardiologist" },
+  { value: "gabriel-chen", label: "Dr. Gabriel Chen - Nephrology & Renal Care", doctor: "Dr. Gabriel Chen", specialty: "Nephrologist" },
+  { value: "evelyn-brooks", label: "Dr. Evelyn Brooks - General Practice", doctor: "Dr. Evelyn Brooks", specialty: "General Physician" },
 ];
 
 function formatDisplayDate(date: string) {
@@ -108,22 +110,22 @@ export default function Appointments() {
   const [isCancelling, setIsCancelling] = useState(false);
 
   // Tab state: "upcoming" selected by default
-  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
+  const [activeTab, setActiveTab] = useState<"upcoming" | "teleconsultations" | "past">("upcoming");
 
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([
     {
       id: 1,
-      doctor: "Dr. Sarah Johnson",
-      specialty: "Cardiologist",
+      doctor: "Dr. Amelia Hart",
+      specialty: "Internal Medicine & Primary Care",
       date: "2026-08-25",
       time: "10:00 AM",
       type: "in-person",
-      location: "Heart & Vascular Center, Suite 402",
+      location: "Zebra Synapse Health Center, Suite 402",
       status: "Confirmed",
     },
     {
       id: 2,
-      doctor: "Dr. Michael Chen",
+      doctor: "Dr. Benjamin Ortiz",
       specialty: "Endocrinologist",
       date: "2026-09-02",
       time: "2:30 PM",
@@ -132,7 +134,7 @@ export default function Appointments() {
     },
     {
       id: 3,
-      doctor: "Dr. Sarah Johnson",
+      doctor: "Dr. Chloe Menon",
       specialty: "Cardiologist",
       date: "2026-04-15",
       time: "10:00 AM",
@@ -143,17 +145,17 @@ export default function Appointments() {
     },
     {
       id: 4,
-      doctor: "Dr. Michael Chen",
-      specialty: "Endocrinologist",
+      doctor: "Dr. Gabriel Chen",
+      specialty: "Nephrologist",
       date: "2026-04-22",
       time: "2:30 PM",
       type: "video",
       status: "Completed",
-      notes: "Routine endocrine assessment. HbA1c target reached. Adjusted dietary recommendations.",
+      notes: "Renal panel follow-up assessment. eGFR stable. Adjusted fluid intake and dietary recommendations.",
     },
     {
       id: 5,
-      doctor: "Dr. Emily Williams",
+      doctor: "Dr. Evelyn Brooks",
       specialty: "General Physician",
       date: "2026-03-10",
       time: "11:15 AM",
@@ -177,8 +179,9 @@ export default function Appointments() {
     }
   };
 
-  const upcomingAppointments = allAppointments.filter((apt) => !isPastAppointment(apt));
-  const pastAppointments = allAppointments.filter((apt) => isPastAppointment(apt));
+  const upcomingAppointments = allAppointments.filter((apt) => !isPastAppointment(apt) && apt.type === "in-person");
+  const teleconsultAppointments = allAppointments.filter((apt) => apt.type === "video");
+  const pastAppointments = allAppointments.filter((apt) => isPastAppointment(apt) && apt.type === "in-person");
 
   const resetScheduleForm = () => {
     setSelectedDoctor("");
@@ -210,8 +213,8 @@ export default function Appointments() {
       setIsSavingSchedule(false);
       setScheduleOpen(false);
       resetScheduleForm();
-      // Ensure we switch to upcoming view to show the newly scheduled appointment
-      setActiveTab("upcoming");
+      // Ensure we switch to appropriate view to show the newly scheduled appointment
+      setActiveTab(selectedType === "video" ? "teleconsultations" : "upcoming");
     }, 500);
   };
 
@@ -556,8 +559,8 @@ export default function Appointments() {
         </DialogContent>
       </Dialog>
 
-      {/* Side-by-Side Tab Buttons: Upcoming vs Past */}
-      <div className="flex items-center gap-3 mb-6">
+      {/* Side-by-Side Tab Buttons: Upcoming vs Teleconsultations vs Past */}
+      <div className="flex flex-wrap items-center gap-3 mb-6">
         <button
           type="button"
           onClick={() => setActiveTab("upcoming")}
@@ -568,13 +571,33 @@ export default function Appointments() {
           }`}
         >
           <Calendar className="h-4 w-4" />
-          <span>Upcoming</span>
+          <span>Upcoming Visits</span>
           <span
             className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
               activeTab === "upcoming" ? "bg-white/20 text-white" : "bg-white/10 text-white/70"
             }`}
           >
             {upcomingAppointments.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("teleconsultations")}
+          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+            activeTab === "teleconsultations"
+              ? "bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white shadow-[0_8px_20px_rgba(6,182,212,0.35)]"
+              : "border border-white/10 bg-white/[0.04] text-[#92a8c7] hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          <Video className="h-4 w-4 text-cyan-400" />
+          <span>Teleconsultations</span>
+          <span
+            className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+              activeTab === "teleconsultations" ? "bg-white/20 text-white" : "bg-cyan-500/20 text-cyan-300"
+            }`}
+          >
+            {teleconsultAppointments.length}
           </span>
         </button>
 
@@ -588,7 +611,7 @@ export default function Appointments() {
           }`}
         >
           <Clock className="h-4 w-4" />
-          <span>Past</span>
+          <span>Past Visits</span>
           <span
             className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
               activeTab === "past" ? "bg-white/20 text-white" : "bg-white/10 text-white/70"
@@ -600,7 +623,7 @@ export default function Appointments() {
       </div>
 
       {/* Tab View Display */}
-      {activeTab === "upcoming" ? (
+      {activeTab === "upcoming" && (
         <section className="space-y-4 max-w-4xl">
           <div className="space-y-4">
             {upcomingAppointments.length > 0 ? (
@@ -633,31 +656,13 @@ export default function Appointments() {
                           <span>{appointment.time}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {appointment.type === "video" ? (
-                            <>
-                              <Video className="h-4 w-4 text-[#8f83ff]" />
-                              <span>Video Consultation</span>
-                            </>
-                          ) : (
-                            <>
-                              <MapPin className="h-4 w-4 text-[#8f83ff]" />
-                              <span>{appointment.location}</span>
-                            </>
-                          )}
+                          <MapPin className="h-4 w-4 text-[#8f83ff]" />
+                          <span>{appointment.location || "Clinic Center"}</span>
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="mt-5 flex flex-wrap items-center gap-3">
-                    {appointment.type === "video" && (
-                      <Button
-                        className="border-transparent bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 text-slate-950 font-semibold shadow-[0_0_20px_rgba(56,189,248,0.35)] hover:shadow-[0_0_30px_rgba(56,189,248,0.6)] text-xs rounded-xl h-10 px-4 transition-all cursor-pointer active:scale-[0.98]"
-                        onClick={() => navigate(`/patient/teleconsult?id=${appointment.id}&doctor=${encodeURIComponent(appointment.doctor)}&specialty=${encodeURIComponent(appointment.specialty)}`)}
-                      >
-                        <Video className="mr-1.5 h-4 w-4" />
-                        Join Video Call
-                      </Button>
-                    )}
                     <Button
                       variant="outline"
                       className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}
@@ -678,12 +683,109 @@ export default function Appointments() {
               ))
             ) : (
               <div className={`${portalPanelClass} p-8 text-center text-sm text-[#92a8c7]`}>
-                No upcoming appointments scheduled. Click &quot;Schedule Appointment&quot; above to book your next visit.
+                No upcoming in-person visits scheduled. Click &quot;Schedule Appointment&quot; above to book your next visit.
               </div>
             )}
           </div>
         </section>
-      ) : (
+      )}
+
+      {activeTab === "teleconsultations" && (
+        <section className="space-y-4 max-w-4xl">
+          <div className="space-y-4">
+            {teleconsultAppointments.length > 0 ? (
+              teleconsultAppointments.map((appointment) => (
+                <article
+                  key={appointment.id}
+                  className="rounded-[1.5rem] border border-cyan-500/20 bg-gradient-to-b from-[#0f1926]/90 via-[#0e1722]/80 to-[#0a111a]/95 p-6 text-white shadow-[0_22px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-[0_28px_80px_rgba(6,182,212,0.15)]"
+                >
+                  <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 via-sky-500 to-blue-600 shadow-[0_12px_32px_rgba(6,182,212,0.35)]">
+                        <Video className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-xl font-semibold text-white">{appointment.doctor}</h3>
+                          <StatusPill status={appointment.status} />
+                        </div>
+                        <p className="mt-1 text-sm text-cyan-200/70">{appointment.specialty}</p>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-cyan-500/20 bg-cyan-950/25 backdrop-blur-md">
+                      <div className="grid gap-3 px-4 py-3 text-sm text-[#E5E7EB] sm:grid-cols-3">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-cyan-400" />
+                          <span>{formatDisplayDate(appointment.date)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-cyan-400" />
+                          <span>{appointment.time}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Video className="h-4 w-4 text-cyan-400" />
+                          <span className="text-cyan-300 font-semibold">Virtual Care</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                    {appointment.status !== "Cancelled" && (
+                      <Button
+                        className="border-transparent bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 text-slate-950 font-bold shadow-[0_0_22px_rgba(56,189,248,0.4)] hover:shadow-[0_0_32px_rgba(56,189,248,0.65)] hover:scale-[1.02] text-xs rounded-xl h-10 px-5 transition-all cursor-pointer active:scale-[0.98]"
+                        onClick={() =>
+                          navigate(
+                            `/patient/teleconsult?id=${appointment.id}&doctor=${encodeURIComponent(
+                              appointment.doctor
+                            )}&specialty=${encodeURIComponent(appointment.specialty)}`
+                          )
+                        }
+                      >
+                        <Video className="mr-1.5 h-4 w-4" />
+                        Join Video Call
+                      </Button>
+                    )}
+                    {appointment.status === "Completed" && (
+                      <Button
+                        variant="outline"
+                        className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                        onClick={() => handleViewNotes(appointment)}
+                      >
+                        View Notes
+                      </Button>
+                    )}
+                    {appointment.status !== "Completed" && appointment.status !== "Cancelled" && (
+                      <>
+                        <Button
+                          variant="outline"
+                          className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                          onClick={() => handleReschedule(appointment)}
+                        >
+                          Reschedule
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="border-rose-500/30 bg-rose-950/20 text-rose-300 hover:bg-rose-950/50 hover:border-rose-500/50 text-xs font-semibold rounded-xl h-10 px-4 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                          onClick={() => handleCancelClick(appointment)}
+                        >
+                          <XCircle className="mr-1.5 h-4 w-4 text-rose-400" />
+                          Cancel Appointment
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className={`${portalPanelClass} p-8 text-center text-sm text-[#92a8c7]`}>
+                No teleconsultations scheduled. Click &quot;Schedule Appointment&quot; above and select &quot;Video Consultation&quot; to book a virtual visit.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === "past" && (
         <section className="space-y-4 max-w-4xl">
           <div className="space-y-4">
             {pastAppointments.length > 0 ? (
@@ -714,17 +816,8 @@ export default function Appointments() {
                       <span>{appointment.time}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      {appointment.type === "video" ? (
-                        <>
-                          <Video className="h-4 w-4 text-[#8f83ff]" />
-                          <span>Video Consultation</span>
-                        </>
-                      ) : (
-                        <>
-                          <MapPin className="h-4 w-4 text-[#8f83ff]" />
-                          <span>In-Person</span>
-                        </>
-                      )}
+                      <MapPin className="h-4 w-4 text-[#8f83ff]" />
+                      <span>{appointment.location || "In-Person"}</span>
                     </div>
                   </div>
                   <Button
@@ -738,7 +831,7 @@ export default function Appointments() {
               ))
             ) : (
               <div className={`${portalPanelClass} p-8 text-center text-sm text-[#92a8c7]`}>
-                No past appointments on record.
+                No past in-person visits on record.
               </div>
             )}
           </div>

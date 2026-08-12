@@ -17,8 +17,8 @@ export default function PatientTeleconsult() {
   const navigate = useNavigate();
   
   const consultationId = searchParams.get("id") || "demo-consult-123";
-  const doctorName = searchParams.get("doctor") || "Dr. Sarah Johnson";
-  const specialty = searchParams.get("specialty") || "Cardiologist";
+  const doctorName = searchParams.get("doctor") || "Dr. Amelia Hart";
+  const specialty = searchParams.get("specialty") || "Internal Medicine & Primary Care";
 
   const [callActive, setCallActive] = useState(true);
 
