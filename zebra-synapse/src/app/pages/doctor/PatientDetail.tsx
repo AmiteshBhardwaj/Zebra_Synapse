@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -78,6 +79,7 @@ import {
   getNutritionPlans,
   getOverallStatus,
   getWellnessTips,
+  synthesizeMultiPanelData,
 } from "../../../lib/labInsights";
 import { toast } from "sonner";
 import {
@@ -616,10 +618,12 @@ export default function PatientDetail() {
     glucose: rel?.glucose,
   };
   const latestLabPanel = getLatestLabPanel(labPanels);
-  const latestLabStatus = latestLabPanel ? getOverallStatus(latestLabPanel) : null;
-  const diseasePredictions = latestLabPanel ? getDiseasePredictions(latestLabPanel) : [];
-  const nutritionPlans = latestLabPanel ? getNutritionPlans(latestLabPanel) : [];
-  const wellnessTips = latestLabPanel ? getWellnessTips(latestLabPanel) : [];
+  const synthesizedLab = useMemo(() => synthesizeMultiPanelData(labPanels), [labPanels]);
+  const activeDoctorPanel = labPanels.length > 0 ? synthesizedLab.panel : latestLabPanel;
+  const latestLabStatus = activeDoctorPanel ? getOverallStatus(activeDoctorPanel, synthesizedLab.metadata) : null;
+  const diseasePredictions = activeDoctorPanel ? getDiseasePredictions(activeDoctorPanel, synthesizedLab.trends) : [];
+  const nutritionPlans = activeDoctorPanel ? getNutritionPlans(activeDoctorPanel, synthesizedLab.trends) : [];
+  const wellnessTips = activeDoctorPanel ? getWellnessTips(activeDoctorPanel, synthesizedLab.trends) : [];
   const relationshipInsights = buildRelationshipInsights({
     glucose: rel?.glucose,
     bloodPressureSystolic: rel?.blood_pressure_systolic,

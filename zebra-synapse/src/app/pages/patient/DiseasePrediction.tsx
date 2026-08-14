@@ -1,4 +1,4 @@
-import { Info, ShieldAlert, TrendingUp, HelpCircle, AlertTriangle } from "lucide-react";
+import { Info, ShieldAlert, TrendingUp, AlertTriangle } from "lucide-react";
 import { useMemo } from "react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
@@ -9,6 +9,7 @@ import {
 } from "../../../lib/labInsights";
 import { formatLabDate } from "../../../lib/labPanels";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
+import ReportScopeSelector from "../../components/patient/ReportScopeSelector";
 import {
   PatientPortalPage,
   portalPanelClass,
@@ -17,16 +18,24 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Badge } from "../../components/ui/badge";
 
 export default function DiseasePrediction() {
-  const { hasLabReports, loading } = usePatientLabReports();
+  const { hasLabReports, uploads, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
-  const { activePanel } = useActiveReport(panels);
+  const {
+    activePanel,
+    biomarkerTrends,
+    multiPanelMeta,
+    isAllReports,
+    selectedReportId,
+    setSelectedReportId,
+  } = useActiveReport(panels);
+
   const predictions = useMemo(
-    () => (activePanel ? getDiseasePredictions(activePanel) : []),
-    [activePanel],
+    () => (activePanel ? getDiseasePredictions(activePanel, biomarkerTrends) : []),
+    [activePanel, biomarkerTrends],
   );
   const overall = useMemo(
-    () => (activePanel ? getOverallStatus(activePanel) : null),
-    [activePanel],
+    () => (activePanel ? getOverallStatus(activePanel, multiPanelMeta) : null),
+    [activePanel, multiPanelMeta],
   );
 
   if (loading || panelsLoading) {
@@ -62,7 +71,9 @@ export default function DiseasePrediction() {
               </span>
             </div>
             <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
-              Rule-based risk assessments grounded in your latest structured lab panel.
+              {isAllReports
+                ? `Rule-based risk assessments synthesizing all ${panels.length} uploaded lab reports.`
+                : `Rule-based risk assessments grounded in report from ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
             </p>
           </div>
         </div>
@@ -74,6 +85,20 @@ export default function DiseasePrediction() {
           </span>
         </div>
       </div>
+
+      {/* Scope Selector Control */}
+      {hasPanels && (
+        <div className="mb-6 max-w-4xl">
+          <ReportScopeSelector
+            panels={panels}
+            uploads={uploads}
+            selectedReportId={selectedReportId}
+            onSelectReportId={setSelectedReportId}
+            multiPanelMeta={multiPanelMeta}
+            biomarkerTrends={biomarkerTrends}
+          />
+        </div>
+      )}
 
       {!hasPanels || !activePanel ? (
         <div className="space-y-6 max-w-4xl">
@@ -103,12 +128,8 @@ export default function DiseasePrediction() {
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                 <p className="text-xs sm:text-sm font-semibold text-white">Awaiting interpretation</p>
                 <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
-                  Upload and process a structured panel to unlock deterministic risk summaries.
+                  Upload and process structured lab reports to unlock deterministic risk summaries.
                 </p>
-              </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
-                <p className="text-xs sm:text-sm font-semibold text-white">Latest structured panel</p>
-                <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">Awaiting panel</p>
               </div>
             </CardContent>
           </Card>
@@ -124,7 +145,7 @@ export default function DiseasePrediction() {
                 <div>
                   <p className="text-xs sm:text-sm font-semibold text-white">Decision support only</p>
                   <p className="mt-0.5 text-xs text-[#b4c9e8] leading-relaxed">
-                    These rule-based scores highlight biomarker patterns. They do not diagnose disease and should always be reviewed with your clinician.
+                    These rule-based scores highlight biomarker patterns across your uploaded medical records. They do not diagnose disease and should always be reviewed with your clinician.
                   </p>
                 </div>
               </div>
@@ -153,7 +174,9 @@ export default function DiseasePrediction() {
                     </Badge>
                   </div>
                   <CardDescription className="text-xs text-[#92a8c7]">
-                    Interpreted from your latest structured biomarker panel
+                    {isAllReports
+                      ? `Evaluated across all ${multiPanelMeta.totalReports} uploaded lab reports with trajectory tracking`
+                      : `Interpreted from structured panel dated ${formatLabDate(activePanel.recorded_at)}`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -171,9 +194,33 @@ export default function DiseasePrediction() {
                         {prediction.triggeredBiomarkers.map((bm) => (
                           <div
                             key={bm.key}
-                            className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5 text-xs"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5 text-xs"
                           >
-                            <span className="font-medium text-slate-200">{bm.label}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-slate-200">{bm.label}</span>
+                              {bm.trend && (bm.trend.readingsCount ?? 0) > 1 && (
+                                <span
+                                  className={`rounded px-1.5 py-0.5 text-[10px] font-medium inline-flex items-center gap-1 ${
+                                    bm.trend.direction === "worsening"
+                                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                                      : bm.trend.direction === "improving"
+                                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                                        : "bg-slate-500/20 text-slate-300 border border-slate-500/30"
+                                  }`}
+                                  title={
+                                    bm.trend.previousValue != null
+                                      ? `Prior: ${bm.trend.previousValue} ${bm.unit}`
+                                      : undefined
+                                  }
+                                >
+                                  {bm.trend.direction === "worsening" && "📈"}
+                                  {bm.trend.direction === "improving" && "📉"}
+                                  {bm.trend.direction === "stable" && "➡️"}
+                                  {bm.trend.deltaText}
+                                </span>
+                              )}
+                            </div>
+
                             <div className="flex items-center gap-1.5">
                               <span className="font-semibold text-white">
                                 {bm.value} {bm.unit}
@@ -217,7 +264,7 @@ export default function DiseasePrediction() {
                 <CardTitle className="text-base text-white">Model context</CardTitle>
               </div>
               <CardDescription className="text-xs text-[#92a8c7]">
-                Coverage and limitations for the current rule-based snapshot
+                Coverage and synthesis scope for the current analysis pass
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -228,9 +275,17 @@ export default function DiseasePrediction() {
                 </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Active structured panel</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Analysis Scope</p>
                 <p className="mt-1 text-xs sm:text-sm text-white">
-                  {activePanel ? formatLabDate(activePanel.recorded_at) : "Awaiting panel"}
+                  {isAllReports
+                    ? `Comprehensive: ${multiPanelMeta.totalReports} uploaded lab reports (${multiPanelMeta.dateRange.spanText})`
+                    : `Single Report: ${formatLabDate(activePanel.recorded_at)}`}
+                </p>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Biomarker Coverage</p>
+                <p className="mt-1 text-xs sm:text-sm text-white">
+                  {multiPanelMeta.uniqueBiomarkersCount} distinct biomarkers synthesized across all uploaded files
                 </p>
               </div>
             </CardContent>
@@ -240,18 +295,20 @@ export default function DiseasePrediction() {
             <CardHeader>
               <div className="flex items-center gap-2.5">
                 <AlertTriangle className="h-4.5 w-4.5 text-[#b4abff]" />
-                <CardTitle className="text-base text-white">Missing signals</CardTitle>
+                <CardTitle className="text-base text-white">Longitudinal Confidence</CardTitle>
               </div>
               <CardDescription className="text-xs text-[#92a8c7]">
-                Data that would improve confidence on the next pass
+                How multi-report historical tracking impacts precision
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4 text-xs sm:text-sm text-[#92a8c7]">
-                Trend data across multiple structured panels would strengthen confidence.
+                {multiPanelMeta.totalReports > 1
+                  ? `Synthesizing across ${multiPanelMeta.totalReports} uploaded lab reports provides increased diagnostic confidence and allows early detection of worsening or improving trajectories.`
+                  : "Upload additional lab reports over time to unlock automated trajectory detection and longitudinal trend confidence."}
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4 text-xs sm:text-sm text-[#92a8c7]">
-                Clinical review is still required before turning any pattern into a diagnosis or treatment plan.
+                Clinical review is still required before turning any pattern into a formal diagnosis or changing prescription regimens.
               </div>
             </CardContent>
           </Card>

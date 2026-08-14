@@ -1,12 +1,13 @@
 import { ShieldCheck, Sparkles, HelpCircle, CheckCircle2 } from "lucide-react";
+import { useMemo } from "react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { formatLabDate } from "../../../lib/labPanels";
 import { getWellnessTips } from "../../../lib/labInsights";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
+import ReportScopeSelector from "../../components/patient/ReportScopeSelector";
 import {
   PatientPortalPage,
-  portalInsetClass,
   portalPanelClass,
 } from "../../components/patient/PortalTheme";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -14,10 +15,21 @@ import { Badge } from "../../components/ui/badge";
 import { useActiveReport } from "../../../hooks/useActiveReport";
 
 export default function WellnessTips() {
-  const { hasLabReports, loading } = usePatientLabReports();
+  const { hasLabReports, uploads, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
-  const { activePanel } = useActiveReport(panels);
-  const tips = activePanel ? getWellnessTips(activePanel) : [];
+  const {
+    activePanel,
+    biomarkerTrends,
+    multiPanelMeta,
+    isAllReports,
+    selectedReportId,
+    setSelectedReportId,
+  } = useActiveReport(panels);
+
+  const tips = useMemo(
+    () => (activePanel ? getWellnessTips(activePanel, biomarkerTrends) : []),
+    [activePanel, biomarkerTrends],
+  );
 
   if (loading || panelsLoading) {
     return (
@@ -52,7 +64,9 @@ export default function WellnessTips() {
               </span>
             </div>
             <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
-              Personalized recovery, movement, and habit suggestions generated from your latest structured panel.
+              {isAllReports
+                ? `Personalized recovery, movement, and habit suggestions synthesizing all ${panels.length} uploaded lab reports.`
+                : `Personalized recovery, movement, and habit suggestions generated from report dated ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
             </p>
           </div>
         </div>
@@ -64,6 +78,20 @@ export default function WellnessTips() {
           </span>
         </div>
       </div>
+
+      {/* Scope Selector Control */}
+      {hasPanels && (
+        <div className="mb-6 max-w-4xl">
+          <ReportScopeSelector
+            panels={panels}
+            uploads={uploads}
+            selectedReportId={selectedReportId}
+            onSelectReportId={setSelectedReportId}
+            multiPanelMeta={multiPanelMeta}
+            biomarkerTrends={biomarkerTrends}
+          />
+        </div>
+      )}
 
       {!hasPanels || !activePanel ? (
         <div className="space-y-6 max-w-4xl">
@@ -87,7 +115,7 @@ export default function WellnessTips() {
                 <CardTitle className="text-base text-white">What unlocks this section</CardTitle>
               </div>
               <CardDescription className="text-xs text-[#92a8c7]">
-                This view turns on when structured biomarkers are available from your latest lab panels.
+                This view turns on when structured biomarkers are available from your lab panels.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -138,7 +166,9 @@ export default function WellnessTips() {
                 <CardTitle className="text-base text-white">Personalized tips</CardTitle>
               </div>
               <CardDescription className="text-xs text-[#92a8c7]">
-                These suggestions stay tied to the markers currently most worth watching.
+                {isAllReports
+                  ? `These suggestions dynamically adapt to multi-report shifts across all ${multiPanelMeta.totalReports} uploaded lab reports.`
+                  : "These suggestions stay tied to the markers currently most worth watching."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -172,13 +202,15 @@ export default function WellnessTips() {
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Current source</p>
                 <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
-                  Your active structured panel from {activePanel ? formatLabDate(activePanel.recorded_at) : "selected report"}.
+                  {isAllReports
+                    ? `Comprehensive Synthesis across ${multiPanelMeta.totalReports} uploaded lab reports (${multiPanelMeta.dateRange.spanText}) covering ${multiPanelMeta.uniqueBiomarkersCount} biomarkers.`
+                    : `Your active structured panel from ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected report"}.`}
                 </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Best practice</p>
                 <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
-                  Apply one or two suggestions at a time and compare how your next panel trends.
+                  Apply one or two suggestions at a time and compare how your next panel trends across your uploaded medical history.
                 </p>
               </div>
             </CardContent>

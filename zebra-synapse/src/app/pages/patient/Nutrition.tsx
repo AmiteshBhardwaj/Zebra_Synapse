@@ -1,10 +1,11 @@
 import { Apple, Leaf, ShieldCheck, Utensils, Info, Tag } from "lucide-react";
+import { useMemo } from "react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
+import ReportScopeSelector from "../../components/patient/ReportScopeSelector";
 import {
   PatientPortalPage,
-  portalInsetClass,
   portalPanelClass,
 } from "../../components/patient/PortalTheme";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -14,10 +15,21 @@ import { useActiveReport } from "../../../hooks/useActiveReport";
 import { getNutritionPlans } from "../../../lib/labInsights";
 
 export default function Nutrition() {
-  const { hasLabReports, loading } = usePatientLabReports();
+  const { hasLabReports, uploads, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
-  const { activePanel } = useActiveReport(panels);
-  const plans = activePanel ? getNutritionPlans(activePanel) : [];
+  const {
+    activePanel,
+    biomarkerTrends,
+    multiPanelMeta,
+    isAllReports,
+    selectedReportId,
+    setSelectedReportId,
+  } = useActiveReport(panels);
+
+  const plans = useMemo(
+    () => (activePanel ? getNutritionPlans(activePanel, biomarkerTrends) : []),
+    [activePanel, biomarkerTrends],
+  );
 
   if (loading || panelsLoading) {
     return (
@@ -52,7 +64,9 @@ export default function Nutrition() {
               </span>
             </div>
             <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
-              Personalized dietary guidance, macro recommendations, and meal plans driven by your lab results.
+              {isAllReports
+                ? `Personalized dietary guidance and macro plans synthesizing all ${panels.length} uploaded lab reports.`
+                : `Personalized dietary guidance and macro plans driven by report dated ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
             </p>
           </div>
         </div>
@@ -64,6 +78,20 @@ export default function Nutrition() {
           </span>
         </div>
       </div>
+
+      {/* Scope Selector Control */}
+      {hasPanels && (
+        <div className="mb-6 max-w-4xl">
+          <ReportScopeSelector
+            panels={panels}
+            uploads={uploads}
+            selectedReportId={selectedReportId}
+            onSelectReportId={setSelectedReportId}
+            multiPanelMeta={multiPanelMeta}
+            biomarkerTrends={biomarkerTrends}
+          />
+        </div>
+      )}
 
       {!hasPanels || !activePanel ? (
         <div className="space-y-6 max-w-4xl">
@@ -87,7 +115,7 @@ export default function Nutrition() {
                 <CardTitle className="text-base text-white">What unlocks this section</CardTitle>
               </div>
               <CardDescription className="text-xs text-[#92a8c7]">
-                This view becomes active once structured biomarkers are available from your latest uploads.
+                This view becomes active once structured biomarkers are available from your uploads.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -162,22 +190,34 @@ export default function Nutrition() {
                 <CardTitle className="text-base text-white">Plan context</CardTitle>
               </div>
               <CardDescription className="text-xs text-[#92a8c7]">
-                These recommendations are based on your latest structured lab panel.
+                {isAllReports
+                  ? `These recommendations are synthesized across all ${multiPanelMeta.totalReports} uploaded lab reports.`
+                  : "These recommendations are based on your selected structured lab panel."}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Panel Date</p>
-                <p className="mt-1 text-xs sm:text-sm font-medium text-white">{activePanel ? formatLabDate(activePanel.recorded_at) : "N/A"}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Analysis Scope</p>
+                <p className="mt-1 text-xs sm:text-sm font-medium text-white">
+                  {isAllReports
+                    ? `Comprehensive Synthesis (${multiPanelMeta.dateRange.spanText})`
+                    : `Single Panel: ${activePanel ? formatLabDate(activePanel.recorded_at) : "N/A"}`}
+                </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Structured Source</p>
-                <p className="mt-1 text-xs sm:text-sm font-medium text-white">Latest uploaded lab panel</p>
+                <p className="mt-1 text-xs sm:text-sm font-medium text-white">
+                  {isAllReports
+                    ? `${multiPanelMeta.totalReports} uploaded reports (${multiPanelMeta.uniqueBiomarkersCount} biomarkers synthesized)`
+                    : "Individual uploaded lab panel"}
+                </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Focus</p>
                 <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
-                  Nutrition actions adapt to glucose, lipid, and hemoglobin trends when available.
+                  {isAllReports && multiPanelMeta.totalReports > 1
+                    ? "Nutrition actions dynamically adapt to longitudinal trends across multiple reports for glucose, lipids, liver enzymes, and hemoglobin."
+                    : "Nutrition actions adapt to glucose, lipid, and hemoglobin trends when available."}
                 </p>
               </div>
             </CardContent>
