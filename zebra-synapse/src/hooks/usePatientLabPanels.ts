@@ -25,7 +25,6 @@ export function usePatientLabPanels() {
       setLoading(false);
       return;
     }
-    setLoading(true);
     const { data, error } = await sb
       .from("lab_panels")
       .select(LAB_PANEL_SELECT)

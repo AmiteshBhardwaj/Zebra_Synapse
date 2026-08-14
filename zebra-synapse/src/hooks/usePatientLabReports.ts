@@ -45,7 +45,6 @@ export function usePatientLabReports() {
       setLoading(false);
       return;
     }
-    setLoading(true);
     const { data, error } = await sb
       .from("lab_report_uploads")
       .select(LAB_REPORT_UPLOAD_SELECT)
