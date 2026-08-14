@@ -508,7 +508,8 @@ export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
   }
 
   // Renal / Kidney Function
-  if (panel.creatinine != null && panel.creatinine > 1.3) {
+  const creatinineVal = panel.creatinine ?? panel.biomarkers?.creatinine;
+  if (creatinineVal != null && creatinineVal > 1.3) {
     list.push({
       title: "Kidney function follow-up",
       level: "moderate",
@@ -518,12 +519,165 @@ export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
         {
           key: "creatinine",
           label: "Creatinine",
-          value: panel.creatinine,
+          value: creatinineVal,
           unit: "mg/dL",
           status: "high",
           reference: "0.6-1.3",
         },
       ],
+    });
+  }
+
+  // Hepatic / Liver Function
+  const liverTriggers: TriggeredBiomarker[] = [];
+  const biliVal = panel.biomarkers?.total_bilirubin;
+  const sgptVal = panel.biomarkers?.sgpt;
+  const sgotVal = panel.biomarkers?.sgot;
+  const albVal = panel.biomarkers?.albumin;
+  const tpVal = panel.biomarkers?.total_protein;
+
+  if (biliVal != null && biliVal > 1.2) {
+    liverTriggers.push({
+      key: "total_bilirubin",
+      label: "Total Bilirubin",
+      value: biliVal,
+      unit: "mg/dL",
+      status: biliVal >= 3.0 ? "high" : "borderline",
+      reference: "0.2-1.3",
+    });
+  }
+  if (sgptVal != null && sgptVal > 35) {
+    liverTriggers.push({
+      key: "sgpt",
+      label: "SGPT (ALT)",
+      value: sgptVal,
+      unit: "U/L",
+      status: sgptVal >= 60 ? "high" : "borderline",
+      reference: "< 35",
+    });
+  }
+  if (sgotVal != null && sgotVal > 35) {
+    liverTriggers.push({
+      key: "sgot",
+      label: "SGOT (AST)",
+      value: sgotVal,
+      unit: "U/L",
+      status: sgotVal >= 60 ? "high" : "borderline",
+      reference: "17-59",
+    });
+  }
+  if (albVal != null && albVal < 3.5) {
+    liverTriggers.push({
+      key: "albumin",
+      label: "Serum Albumin",
+      value: albVal,
+      unit: "g/dL",
+      status: albVal <= 2.5 ? "high" : "low",
+      reference: "3.5-5.0",
+    });
+  }
+  if (tpVal != null && tpVal < 6.3) {
+    liverTriggers.push({
+      key: "total_protein",
+      label: "Total Protein",
+      value: tpVal,
+      unit: "g/dL",
+      status: tpVal <= 5.0 ? "high" : "low",
+      reference: "6.3-8.2",
+    });
+  }
+
+  if (liverTriggers.length > 0) {
+    const isSevere = (biliVal != null && biliVal >= 3.0) || (albVal != null && albVal <= 2.5);
+    list.push({
+      title: "Hepatic function & liver enzyme elevation",
+      level: isSevere ? "high" : "moderate",
+      rationale: "Elevated Bilirubin/ALT or low Albumin levels indicate deranged liver function requiring clinical evaluation.",
+      nextStep: "Consult a physician or gastroenterologist to evaluate liver enzyme patterns, diet, and clinical causes.",
+      triggeredBiomarkers: liverTriggers,
+    });
+  }
+
+  // Thyroid Profile
+  const thyroidTriggers: TriggeredBiomarker[] = [];
+  const tshVal = panel.biomarkers?.tsh;
+  const t3Val = panel.biomarkers?.t3;
+  const t4Val = panel.biomarkers?.t4;
+
+  if (tshVal != null && (tshVal > 4.94 || tshVal < 0.35)) {
+    thyroidTriggers.push({
+      key: "tsh",
+      label: "TSH",
+      value: tshVal,
+      unit: "uIU/mL",
+      status: tshVal > 4.94 ? "high" : "low",
+      reference: "0.35-4.94",
+    });
+  }
+  if (t4Val != null && (t4Val < 4.87 || t4Val > 11.72)) {
+    thyroidTriggers.push({
+      key: "t4",
+      label: "T4",
+      value: t4Val,
+      unit: "ug/dL",
+      status: t4Val < 4.87 ? "low" : "high",
+      reference: "4.87-11.72",
+    });
+  }
+  if (t3Val != null && (t3Val < 0.58 || t3Val > 1.59)) {
+    thyroidTriggers.push({
+      key: "t3",
+      label: "T3",
+      value: t3Val,
+      unit: "ng/mL",
+      status: t3Val < 0.58 ? "low" : "high",
+      reference: "0.58-1.59",
+    });
+  }
+
+  if (thyroidTriggers.length > 0) {
+    list.push({
+      title: "Thyroid function & hormone variation",
+      level: "moderate",
+      rationale: "Thyroid hormone levels (T3, T4, or TSH) deviate from standard endocrine reference ranges.",
+      nextStep: "Review thyroid markers with your clinician for formal interpretation and endocrine follow-up.",
+      triggeredBiomarkers: thyroidTriggers,
+    });
+  }
+
+  // Electrolytes & Minerals
+  const mineralTriggers: TriggeredBiomarker[] = [];
+  const calciumVal = panel.biomarkers?.calcium;
+  const sodiumVal = panel.biomarkers?.sodium;
+
+  if (calciumVal != null && (calciumVal < 8.4 || calciumVal > 10.2)) {
+    mineralTriggers.push({
+      key: "calcium",
+      label: "Calcium",
+      value: calciumVal,
+      unit: "mg/dL",
+      status: calciumVal < 8.4 ? "low" : "high",
+      reference: "8.4-10.2",
+    });
+  }
+  if (sodiumVal != null && (sodiumVal < 136 || sodiumVal > 145)) {
+    mineralTriggers.push({
+      key: "sodium",
+      label: "Sodium",
+      value: sodiumVal,
+      unit: "mmol/L",
+      status: sodiumVal > 145 ? "high" : "low",
+      reference: "136-145",
+    });
+  }
+
+  if (mineralTriggers.length > 0) {
+    list.push({
+      title: "Electrolyte & mineral balance alert",
+      level: "moderate",
+      rationale: "Serum calcium or sodium levels deviate from optimal physiological reference bounds.",
+      nextStep: "Review dietary calcium, hydration, and renal/parathyroid markers with your doctor.",
+      triggeredBiomarkers: mineralTriggers,
     });
   }
 
