@@ -68,7 +68,7 @@ function buildPageLines(items: readonly unknown[]): string[] {
 
   const lines: Array<{ y: number; items: Array<{ str: string; x: number }> }> = [];
   for (const item of positionedItems) {
-    const existing = lines.find((line) => Math.abs(line.y - item.y) < 2);
+    const existing = lines.find((line) => Math.abs(line.y - item.y) < 4);
     if (existing) {
       existing.items.push({ str: item.str, x: item.x });
     } else {
@@ -133,32 +133,121 @@ function extractValue(text: string, patterns: RegExp[]): number | null {
   return null;
 }
 
+const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number }> = {
+  hemoglobin_a1c: { min: 3.0, max: 20.0 },
+  fasting_glucose: { min: 20.0, max: 800.0 },
+  total_cholesterol: { min: 40.0, max: 800.0 },
+  ldl: { min: 10.0, max: 600.0 },
+  hdl: { min: 10.0, max: 200.0 },
+  triglycerides: { min: 20.0, max: 2000.0 },
+  hemoglobin: { min: 3.0, max: 25.0 },
+  wbc: { min: 200.0, max: 100000.0 },
+  platelets: { min: 10000.0, max: 1500000.0 },
+  creatinine: { min: 0.1, max: 25.0 },
+  rbc_count: { min: 1.0, max: 10.0 },
+  hematocrit: { min: 10.0, max: 75.0 },
+  mcv: { min: 40.0, max: 140.0 },
+  mch: { min: 10.0, max: 60.0 },
+  mchc: { min: 20.0, max: 50.0 },
+  rdw_cv: { min: 5.0, max: 40.0 },
+  neutrophils_percent: { min: 0.0, max: 100.0 },
+  lymphocytes_percent: { min: 0.0, max: 100.0 },
+  eosinophils_percent: { min: 0.0, max: 100.0 },
+  monocytes_percent: { min: 0.0, max: 100.0 },
+  basophils_percent: { min: 0.0, max: 100.0 },
+  esr: { min: 0.0, max: 200.0 },
+  vldl: { min: 1.0, max: 300.0 },
+  chol_hdl_ratio: { min: 0.5, max: 30.0 },
+  ldl_hdl_ratio: { min: 0.2, max: 20.0 },
+  t3: { min: 0.1, max: 20.0 },
+  t4: { min: 0.1, max: 40.0 },
+};
+
+function sanitizeLineText(text: string): string {
+  return text
+    .replace(/\(\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?\s*(?:[\-\–\—|to]\s*\d+(?:\.\d+)?)?\s*%?\s*\)/gi, " ")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\[[^\]]*\]/g, " ")
+    .replace(/\b\d+(?:\.\d+)?\s*(?:[\-\–\—]|to)\s*\d+(?:\.\d+)?\b/gi, " ")
+    .replace(/(?:<|<=|>|>=)\s*\d+(?:\.\d+)?/g, " ")
+    .replace(/(?:ref|reference|normal|range|interval|desirable|optimal|borderline)\s*[:\-]?\s*[\d\.\s\-\<\>\=]+/gi, " ");
+}
+
 function extractValueFromLines(
   lines: string[],
   labels: RegExp[],
   units: string[],
+  biomarkerKey: string,
   exclude?: RegExp[],
 ): number | null {
-  const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
-  const unitPattern = units.filter((unit) => unit.trim().length > 0).map(escapeRegex).join("|");
-  const valuePattern = hasUnitConstraint
-    ? new RegExp(`(\\d+(?:\\.\\d+)?)(?=\\s*(?:${unitPattern})(?:\\s|$))`, "gi")
-    : /(?:^|\s)(\d+(?:\.\d+)?)(?=\s|$)/gi;
+  const bounds = BIOMARKER_SANITY_BOUNDS[biomarkerKey];
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
     if (exclude?.some((pattern) => pattern.test(line))) continue;
 
     const labelMatch = labels.find((pattern) => pattern.test(line));
     if (!labelMatch) continue;
 
+    // Multi-line window search (lines i to i+3) to catch card layouts e.g. Dr Lal PathLabs
+    const windowLines = lines.slice(i, i + 4);
+    const combinedWindowText = windowLines.join(" ");
+
+    // 1. Check for "Value : X" or "Value: X" in card layouts
+    const cardMatch = combinedWindowText.match(/Value\s*:\s*(?:>|<|=)?\s*(\d+(?:\.\d+)?)/i);
+    if (cardMatch?.[1]) {
+      let val = Number(cardMatch[1]);
+      if (Number.isFinite(val)) {
+        if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
+        if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
+        if (!bounds || (val >= bounds.min && val <= bounds.max)) {
+          return val;
+        }
+      }
+    }
+
     const startIndex = line.search(labelMatch);
     const afterLabel = startIndex >= 0 ? line.slice(startIndex) : line;
-    const resultMatch = valuePattern.exec(afterLabel);
-    valuePattern.lastIndex = 0;
 
-    if (!resultMatch?.[1]) continue;
-    const value = Number(resultMatch[1]);
-    if (Number.isFinite(value)) return value;
+    const cleanedAfterLabel = sanitizeLineText(afterLabel);
+
+    // 2. Try matching with unit constraint if units are defined
+    const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
+    if (hasUnitConstraint) {
+      const unitPatternStr = units
+        .filter((u) => u.trim().length > 0)
+        .map(escapeRegex)
+        .join("|");
+      const unitRegex = new RegExp(
+        `(\\d+(?:\\.\d+)?)\\s*(?:${unitPatternStr})`,
+        "i",
+      );
+      const matchWithUnit = cleanedAfterLabel.match(unitRegex);
+      if (matchWithUnit?.[1]) {
+        let val = Number(matchWithUnit[1]);
+        if (Number.isFinite(val)) {
+          if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
+          if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
+          if (!bounds || (val >= bounds.min && val <= bounds.max)) {
+            return val;
+          }
+        }
+      }
+    }
+
+    // 3. Fallback: inspect remaining numbers on the sanitized line
+    const matches = Array.from(cleanedAfterLabel.matchAll(/(\d+(?:\.\d+)?)/g));
+    for (const match of matches) {
+      if (!match[1]) continue;
+      let val = Number(match[1]);
+      if (Number.isFinite(val)) {
+        if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
+        if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
+        if (!bounds || (val >= bounds.min && val <= bounds.max)) {
+          return val;
+        }
+      }
+    }
   }
 
   return null;
@@ -200,15 +289,18 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
   const biomarkers: Record<string, number> = {};
   for (const definition of BIOMARKER_DEFINITIONS) {
     const extracted =
-      extractValueFromLines(lines, definition.patterns, definition.units, definition.exclude) ??
+      extractValueFromLines(lines, definition.patterns, definition.units, definition.key, definition.exclude) ??
       extractValue(
         normalized,
         definition.patterns.map(
-          (pattern) => new RegExp(`${pattern.source}\\s*[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`, pattern.flags),
+          (pattern) => new RegExp(`${pattern.source}[\\s\\S]{0,30}?[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`, pattern.flags),
         ),
       );
     if (extracted != null) {
-      biomarkers[definition.key] = extracted;
+      const bounds = BIOMARKER_SANITY_BOUNDS[definition.key];
+      if (!bounds || (extracted >= bounds.min && extracted <= bounds.max)) {
+        biomarkers[definition.key] = extracted;
+      }
     }
   }
 

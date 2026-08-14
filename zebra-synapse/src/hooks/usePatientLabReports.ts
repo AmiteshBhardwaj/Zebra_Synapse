@@ -45,7 +45,6 @@ export function usePatientLabReports() {
       setLoading(false);
       return;
     }
-    setLoading(true);
     const { data, error } = await sb
       .from("lab_report_uploads")
       .select(LAB_REPORT_UPLOAD_SELECT)
@@ -152,14 +151,71 @@ export function usePatientLabReports() {
 
       await refetch();
 
+      let extractedDirectly = false;
+      let directMessage = "";
+      try {
+        if (file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf") {
+          const { extractLabPanelFromPdf } = await import("../lib/labReportExtraction");
+          const result = await extractLabPanelFromPdf(file);
+          if (result.status === "success" && result.panel.matchedCount > 0) {
+            const { buildPanelPayloadFromExtraction } = await import("../lib/labReportAnalysis");
+            
+            // Insert extraction draft row first to satisfy trigger FK
+            const { data: extData } = await sb
+              .from("lab_report_extractions")
+              .insert({
+                upload_id: uploadId,
+                raw_text: result.panel.notes,
+                extracted_recorded_at: result.panel.recordedAt,
+                biomarkers_json: result.panel.biomarkers,
+                review_state: "auto_published",
+              })
+              .select("id")
+              .maybeSingle();
+
+            const extractionId = extData?.id ?? null;
+
+            const panelPayload = buildPanelPayloadFromExtraction({
+              patientId: user.id,
+              uploadId,
+              extractionId: extractionId as string,
+              recordedAt: result.panel.recordedAt,
+              biomarkers: result.panel.biomarkers,
+              notes: result.panel.notes,
+            });
+
+            const { error: pErr } = await sb.from("lab_panels").insert(panelPayload);
+            if (pErr) {
+              console.error("[lab panel insert error]", pErr.message);
+            } else {
+              await sb.from("lab_report_uploads").update({
+                analysis_status: "ready",
+                document_type: "lab_report",
+                processed_at: new Date().toISOString(),
+              }).eq("id", uploadId);
+              extractedDirectly = true;
+              directMessage = `Successfully extracted ${result.panel.matchedCount} biomarkers from ${file.name}.`;
+            }
+          } else if (result.status === "unsupported" || result.status === "no_data") {
+            directMessage = `Uploaded ${file.name}. ${result.reason ?? "You can review or enter values in Medical Records."}`;
+          }
+        }
+      } catch (clientParseErr) {
+        console.warn("[client pdf parse fallback]", clientParseErr);
+      }
+
+      await refetch();
+
       void invokeQueueProcessor(uploadId);
 
-      const statusLabel = getUploadStatusMeta("queued").label;
+      const statusLabel = getUploadStatusMeta(extractedDirectly ? "ready" : "queued").label;
       return {
-        queued: true,
-        extracted: false,
+        queued: !extractedDirectly,
+        extracted: extractedDirectly,
         uploadId,
-        message: `Upload complete. ${statusLabel} for server-side analysis.`,
+        message: directMessage.length > 0
+          ? directMessage
+          : `Upload complete. ${statusLabel} for server-side analysis.`,
       };
     },
     [user, refetch, invokeQueueProcessor],

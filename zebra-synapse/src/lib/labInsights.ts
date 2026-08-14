@@ -14,11 +14,21 @@ export type MetricAssessment = {
   priority?: number;
 };
 
+export type TriggeredBiomarker = {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  status: "high" | "low" | "borderline";
+  reference?: string;
+};
+
 export type DiseasePrediction = {
   title: string;
   level: "low" | "moderate" | "high";
   rationale: string;
   nextStep: string;
+  triggeredBiomarkers?: TriggeredBiomarker[];
 };
 
 export type NutritionPlan = {
@@ -368,6 +378,29 @@ export function getOverallStatus(panel: LabPanelRow): {
 export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
   const list: DiseasePrediction[] = [];
 
+  // Diabetes / Glucose
+  const glucoseTriggers: TriggeredBiomarker[] = [];
+  if (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 5.7) {
+    glucoseTriggers.push({
+      key: "hemoglobin_a1c",
+      label: "Hemoglobin A1c",
+      value: panel.hemoglobin_a1c,
+      unit: "%",
+      status: panel.hemoglobin_a1c >= 6.5 ? "high" : "borderline",
+      reference: "< 5.7",
+    });
+  }
+  if (panel.fasting_glucose != null && panel.fasting_glucose >= 100) {
+    glucoseTriggers.push({
+      key: "fasting_glucose",
+      label: "Fasting Glucose",
+      value: panel.fasting_glucose,
+      unit: "mg/dL",
+      status: panel.fasting_glucose >= 126 ? "high" : "borderline",
+      reference: "70-99",
+    });
+  }
+
   if (
     (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 6.5) ||
     (panel.fasting_glucose != null && panel.fasting_glucose >= 126)
@@ -377,16 +410,58 @@ export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
       level: "high",
       rationale: "A1c or fasting glucose is in a range often associated with diabetes.",
       nextStep: "Review the report with your clinician for confirmation and treatment planning.",
+      triggeredBiomarkers: glucoseTriggers,
     });
-  } else if (
-    (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 5.7) ||
-    (panel.fasting_glucose != null && panel.fasting_glucose >= 100)
-  ) {
+  } else if (glucoseTriggers.length > 0) {
     list.push({
       title: "Prediabetes risk",
       level: "moderate",
       rationale: "Glucose markers are above ideal but below common diabetes thresholds.",
       nextStep: "Focus on weight, activity, sleep, and lower-refined-carbohydrate meals.",
+      triggeredBiomarkers: glucoseTriggers,
+    });
+  }
+
+  // Lipid / Cardiovascular
+  const lipidTriggers: TriggeredBiomarker[] = [];
+  if (panel.ldl != null && panel.ldl >= 100) {
+    lipidTriggers.push({
+      key: "ldl",
+      label: "LDL Cholesterol",
+      value: panel.ldl,
+      unit: "mg/dL",
+      status: panel.ldl >= 160 ? "high" : "borderline",
+      reference: "< 100",
+    });
+  }
+  if (panel.triglycerides != null && panel.triglycerides >= 150) {
+    lipidTriggers.push({
+      key: "triglycerides",
+      label: "Triglycerides",
+      value: panel.triglycerides,
+      unit: "mg/dL",
+      status: panel.triglycerides >= 200 ? "high" : "borderline",
+      reference: "< 150",
+    });
+  }
+  if (panel.hdl != null && panel.hdl < 40) {
+    lipidTriggers.push({
+      key: "hdl",
+      label: "HDL Cholesterol",
+      value: panel.hdl,
+      unit: "mg/dL",
+      status: "low",
+      reference: ">= 40",
+    });
+  }
+  if (panel.total_cholesterol != null && panel.total_cholesterol >= 200) {
+    lipidTriggers.push({
+      key: "total_cholesterol",
+      label: "Total Cholesterol",
+      value: panel.total_cholesterol,
+      unit: "mg/dL",
+      status: panel.total_cholesterol >= 240 ? "high" : "borderline",
+      reference: "< 200",
     });
   }
 
@@ -400,34 +475,209 @@ export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
       level: "high",
       rationale: "Cholesterol markers suggest elevated cardiovascular risk.",
       nextStep: "Discuss lipid management, exercise targets, and medication need with your clinician.",
+      triggeredBiomarkers: lipidTriggers,
     });
-  } else if (
-    (panel.ldl != null && panel.ldl >= 100) ||
-    (panel.triglycerides != null && panel.triglycerides >= 150)
-  ) {
+  } else if (lipidTriggers.length > 0) {
     list.push({
       title: "Emerging lipid imbalance",
       level: "moderate",
       rationale: "Some lipid markers are above ideal and worth tracking.",
       nextStep: "Reduce saturated fat, improve fiber intake, and recheck labs on schedule.",
+      triggeredBiomarkers: lipidTriggers,
     });
   }
 
+  // Hematologic / Anemia
   if (panel.hemoglobin != null && panel.hemoglobin < 12) {
     list.push({
       title: "Possible anemia pattern",
       level: "moderate",
-      rationale: "Hemoglobin is below the usual range.",
+      rationale: "Hemoglobin is below the usual reference range (12-17 g/dL).",
       nextStep: "Review iron studies, symptoms, and possible causes with your clinician.",
+      triggeredBiomarkers: [
+        {
+          key: "hemoglobin",
+          label: "Hemoglobin",
+          value: panel.hemoglobin,
+          unit: "g/dL",
+          status: "low",
+          reference: "12-17",
+        },
+      ],
     });
   }
 
-  if (panel.creatinine != null && panel.creatinine > 1.3) {
+  // Renal / Kidney Function
+  const creatinineVal = panel.creatinine ?? panel.biomarkers?.creatinine;
+  if (creatinineVal != null && creatinineVal > 1.3) {
     list.push({
       title: "Kidney function follow-up",
       level: "moderate",
-      rationale: "Creatinine is above the usual range.",
+      rationale: "Creatinine is above the usual reference range (0.6-1.3 mg/dL).",
       nextStep: "Review hydration, medications, blood pressure, and kidney follow-up labs.",
+      triggeredBiomarkers: [
+        {
+          key: "creatinine",
+          label: "Creatinine",
+          value: creatinineVal,
+          unit: "mg/dL",
+          status: "high",
+          reference: "0.6-1.3",
+        },
+      ],
+    });
+  }
+
+  // Hepatic / Liver Function
+  const liverTriggers: TriggeredBiomarker[] = [];
+  const biliVal = panel.biomarkers?.total_bilirubin;
+  const sgptVal = panel.biomarkers?.sgpt;
+  const sgotVal = panel.biomarkers?.sgot;
+  const albVal = panel.biomarkers?.albumin;
+  const tpVal = panel.biomarkers?.total_protein;
+
+  if (biliVal != null && biliVal > 1.2) {
+    liverTriggers.push({
+      key: "total_bilirubin",
+      label: "Total Bilirubin",
+      value: biliVal,
+      unit: "mg/dL",
+      status: biliVal >= 3.0 ? "high" : "borderline",
+      reference: "0.2-1.3",
+    });
+  }
+  if (sgptVal != null && sgptVal > 35) {
+    liverTriggers.push({
+      key: "sgpt",
+      label: "SGPT (ALT)",
+      value: sgptVal,
+      unit: "U/L",
+      status: sgptVal >= 60 ? "high" : "borderline",
+      reference: "< 35",
+    });
+  }
+  if (sgotVal != null && sgotVal > 35) {
+    liverTriggers.push({
+      key: "sgot",
+      label: "SGOT (AST)",
+      value: sgotVal,
+      unit: "U/L",
+      status: sgotVal >= 60 ? "high" : "borderline",
+      reference: "17-59",
+    });
+  }
+  if (albVal != null && albVal < 3.5) {
+    liverTriggers.push({
+      key: "albumin",
+      label: "Serum Albumin",
+      value: albVal,
+      unit: "g/dL",
+      status: albVal <= 2.5 ? "high" : "low",
+      reference: "3.5-5.0",
+    });
+  }
+  if (tpVal != null && tpVal < 6.3) {
+    liverTriggers.push({
+      key: "total_protein",
+      label: "Total Protein",
+      value: tpVal,
+      unit: "g/dL",
+      status: tpVal <= 5.0 ? "high" : "low",
+      reference: "6.3-8.2",
+    });
+  }
+
+  if (liverTriggers.length > 0) {
+    const isSevere = (biliVal != null && biliVal >= 3.0) || (albVal != null && albVal <= 2.5);
+    list.push({
+      title: "Hepatic function & liver enzyme elevation",
+      level: isSevere ? "high" : "moderate",
+      rationale: "Elevated Bilirubin/ALT or low Albumin levels indicate deranged liver function requiring clinical evaluation.",
+      nextStep: "Consult a physician or gastroenterologist to evaluate liver enzyme patterns, diet, and clinical causes.",
+      triggeredBiomarkers: liverTriggers,
+    });
+  }
+
+  // Thyroid Profile
+  const thyroidTriggers: TriggeredBiomarker[] = [];
+  const tshVal = panel.biomarkers?.tsh;
+  const t3Val = panel.biomarkers?.t3;
+  const t4Val = panel.biomarkers?.t4;
+
+  if (tshVal != null && (tshVal > 4.94 || tshVal < 0.35)) {
+    thyroidTriggers.push({
+      key: "tsh",
+      label: "TSH",
+      value: tshVal,
+      unit: "uIU/mL",
+      status: tshVal > 4.94 ? "high" : "low",
+      reference: "0.35-4.94",
+    });
+  }
+  if (t4Val != null && (t4Val < 4.87 || t4Val > 11.72)) {
+    thyroidTriggers.push({
+      key: "t4",
+      label: "T4",
+      value: t4Val,
+      unit: "ug/dL",
+      status: t4Val < 4.87 ? "low" : "high",
+      reference: "4.87-11.72",
+    });
+  }
+  if (t3Val != null && (t3Val < 0.58 || t3Val > 1.59)) {
+    thyroidTriggers.push({
+      key: "t3",
+      label: "T3",
+      value: t3Val,
+      unit: "ng/mL",
+      status: t3Val < 0.58 ? "low" : "high",
+      reference: "0.58-1.59",
+    });
+  }
+
+  if (thyroidTriggers.length > 0) {
+    list.push({
+      title: "Thyroid function & hormone variation",
+      level: "moderate",
+      rationale: "Thyroid hormone levels (T3, T4, or TSH) deviate from standard endocrine reference ranges.",
+      nextStep: "Review thyroid markers with your clinician for formal interpretation and endocrine follow-up.",
+      triggeredBiomarkers: thyroidTriggers,
+    });
+  }
+
+  // Electrolytes & Minerals
+  const mineralTriggers: TriggeredBiomarker[] = [];
+  const calciumVal = panel.biomarkers?.calcium;
+  const sodiumVal = panel.biomarkers?.sodium;
+
+  if (calciumVal != null && (calciumVal < 8.4 || calciumVal > 10.2)) {
+    mineralTriggers.push({
+      key: "calcium",
+      label: "Calcium",
+      value: calciumVal,
+      unit: "mg/dL",
+      status: calciumVal < 8.4 ? "low" : "high",
+      reference: "8.4-10.2",
+    });
+  }
+  if (sodiumVal != null && (sodiumVal < 136 || sodiumVal > 145)) {
+    mineralTriggers.push({
+      key: "sodium",
+      label: "Sodium",
+      value: sodiumVal,
+      unit: "mmol/L",
+      status: sodiumVal > 145 ? "high" : "low",
+      reference: "136-145",
+    });
+  }
+
+  if (mineralTriggers.length > 0) {
+    list.push({
+      title: "Electrolyte & mineral balance alert",
+      level: "moderate",
+      rationale: "Serum calcium or sodium levels deviate from optimal physiological reference bounds.",
+      nextStep: "Review dietary calcium, hydration, and renal/parathyroid markers with your doctor.",
+      triggeredBiomarkers: mineralTriggers,
     });
   }
 
@@ -446,10 +696,9 @@ export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
 export function getNutritionPlans(panel: LabPanelRow): NutritionPlan[] {
   const plans: NutritionPlan[] = [];
 
-  if (
-    (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 5.7) ||
-    (panel.fasting_glucose != null && panel.fasting_glucose >= 100)
-  ) {
+  const glucoseVal = panel.fasting_glucose ?? panel.biomarkers?.fasting_glucose;
+  const a1cVal = panel.hemoglobin_a1c ?? panel.biomarkers?.hemoglobin_a1c;
+  if ((a1cVal != null && a1cVal >= 5.7) || (glucoseVal != null && glucoseVal >= 100)) {
     plans.push({
       headline: "Glucose control",
       focus: "Lower glycemic load and steadier post-meal blood sugar.",
@@ -461,11 +710,10 @@ export function getNutritionPlans(panel: LabPanelRow): NutritionPlan[] {
     });
   }
 
-  if (
-    (panel.ldl != null && panel.ldl >= 100) ||
-    (panel.triglycerides != null && panel.triglycerides >= 150) ||
-    (panel.hdl != null && panel.hdl < 40)
-  ) {
+  const ldlVal = panel.ldl ?? panel.biomarkers?.ldl;
+  const tgVal = panel.triglycerides ?? panel.biomarkers?.triglycerides;
+  const hdlVal = panel.hdl ?? panel.biomarkers?.hdl;
+  if ((ldlVal != null && ldlVal >= 100) || (tgVal != null && tgVal >= 150) || (hdlVal != null && hdlVal < 40)) {
     plans.push({
       headline: "Lipid improvement",
       focus: "Improve LDL, HDL, and triglyceride balance.",
@@ -477,7 +725,36 @@ export function getNutritionPlans(panel: LabPanelRow): NutritionPlan[] {
     });
   }
 
-  if (panel.hemoglobin != null && panel.hemoglobin < 12) {
+  const biliVal = panel.biomarkers?.total_bilirubin;
+  const sgptVal = panel.biomarkers?.sgpt;
+  const albVal = panel.biomarkers?.albumin;
+  if ((biliVal != null && biliVal > 1.2) || (sgptVal != null && sgptVal > 35) || (albVal != null && albVal < 3.5)) {
+    plans.push({
+      headline: "Liver & hepatic support",
+      focus: "Lighten hepatic metabolic load and support liver cell recovery.",
+      actions: [
+        "Eliminate alcohol completely and avoid deep-fried, oily, or unhygienic foods.",
+        "Emphasize antioxidant-rich foods like leafy greens, beets, berries, and cruciferous vegetables.",
+        "Maintain clean hydration (2 to 2.5 liters water daily) and adequate light protein intake.",
+      ],
+    });
+  }
+
+  const calciumVal = panel.biomarkers?.calcium;
+  if (calciumVal != null && calciumVal < 8.4) {
+    plans.push({
+      headline: "Calcium & bone support",
+      focus: "Increase bioavailable dietary calcium and supportive co-factors.",
+      actions: [
+        "Include calcium-rich foods like low-fat dairy, ragi, sesame seeds, almonds, and green leafy vegetables.",
+        "Pair calcium sources with Vitamin D (sunlight exposure/supplements) for optimal intestinal absorption.",
+        "Limit excess caffeine, soft drinks, and alcohol, which inhibit calcium retention.",
+      ],
+    });
+  }
+
+  const hbVal = panel.hemoglobin ?? panel.biomarkers?.hemoglobin;
+  if (hbVal != null && hbVal < 12) {
     plans.push({
       headline: "Iron-supportive meals",
       focus: "Support low hemoglobin with nutrient-dense food choices.",
@@ -510,7 +787,7 @@ export function getWellnessTips(panel: LabPanelRow): WellnessTip[] {
   const worst = [...metrics]
     .filter((m) => m.status !== "missing")
     .sort((a, b) => statusRank(b.status) - statusRank(a.status))
-    .slice(0, 3);
+    .slice(0, 4);
 
   for (const metric of worst) {
     if (metric.key === "hemoglobin_a1c" || metric.key === "fasting_glucose") {
@@ -527,6 +804,21 @@ export function getWellnessTips(panel: LabPanelRow): WellnessTip[] {
         title: "Protect cardiovascular health",
         detail: "Combine regular aerobic exercise with higher-fiber meals and less ultra-processed food.",
       });
+    } else if (
+      metric.key === "total_bilirubin" ||
+      metric.key === "sgpt" ||
+      metric.key === "sgot" ||
+      metric.key === "albumin"
+    ) {
+      tips.push({
+        title: "Protect liver health",
+        detail: "Avoid alcohol, reduce heavy greasy foods, avoid OTC painkiller overuse, and rest.",
+      });
+    } else if (metric.key === "calcium") {
+      tips.push({
+        title: "Support bone density",
+        detail: "Engage in light weight-bearing exercise and get safe daily sunlight exposure for Vitamin D.",
+      });
     } else if (metric.key === "hemoglobin") {
       tips.push({
         title: "Watch fatigue and exertion",
@@ -536,6 +828,11 @@ export function getWellnessTips(panel: LabPanelRow): WellnessTip[] {
       tips.push({
         title: "Review hydration and medications",
         detail: "Kidney-related markers are easier to interpret with hydration, blood pressure, and medication context.",
+      });
+    } else if (metric.key === "tsh" || metric.key === "t4" || metric.key === "t3") {
+      tips.push({
+        title: "Track energy and thyroid signals",
+        detail: "Note any changes in energy, cold tolerance, skin/hair, and discuss thyroid follow-up with your doctor.",
       });
     }
   }

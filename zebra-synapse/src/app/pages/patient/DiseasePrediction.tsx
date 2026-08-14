@@ -132,33 +132,84 @@ export default function DiseasePrediction() {
             </CardContent>
           </Card>
 
-          {predictions.map((prediction) => (
-            <Card key={prediction.title} className={`${portalPanelClass} p-2`}>
-              <CardHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <TrendingUp className="h-4.5 w-4.5 text-[#ff9c61]" />
-                    <CardTitle className="text-base text-white">{prediction.title}</CardTitle>
+          {predictions.map((prediction) => {
+            const isHigh = prediction.level === "high";
+            const isMod = prediction.level === "moderate";
+            const levelBadgeClass = isHigh
+              ? "border-rose-500/30 bg-rose-500/15 text-rose-300"
+              : isMod
+                ? "border-amber-500/30 bg-amber-500/15 text-amber-300"
+                : "border-emerald-500/30 bg-emerald-500/15 text-emerald-300";
+
+            return (
+              <Card key={prediction.title} className={`${portalPanelClass} p-2`}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <TrendingUp className={`h-4.5 w-4.5 ${isHigh ? "text-rose-400" : isMod ? "text-amber-400" : "text-emerald-400"}`} />
+                      <CardTitle className="text-base text-white">{prediction.title}</CardTitle>
+                    </div>
+                    <Badge className={`border text-xs capitalize shrink-0 px-2.5 py-0.5 ${levelBadgeClass}`}>
+                      {prediction.level} Risk
+                    </Badge>
                   </div>
-                  <Badge className="border border-white/10 bg-white/[0.08] text-xs text-white shrink-0">
-                    {prediction.level}
-                  </Badge>
-                </div>
-                <CardDescription className="text-xs text-[#92a8c7]">
-                  Interpreted from the latest structured biomarker panel
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
-                  <p className="text-xs sm:text-sm text-[#E5E7EB] leading-relaxed">{prediction.rationale}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Recommended next step</p>
-                  <p className="mt-1 text-xs sm:text-sm font-medium text-white">{prediction.nextStep}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <CardDescription className="text-xs text-[#92a8c7]">
+                    Interpreted from your latest structured biomarker panel
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                    <p className="text-xs sm:text-sm text-[#E5E7EB] leading-relaxed">{prediction.rationale}</p>
+                  </div>
+
+                  {/* Triggered Biomarker Evidence Grid */}
+                  {prediction.triggeredBiomarkers && prediction.triggeredBiomarkers.length > 0 && (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-2.5">
+                        Triggered Biomarker Evidence
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {prediction.triggeredBiomarkers.map((bm) => (
+                          <div
+                            key={bm.key}
+                            className="flex items-center justify-between gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5 text-xs"
+                          >
+                            <span className="font-medium text-slate-200">{bm.label}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-white">
+                                {bm.value} {bm.unit}
+                              </span>
+                              {bm.reference && (
+                                <span className="text-[10px] text-slate-400">
+                                  (Ref: {bm.reference})
+                                </span>
+                              )}
+                              <span
+                                className={`rounded px-1.5 py-0.2 text-[10px] font-bold uppercase ${
+                                  bm.status === "high"
+                                    ? "bg-rose-500/20 text-rose-300"
+                                    : bm.status === "low"
+                                      ? "bg-sky-500/20 text-sky-300"
+                                      : "bg-amber-500/20 text-amber-300"
+                                }`}
+                              >
+                                {bm.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Recommended next step</p>
+                    <p className="mt-1 text-xs sm:text-sm font-medium text-white">{prediction.nextStep}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>

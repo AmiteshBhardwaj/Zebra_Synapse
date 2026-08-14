@@ -35,7 +35,6 @@ export function usePatientLabReportExtractions() {
       return;
     }
 
-    setLoading(true);
     const { data, error } = await sb
       .from("lab_report_extractions")
       .select(LAB_REPORT_EXTRACTION_SELECT)
