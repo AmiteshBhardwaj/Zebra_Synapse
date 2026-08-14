@@ -68,7 +68,7 @@ function buildPageLines(items: readonly unknown[]): string[] {
 
   const lines: Array<{ y: number; items: Array<{ str: string; x: number }> }> = [];
   for (const item of positionedItems) {
-    const existing = lines.find((line) => Math.abs(line.y - item.y) < 2);
+    const existing = lines.find((line) => Math.abs(line.y - item.y) < 4);
     if (existing) {
       existing.items.push({ str: item.str, x: item.x });
     } else {

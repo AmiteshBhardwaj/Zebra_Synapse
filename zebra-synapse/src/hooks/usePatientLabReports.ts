@@ -160,17 +160,35 @@ export function usePatientLabReports() {
           const result = await extractLabPanelFromPdf(file);
           if (result.status === "success" && result.panel.matchedCount > 0) {
             const { buildPanelPayloadFromExtraction } = await import("../lib/labReportAnalysis");
+            
+            // Insert extraction draft row first to satisfy trigger FK
+            const { data: extData } = await sb
+              .from("lab_report_extractions")
+              .insert({
+                upload_id: uploadId,
+                raw_text: result.panel.notes,
+                extracted_recorded_at: result.panel.recordedAt,
+                biomarkers_json: result.panel.biomarkers,
+                review_state: "auto_published",
+              })
+              .select("id")
+              .maybeSingle();
+
+            const extractionId = extData?.id ?? null;
+
             const panelPayload = buildPanelPayloadFromExtraction({
               patientId: user.id,
               uploadId,
-              extractionId: uploadId,
+              extractionId: extractionId as string,
               recordedAt: result.panel.recordedAt,
               biomarkers: result.panel.biomarkers,
               notes: result.panel.notes,
             });
 
             const { error: pErr } = await sb.from("lab_panels").insert(panelPayload);
-            if (!pErr) {
+            if (pErr) {
+              console.error("[lab panel insert error]", pErr.message);
+            } else {
               await sb.from("lab_report_uploads").update({
                 analysis_status: "ready",
                 document_type: "lab_report",
