@@ -1,1 +1,1 @@
-export { default } from "./Nutrition";
+export { default } from "./Diet";

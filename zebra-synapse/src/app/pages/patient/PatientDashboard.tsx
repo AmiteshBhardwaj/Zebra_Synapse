@@ -16,6 +16,7 @@ import {
   Settings,
   Sparkles,
   TrendingUp,
+  Utensils,
   Video,
 } from "lucide-react";
 
@@ -41,7 +42,7 @@ export default function PatientDashboard() {
     { path: "/patient/teleconsult", icon: Video, label: "Teleconsultation" },
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },
     { path: "/patient/disease-prediction", icon: TrendingUp, label: "Disease Prediction" },
-    { path: "/patient/nutrition", icon: Apple, label: "Nutrition" },
+    { path: "/patient/diet", icon: Utensils, label: "Diet", altPaths: ["/patient/nutrition"] },
     { path: "/patient/exercise", icon: Dumbbell, label: "Exercise Plan" },
     { path: "/patient/clinical-trials", icon: FlaskConical, label: "Clinical Trials" },
     { path: "/patient/wellness-tips", icon: Sparkles, label: "Wellness Tips" },
@@ -75,7 +76,7 @@ export default function PatientDashboard() {
         <nav className="flex-1 overflow-y-auto p-2 space-y-1.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           {primaryMenuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.path || (item.altPaths && item.altPaths.includes(location.pathname));
 
             return (
               <button

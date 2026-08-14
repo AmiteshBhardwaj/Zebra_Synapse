@@ -112,6 +112,49 @@ export default function ProfileSettings() {
   const [dietaryConditions, setDietaryConditions] = useState<string[]>([]);
   const [dietaryNotes, setDietaryNotes] = useState<string>("");
 
+  // Diet & Metabolic Goals states (persisted in localStorage + sync with Diet mini-app)
+  const dietStorageKey = `zebra_diet_settings_${user?.id || "default"}`;
+  const [activityLevel, setActivityLevel] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(`zebra_diet_settings_${user?.id || "default"}`);
+      return saved ? JSON.parse(saved).activityLevel || "moderate" : "moderate";
+    } catch {
+      return "moderate";
+    }
+  });
+  const [dietGoal, setDietGoal] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(`zebra_diet_settings_${user?.id || "default"}`);
+      return saved ? JSON.parse(saved).goal || "maintain_longevity" : "maintain_longevity";
+    } catch {
+      return "maintain_longevity";
+    }
+  });
+  const [targetWeightKg, setTargetWeightKg] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(`zebra_diet_settings_${user?.id || "default"}`);
+      return saved && JSON.parse(saved).targetWeightKg ? String(JSON.parse(saved).targetWeightKg) : "";
+    } catch {
+      return "";
+    }
+  });
+  const [weeklyPaceKg, setWeeklyPaceKg] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(`zebra_diet_settings_${user?.id || "default"}`);
+      return saved ? String(JSON.parse(saved).weeklyPaceKg ?? "0") : "0";
+    } catch {
+      return "0";
+    }
+  });
+  const [dailyWaterTargetMl, setDailyWaterTargetMl] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem(`zebra_diet_settings_${user?.id || "default"}`);
+      return saved ? String(JSON.parse(saved).dailyWaterTargetMl || "2500") : "2500";
+    } catch {
+      return "2500";
+    }
+  });
+
   // Fitness preferences states (persisted in localStorage + sync)
   const fitnessStorageKey = `zebra_fitness_prefs_${user?.id || "default"}`;
   const [fitnessLevel, setFitnessLevel] = useState<string>(() => {
@@ -319,6 +362,29 @@ export default function ProfileSettings() {
             fitnessLevel,
             workoutEnv,
             physicalLimitations,
+          })
+        );
+      } catch {
+        // ignore
+      }
+
+      // Save diet & metabolic settings to localStorage
+      try {
+        const existing = localStorage.getItem(dietStorageKey);
+        const parsed = existing ? JSON.parse(existing) : {};
+        localStorage.setItem(
+          dietStorageKey,
+          JSON.stringify({
+            ...parsed,
+            activityLevel,
+            goal: dietGoal,
+            targetWeightKg: parseFloat(targetWeightKg) || (parsedW > 0 ? parsedW : 70),
+            weeklyPaceKg: parseFloat(weeklyPaceKg) || 0,
+            dailyWaterTargetMl: parseInt(dailyWaterTargetMl, 10) || 2500,
+            dietaryPreference,
+            foodAllergies,
+            dietaryConditions,
+            dietaryNotes,
           })
         );
       } catch {
@@ -779,7 +845,78 @@ export default function ProfileSettings() {
                   </div>
                 </div>
 
-                {/* 4. Custom Dietary Notes */}
+                {/* 4. Metabolic Goals & Activity Multiplier */}
+                <div className="space-y-4 pt-4 border-t border-white/10">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
+                      <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                      Metabolic Targets & Caloric Goals
+                    </Label>
+                    <span className="text-[11px] text-emerald-400 font-medium">Syncs with Diet Mini-App</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Primary Health Goal */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-white/80">Primary Metabolic Goal</Label>
+                      <select
+                        value={dietGoal}
+                        onChange={(e) => setDietGoal(e.target.value)}
+                        className={`${portalInputClass} text-xs bg-[#0c121e]`}
+                      >
+                        <option value="fat_loss">Fat Loss & Caloric Deficit (-0.5 kg/wk)</option>
+                        <option value="maintain_longevity">Maintenance & Metabolic Longevity</option>
+                        <option value="muscle_gain">Lean Muscle Building (+0.25 kg/wk)</option>
+                        <option value="blood_sugar_balance">Blood Sugar & Insulin Regulation</option>
+                        <option value="heart_cardiovascular">Cardiovascular & Lipid Optimization</option>
+                      </select>
+                    </div>
+
+                    {/* Activity Level */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-white/80">Daily Activity Level</Label>
+                      <select
+                        value={activityLevel}
+                        onChange={(e) => setActivityLevel(e.target.value)}
+                        className={`${portalInputClass} text-xs bg-[#0c121e]`}
+                      >
+                        <option value="sedentary">Sedentary (Desk Job, 1.2x TDEE)</option>
+                        <option value="light">Lightly Active (1-3 days/wk, 1.375x TDEE)</option>
+                        <option value="moderate">Moderately Active (3-5 days/wk, 1.55x TDEE)</option>
+                        <option value="very_active">Very Active (6-7 days/wk, 1.725x TDEE)</option>
+                        <option value="extra_active">Extremely Active (Athletic, 1.9x TDEE)</option>
+                      </select>
+                    </div>
+
+                    {/* Target Weight & Weekly Pace */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-white/80">Target Goal Weight (kg)</Label>
+                      <Input
+                        type="number"
+                        step="0.5"
+                        placeholder="e.g. 68"
+                        value={targetWeightKg}
+                        onChange={(e) => setTargetWeightKg(e.target.value)}
+                        className={`${portalInputClass} text-xs`}
+                      />
+                    </div>
+
+                    {/* Daily Water Target */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-white/80">Daily Hydration Target (ml)</Label>
+                      <Input
+                        type="number"
+                        step="250"
+                        placeholder="e.g. 2500"
+                        value={dailyWaterTargetMl}
+                        onChange={(e) => setDailyWaterTargetMl(e.target.value)}
+                        className={`${portalInputClass} text-xs`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Custom Dietary Notes */}
                 <div className="space-y-2 pt-4 border-t border-white/10">
                   <Label htmlFor="dietary_notes" className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
                     <Apple className="w-3.5 h-3.5 text-sky-400" />
