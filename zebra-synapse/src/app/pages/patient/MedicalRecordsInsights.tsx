@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import { AlertCircle, FileText } from "lucide-react";
+import { useNavigate } from "react-router";
+import { AlertCircle, Bot, FileText, Sparkles } from "lucide-react";
+import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import {
   Select,
@@ -24,6 +26,8 @@ import {
   StatusPill,
   portalInsetClass,
   portalPanelClass,
+  portalPrimaryButtonClass,
+  portalSecondaryButtonClass,
   portalTableCellClass,
   portalTableClass,
   portalTableHeadClass,
@@ -44,6 +48,7 @@ function formatUploadedAt(iso: string): string {
 }
 
 export default function MedicalRecordsInsights() {
+  const navigate = useNavigate();
   const { uploads } = usePatientLabReports();
   const { panels } = usePatientLabPanels();
 
@@ -146,22 +151,34 @@ export default function MedicalRecordsInsights() {
               </div>
             </div>
 
-            <div className="w-full sm:w-auto min-w-[260px]">
-              <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="h-10 w-full rounded-xl border-white/14 bg-[#0d1829]/90 text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
-                  <SelectValue placeholder="Change medical report..." />
-                </SelectTrigger>
-                <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-xl p-1">
-                  <SelectItem value="none" className="py-2 text-white/40 cursor-pointer">
-                    -- Clear Selection --
-                  </SelectItem>
-                  {availableReports.map((report) => (
-                    <SelectItem key={report.id} value={report.id} className="py-2 text-white text-xs cursor-pointer">
-                      📄 {report.name} ({report.date})
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="w-full sm:w-auto min-w-[240px]">
+                <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+                  <SelectTrigger className="h-10 w-full rounded-xl border-white/14 bg-[#0d1829]/90 text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
+                    <SelectValue placeholder="Change medical report..." />
+                  </SelectTrigger>
+                  <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-xl p-1">
+                    <SelectItem value="none" className="py-2 text-white/40 cursor-pointer">
+                      -- Clear Selection --
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {availableReports.map((report) => (
+                      <SelectItem key={report.id} value={report.id} className="py-2 text-white text-xs cursor-pointer">
+                        📄 {report.name} ({report.date})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedReportId !== "none" && (
+                <Button
+                  onClick={() => navigate(`/patient/ai-chat?reportId=${selectedReportId}`)}
+                  className="h-10 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 font-semibold text-xs gap-2 shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all shrink-0"
+                >
+                  <Bot className="h-4 w-4" />
+                  Ask AI About Report
+                </Button>
+              )}
             </div>
           </div>
 

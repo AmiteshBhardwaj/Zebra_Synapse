@@ -561,5 +561,14 @@ export const BIOMARKER_DEFINITION_MAP = new Map(
 );
 
 export function getBiomarkerDefinition(key: string): BiomarkerDefinition | undefined {
-  return BIOMARKER_DEFINITION_MAP.get(key);
+  if (!key) return undefined;
+  const direct = BIOMARKER_DEFINITION_MAP.get(key);
+  if (direct) return direct;
+
+  const normalized = key.toLowerCase().replace(/[\s_-]+/g, "");
+  for (const def of BIOMARKER_DEFINITIONS) {
+    if (def.key.replace(/[\s_-]+/g, "") === normalized) return def;
+    if (def.patterns.some((p) => p.test(key))) return def;
+  }
+  return undefined;
 }

@@ -24,6 +24,14 @@ import {
   Calendar,
   Upload,
   Send,
+  Bot,
+  CheckCircle2,
+  Check,
+  Clock,
+  Sparkles,
+  Stethoscope,
+  XCircle,
+  Edit3,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
@@ -33,6 +41,12 @@ import {
   formatDisplayDate,
   type CareRelationshipListRow,
 } from "../../../lib/careRelationships";
+import {
+  fetchDoctorPatientQueries,
+  verifyLabReportQuery,
+  rejectAndReplaceLabReportQuery,
+  type LabReportQueryRow,
+} from "../../../lib/labReportChat";
 import { getSupabase } from "../../../lib/supabase";
 import {
   CARE_ACTIONS_SELECT,
@@ -291,6 +305,15 @@ export default function PatientDetail() {
   const [actionDetails, setActionDetails] = useState("");
   const [actionSchedule, setActionSchedule] = useState("");
 
+  // Lab Report AI Chat Queries state
+  const [queries, setQueries] = useState<LabReportQueryRow[]>([]);
+  const [queriesLoading, setQueriesLoading] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [selectedQueryForReject, setSelectedQueryForReject] = useState<LabReportQueryRow | null>(null);
+  const [customDoctorResponse, setCustomDoctorResponse] = useState("");
+  const [doctorRejectNotes, setDoctorRejectNotes] = useState("");
+  const [queryActionSaving, setQueryActionSaving] = useState(false);
+
   const load = useCallback(async () => {
     if (!patientId) {
       setLoadError("Missing patient id.");
@@ -332,6 +355,7 @@ export default function PatientDetail() {
     setLabUploads([]);
     setLabPanels([]);
     setCareActions([]);
+    setQueries([]);
     setCareActionsUnavailable(false);
   }, [patientId]);
 
@@ -474,6 +498,78 @@ export default function PatientDetail() {
     },
     [loadCareActions, patientId, user?.id],
   );
+
+  const loadQueries = useCallback(async () => {
+    if (!patientId || !user?.id) return;
+    setQueriesLoading(true);
+    try {
+      const rows = await fetchDoctorPatientQueries({
+        doctorId: user.id,
+        patientId,
+      });
+      setQueries(rows);
+    } catch (e) {
+      console.error("[lab report queries]", e);
+    } finally {
+      setQueriesLoading(false);
+    }
+  }, [patientId, user?.id]);
+
+  useEffect(() => {
+    if (rel) void loadQueries();
+  }, [rel, loadQueries]);
+
+  const handleVerifyQuery = async (queryId: string, notesText?: string) => {
+    if (!user?.id) return;
+    setQueryActionSaving(true);
+    try {
+      await verifyLabReportQuery({
+        queryId,
+        doctorId: user.id,
+        doctorNotes: notesText,
+      });
+      toast.success("Response verified and marked as approved by doctor!");
+      void loadQueries();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to verify query");
+    } finally {
+      setQueryActionSaving(false);
+    }
+  };
+
+  const handleOpenRejectDialog = (query: LabReportQueryRow) => {
+    setSelectedQueryForReject(query);
+    setCustomDoctorResponse(query.doctor_response || "");
+    setDoctorRejectNotes(query.doctor_notes || "");
+    setRejectDialogOpen(true);
+  };
+
+  const handleSubmitRejectAndReplace = async () => {
+    if (!selectedQueryForReject || !user?.id) return;
+    if (!customDoctorResponse.trim()) {
+      toast.error("Please provide your replacement clinical advice for the patient");
+      return;
+    }
+    setQueryActionSaving(true);
+    try {
+      await rejectAndReplaceLabReportQuery({
+        queryId: selectedQueryForReject.id,
+        doctorId: user.id,
+        doctorResponse: customDoctorResponse.trim(),
+        doctorNotes: doctorRejectNotes.trim() || undefined,
+      });
+      toast.success("AI answer replaced with your verified clinical guidance!");
+      setRejectDialogOpen(false);
+      setSelectedQueryForReject(null);
+      setCustomDoctorResponse("");
+      setDoctorRejectNotes("");
+      void loadQueries();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to replace response");
+    } finally {
+      setQueryActionSaving(false);
+    }
+  };
 
   const patientName = rel?.patient?.full_name?.trim() || "Patient";
   const upcomingFollowUps = careActions
@@ -765,7 +861,8 @@ export default function PatientDetail() {
   }
 
   return (
-    <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+    <>
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
       <DialogContent className={portalDialogClass}>
         <DialogHeader>
           <DialogTitle className="text-white">
@@ -829,7 +926,79 @@ export default function PatientDetail() {
           </Button>
         </DialogFooter>
       </DialogContent>
-      <div className={detailPageClass}>
+    </Dialog>
+
+    {/* Reject and Replace Clinical Response Dialog */}
+    <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+      <DialogContent className={portalDialogClass}>
+        <DialogHeader>
+          <DialogTitle className="text-white flex items-center gap-2">
+            <Stethoscope className="h-5 w-5 text-cyan-400" />
+            Clinical Revision: Replace AI Response
+          </DialogTitle>
+          <DialogDescription className="text-white/60">
+            Provide your clinical explanation to replace the AI-generated answer. The patient will see your advice marked as verified clinical guidance.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {selectedQueryForReject && (
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5 text-xs">
+              <p className="text-cyan-400 font-mono uppercase tracking-wider">Patient's Question:</p>
+              <p className="text-white font-medium">"{selectedQueryForReject.user_query}"</p>
+              <p className="text-slate-400 mt-2 font-mono uppercase tracking-wider">Original AI Proposal (To be replaced):</p>
+              <p className="text-slate-300 line-clamp-3 italic">{selectedQueryForReject.ai_response}</p>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="doctor_response" className="text-xs font-mono uppercase text-cyan-300">
+              Your Clinical Guidance (Shown to Patient) *
+            </Label>
+            <Textarea
+              id="doctor_response"
+              value={customDoctorResponse}
+              onChange={(e) => setCustomDoctorResponse(e.target.value)}
+              rows={5}
+              placeholder="E.g., Your vitamin D is indeed low at 18 ng/mL, but I also recommend checking iron and staying well hydrated..."
+              className="bg-slate-950/80 border-slate-700 text-slate-100 placeholder:text-slate-500 rounded-xl"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="doctor_reject_notes" className="text-xs font-mono uppercase text-slate-400">
+              Internal Clinical Notes (Optional)
+            </Label>
+            <Input
+              id="doctor_reject_notes"
+              value={doctorRejectNotes}
+              onChange={(e) => setDoctorRejectNotes(e.target.value)}
+              placeholder="Notes for chart or follow-up reason"
+              className={portalInputClass}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            className={portalSecondaryButtonClass}
+            onClick={() => setRejectDialogOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className={portalPrimaryButtonClass}
+            onClick={() => void handleSubmitRejectAndReplace()}
+            disabled={queryActionSaving || !customDoctorResponse.trim()}
+          >
+            {queryActionSaving ? "Saving Revision..." : "Replace & Approve Guidance"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <div className={detailPageClass}>
       <Button variant="outline" className={`mb-6 ${portalSecondaryButtonClass}`} onClick={() => navigate("/doctor")}>
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Patients
@@ -908,6 +1077,17 @@ export default function PatientDetail() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="labs">Lab Results</TabsTrigger>
+          <TabsTrigger value="queries" className="relative">
+            <span className="flex items-center gap-1.5">
+              <Bot className="w-3.5 h-3.5 text-cyan-400" />
+              AI Chat Reviews
+              {queries.filter((q) => q.status === "pending_review").length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px]">
+                  {queries.filter((q) => q.status === "pending_review").length}
+                </span>
+              )}
+            </span>
+          </TabsTrigger>
           <TabsTrigger value="medications">Medications</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
           <TabsTrigger value="actions">Actions</TabsTrigger>
@@ -1025,6 +1205,168 @@ export default function PatientDetail() {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="queries">
+          <Card className={portalPanelClass}>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Bot className="h-5 w-5 text-cyan-400" />
+                  Patient Lab Report Queries & AI Responses
+                </CardTitle>
+                <CardDescription>
+                  Review AI answers generated for this patient's lab inquiries. You can verify (tickmark) accurate responses or reject and replace them with your custom clinical guidance.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void loadQueries()}
+                  disabled={queriesLoading}
+                  className={`${portalSecondaryButtonClass} text-xs`}
+                >
+                  Refresh Inquiries
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {queriesLoading ? (
+                <p className="text-sm text-white/60">Loading queries...</p>
+              ) : queries.length === 0 ? (
+                <div className="text-center py-10 px-4 space-y-3">
+                  <div className="flex h-12 w-12 mx-auto items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                    <Bot className="h-6 w-6" />
+                  </div>
+                  <p className="text-sm text-white/70 font-medium">No lab report inquiries submitted yet</p>
+                  <p className="text-xs text-white/40 max-w-sm mx-auto">
+                    When this patient asks questions in their AI Lab Assistant, they will appear here for your verification and approval.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {queries.map((q) => (
+                    <div
+                      key={q.id}
+                      className={`rounded-2xl border p-5 space-y-4 transition-all ${
+                        q.status === "pending_review"
+                          ? "border-amber-500/40 bg-amber-500/[0.04] shadow-[0_0_20px_rgba(245,158,11,0.08)]"
+                          : q.status === "verified"
+                          ? "border-emerald-500/30 bg-emerald-500/[0.03]"
+                          : "border-cyan-500/30 bg-cyan-500/[0.03]"
+                      }`}
+                    >
+                      {/* Top Header info */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/10 pb-3">
+                        <div className="flex items-center gap-2 text-xs text-white/70">
+                          <FileText className="h-4 w-4 text-cyan-400" />
+                          <span className="font-semibold text-white">
+                            {q.upload?.original_filename || "Lab Document"}
+                          </span>
+                          <span className="text-white/40">•</span>
+                          <span className="text-white/40">
+                            Asked {new Date(q.created_at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" })}
+                          </span>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div>
+                          {q.status === "pending_review" && (
+                            <Badge className="border border-amber-500/30 bg-amber-500/20 text-amber-300 gap-1">
+                              <Clock className="h-3 w-3 animate-pulse text-amber-400" />
+                              Pending Verification
+                            </Badge>
+                          )}
+                          {q.status === "verified" && (
+                            <Badge className="border border-emerald-500/30 bg-emerald-500/20 text-emerald-300 gap-1">
+                              <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                              Verified by Doctor
+                            </Badge>
+                          )}
+                          {q.status === "rejected_and_replaced" && (
+                            <Badge className="border border-cyan-500/30 bg-cyan-500/20 text-cyan-200 gap-1">
+                              <Stethoscope className="h-3 w-3 text-cyan-400" />
+                              Replaced with Doctor Guidance
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Question */}
+                      <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-xs space-y-1">
+                        <p className="font-mono uppercase tracking-wider text-cyan-300 text-[10px]">Patient Question</p>
+                        <p className="text-slate-100 font-medium text-sm">"{q.user_query}"</p>
+                      </div>
+
+                      {/* AI Generated or Doctor Replaced Response */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-mono uppercase tracking-wider text-slate-400 text-[10px]">
+                            {q.status === "rejected_and_replaced" ? "Your Verified Clinical Replacement:" : "AI Generated Proposal:"}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-950/80 border border-white/10 rounded-xl p-4 text-xs sm:text-sm text-slate-200 leading-relaxed whitespace-pre-wrap">
+                          {q.status === "rejected_and_replaced" ? q.doctor_response : q.ai_response}
+                        </div>
+
+                        {q.doctor_notes && (
+                          <p className="text-xs text-slate-400 italic">
+                            Internal note: {q.doctor_notes}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Doctor Action Controls */}
+                      <div className="flex flex-wrap items-center justify-end gap-3 pt-2 border-t border-white/10">
+                        {q.status === "pending_review" ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => handleOpenRejectDialog(q)}
+                              disabled={queryActionSaving}
+                              className={`${portalSecondaryButtonClass} text-xs text-rose-300 border-rose-500/30 hover:bg-rose-500/20 gap-1.5`}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              Reject & Replace
+                            </Button>
+
+                            <Button
+                              type="button"
+                              onClick={() => void handleVerifyQuery(q.id)}
+                              disabled={queryActionSaving}
+                              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-xs gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              Verify Response
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-slate-400">
+                              Reviewed {q.reviewed_at ? new Date(q.reviewed_at).toLocaleDateString() : ""}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenRejectDialog(q)}
+                              className={`${portalSecondaryButtonClass} text-xs gap-1`}
+                            >
+                              <Edit3 className="h-3.5 w-3.5" />
+                              Revise Guidance
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -1365,7 +1707,7 @@ export default function PatientDetail() {
         </TabsContent>
       </Tabs>
       </div>
-    </Dialog>
+    </>
   );
 }
 

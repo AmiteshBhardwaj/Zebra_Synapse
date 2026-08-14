@@ -4,6 +4,7 @@ import {
   Activity,
   AlertTriangle,
   ArrowUpRight,
+  Bot,
   Heart,
   Search,
   TrendingUp,
@@ -36,6 +37,7 @@ export default function PatientsList() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [patients, setPatients] = useState<DoctorPatientListItem[]>([]);
+  const [pendingReviewMap, setPendingReviewMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -64,6 +66,25 @@ export default function PatientsList() {
 
     const rows = (data ?? []) as unknown as CareRelationshipListRow[];
     setPatients(rows.map(mapRowToListItem));
+
+    // Load pending AI inquiries for this doctor
+    try {
+      const { data: queryData } = await sb
+        .from("lab_report_queries")
+        .select("patient_id")
+        .eq("status", "pending_review");
+
+      if (queryData) {
+        const counts: Record<string, number> = {};
+        for (const item of queryData) {
+          counts[item.patient_id] = (counts[item.patient_id] || 0) + 1;
+        }
+        setPendingReviewMap(counts);
+      }
+    } catch {
+      // Non-blocking if table or queries are empty
+    }
+
     setLoading(false);
   }, [user]);
 
@@ -209,6 +230,12 @@ export default function PatientsList() {
                   <div className="flex flex-wrap items-center gap-3">
                     <h3 className="truncate text-xl font-semibold text-white">{patient.name}</h3>
                     <StatusPill status={patient.vitals.status} />
+                    {(pendingReviewMap[patient.patientId] || 0) > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+                        <Bot className="h-3.5 w-3.5 text-amber-400" />
+                        {pendingReviewMap[patient.patientId]} AI Review{pendingReviewMap[patient.patientId] > 1 ? "s" : ""} Pending
+                      </span>
+                    )}
                   </div>
                   <p className="mt-2 text-sm leading-6 text-[#92a8c7]">
                     {patient.condition} · Last visit {patient.lastVisitLabel}

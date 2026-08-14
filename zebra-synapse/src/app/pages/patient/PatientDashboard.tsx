@@ -5,11 +5,13 @@ import { DnaCanvas3D } from "../../components/DnaCanvas3D";
 import {
   Activity,
   Apple,
+  Bot,
   Calendar,
   FileText,
   FlaskConical,
   Home,
   LogOut,
+  MessageSquare,
   Pill,
   Settings,
   Sparkles,
@@ -34,6 +36,7 @@ export default function PatientDashboard() {
   const primaryMenuItems = [
     { path: "/patient", icon: Home, label: "Health Overview" },
     { path: "/patient/medical-records", icon: FileText, label: "Medical Records" },
+    { path: "/patient/ai-chat", icon: Bot, label: "AI Lab Assistant" },
     { path: "/patient/appointments", icon: Calendar, label: "Appointments" },
     { path: "/patient/teleconsult", icon: Video, label: "Teleconsultation" },
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },

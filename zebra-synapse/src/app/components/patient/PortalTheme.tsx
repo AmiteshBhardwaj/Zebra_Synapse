@@ -96,9 +96,9 @@ export function StatusPill({ status, className }: { status: string; className?: 
   );
 }
 
-export function PatientPortalPage({ children }: { children: ReactNode }) {
+export function PatientPortalPage({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <div className={portalShellClass}>
+    <div className={cn(portalShellClass, className)}>
       <div className={portalContentClass}>{children}</div>
     </div>
   );
@@ -106,19 +106,26 @@ export function PatientPortalPage({ children }: { children: ReactNode }) {
 
 export function PatientPageHero({
   eyebrow,
+  badge,
   title,
   description,
   icon: Icon,
   actions,
+  action,
   meta,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
+  badge?: string;
   title: string;
   description: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
   actions?: ReactNode;
+  action?: ReactNode;
   meta?: Array<{ label: string; value: ReactNode }>;
 }) {
+  const eyebrowText = eyebrow || badge || "OVERVIEW";
+  const actionContent = actions || action;
+
   return (
     <section className={cn(portalPanelClass, "relative overflow-hidden px-6 py-7 sm:px-8 lg:px-10 lg:py-8 border-cyan-500/30 bg-[linear-gradient(135deg,rgba(6,8,18,0.85)_0%,rgba(10,18,36,0.75)_100%)] shadow-[0_0_30px_rgba(56,189,248,0.12)]")}>
       {/* 3D Voluminescent Glow Lights */}
@@ -131,11 +138,13 @@ export function PatientPageHero({
         <div className="max-w-3xl">
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <span className="rounded-full border border-cyan-500/30 bg-cyan-950/60 px-3.5 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.25)] backdrop-blur-md">
-              {eyebrow}
+              {eyebrowText}
             </span>
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/30 bg-slate-950/80 text-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-              <Icon className="h-5 w-5" />
-            </span>
+            {Icon && (
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/30 bg-slate-950/80 text-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+                <Icon className="h-5 w-5" />
+              </span>
+            )}
           </div>
           <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl">
             {title}
@@ -152,7 +161,7 @@ export function PatientPageHero({
             </div>
           ) : null}
         </div>
-        {actions ? <div className="shrink-0">{actions}</div> : null}
+        {actionContent ? <div className="flex shrink-0 items-center gap-3">{actionContent}</div> : null}
       </div>
     </section>
   );
