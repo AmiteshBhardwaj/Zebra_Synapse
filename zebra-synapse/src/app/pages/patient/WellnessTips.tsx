@@ -2,7 +2,7 @@ import { ShieldCheck, Sparkles, HelpCircle, CheckCircle2 } from "lucide-react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { formatLabDate } from "../../../lib/labPanels";
-import { getLatestLabPanel, getWellnessTips } from "../../../lib/labInsights";
+import { getWellnessTips } from "../../../lib/labInsights";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import {
   PatientPortalPage,
@@ -11,12 +11,13 @@ import {
 } from "../../components/patient/PortalTheme";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
+import { useActiveReport } from "../../../hooks/useActiveReport";
 
 export default function WellnessTips() {
   const { hasLabReports, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
-  const latestPanel = getLatestLabPanel(panels);
-  const tips = latestPanel ? getWellnessTips(latestPanel) : [];
+  const { activePanel } = useActiveReport(panels);
+  const tips = activePanel ? getWellnessTips(activePanel) : [];
 
   if (loading || panelsLoading) {
     return (
@@ -59,12 +60,12 @@ export default function WellnessTips() {
         <div className="flex items-center gap-2 text-xs">
           <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            {hasPanels && latestPanel ? `${tips.length} Custom Tips` : "Awaiting Biomarkers"}
+            {hasPanels && activePanel ? `${tips.length} Custom Tips` : "Awaiting Biomarkers"}
           </span>
         </div>
       </div>
 
-      {!hasPanels || !latestPanel ? (
+      {!hasPanels || !activePanel ? (
         <div className="space-y-6 max-w-4xl">
           <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>
@@ -171,7 +172,7 @@ export default function WellnessTips() {
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Current source</p>
                 <p className="mt-1 text-xs sm:text-sm text-[#92a8c7]">
-                  Your latest structured panel from {formatLabDate(latestPanel.recorded_at)}.
+                  Your active structured panel from {activePanel ? formatLabDate(activePanel.recorded_at) : "selected report"}.
                 </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
