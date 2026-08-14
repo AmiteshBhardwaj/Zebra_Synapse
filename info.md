@@ -123,10 +123,3 @@ This document serves as the single, consolidated internal technical and function
 | **Demo Auth Mode** | **Offline Fallback** | `AuthContext.tsx` uses `localStorage` demo sessions if Supabase environment variables are unconfigured. |
 
 ---
-
-## 6. Key Takeaways & Surprising Repo Findings
-
-1. **No AI Hallucination in Insights:** Generative AI (Gemini API) is strictly bounded to raw PDF parsing/OCR. Clinical risk evaluations are 100% deterministic TypeScript code.
-2. **Built-in PHI Audit Log:** Every mutation to patient profiles, relationships, lab values, prescriptions, and notes automatically writes a full JSON diff to `security_audit_log`.
-3. **P2P Video + WebSocket Note Streaming:** Teleconsultation combines WebRTC peer-to-peer video with live WebSocket note streaming without polling the database.
-4. **Clean Codebase Separation:** Research scripts (`research/ml`) are kept strictly isolated from the React/Vite product build.
