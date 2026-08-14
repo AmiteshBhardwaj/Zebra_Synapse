@@ -148,6 +148,12 @@ function extractValueFromLines(
     const startIndex = line.search(labelMatch);
     const afterLabel = startIndex >= 0 ? line.slice(startIndex) : line;
 
+    // Clean out parenthesized reference ranges e.g. "(70 - 99)", "(4.0 - 5.6%)", "(12.0 - 17.0)"
+    const cleanedAfterLabel = afterLabel.replace(
+      /\(\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?\s*(?:[\-\–\—]\s*\d+(?:\.\d+)?)?\s*%?\s*\)/gi,
+      " ",
+    );
+
     // 1. Try matching with unit constraint if units are defined
     const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
     if (hasUnitConstraint) {
@@ -159,15 +165,20 @@ function extractValueFromLines(
         `(\\d+(?:\\.\\d+)?)\\s*(?:${unitPatternStr})`,
         "i",
       );
-      const matchWithUnit = afterLabel.match(unitRegex);
+      const matchWithUnit = cleanedAfterLabel.match(unitRegex);
       if (matchWithUnit?.[1]) {
         const val = Number(matchWithUnit[1]);
         if (Number.isFinite(val)) return val;
       }
     }
 
-    // 2. Fallback: extract the first number appearing after the label on this line
-    const matchNumber = afterLabel.match(/(\d+(?:\.\d+)?)/);
+    // 2. Fallback: strip reference clauses ("Ref: 70 - 99", "Normal 12 - 17") and pick the result number
+    const noRefLine = cleanedAfterLabel.replace(
+      /(?:ref|reference|normal|range|interval)\s*[:\-]?\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?(?:\s*[\-\–\—]\s*\d+(?:\.\d+)?)?/gi,
+      " ",
+    );
+
+    const matchNumber = noRefLine.match(/(\d+(?:\.\d+)?)/);
     if (matchNumber?.[1]) {
       const val = Number(matchNumber[1]);
       if (Number.isFinite(val)) return val;
