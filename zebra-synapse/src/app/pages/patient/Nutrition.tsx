@@ -10,13 +10,14 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { formatLabDate } from "../../../lib/labPanels";
-import { getLatestLabPanel, getNutritionPlans } from "../../../lib/labInsights";
+import { useActiveReport } from "../../../hooks/useActiveReport";
+import { getNutritionPlans } from "../../../lib/labInsights";
 
 export default function Nutrition() {
   const { hasLabReports, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
-  const latestPanel = getLatestLabPanel(panels);
-  const plans = latestPanel ? getNutritionPlans(latestPanel) : [];
+  const { activePanel } = useActiveReport(panels);
+  const plans = activePanel ? getNutritionPlans(activePanel) : [];
 
   if (loading || panelsLoading) {
     return (
@@ -59,12 +60,12 @@ export default function Nutrition() {
         <div className="flex items-center gap-2 text-xs">
           <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            {hasPanels && latestPanel ? `${plans.length} Custom Meal Plans` : "Awaiting Biomarkers"}
+            {hasPanels && activePanel ? `${plans.length} Custom Meal Plans` : "Awaiting Biomarkers"}
           </span>
         </div>
       </div>
 
-      {!hasPanels || !latestPanel ? (
+      {!hasPanels || !activePanel ? (
         <div className="space-y-6 max-w-4xl">
           <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>
@@ -167,7 +168,7 @@ export default function Nutrition() {
             <CardContent className="space-y-3">
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Panel Date</p>
-                <p className="mt-1 text-xs sm:text-sm font-medium text-white">{formatLabDate(latestPanel.recorded_at)}</p>
+                <p className="mt-1 text-xs sm:text-sm font-medium text-white">{activePanel ? formatLabDate(activePanel.recorded_at) : "N/A"}</p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Structured Source</p>

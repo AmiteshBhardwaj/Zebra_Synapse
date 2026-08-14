@@ -3,6 +3,7 @@ import { ExternalLink, FlaskConical, Info, ShieldCheck, Search } from "lucide-re
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
+import { useActiveReport } from "../../../hooks/useActiveReport";
 import { formatDisplayDate } from "../../../lib/careRelationships";
 import { formatLabDate, type LabPanelRow } from "../../../lib/labPanels";
 import { getLatestLabPanel, getTrialMatches } from "../../../lib/labInsights";
@@ -125,21 +126,21 @@ export default function ClinicalTrials() {
     loadCareRow();
   }, [loadCareRow]);
 
-  const latestPanel = getLatestLabPanel(panels);
+  const { activePanel: selectedPanel } = useActiveReport(panels);
 
   const activePanel = useMemo(() => {
-    if (latestPanel) return latestPanel;
+    if (selectedPanel) return selectedPanel;
     if (careRow && user?.id) {
       return buildMinimalPanelFromCareRow(user.id, careRow);
     }
     return null;
-  }, [latestPanel, careRow, user]);
+  }, [selectedPanel, careRow, user]);
 
   const matches = useMemo(() => (activePanel ? getTrialMatches(activePanel) : []), [activePanel]);
 
-  const sourceLabel = latestPanel ? "Latest lab panel" : careRow ? "Linked care record" : "No active signals";
-  const sourceDate = latestPanel
-    ? formatLabDate(latestPanel.recorded_at)
+  const sourceLabel = selectedPanel ? "Active lab panel" : careRow ? "Linked care record" : "No active signals";
+  const sourceDate = selectedPanel
+    ? formatLabDate(selectedPanel.recorded_at)
     : careRow
     ? formatDisplayDate(careRow.last_visit ?? careRow.created_at)
     : "";
@@ -320,8 +321,8 @@ export default function ClinicalTrials() {
                 <p className="text-xs sm:text-sm font-medium text-white">{sourceLabel}</p>
                 <p className="text-xs text-white/60">Latest signal recorded {sourceDate}</p>
                 <p className="text-xs text-[#92a8c7] leading-relaxed">
-                  {latestPanel
-                    ? "Direct links were chosen from your latest structured lab panel."
+                  {selectedPanel
+                    ? "Direct links were chosen from your active structured lab panel."
                     : "No structured lab panel was available, so the page used your linked-care glucose snapshot as a minimal fallback."}
                 </p>
                 <div className="space-y-1.5 pt-1">

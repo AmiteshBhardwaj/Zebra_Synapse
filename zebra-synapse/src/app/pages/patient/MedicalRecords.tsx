@@ -16,6 +16,7 @@ import {
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { usePatientLabReportExtractions } from "../../../hooks/usePatientLabReportExtractions";
+import { useActiveReport } from "../../../hooks/useActiveReport";
 import {
   buildPublishedPanelSummary,
   coerceBiomarkerMap,
@@ -25,7 +26,7 @@ import {
   sortBiomarkerKeys,
 } from "../../../lib/labReportAnalysis";
 import { formatLabDate } from "../../../lib/labPanels";
-import { getLatestLabPanel, getMetricAssessments } from "../../../lib/labInsights";
+import { getMetricAssessments } from "../../../lib/labInsights";
 import { getBiomarkerDefinition } from "../../../lib/biomarkerCatalog";
 import {
   PatientPageHero,
@@ -64,9 +65,7 @@ export default function MedicalRecords() {
   const { uploads, refetch: refetchUploads } = usePatientLabReports();
   const { panels, refetch: refetchPanels } = usePatientLabPanels();
   const { extractions, publishReviewedExtraction, refetch: refetchExtractions } = usePatientLabReportExtractions();
-
-  // Report selection state - defaults to "none" so the empty state is displayed first
-  const [selectedReportId, setSelectedReportId] = useState<string>("none");
+  const { selectedReportId, setSelectedReportId, activePanel } = useActiveReport(panels);
 
   // Available reports dropdown options
   const availableReports = useMemo(() => {
@@ -83,7 +82,7 @@ export default function MedicalRecords() {
       panels.forEach((p) => {
         list.push({
           id: p.id,
-          name: `Published Lab Panel`,
+          name: `Structured Lab Panel`,
           date: formatLabDate(p.recorded_at),
         });
       });
@@ -103,10 +102,9 @@ export default function MedicalRecords() {
     return list;
   }, [uploads, panels]);
 
-  const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
   const latestMetrics = useMemo(
-    () => (latestPanel ? getMetricAssessments(latestPanel).filter((metric) => metric.status !== "missing") : []),
-    [latestPanel],
+    () => (activePanel ? getMetricAssessments(activePanel).filter((metric) => metric.status !== "missing") : []),
+    [activePanel],
   );
   const uploadsById = useMemo(() => new Map(uploads.map((upload) => [upload.id, upload])), [uploads]);
   const pendingExtractions = useMemo(
@@ -259,18 +257,18 @@ export default function MedicalRecords() {
 
 
 
-          {latestPanel ? (
+          {activePanel ? (
             <Card className={portalPanelClass}>
               <CardHeader>
                 <CardTitle className="text-white">Published report summary</CardTitle>
                 <CardDescription className="text-[#A1A1AA]">
-                  Latest live panel for {formatLabDate(latestPanel.recorded_at)}
+                  Latest live panel for {formatLabDate(activePanel.recorded_at)}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className={`${portalInsetClass} p-5`}>
                   <p className="text-sm leading-7 text-[#D4D4D8]">
-                    {buildPublishedPanelSummary(latestPanel.biomarkers ?? {})}
+                    {buildPublishedPanelSummary(activePanel.biomarkers ?? {})}
                   </p>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
