@@ -1,6 +1,7 @@
 # System Architecture
 
-This document is the canonical system-design reference for **Zebra Synapse**. Setup, deployment, and operations stay in [`README.md`](./README.md). Supplementary development notes stay in [`docs/`](./docs).
+This document is the canonical system-design reference for **Zebra Synapse**. Setup, deployment, and operations stay in [`../README.md`](../README.md). Supplementary development notes stay in [`docs/codebase.md`](./docs/codebase.md).
+
 
 ---
 

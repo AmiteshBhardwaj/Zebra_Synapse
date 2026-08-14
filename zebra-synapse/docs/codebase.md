@@ -1,6 +1,7 @@
 # Zebra Synapse — Codebase Navigation & Architecture Map
 
-This guide provides an architectural map of the codebase for developers modifying or extending Zebra Synapse. Canonical setup and operations stay in [`../README.md`](../README.md). Canonical system architecture stays in [`../architecture.md`](../architecture.md).
+This guide provides an architectural map of the codebase for developers modifying or extending Zebra Synapse. Canonical setup and operations stay in [`../../README.md`](../../README.md). Canonical system architecture stays in [`../architecture.md`](../architecture.md).
+
 
 ---
 

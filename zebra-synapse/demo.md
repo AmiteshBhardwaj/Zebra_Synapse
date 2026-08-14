@@ -1,6 +1,6 @@
 # Zebra Synapse — Demo & Evaluation Guide
 
-This guide is designed for judges, evaluators, and reviewers exploring **Zebra Synapse**. Setup and deployment instructions stay in [`README.md`](./README.md). Technical architecture stays in [`architecture.md`](./architecture.md).
+This guide is designed for judges, evaluators, and reviewers exploring **Zebra Synapse**. Setup and deployment instructions stay in [`README.md`](../README.md). Technical architecture stays in [`architecture.md`](./architecture.md).
 
 ---
 
@@ -8,7 +8,7 @@ This guide is designed for judges, evaluators, and reviewers exploring **Zebra S
 
 - **Live Web Application:** [https://zebrasynapse.vercel.app/](https://zebrasynapse.vercel.app/)
 - **Demo Video Walkthrough:** [https://youtu.be/xa0-ucu9rgE?si=y67QKcMFRMQ1W2ej](https://youtu.be/xa0-ucu9rgE?si=y67QKcMFRMQ1W2ej)
-- **Submission Screenshots:** Available in [`screenshots/`](./screenshots) (Index: [`screenshots/README.md`](./screenshots/README.md))
+- **Submission Screenshots:** Available in [`screenshots/`](./screenshots)
 
 ---
 
@@ -16,7 +16,8 @@ This guide is designed for judges, evaluators, and reviewers exploring **Zebra S
 
 To test locally with pre-seeded demo clinical data:
 
-1. Follow standard setup in [`README.md`](./README.md) (`npm install`, configure `.env`).
+1. Follow standard setup in [`README.md`](../README.md) (`npm install`, configure `.env`).
+
 2. Apply SQL migrations 001 through 017 in [`supabase/migrations/`](./supabase/migrations/).
 3. Run [`supabase/migrations/seed_doctors_patients.sql`](./supabase/migrations/seed_doctors_patients.sql) to populate demo doctors, patients, care links, and historical lab panels.
 4. Launch local dev server: `npm run dev`.

@@ -2,7 +2,8 @@
 
 Thank you for contributing to Zebra Synapse! Please review this document for development workflows, testing expectations, and contribution standards.
 
-For setup and deployment prerequisites, consult [`README.md`](./README.md). For system architecture and component structure, consult [`architecture.md`](./architecture.md).
+For setup and deployment prerequisites, consult [`../README.md`](../README.md). For system architecture and component structure, consult [`architecture.md`](./architecture.md).
+
 
 ---
 
