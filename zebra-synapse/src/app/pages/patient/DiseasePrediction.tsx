@@ -2,16 +2,15 @@ import { Info, ShieldAlert, TrendingUp, HelpCircle, AlertTriangle } from "lucide
 import { useMemo } from "react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
+import { useActiveReport } from "../../../hooks/useActiveReport";
 import {
   getDiseasePredictions,
-  getLatestLabPanel,
   getOverallStatus,
 } from "../../../lib/labInsights";
 import { formatLabDate } from "../../../lib/labPanels";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import {
   PatientPortalPage,
-  portalInsetClass,
   portalPanelClass,
 } from "../../components/patient/PortalTheme";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -20,14 +19,14 @@ import { Badge } from "../../components/ui/badge";
 export default function DiseasePrediction() {
   const { hasLabReports, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
-  const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
+  const { activePanel } = useActiveReport(panels);
   const predictions = useMemo(
-    () => (latestPanel ? getDiseasePredictions(latestPanel) : []),
-    [latestPanel],
+    () => (activePanel ? getDiseasePredictions(activePanel) : []),
+    [activePanel],
   );
   const overall = useMemo(
-    () => (latestPanel ? getOverallStatus(latestPanel) : null),
-    [latestPanel],
+    () => (activePanel ? getOverallStatus(activePanel) : null),
+    [activePanel],
   );
 
   if (loading || panelsLoading) {
@@ -71,12 +70,12 @@ export default function DiseasePrediction() {
         <div className="flex items-center gap-2 text-xs">
           <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            {hasPanels && latestPanel ? `${predictions.length} Risk Models Active` : "Awaiting Biomarkers"}
+            {hasPanels && activePanel ? `${predictions.length} Risk Models Active` : "Awaiting Biomarkers"}
           </span>
         </div>
       </div>
 
-      {!hasPanels || !latestPanel ? (
+      {!hasPanels || !activePanel ? (
         <div className="space-y-6 max-w-4xl">
           <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>
@@ -229,9 +228,9 @@ export default function DiseasePrediction() {
                 </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5 sm:p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Latest structured panel</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50">Active structured panel</p>
                 <p className="mt-1 text-xs sm:text-sm text-white">
-                  {latestPanel ? formatLabDate(latestPanel.recorded_at) : "Awaiting panel"}
+                  {activePanel ? formatLabDate(activePanel.recorded_at) : "Awaiting panel"}
                 </p>
               </div>
             </CardContent>

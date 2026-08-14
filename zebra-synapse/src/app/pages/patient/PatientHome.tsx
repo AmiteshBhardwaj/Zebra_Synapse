@@ -23,6 +23,7 @@ import {
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
+import { useActiveReport } from "../../../hooks/useActiveReport";
 import { formatLabDate } from "../../../lib/labPanels";
 import {
   MetricPriorityBars,
@@ -54,8 +55,7 @@ export default function PatientHome() {
   const [dragActive, setDragActive] = useState(false);
   const [focusedMetricKeys, setFocusedMetricKeys] = useState<string[]>([]);
 
-  // Medical report selection state - defaults to "none" so area below stays empty until selected
-  const [selectedReportId, setSelectedReportId] = useState<string>("none");
+  const { selectedReportId, setSelectedReportId, activePanel } = useActiveReport(panels);
 
   // Available medical reports list for dropdown
   const availableReports = useMemo(() => {
@@ -92,12 +92,11 @@ export default function PatientHome() {
     return list;
   }, [uploads, panels]);
 
-  const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
   const allMetrics = useMemo(
-    () => (latestPanel ? getMetricAssessments(latestPanel).filter((metric) => metric.status !== "missing") : []),
-    [latestPanel],
+    () => (activePanel ? getMetricAssessments(activePanel).filter((metric) => metric.status !== "missing") : []),
+    [activePanel],
   );
-  const topMetrics = latestPanel ? getMetricsForDashboard(latestPanel, 20) : [];
+  const topMetrics = activePanel ? getMetricsForDashboard(activePanel, 20) : [];
 
   // Dynamic time-of-day greeting
   const greeting = useMemo(() => {
@@ -338,8 +337,8 @@ export default function PatientHome() {
               stats={[
                 {
                   label: "Tracked Biomarkers",
-                  value: Object.keys(latestPanel?.biomarkers ?? {}).length,
-                  detail: "Live markers extracted from your latest uploaded report.",
+                  value: Object.keys(activePanel?.biomarkers ?? {}).length,
+                  detail: "Live markers extracted from your active selected report.",
                   tone: "teal",
                 },
                 {

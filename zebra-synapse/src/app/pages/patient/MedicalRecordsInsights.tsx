@@ -10,6 +10,7 @@ import {
 } from "../../components/ui/select";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
+import { useActiveReport } from "../../../hooks/useActiveReport";
 import {
   MetricPriorityBars,
   MetricSparklineGrid,
@@ -17,7 +18,7 @@ import {
   OverviewStatCards,
 } from "../../components/patient/InsightVisuals";
 import { formatLabDate } from "../../../lib/labPanels";
-import { getLatestLabPanel, getMetricAssessments, getMetricValueLabel } from "../../../lib/labInsights";
+import { getMetricAssessments, getMetricValueLabel } from "../../../lib/labInsights";
 import {
   PatientPageHero,
   PatientPortalPage,
@@ -46,11 +47,9 @@ function formatUploadedAt(iso: string): string {
 export default function MedicalRecordsInsights() {
   const { uploads } = usePatientLabReports();
   const { panels } = usePatientLabPanels();
+  const { selectedReportId, setSelectedReportId, activePanel } = useActiveReport(panels);
 
-  // Report selection state - defaults to "none" so empty state is displayed until chosen
-  const [selectedReportId, setSelectedReportId] = useState<string>("none");
-
-  // List of available reports for dropdown
+  // Available reports dropdown options
   const availableReports = useMemo(() => {
     const list: Array<{ id: string; name: string; date: string }> = [];
     if (uploads.length > 0) {
@@ -85,9 +84,8 @@ export default function MedicalRecordsInsights() {
     return list;
   }, [uploads, panels]);
 
-  const latestPanel = getLatestLabPanel(panels);
-  const metrics = latestPanel
-    ? getMetricAssessments(latestPanel).filter((metric) => metric.status !== "missing")
+  const metrics = activePanel
+    ? getMetricAssessments(activePanel).filter((metric) => metric.status !== "missing")
     : [];
 
   return (
@@ -195,18 +193,18 @@ export default function MedicalRecordsInsights() {
             </CardContent>
           </Card>
 
-          {latestPanel ? (
+          {activePanel ? (
             <OverviewStatCards
               stats={[
                 {
                   label: "Panel Date",
-                  value: formatLabDate(latestPanel.recorded_at),
+                  value: formatLabDate(activePanel.recorded_at),
                   detail: "Date associated with this recorded laboratory panel.",
                   tone: "teal",
                 },
                 {
                   label: "Extracted Biomarkers",
-                  value: Object.keys(latestPanel.biomarkers ?? {}).length,
+                  value: Object.keys(activePanel.biomarkers ?? {}).length,
                   detail: "Total number of structured markers in this panel.",
                   tone: "amber",
                 },
@@ -253,7 +251,7 @@ export default function MedicalRecordsInsights() {
                 <CardHeader>
                   <CardTitle className="text-white">Structured biomarker values</CardTitle>
                   <CardDescription className="text-[#A1A1AA]">
-                    Full breakdown of lab values extracted for {latestPanel ? formatLabDate(latestPanel.recorded_at) : "latest panel"}.
+                    Full breakdown of lab values extracted for {activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

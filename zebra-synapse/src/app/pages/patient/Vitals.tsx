@@ -10,10 +10,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
+import { useActiveReport } from "../../../hooks/useActiveReport";
 import { getSupabase } from "../../../lib/supabase";
 import { formatBloodPressure, formatDisplayDate } from "../../../lib/careRelationships";
 import { formatLabDate, type LabPanelRow } from "../../../lib/labPanels";
-import { getLatestLabPanel, getOverallStatus } from "../../../lib/labInsights";
+import { getOverallStatus } from "../../../lib/labInsights";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
@@ -110,8 +111,8 @@ export default function Vitals() {
     void loadVitals();
   }, [loadVitals]);
 
-  const latestPanel = useMemo(() => getLatestLabPanel(panels), [panels]);
-  const labStatus = latestPanel ? getOverallStatus(latestPanel) : null;
+  const { activePanel } = useActiveReport(panels);
+  const labStatus = activePanel ? getOverallStatus(activePanel) : null;
 
   const summary = useMemo<VitalsSummary | null>(() => {
     if (vitalsRow) {
@@ -132,23 +133,23 @@ export default function Vitals() {
       };
     }
 
-    if (latestPanel) {
+    if (activePanel) {
       return {
         source: "lab" as const,
         bloodPressure: null as string | null,
         heartRate: null as number | null,
-        glucose: latestPanel.fasting_glucose,
-        a1c: latestPanel.hemoglobin_a1c,
+        glucose: (activePanel.fasting_glucose ?? activePanel.biomarkers?.fasting_glucose) ?? null,
+        a1c: (activePanel.hemoglobin_a1c ?? activePanel.biomarkers?.hemoglobin_a1c) ?? null,
         riskFlags: [] as string[],
-        lastUpdated: formatLabDate(latestPanel.recorded_at),
-        condition: "Latest uploaded lab panel",
+        lastUpdated: formatLabDate(activePanel.recorded_at),
+        condition: "Active selected lab panel",
         status: (labStatus?.tone === "normal" ? "normal" : "elevated") as VitalsStatus,
         statusLabel: labStatus?.label ?? "Lab-derived",
       };
     }
 
     return null;
-  }, [vitalsRow, latestPanel, labStatus]);
+  }, [vitalsRow, activePanel, labStatus]);
 
   const hasAnyVitals = Boolean(
     summary &&
@@ -365,7 +366,7 @@ export default function Vitals() {
                       </Badge>
                     ))}
                   </div>
-                ) : summary.source === "lab" && latestPanel ? (
+                ) : summary.source === "lab" && activePanel ? (
                   <div className={`${portalInsetClass} p-4`}>
                     <p className="text-sm leading-7 text-white/70">
                       {labStatus?.summary ??
