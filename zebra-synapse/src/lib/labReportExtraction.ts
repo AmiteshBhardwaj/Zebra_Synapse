@@ -182,19 +182,36 @@ function extractValueFromLines(
 ): number | null {
   const bounds = BIOMARKER_SANITY_BOUNDS[biomarkerKey];
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
     if (exclude?.some((pattern) => pattern.test(line))) continue;
 
     const labelMatch = labels.find((pattern) => pattern.test(line));
     if (!labelMatch) continue;
 
+    // Multi-line window search (lines i to i+3) to catch card layouts e.g. Dr Lal PathLabs
+    const windowLines = lines.slice(i, i + 4);
+    const combinedWindowText = windowLines.join(" ");
+
+    // 1. Check for "Value : X" or "Value: X" in card layouts
+    const cardMatch = combinedWindowText.match(/Value\s*:\s*(?:>|<|=)?\s*(\d+(?:\.\d+)?)/i);
+    if (cardMatch?.[1]) {
+      let val = Number(cardMatch[1]);
+      if (Number.isFinite(val)) {
+        if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
+        if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
+        if (!bounds || (val >= bounds.min && val <= bounds.max)) {
+          return val;
+        }
+      }
+    }
+
     const startIndex = line.search(labelMatch);
-    if (startIndex < 0) continue;
-    const afterLabel = line.slice(startIndex);
+    const afterLabel = startIndex >= 0 ? line.slice(startIndex) : line;
 
     const cleanedAfterLabel = sanitizeLineText(afterLabel);
 
-    // 1. Try matching with unit constraint if units are defined
+    // 2. Try matching with unit constraint if units are defined
     const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
     if (hasUnitConstraint) {
       const unitPatternStr = units
@@ -202,25 +219,33 @@ function extractValueFromLines(
         .map(escapeRegex)
         .join("|");
       const unitRegex = new RegExp(
-        `(\\d+(?:\\.\\d+)?)\\s*(?:${unitPatternStr})`,
+        `(\\d+(?:\\.\d+)?)\\s*(?:${unitPatternStr})`,
         "i",
       );
       const matchWithUnit = cleanedAfterLabel.match(unitRegex);
       if (matchWithUnit?.[1]) {
-        const val = Number(matchWithUnit[1]);
-        if (Number.isFinite(val) && (!bounds || (val >= bounds.min && val <= bounds.max))) {
-          return val;
+        let val = Number(matchWithUnit[1]);
+        if (Number.isFinite(val)) {
+          if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
+          if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
+          if (!bounds || (val >= bounds.min && val <= bounds.max)) {
+            return val;
+          }
         }
       }
     }
 
-    // 2. Fallback: inspect remaining numbers on the sanitized line
+    // 3. Fallback: inspect remaining numbers on the sanitized line
     const matches = Array.from(cleanedAfterLabel.matchAll(/(\d+(?:\.\d+)?)/g));
     for (const match of matches) {
       if (!match[1]) continue;
-      const val = Number(match[1]);
-      if (Number.isFinite(val) && (!bounds || (val >= bounds.min && val <= bounds.max))) {
-        return val;
+      let val = Number(match[1]);
+      if (Number.isFinite(val)) {
+        if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
+        if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
+        if (!bounds || (val >= bounds.min && val <= bounds.max)) {
+          return val;
+        }
       }
     }
   }
