@@ -14,11 +14,21 @@ export type MetricAssessment = {
   priority?: number;
 };
 
+export type TriggeredBiomarker = {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  status: "high" | "low" | "borderline";
+  reference?: string;
+};
+
 export type DiseasePrediction = {
   title: string;
   level: "low" | "moderate" | "high";
   rationale: string;
   nextStep: string;
+  triggeredBiomarkers?: TriggeredBiomarker[];
 };
 
 export type NutritionPlan = {
@@ -368,6 +378,29 @@ export function getOverallStatus(panel: LabPanelRow): {
 export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
   const list: DiseasePrediction[] = [];
 
+  // Diabetes / Glucose
+  const glucoseTriggers: TriggeredBiomarker[] = [];
+  if (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 5.7) {
+    glucoseTriggers.push({
+      key: "hemoglobin_a1c",
+      label: "Hemoglobin A1c",
+      value: panel.hemoglobin_a1c,
+      unit: "%",
+      status: panel.hemoglobin_a1c >= 6.5 ? "high" : "borderline",
+      reference: "< 5.7",
+    });
+  }
+  if (panel.fasting_glucose != null && panel.fasting_glucose >= 100) {
+    glucoseTriggers.push({
+      key: "fasting_glucose",
+      label: "Fasting Glucose",
+      value: panel.fasting_glucose,
+      unit: "mg/dL",
+      status: panel.fasting_glucose >= 126 ? "high" : "borderline",
+      reference: "70-99",
+    });
+  }
+
   if (
     (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 6.5) ||
     (panel.fasting_glucose != null && panel.fasting_glucose >= 126)
@@ -377,16 +410,58 @@ export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
       level: "high",
       rationale: "A1c or fasting glucose is in a range often associated with diabetes.",
       nextStep: "Review the report with your clinician for confirmation and treatment planning.",
+      triggeredBiomarkers: glucoseTriggers,
     });
-  } else if (
-    (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 5.7) ||
-    (panel.fasting_glucose != null && panel.fasting_glucose >= 100)
-  ) {
+  } else if (glucoseTriggers.length > 0) {
     list.push({
       title: "Prediabetes risk",
       level: "moderate",
       rationale: "Glucose markers are above ideal but below common diabetes thresholds.",
       nextStep: "Focus on weight, activity, sleep, and lower-refined-carbohydrate meals.",
+      triggeredBiomarkers: glucoseTriggers,
+    });
+  }
+
+  // Lipid / Cardiovascular
+  const lipidTriggers: TriggeredBiomarker[] = [];
+  if (panel.ldl != null && panel.ldl >= 100) {
+    lipidTriggers.push({
+      key: "ldl",
+      label: "LDL Cholesterol",
+      value: panel.ldl,
+      unit: "mg/dL",
+      status: panel.ldl >= 160 ? "high" : "borderline",
+      reference: "< 100",
+    });
+  }
+  if (panel.triglycerides != null && panel.triglycerides >= 150) {
+    lipidTriggers.push({
+      key: "triglycerides",
+      label: "Triglycerides",
+      value: panel.triglycerides,
+      unit: "mg/dL",
+      status: panel.triglycerides >= 200 ? "high" : "borderline",
+      reference: "< 150",
+    });
+  }
+  if (panel.hdl != null && panel.hdl < 40) {
+    lipidTriggers.push({
+      key: "hdl",
+      label: "HDL Cholesterol",
+      value: panel.hdl,
+      unit: "mg/dL",
+      status: "low",
+      reference: ">= 40",
+    });
+  }
+  if (panel.total_cholesterol != null && panel.total_cholesterol >= 200) {
+    lipidTriggers.push({
+      key: "total_cholesterol",
+      label: "Total Cholesterol",
+      value: panel.total_cholesterol,
+      unit: "mg/dL",
+      status: panel.total_cholesterol >= 240 ? "high" : "borderline",
+      reference: "< 200",
     });
   }
 
@@ -400,34 +475,55 @@ export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
       level: "high",
       rationale: "Cholesterol markers suggest elevated cardiovascular risk.",
       nextStep: "Discuss lipid management, exercise targets, and medication need with your clinician.",
+      triggeredBiomarkers: lipidTriggers,
     });
-  } else if (
-    (panel.ldl != null && panel.ldl >= 100) ||
-    (panel.triglycerides != null && panel.triglycerides >= 150)
-  ) {
+  } else if (lipidTriggers.length > 0) {
     list.push({
       title: "Emerging lipid imbalance",
       level: "moderate",
       rationale: "Some lipid markers are above ideal and worth tracking.",
       nextStep: "Reduce saturated fat, improve fiber intake, and recheck labs on schedule.",
+      triggeredBiomarkers: lipidTriggers,
     });
   }
 
+  // Hematologic / Anemia
   if (panel.hemoglobin != null && panel.hemoglobin < 12) {
     list.push({
       title: "Possible anemia pattern",
       level: "moderate",
-      rationale: "Hemoglobin is below the usual range.",
+      rationale: "Hemoglobin is below the usual reference range (12-17 g/dL).",
       nextStep: "Review iron studies, symptoms, and possible causes with your clinician.",
+      triggeredBiomarkers: [
+        {
+          key: "hemoglobin",
+          label: "Hemoglobin",
+          value: panel.hemoglobin,
+          unit: "g/dL",
+          status: "low",
+          reference: "12-17",
+        },
+      ],
     });
   }
 
+  // Renal / Kidney Function
   if (panel.creatinine != null && panel.creatinine > 1.3) {
     list.push({
       title: "Kidney function follow-up",
       level: "moderate",
-      rationale: "Creatinine is above the usual range.",
+      rationale: "Creatinine is above the usual reference range (0.6-1.3 mg/dL).",
       nextStep: "Review hydration, medications, blood pressure, and kidney follow-up labs.",
+      triggeredBiomarkers: [
+        {
+          key: "creatinine",
+          label: "Creatinine",
+          value: panel.creatinine,
+          unit: "mg/dL",
+          status: "high",
+          reference: "0.6-1.3",
+        },
+      ],
     });
   }
 
