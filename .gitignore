@@ -19,3 +19,7 @@ coverage/
 Thumbs.db
 .codex-*
 guidelines/
+.temp/
+**/.temp/
+supabase/.temp/
+**/supabase/.temp/
