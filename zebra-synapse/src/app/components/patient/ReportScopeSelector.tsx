@@ -70,7 +70,7 @@ export default function ReportScopeSelector({
 
   return (
     <div
-      className={`rounded-2xl border border-white/10 bg-[#0d131f]/90 p-4 shadow-[0_8px_30px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all ${className}`}
+      className={`rounded-[24px] border border-slate-100 bg-white p-4 shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-all ${className}`}
     >
       {/* Top Header Row: Scope Context & Dropdown Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
@@ -78,32 +78,32 @@ export default function ReportScopeSelector({
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-colors shrink-0 ${
               isComprehensive
-                ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
-                : "border-cyan-500/30 bg-cyan-500/10 text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                ? "border-lime-200 bg-lime-50 text-lime-700 shadow-sm"
+                : "border-sky-200 bg-sky-50 text-sky-700 shadow-sm"
             }`}
           >
             {isComprehensive ? (
-              <Layers className="h-5 w-5" />
+              <Layers className="h-5 w-5 stroke-[2.2]" />
             ) : (
-              <FileText className="h-5 w-5" />
+              <FileText className="h-5 w-5 stroke-[2.2]" />
             )}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#ff9c61]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Analysis Scope
               </p>
               <Badge
                 className={`text-[9px] px-1.5 py-0 h-4 uppercase font-semibold tracking-wider ${
                   isComprehensive
-                    ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-300"
-                    : "border-cyan-500/40 bg-cyan-500/20 text-cyan-300"
+                    ? "border-lime-200 bg-lime-50 text-lime-800"
+                    : "border-sky-200 bg-sky-50 text-sky-800"
                 }`}
               >
                 {isComprehensive ? "Multi-Report" : "Single Report"}
               </Badge>
             </div>
-            <p className="text-xs sm:text-sm font-semibold text-white mt-0.5">
+            <p className="text-xs sm:text-sm font-bold text-slate-900 mt-0.5 font-['Manrope']">
               {isComprehensive
                 ? "Comprehensive Multi-Report Mode"
                 : "Single Report Snapshot"}
@@ -114,23 +114,23 @@ export default function ReportScopeSelector({
         {/* Dropdown Scope Selector */}
         <div className="w-full sm:w-auto sm:min-w-[280px] sm:max-w-md">
           <Select value={selectedReportId} onValueChange={onSelectReportId}>
-            <SelectTrigger className="h-10 w-full rounded-xl border-white/15 bg-[#070b13] px-3 text-xs font-medium text-white shadow-inner hover:border-cyan-500/50 focus:ring-1 focus:ring-cyan-400">
+            <SelectTrigger className="h-10 w-full rounded-xl border-slate-200 bg-slate-50/80 px-3 text-xs font-medium text-slate-800 hover:border-lime-400 focus:ring-1 focus:ring-lime-500 transition-all">
               <SelectValue placeholder="Choose analysis scope..." />
             </SelectTrigger>
-            <SelectContent className="border-cyan-500/20 bg-[#0d131f] text-white shadow-2xl rounded-xl p-1 max-w-[92vw] sm:max-w-md">
+            <SelectContent className="border-slate-100 bg-white text-slate-800 shadow-xl rounded-2xl p-1 max-w-[92vw] sm:max-w-md">
               {reportOptions.map((opt) => (
                 <SelectItem
                   key={opt.id}
                   value={opt.id}
-                  className="py-2.5 text-xs text-white focus:bg-cyan-500/20 focus:text-cyan-200 cursor-pointer rounded-lg"
+                  className="py-2.5 text-xs text-slate-700 focus:bg-lime-50 focus:text-lime-900 cursor-pointer rounded-xl"
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-4">
                     {opt.isAll ? (
-                      <Sparkles className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <Sparkles className="h-3.5 w-3.5 text-lime-600 shrink-0" />
                     ) : (
-                      <FileText className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                      <FileText className="h-3.5 w-3.5 text-sky-600 shrink-0" />
                     )}
-                    <span className={`truncate ${opt.isAll ? "font-semibold text-emerald-300" : "text-white/90"}`}>
+                    <span className={`truncate ${opt.isAll ? "font-bold text-lime-800" : "text-slate-700"}`}>
                       {opt.label}
                     </span>
                   </div>
@@ -142,15 +142,15 @@ export default function ReportScopeSelector({
       </div>
 
       {/* Bottom Row: Scope Stats & Longitudinal Trend Indicators */}
-      <div className="mt-3.5 pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-2.5">
+      <div className="mt-3.5 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2.5">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Badge className="border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/90">
-            <Calendar className="mr-1.5 h-3 w-3 text-sky-400 shrink-0" />
+          <Badge className="border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 font-medium">
+            <Calendar className="mr-1.5 h-3 w-3 text-sky-600 shrink-0" />
             <span>{multiPanelMeta.dateRange.spanText}</span>
           </Badge>
 
-          <Badge className="border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/90">
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 mr-1.5 shrink-0" />
+          <Badge className="border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-700 font-medium">
+            <span className="h-1.5 w-1.5 rounded-full bg-lime-500 mr-1.5 shrink-0" />
             <span>{multiPanelMeta.uniqueBiomarkersCount} Biomarkers Tracked</span>
           </Badge>
         </div>
@@ -159,19 +159,19 @@ export default function ReportScopeSelector({
         {isComprehensive && multiPanelMeta.totalReports > 1 && (
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             {multiPanelMeta.worseningCount > 0 && (
-              <Badge className="border border-rose-500/30 bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+              <Badge className="border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">
                 <TrendingUp className="mr-1 h-3 w-3 shrink-0" />
                 <span>{multiPanelMeta.worseningCount} Upward</span>
               </Badge>
             )}
             {multiPanelMeta.improvingCount > 0 && (
-              <Badge className="border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+              <Badge className="border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                 <TrendingDown className="mr-1 h-3 w-3 shrink-0" />
                 <span>{multiPanelMeta.improvingCount} Improving</span>
               </Badge>
             )}
             {multiPanelMeta.stableCount > 0 && (
-              <Badge className="border border-slate-500/30 bg-slate-500/15 px-2 py-0.5 text-[10px] font-semibold text-slate-300">
+              <Badge className="border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
                 <Minus className="mr-1 h-3 w-3 shrink-0" />
                 <span>{multiPanelMeta.stableCount} Stable</span>
               </Badge>

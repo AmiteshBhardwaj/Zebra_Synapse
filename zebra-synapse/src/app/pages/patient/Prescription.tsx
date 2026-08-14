@@ -68,41 +68,41 @@ export default function Prescription() {
   return (
     <PatientPortalPage>
       {/* Sleek Executive Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
-            <Pill className="h-6 w-6 text-[#ff9c61]" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+            <Pill className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Prescriptions</h1>
-              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Prescriptions</h1>
+              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider">
                 Medication Vault
               </span>
             </div>
-            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
               Medications prescribed by your care team, dosage schedules, and active refill requests.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-1.5 text-slate-700 font-semibold shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             {active.length} Active Rx
           </span>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-sm text-[#A1A1AA]">Loading prescriptions…</p>
+        <p className="text-xs text-slate-400">Loading prescriptions…</p>
       ) : null}
 
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-4xl">
         <div>
-          <h2 className="text-lg font-semibold text-white mb-4">Active Prescriptions</h2>
+          <h2 className="text-base font-bold text-slate-900 mb-3 font-['Manrope']">Active Prescriptions</h2>
           {!loading && active.length === 0 ? (
-            <div className={`${portalPanelClass} p-6 text-center text-sm text-[#92a8c7]`}>
+            <div className={`${portalPanelClass} p-6 text-center text-xs text-slate-400`}>
               No active prescriptions yet. Your doctor will add them from their dashboard.
             </div>
           ) : null}
@@ -110,30 +110,30 @@ export default function Prescription() {
             {active.map((rx) => (
               <Card key={rx.id} className={portalPanelClass}>
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-4 min-w-0">
-                      <div className="w-12 h-12 bg-[#ff9c61]/15 border border-[#ff9c61]/30 rounded-2xl flex items-center justify-center shrink-0">
-                        <Pill className="w-6 h-6 text-[#ff9c61]" />
+                      <div className="w-12 h-12 bg-lime-500/15 text-lime-700 rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
+                        <Pill className="w-6 h-6" />
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-lg font-semibold text-white">{prescriptionHeading(rx.details)}</h3>
-                        <p className="text-xs text-[#92a8c7] mt-1">Prescribed by {prescriberLabel(rx)}</p>
+                        <h3 className="text-base sm:text-lg font-bold text-slate-900 font-['Manrope']">{prescriptionHeading(rx.details)}</h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">Prescribed by {prescriberLabel(rx)}</p>
                       </div>
                     </div>
-                    <Badge className="border-emerald-500/30 bg-emerald-500/15 text-emerald-200 shrink-0">
+                    <Badge className="border-lime-200 bg-lime-50 text-lime-800 font-bold text-xs shrink-0">
                       Active
                     </Badge>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-[#92a8c7] mb-4">
-                    <Calendar className="w-4 h-4 shrink-0" />
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
+                    <Calendar className="w-4 h-4 shrink-0 text-lime-600" />
                     <span>Prescribed: {formatPrescriptionDate(rx.created_at)}</span>
                   </div>
 
-                  <div className="flex items-center gap-3 pt-2">
+                  <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
                     <Button
                       size="sm"
-                      className="bg-gradient-to-r from-[#ff7a33] to-[#ff9b61] text-white rounded-xl"
+                      className="bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs rounded-2xl px-4 h-9 shadow-sm"
                       onClick={() => handleRequestRefill(rx)}
                     >
                       Request Refill
@@ -141,7 +141,7 @@ export default function Prescription() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className={portalSecondaryButtonClass}
+                      className={`rounded-2xl text-xs h-9 px-4 ${portalSecondaryButtonClass}`}
                       onClick={() => handleContactDoctor(rx)}
                     >
                       Contact Doctor
@@ -155,22 +155,22 @@ export default function Prescription() {
 
         {completed.length > 0 ? (
           <div>
-            <h2 className="text-lg font-semibold text-white mb-4">Past Prescriptions</h2>
+            <h2 className="text-base font-bold text-slate-900 mb-3 font-['Manrope']">Past Prescriptions</h2>
             <div className="space-y-4">
               {completed.map((rx) => (
                 <Card key={rx.id} className={portalPanelClass}>
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex items-start gap-4 min-w-0">
-                        <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center shrink-0">
-                          <Pill className="w-6 h-6 text-[#92a8c7]" />
+                        <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center shrink-0 text-slate-400">
+                          <Pill className="w-6 h-6" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-lg font-semibold text-white">{prescriptionHeading(rx.details)}</h3>
-                          <p className="text-xs text-[#92a8c7] mt-1">Prescribed by {prescriberLabel(rx)}</p>
+                          <h3 className="text-base font-bold text-slate-900 font-['Manrope']">{prescriptionHeading(rx.details)}</h3>
+                          <p className="text-xs text-slate-500 mt-0.5">Prescribed by {prescriberLabel(rx)}</p>
                         </div>
                       </div>
-                      <Badge className="border-white/10 bg-white/5 text-white/60 shrink-0">
+                      <Badge className="border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs shrink-0">
                         Completed
                       </Badge>
                     </div>

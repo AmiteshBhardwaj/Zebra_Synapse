@@ -583,7 +583,7 @@ export default function PatientLabChat() {
     sessionTitles[selectedReportId] || activeReport?.original_filename || "Select Lab Report";
 
   return (
-    <div className="flex h-full w-full bg-[#07090e] text-slate-100 overflow-hidden font-sans selection:bg-cyan-500/25 selection:text-cyan-200 relative">
+    <div className="flex h-full w-full bg-[#f6f8f5] text-slate-800 overflow-hidden font-sans selection:bg-lime-500/20 selection:text-lime-900 relative">
       {/* Retractable Chat Session Sidebar */}
       <ChatSessionSidebar
         isOpen={isSidebarOpen}
@@ -604,9 +604,9 @@ export default function PatientLabChat() {
       />
 
       {/* Main Conversation Workspace */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative bg-[#07090e]">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative bg-[#f6f8f5]">
         {/* Top Header */}
-        <header className="h-16 shrink-0 border-b border-slate-800/90 bg-[#0c101a] px-4 sm:px-6 lg:px-8 flex items-center justify-between z-20">
+        <header className="h-16 shrink-0 border-b border-slate-100 bg-white px-4 sm:px-6 lg:px-8 flex items-center justify-between z-20">
           <div className="flex items-center gap-2.5 sm:gap-3 overflow-hidden">
             {/* Retract / Expand Sidebar Toggle Button & Brand Header */}
             <button
@@ -617,33 +617,33 @@ export default function PatientLabChat() {
                   ? "Collapse chat sessions (Ctrl+B)"
                   : "Open chat sessions (Ctrl+B)"
               }
-              className="flex items-center gap-2.5 px-2.5 py-1.5 -ml-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-cyan-500/30 text-zinc-300 hover:text-white transition-all group active:scale-95 cursor-pointer shadow-sm"
+              className="flex items-center gap-2 px-2.5 py-1.5 -ml-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 transition-all group active:scale-95 cursor-pointer shadow-sm"
             >
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 group-hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/20 transition-all shadow-[0_0_10px_rgba(6,182,212,0.15)]">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-lime-500/15 group-hover:bg-lime-500/25 text-lime-700 transition-all">
                 {isSidebarOpen ? (
-                  <PanelLeftClose className="h-4 w-4 text-cyan-300 group-hover:scale-110 transition-transform" />
+                  <PanelLeftClose className="h-4 w-4 text-lime-700 group-hover:scale-110 transition-transform" />
                 ) : (
-                  <PanelLeft className="h-4 w-4 text-cyan-400 group-hover:scale-110 transition-transform" />
+                  <PanelLeft className="h-4 w-4 text-lime-700 group-hover:scale-110 transition-transform" />
                 )}
               </div>
-              <span className="text-sm font-semibold text-white tracking-tight flex items-center gap-1.5 select-none">
+              <span className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5 select-none font-['Manrope']">
                 Synapse Chat
               </span>
             </button>
 
             {/* Target Lab Document Picker Dropdown */}
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-xs text-slate-200 font-medium transition-all group outline-none max-w-[170px] sm:max-w-[260px]">
-                <FileText className="h-3.5 w-3.5 text-cyan-400 group-hover:scale-110 transition-transform shrink-0" />
+              <DropdownMenuTrigger className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs text-slate-800 font-semibold transition-all group outline-none max-w-[170px] sm:max-w-[260px]">
+                <FileText className="h-3.5 w-3.5 text-lime-600 group-hover:scale-110 transition-transform shrink-0" />
                 <span className="truncate">{currentSessionDisplayName}</span>
                 <ChevronDown className="h-3 w-3 text-slate-400 shrink-0" />
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent className="w-80 bg-[#16171d] border border-white/10 text-slate-200 shadow-2xl rounded-2xl p-2 z-50">
-                <DropdownMenuLabel className="text-[11px] font-mono uppercase tracking-wider text-slate-400 px-2 py-1.5">
+              <DropdownMenuContent className="w-80 bg-white border border-slate-100 text-slate-800 shadow-xl rounded-2xl p-2 z-50">
+                <DropdownMenuLabel className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 px-2 py-1.5">
                   Target Lab Report
                 </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-white/10 my-1" />
+                <DropdownMenuSeparator className="bg-slate-100 my-1" />
 
                 {uploads.length === 0 ? (
                   <div className="p-3 text-xs text-slate-400 text-center">
@@ -659,23 +659,23 @@ export default function PatientLabChat() {
                         onClick={() => handleSelectReportContext(u.id)}
                         className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs cursor-pointer ${
                           isSelected
-                            ? "bg-cyan-500/15 text-cyan-300 font-medium"
-                            : "hover:bg-white/5 text-slate-300"
+                            ? "bg-lime-50 text-lime-950 font-bold"
+                            : "hover:bg-slate-50 text-slate-700"
                         }`}
                       >
                         <span className="truncate max-w-[220px]">
                           {customTitle || u.original_filename}
                         </span>
-                        {isSelected && <Check className="h-4 w-4 text-cyan-400 shrink-0" />}
+                        {isSelected && <Check className="h-4 w-4 text-lime-600 shrink-0" />}
                       </DropdownMenuItem>
                     );
                   })
                 )}
 
-                <DropdownMenuSeparator className="bg-white/10 my-1" />
+                <DropdownMenuSeparator className="bg-slate-100 my-1" />
                 <DropdownMenuItem
                   onClick={() => navigate("/patient/medical-records")}
-                  className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs text-cyan-400 hover:bg-cyan-500/10 cursor-pointer font-medium"
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-xs text-lime-700 hover:bg-lime-50 cursor-pointer font-bold"
                 >
                   <FilePlus2 className="h-4 w-4" />
                   <span>Upload New Lab Report</span>
@@ -684,8 +684,8 @@ export default function PatientLabChat() {
             </DropdownMenu>
 
             {activeMetrics.length > 0 && (
-              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono text-cyan-300 bg-cyan-950/40 border border-cyan-500/30 shrink-0">
-                <Zap className="h-3 w-3 text-cyan-400" />
+              <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-lime-800 bg-lime-50 border border-lime-200 shrink-0">
+                <Zap className="h-3 w-3 text-lime-600" />
                 {activeMetrics.length} Biomarkers
               </span>
             )}
@@ -696,7 +696,7 @@ export default function PatientLabChat() {
             <button
               onClick={handleNewChat}
               title="Start new chat (Alt+N)"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 text-xs text-slate-200 hover:text-white transition-all font-medium active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs text-slate-700 hover:text-slate-900 transition-all font-semibold active:scale-95"
             >
               <Plus className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">New chat</span>
@@ -709,14 +709,14 @@ export default function PatientLabChat() {
                 toast.success("Chat cleared");
               }}
               title="Clear current view"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-zinc-400 hover:text-zinc-200 transition-all active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs text-slate-500 hover:text-slate-700 transition-all active:scale-95"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               <span className="hidden md:inline">Clear view</span>
             </button>
 
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 text-xs font-medium">
-              <Stethoscope className="h-3.5 w-3.5 text-emerald-400" />
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+              <Stethoscope className="h-3.5 w-3.5 text-emerald-600" />
               <span>Doctor Verified</span>
             </div>
           </div>
@@ -728,31 +728,31 @@ export default function PatientLabChat() {
           {!hasMessages && !loadingMessages && (
             <div className="flex-1 flex flex-col items-center justify-center text-center max-w-3xl mx-auto w-full py-4 animate-in fade-in zoom-in-95 duration-300">
               {/* Mascot */}
-              <div className="mb-6">
+              <div className="mb-5">
                 <RobotMascot />
               </div>
 
               {/* Bold Title */}
-              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-white mb-3">
+              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 mb-2 font-['Manrope']">
                 Your smart AI buddy
-                <span className="block text-slate-200 font-semibold mt-1">
+                <span className="block text-lime-700 font-semibold mt-1">
                   for all things digital & health
                 </span>
               </h1>
 
               {/* Subtitle */}
-              <p className="text-sm text-zinc-400 mb-8 max-w-md">
+              <p className="text-xs sm:text-sm text-slate-500 mb-7 max-w-md">
                 Ask, analyze, explore — with Synapse
               </p>
 
               {/* Suggestion Interactive Pills */}
-              <div className="flex flex-wrap items-center justify-center gap-2.5 max-w-2xl">
+              <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl">
                 {QUICK_PROMPT_PILLS.map((pill, idx) => (
                   <button
                     key={idx}
                     onClick={() => void handleSendMessage(pill.query)}
                     disabled={sending}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#17181e] hover:bg-[#20222a] border border-white/10 hover:border-cyan-500/40 text-xs font-medium text-slate-200 hover:text-white transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-lime-50/60 border border-slate-100 hover:border-lime-300 text-xs font-semibold text-slate-800 transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98]"
                   >
                     <span className="text-base">{pill.emoji}</span>
                     <span>{pill.text}</span>
@@ -764,39 +764,39 @@ export default function PatientLabChat() {
 
           {/* STATE B: Active Conversation Stream */}
           {hasMessages && (
-            <div className="max-w-3xl mx-auto w-full space-y-6 pb-6">
+            <div className="max-w-3xl mx-auto w-full space-y-5 pb-6">
               {messages.map((item) => (
-                <div key={item.id} className="space-y-4">
+                <div key={item.id} className="space-y-3">
                   {/* User Message Bubble */}
                   <div className="flex justify-end items-start gap-3">
-                    <div className="max-w-[85%] sm:max-w-xl bg-[#202228] border border-white/10 rounded-2xl rounded-tr-none px-4 py-3 text-slate-100 text-sm shadow-md">
+                    <div className="max-w-[85%] sm:max-w-xl bg-lime-500 text-slate-950 rounded-2xl rounded-tr-none px-4 py-3 text-sm font-medium shadow-sm">
                       <p className="whitespace-pre-wrap leading-relaxed">{item.user_query}</p>
                     </div>
                   </div>
 
                   {/* AI Response Card */}
                   <div className="flex justify-start items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 shadow-sm mt-1">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700 shadow-sm mt-1">
                       {item.status === "rejected_and_replaced" ? (
-                        <Stethoscope className="h-5 w-5 text-emerald-400" />
+                        <Stethoscope className="h-5 w-5 text-emerald-600" />
                       ) : (
-                        <Bot className="h-5 w-5 text-cyan-400" />
+                        <Bot className="h-5 w-5 text-lime-700" />
                       )}
                     </div>
 
-                    <div className="max-w-[92%] sm:max-w-2xl w-full space-y-2.5">
+                    <div className="max-w-[92%] sm:max-w-2xl w-full space-y-2">
                       {/* Status Pill Header */}
                       <div className="flex flex-wrap items-center gap-2">
                         {item.status === "pending_review" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.15)]">
-                            <Clock className="h-3.5 w-3.5 animate-pulse text-amber-400" />
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                            <Clock className="h-3.5 w-3.5 animate-pulse text-amber-600" />
                             Pending Doctor Verification
                           </span>
                         )}
 
                         {item.status === "verified" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                             Verified by{" "}
                             {item.reviewer_profile?.full_name
                               ? `Dr. ${item.reviewer_profile.full_name}`
@@ -805,13 +805,13 @@ export default function PatientLabChat() {
                         )}
 
                         {item.status === "rejected_and_replaced" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-cyan-500/20 text-cyan-200 border border-cyan-400/40 shadow-[0_0_12px_rgba(56,189,248,0.25)]">
-                            <Stethoscope className="h-3.5 w-3.5 text-cyan-400" />
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-200">
+                            <Stethoscope className="h-3.5 w-3.5 text-sky-600" />
                             Doctor's Clinical Guidance
                           </span>
                         )}
 
-                        <span className="text-[11px] font-mono text-zinc-500 ml-auto">
+                        <span className="text-[11px] text-slate-400 ml-auto">
                           {new Date(item.created_at).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -820,10 +820,10 @@ export default function PatientLabChat() {
                       </div>
 
                       {/* Content Card */}
-                      <div className="rounded-2xl bg-[#14151a] border border-white/10 p-4 sm:p-5 text-slate-200 text-sm leading-relaxed space-y-3 shadow-lg">
+                      <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 text-slate-800 text-sm leading-relaxed space-y-3 shadow-sm">
                         {item.status === "rejected_and_replaced" ? (
                           <div>
-                            <div className="mb-2 pb-2 border-b border-white/10 flex items-center justify-between text-xs text-emerald-400 font-medium">
+                            <div className="mb-2 pb-2 border-b border-slate-100 flex items-center justify-between text-xs text-emerald-700 font-bold">
                               <span>
                                 Clinical Guidance from{" "}
                                 {item.reviewer_profile?.full_name
@@ -832,22 +832,22 @@ export default function PatientLabChat() {
                                 :
                               </span>
                               {item.reviewed_at && (
-                                <span className="text-[10px] text-slate-500">
+                                <span className="text-[10px] text-slate-400 font-normal">
                                   {new Date(item.reviewed_at).toLocaleDateString()}
                                 </span>
                               )}
                             </div>
-                            <p className="whitespace-pre-wrap text-slate-100 font-sans">
+                            <p className="whitespace-pre-wrap text-slate-800 font-sans">
                               {item.doctor_response}
                             </p>
                           </div>
                         ) : (
                           <div>
-                            <p className="whitespace-pre-wrap text-slate-100">
+                            <p className="whitespace-pre-wrap text-slate-800">
                               {item.ai_response}
                             </p>
                             {item.doctor_notes && (
-                              <div className="mt-3 pt-3 border-t border-white/10 text-xs text-emerald-300 bg-emerald-950/20 p-2.5 rounded-xl border border-emerald-500/20">
+                              <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
                                 <strong>Doctor's Note:</strong> {item.doctor_notes}
                               </div>
                             )}
@@ -855,22 +855,22 @@ export default function PatientLabChat() {
                         )}
 
                         {/* Actions (Copy) */}
-                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/5 text-xs text-zinc-400">
+                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 text-xs text-slate-400">
                           <button
                             onClick={() =>
                               handleCopy(
                                 item.status === "rejected_and_replaced"
-                                  ? item.doctor_response || ""
+                                   ? item.doctor_response || ""
                                   : item.ai_response,
                                 item.id
                               )
                             }
-                            className="flex items-center gap-1 hover:text-white transition-colors px-2 py-1 rounded-lg hover:bg-white/5"
+                            className="flex items-center gap-1 hover:text-slate-800 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
                           >
                             {copiedId === item.id ? (
                               <>
-                                <Check className="h-3.5 w-3.5 text-emerald-400" />
-                                <span className="text-emerald-400">Copied</span>
+                                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                <span className="text-emerald-700 font-semibold">Copied</span>
                               </>
                             ) : (
                               <>
@@ -889,16 +889,16 @@ export default function PatientLabChat() {
               {/* Sending Skeleton */}
               {sending && (
                 <div className="flex justify-start items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 animate-pulse">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700 animate-pulse">
                     <Sparkles className="h-5 w-5" />
                   </div>
-                  <div className="max-w-xl w-full bg-[#14151a] border border-cyan-500/30 rounded-2xl p-4 text-sm text-slate-300 space-y-2.5">
-                    <div className="flex items-center gap-2 text-xs font-mono text-cyan-400">
+                  <div className="max-w-xl w-full bg-white border border-lime-200 rounded-2xl p-4 text-sm text-slate-700 space-y-2 shadow-sm">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-lime-700">
                       <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                       Analyzing relevant biomarkers for clinical precision...
                     </div>
-                    <div className="h-2.5 bg-white/10 rounded-full w-3/4 animate-pulse" />
-                    <div className="h-2.5 bg-white/10 rounded-full w-1/2 animate-pulse" />
+                    <div className="h-2 bg-slate-100 rounded-full w-3/4 animate-pulse" />
+                    <div className="h-2 bg-slate-100 rounded-full w-1/2 animate-pulse" />
                   </div>
                 </div>
               )}
@@ -909,31 +909,31 @@ export default function PatientLabChat() {
 
           {/* Bottom Floating Input Bar */}
           <div className="w-full max-w-3xl mx-auto pt-2 shrink-0">
-            <div className="rounded-2xl sm:rounded-3xl bg-[#121318] border border-white/10 hover:border-white/20 focus-within:border-cyan-500/40 focus-within:ring-2 focus-within:ring-cyan-500/20 shadow-2xl p-2 sm:p-2.5 flex items-center gap-2 transition-all">
+            <div className="rounded-[24px] bg-white border border-slate-200 hover:border-slate-300 focus-within:border-lime-500 focus-within:ring-2 focus-within:ring-lime-500/20 shadow-lg p-2 sm:p-2.5 flex items-center gap-2 transition-all">
               {/* Left 1: Document / Attachment Button */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     title="Attach or select lab report"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white transition-colors outline-none"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors outline-none"
                   >
                     <Paperclip className="h-4 w-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-64 bg-[#18191f] border border-white/10 text-slate-200 shadow-2xl rounded-2xl p-2 z-50">
+                <DropdownMenuContent className="w-64 bg-white border border-slate-100 text-slate-800 shadow-xl rounded-2xl p-2 z-50">
                   <DropdownMenuItem
                     onClick={() => navigate("/patient/medical-records")}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-200 hover:bg-white/10 cursor-pointer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-800 hover:bg-slate-50 cursor-pointer font-medium"
                   >
-                    <FilePlus2 className="h-4 w-4 text-cyan-400" />
+                    <FilePlus2 className="h-4 w-4 text-lime-600" />
                     <span>Upload New Lab Report</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => navigate("/patient/medical-records")}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-200 hover:bg-white/10 cursor-pointer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-slate-800 hover:bg-slate-50 cursor-pointer font-medium"
                   >
-                    <Zap className="h-4 w-4 text-amber-400" />
+                    <Zap className="h-4 w-4 text-amber-500" />
                     <span>View Biomarkers & Insights</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -947,7 +947,7 @@ export default function PatientLabChat() {
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
                   isListening
                     ? "bg-rose-500 text-white animate-pulse"
-                    : "bg-white/[0.05] hover:bg-white/[0.1] text-zinc-400 hover:text-white"
+                    : "bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800"
                 }`}
               >
                 {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -967,15 +967,15 @@ export default function PatientLabChat() {
                 }}
                 placeholder="Type a thought or symptom... Synapse responds with clinical precision."
                 disabled={sending || uploads.length === 0}
-                className="bg-transparent border-0 text-white placeholder:text-zinc-500 focus:outline-none focus:ring-0 text-xs sm:text-sm flex-1 px-2 py-1.5 resize-none max-h-36 min-h-[26px] leading-relaxed font-sans"
+                className="bg-transparent border-0 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 text-xs sm:text-sm flex-1 px-2 py-1.5 resize-none max-h-36 min-h-[26px] leading-relaxed font-sans"
               />
 
-              {/* Right Send Button (Glowing Turquoise/Teal) */}
+              {/* Right Send Button */}
               <button
                 type="button"
                 onClick={() => void handleSendMessage()}
                 disabled={sending || !inputQuery.trim() || uploads.length === 0}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00e5a3] hover:bg-[#00c98f] text-slate-950 shadow-[0_0_18px_rgba(0,229,163,0.35)] disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95 hover:scale-105"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 shadow-sm disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95 hover:scale-105"
               >
                 <Send className="h-4 w-4 stroke-[2.5]" />
               </button>

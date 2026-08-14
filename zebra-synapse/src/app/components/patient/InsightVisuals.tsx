@@ -29,23 +29,23 @@ import {
 } from "../../../lib/labInsights";
 
 const STATUS_META = {
-  high: { label: "High", color: "#d9485f", surface: "border-rose-500/20 bg-rose-500/12 text-rose-100" },
-  low: { label: "Low", color: "#2563eb", surface: "border-blue-500/20 bg-blue-500/12 text-blue-100" },
-  borderline: { label: "Borderline", color: "#d97706", surface: "border-amber-500/20 bg-amber-500/12 text-amber-100" },
-  normal: { label: "Normal", color: "#0f766e", surface: "border-teal-500/20 bg-teal-500/12 text-teal-100" },
-  missing: { label: "Missing", color: "#64748b", surface: "border-slate-500/20 bg-slate-500/12 text-slate-100" },
+  high: { label: "High", color: "#f43f5e", surface: "border-rose-200 bg-rose-50 text-rose-700" },
+  low: { label: "Low", color: "#0ea5e9", surface: "border-sky-200 bg-sky-50 text-sky-700" },
+  borderline: { label: "Borderline", color: "#f59e0b", surface: "border-amber-200 bg-amber-50 text-amber-700" },
+  normal: { label: "Normal", color: "#84cc16", surface: "border-lime-200 bg-lime-50 text-lime-800" },
+  missing: { label: "Missing", color: "#94a3b8", surface: "border-slate-200 bg-slate-100 text-slate-700" },
 } as const;
 
 type StatTone = "teal" | "amber" | "rose" | "blue" | "slate" | "orange" | "violet";
 
 const STAT_TONE_CLASSES: Record<StatTone, string> = {
-  teal: "border-teal-500/30 bg-[linear-gradient(135deg,rgba(14,165,233,0.14)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
-  amber: "border-amber-500/30 bg-[linear-gradient(135deg,rgba(245,158,11,0.14)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
-  rose: "border-rose-500/30 bg-[linear-gradient(135deg,rgba(244,63,94,0.14)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
-  blue: "border-cyan-500/30 bg-[linear-gradient(135deg,rgba(56,189,248,0.15)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
-  slate: "border-slate-800/80 bg-[linear-gradient(135deg,rgba(255,255,255,0.04)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
-  orange: "border-sky-500/30 bg-[linear-gradient(135deg,rgba(14,165,233,0.15)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
-  violet: "border-indigo-500/30 bg-[linear-gradient(135deg,rgba(99,102,241,0.15)_0%,rgba(6,8,19,0.85)_100%)] backdrop-blur-xl text-slate-100 shadow-[0_8px_20px_rgba(0,0,0,0.4)]",
+  teal: "border-lime-100 bg-lime-50/40 text-slate-800",
+  amber: "border-amber-100 bg-amber-50/40 text-slate-800",
+  rose: "border-rose-100 bg-rose-50/40 text-slate-800",
+  blue: "border-sky-100 bg-sky-50/40 text-slate-800",
+  slate: "border-slate-100 bg-slate-50/60 text-slate-800",
+  orange: "border-orange-100 bg-orange-50/40 text-slate-800",
+  violet: "border-purple-100 bg-purple-50/40 text-slate-800",
 };
 
 function severityScore(metric: MetricAssessment): number {
@@ -67,7 +67,7 @@ function shortLabel(label: string): string {
 }
 
 function getPanelCardClassName() {
-  return "rounded-[1.8rem] border-white/10 bg-[#141419] text-white shadow-[0_25px_60px_rgba(0,0,0,0.35)]";
+  return "rounded-[24px] border border-slate-100 bg-white text-slate-800 shadow-[0_4px_24px_rgba(0,0,0,0.02)]";
 }
 
 export function getMetricStatusCounts(metrics: MetricAssessment[]) {
@@ -90,14 +90,14 @@ export function OverviewStatCards({
         <Card
           key={stat.label}
           className={cn(
-            "overflow-hidden rounded-[1.6rem] border shadow-[0_20px_45px_rgba(0,0,0,0.22)]",
+            "overflow-hidden rounded-[24px] border shadow-[0_4px_20px_rgba(0,0,0,0.02)]",
             STAT_TONE_CLASSES[stat.tone ?? "slate"],
           )}
         >
-          <CardContent className="space-y-3 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/62">{stat.label}</p>
-            <p className="text-3xl font-semibold leading-none">{stat.value}</p>
-            <p className="text-sm text-white/74">{stat.detail}</p>
+          <CardContent className="space-y-2 p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">{stat.label}</p>
+            <p className="text-3xl font-bold leading-none text-slate-900">{stat.value}</p>
+            <p className="text-xs text-slate-500">{stat.detail}</p>
           </CardContent>
         </Card>
       ))}
@@ -124,14 +124,14 @@ export function MetricStatusDonut({
   return (
     <Card className={getPanelCardClassName()}>
       <CardHeader>
-        <CardTitle className="text-white">{title}</CardTitle>
-        <CardDescription className="text-white/58">{description}</CardDescription>
+        <CardTitle className="text-slate-900 text-lg font-bold">{title}</CardTitle>
+        <CardDescription className="text-slate-500 text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <ChartContainer config={config} className="mx-auto h-[280px] w-full max-w-[420px]">
+        <ChartContainer config={config} className="mx-auto h-[260px] w-full max-w-[380px]">
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="key" />} />
-            <Pie data={data} dataKey="value" nameKey="key" innerRadius={68} outerRadius={108} paddingAngle={3}>
+            <Pie data={data} dataKey="value" nameKey="key" innerRadius={64} outerRadius={100} paddingAngle={4}>
               {data.map((entry) => (
                 <Cell key={entry.key} fill={entry.fill} />
               ))}
@@ -141,18 +141,18 @@ export function MetricStatusDonut({
         </ChartContainer>
 
         <div className="space-y-3">
-          <div className="rounded-[1.4rem] border border-white/10 bg-white/[0.04] p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/42">Tracked Biomarkers</p>
-            <p className="mt-2 text-4xl font-semibold text-white">{total}</p>
-            <p className="mt-2 text-sm text-white/58">This panel is now being interpreted visually instead of as a flat table only.</p>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tracked Biomarkers</p>
+            <p className="mt-1 text-3xl font-bold text-slate-900">{total}</p>
+            <p className="mt-1 text-xs text-slate-500">Visualized breakdown from active lab panel.</p>
           </div>
           {data.map((item) => (
-            <div key={item.key} className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/20 px-4 py-3">
-              <div className="flex items-center gap-3">
+            <div key={item.key} className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/50 px-3.5 py-2.5">
+              <div className="flex items-center gap-2.5">
                 <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.fill }} />
-                <span className="text-sm font-medium text-white">{item.label}</span>
+                <span className="text-xs font-medium text-slate-700">{item.label}</span>
               </div>
-              <Badge variant="outline" className="border-white/10 bg-white/[0.04] text-white">
+              <Badge variant="outline" className="border-slate-200 bg-white text-slate-800 font-semibold text-xs">
                 {item.value}
               </Badge>
             </div>
@@ -196,15 +196,15 @@ export function MetricPriorityBars({
   return (
     <Card className={getPanelCardClassName()}>
       <CardHeader>
-        <CardTitle className="text-white">{title}</CardTitle>
-        <CardDescription className="text-white/58">{description}</CardDescription>
+        <CardTitle className="text-slate-900 text-lg font-bold">{title}</CardTitle>
+        <CardDescription className="text-slate-500 text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ChartContainer config={config} className="h-[320px] w-full">
+        <ChartContainer config={config} className="h-[300px] w-full">
           <BarChart data={data} layout="vertical" margin={{ left: 20, right: 12, top: 8, bottom: 8 }}>
-            <CartesianGrid horizontal={false} />
+            <CartesianGrid horizontal={false} stroke="#f1f5f9" />
             <XAxis type="number" hide domain={[0, 100]} />
-            <YAxis type="category" dataKey="label" width={110} tickLine={false} axisLine={false} />
+            <YAxis type="category" dataKey="label" width={110} tickLine={false} axisLine={false} className="text-xs text-slate-600" />
             <ChartTooltip
               cursor={false}
               content={
@@ -212,8 +212,8 @@ export function MetricPriorityBars({
                   hideLabel
                   formatter={(_, __, item) => (
                     <div className="flex w-full items-center justify-between gap-4">
-                      <span className="text-white/60">{item.payload.fullLabel}</span>
-                      <span className="font-mono font-medium text-white">{item.payload.value}</span>
+                      <span className="text-slate-500 text-xs">{item.payload.fullLabel}</span>
+                      <span className="font-mono font-bold text-slate-900 text-xs">{item.payload.value}</span>
                     </div>
                   )}
                 />
@@ -226,12 +226,12 @@ export function MetricPriorityBars({
             </Bar>
           </BarChart>
         </ChartContainer>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {data.map((item) => (
             <Badge
               key={item.key}
               variant="outline"
-              className={cn("border-white/10 bg-white/[0.04] text-white", STATUS_META[item.status].surface)}
+              className={cn("text-xs font-medium", STATUS_META[item.status].surface)}
             >
               {item.fullLabel}: {item.value}
             </Badge>
@@ -291,8 +291,8 @@ export function MetricSparklineGrid({
   return (
     <Card className={getPanelCardClassName()}>
       <CardHeader>
-        <CardTitle className="text-white">{title}</CardTitle>
-        <CardDescription className="text-white/58">{description}</CardDescription>
+        <CardTitle className="text-slate-900 text-lg font-bold">{title}</CardTitle>
+        <CardDescription className="text-slate-500 text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -302,20 +302,20 @@ export function MetricSparklineGrid({
             };
 
             return (
-              <div key={card.key} className="rounded-[1.5rem] border border-white/8 bg-black/20 p-4 shadow-[0_18px_34px_rgba(0,0,0,0.22)]">
+              <div key={card.key} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 shadow-sm">
                 <div className="mb-3 flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-medium text-white">{card.latestMetric.label}</p>
-                    <p className="mt-1 text-2xl font-semibold text-white">{getMetricValueLabel(card.latestMetric)}</p>
+                    <p className="text-xs font-medium text-slate-500">{card.latestMetric.label}</p>
+                    <p className="mt-1 text-xl font-bold text-slate-900">{getMetricValueLabel(card.latestMetric)}</p>
                   </div>
                   <Badge
                     variant="outline"
-                    className={cn("border-white/10 bg-white/[0.04] text-white", STATUS_META[card.latestMetric.status].surface)}
+                    className={cn("text-xs font-semibold", STATUS_META[card.latestMetric.status].surface)}
                   >
                     {STATUS_META[card.latestMetric.status].label}
                   </Badge>
                 </div>
-                <ChartContainer config={config} className="h-[120px] w-full">
+                <ChartContainer config={config} className="h-[110px] w-full">
                   <AreaChart data={card.series} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
                     <defs>
                       <linearGradient id={`fill-${card.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -323,15 +323,15 @@ export function MetricSparklineGrid({
                         <stop offset="95%" stopColor={card.fill} stopOpacity={0.05} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} />
+                    <CartesianGrid vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="date" hide />
                     <YAxis hide domain={["dataMin - 1", "dataMax + 1"]} />
                     <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                    <Area type="monotone" dataKey="value" stroke={card.fill} fill={`url(#fill-${card.key})`} strokeWidth={2.5} />
+                    <Area type="monotone" dataKey="value" stroke={card.fill} fill={`url(#fill-${card.key})`} strokeWidth={2.2} />
                   </AreaChart>
                 </ChartContainer>
-                <p className="mt-3 text-xs text-white/45">
-                  Recent panels across {card.series.length} reading{card.series.length === 1 ? "" : "s"}.
+                <p className="mt-2.5 text-[11px] text-slate-400">
+                  Tracked across {card.series.length} record{card.series.length === 1 ? "" : "s"}.
                 </p>
               </div>
             );
@@ -354,22 +354,22 @@ export function CategoryBarChart({
   valueLabel?: string;
 }) {
   const config = items.reduce<ChartConfig>((acc, item) => {
-    acc[item.key] = { label: item.label, color: item.fill ?? "#0f766e" };
+    acc[item.key] = { label: item.label, color: item.fill ?? "#84cc16" };
     return acc;
   }, {});
 
   return (
     <Card className={getPanelCardClassName()}>
       <CardHeader>
-        <CardTitle className="text-white">{title}</CardTitle>
-        <CardDescription className="text-white/58">{description}</CardDescription>
+        <CardTitle className="text-slate-900 text-lg font-bold">{title}</CardTitle>
+        <CardDescription className="text-slate-500 text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
-        <ChartContainer config={config} className="h-[300px] w-full">
+      <CardContent className="space-y-4">
+        <ChartContainer config={config} className="h-[280px] w-full">
           <BarChart data={items} margin={{ left: 0, right: 10, top: 8, bottom: 8 }}>
-            <CartesianGrid vertical={false} />
-            <XAxis dataKey="label" tickLine={false} axisLine={false} interval={0} angle={-18} textAnchor="end" height={64} />
-            <YAxis allowDecimals={false} tickLine={false} axisLine={false} />
+            <CartesianGrid vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="label" tickLine={false} axisLine={false} interval={0} angle={-18} textAnchor="end" height={64} className="text-xs text-slate-600" />
+            <YAxis allowDecimals={false} tickLine={false} axisLine={false} className="text-xs text-slate-600" />
             <ChartTooltip
               cursor={false}
               content={
@@ -377,8 +377,8 @@ export function CategoryBarChart({
                   hideLabel
                   formatter={(value, _, item) => (
                     <div className="flex w-full items-center justify-between gap-4">
-                      <span className="text-white/60">{item.payload.label}</span>
-                      <span className="font-mono font-medium text-white">
+                      <span className="text-slate-500 text-xs">{item.payload.label}</span>
+                      <span className="font-mono font-bold text-slate-900 text-xs">
                         {value}
                         {valueLabel ? ` ${valueLabel}` : ""}
                       </span>
@@ -389,24 +389,24 @@ export function CategoryBarChart({
             />
             <Bar dataKey="value" radius={8}>
               {items.map((item) => (
-                <Cell key={item.key} fill={item.fill ?? "#0f766e"} />
+                <Cell key={item.key} fill={item.fill ?? "#84cc16"} />
               ))}
             </Bar>
           </BarChart>
         </ChartContainer>
         <div className="grid gap-3 md:grid-cols-2">
           {items.map((item) => (
-            <div key={item.key} className="rounded-2xl border border-white/8 bg-black/20 p-3">
+            <div key={item.key} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.fill ?? "#0f766e" }} />
-                  <span className="text-sm font-medium text-white">{item.label}</span>
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.fill ?? "#84cc16" }} />
+                  <span className="text-xs font-semibold text-slate-800">{item.label}</span>
                 </div>
-                <Badge variant="outline" className="border-white/10 bg-white/[0.04] text-white">
+                <Badge variant="outline" className="border-slate-200 bg-white text-slate-800 text-xs font-semibold">
                   {item.value}
                 </Badge>
               </div>
-              {item.detail ? <p className="mt-2 text-sm text-white/58">{item.detail}</p> : null}
+              {item.detail ? <p className="mt-1.5 text-xs text-slate-500">{item.detail}</p> : null}
             </div>
           ))}
         </div>

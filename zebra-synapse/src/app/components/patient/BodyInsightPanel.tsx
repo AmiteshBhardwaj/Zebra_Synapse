@@ -307,8 +307,8 @@ const REGION_SHAPES: RegionShape[] = [
 
 function getSeverityColor(hasCritical: boolean) {
   return hasCritical
-    ? "border-[#FF4D4D]/80 bg-[#FF4D4D]/22 shadow-[0_0_32px_rgba(255,77,77,0.45)]"
-    : "border-[#FFC857]/80 bg-[#FFC857]/20 shadow-[0_0_24px_rgba(255,200,87,0.36)]";
+    ? "border-rose-200 bg-rose-50 text-rose-800"
+    : "border-amber-200 bg-amber-50 text-amber-800";
 }
 
 function statusText(status: MetricAssessment["status"]) {
@@ -367,23 +367,23 @@ export function BodyInsightPanel({
     : null;
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl sm:p-5">
+    <div className="rounded-[24px] border border-slate-100 bg-white p-4 sm:p-5 shadow-sm">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-white/70">Body Insight Panel</h3>
-        {!hasAbnormal ? <span className="text-xs font-medium text-emerald-300">Within normal range</span> : null}
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Body Insight Panel</h3>
+        {!hasAbnormal ? <span className="text-xs font-semibold text-emerald-600">Within normal range</span> : null}
       </div>
 
       <div className="relative mx-auto h-[340px] w-[300px] max-w-full">
         <svg viewBox="0 0 300 340" className="h-full w-full">
           <defs>
             <linearGradient id="bodyGlow" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
-              <stop offset="100%" stopColor="rgba(255,255,255,0.15)" />
+              <stop offset="0%" stopColor="rgba(148, 163, 184, 0.45)" />
+              <stop offset="100%" stopColor="rgba(203, 213, 225, 0.3)" />
             </linearGradient>
           </defs>
 
           {/* SVG Human Body Silhouette */}
-          <g opacity="0.65">
+          <g opacity="0.85">
             {/* Head */}
             <circle cx="150" cy="48" r="26" fill="url(#bodyGlow)" />
             {/* Torso */}
@@ -426,9 +426,9 @@ export function BodyInsightPanel({
                   if (nodes.length === 0) return;
 
                   nodes[0].scrollIntoView({ behavior: "smooth", block: "center" });
-                  nodes.forEach((node) => node.classList.add("ring-2", "ring-[#FF6A00]"));
+                  nodes.forEach((node) => node.classList.add("ring-2", "ring-lime-500"));
                   setTimeout(() => {
-                    nodes.forEach((node) => node.classList.remove("ring-2", "ring-[#FF6A00]"));
+                    nodes.forEach((node) => node.classList.remove("ring-2", "ring-lime-500"));
                   }, 1100);
                 }}
               >
@@ -439,27 +439,27 @@ export function BodyInsightPanel({
         </svg>
 
         {activeRegion && activeRegionShape && activeRegionMetrics ? (
-          <div className="absolute left-1/2 top-2 z-20 w-[260px] -translate-x-1/2 rounded-xl border border-white/10 bg-[#1f1f20]/95 p-3 text-left shadow-[0_10px_30px_rgba(0,0,0,0.45)]">
+          <div className="absolute left-1/2 top-2 z-20 w-[260px] -translate-x-1/2 rounded-2xl border border-slate-100 bg-white p-3 text-left shadow-xl">
             <div className="space-y-2">
-              <p className="text-xs uppercase tracking-[0.14em] text-white/55">{activeRegionShape.label}</p>
+              <p className="text-xs uppercase tracking-wider font-semibold text-slate-400">{activeRegionShape.label}</p>
               {activeRegionMetrics.abnormal.length > 0 ? (
                 activeRegionMetrics.abnormal.map((metric) => (
                   <div
                     key={metric.key}
                     className={cn(
-                      "rounded-lg border p-2",
+                      "rounded-xl border p-2 text-xs",
                       getSeverityColor(metric.status === "high"),
                     )}
                   >
-                    <p className="text-sm font-semibold text-white">{metric.label}</p>
-                    <p className="text-xs text-white/65">
+                    <p className="text-xs font-bold text-slate-900">{metric.label}</p>
+                    <p className="text-[11px] text-slate-600">
                       {getMetricValueLabel(metric)} · {statusText(metric.status)}
                     </p>
-                    <p className="text-xs text-white/55">{metric.summary}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{metric.summary}</p>
                   </div>
                 ))
               ) : (
-                <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-2 text-xs text-emerald-200">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2 text-xs font-medium text-emerald-800">
                   All biomarkers normal for this region
                 </div>
               )}
@@ -468,25 +468,25 @@ export function BodyInsightPanel({
         ) : null}
 
         {!hasAbnormal ? (
-          <div className="absolute bottom-3 left-1/2 w-[250px] -translate-x-1/2 rounded-lg border border-emerald-400/25 bg-emerald-500/10 px-3 py-2 text-center text-xs text-emerald-200">
+          <div className="absolute bottom-3 left-1/2 w-[250px] -translate-x-1/2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-center text-xs font-medium text-emerald-800">
             Your body indicators are within normal range
           </div>
         ) : null}
 
         {hasAbnormal && activeRegionCount > 1 ? (
-          <div className="absolute bottom-3 left-1/2 w-[250px] -translate-x-1/2 rounded-lg border border-[#FF6A00]/35 bg-[#FF6A00]/10 px-3 py-2 text-center text-xs text-[#ffd0b4]">
+          <div className="absolute bottom-3 left-1/2 w-[250px] -translate-x-1/2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs font-medium text-amber-800">
             Multiple areas require attention
           </div>
         ) : null}
       </div>
 
-      <div className="mt-3 flex items-center gap-3 text-xs text-white/70">
+      <div className="mt-3 flex items-center gap-3 text-xs text-slate-500 font-medium">
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#FF4D4D]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
           Critical
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#FFC857]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
           Needs Attention
         </span>
       </div>

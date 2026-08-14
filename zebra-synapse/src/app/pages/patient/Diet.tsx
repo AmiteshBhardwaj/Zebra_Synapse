@@ -9,9 +9,12 @@ import {
   CheckCircle2,
   Sparkles,
   Scale,
-  Calendar,
+  Calendar as CalendarIcon,
   SlidersHorizontal,
   ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   RefreshCw,
   Search,
   ShoppingCart,
@@ -27,6 +30,23 @@ import {
   ArrowRight,
   TrendingDown,
   TrendingUp,
+  Zap,
+  Footprints,
+  Moon,
+  Dumbbell,
+  Bell,
+  User,
+  Heart,
+  FileDown,
+  CheckCircle,
+  LayoutDashboard,
+  UtensilsCrossed,
+  ClipboardList,
+  BookOpen,
+  MessageSquare,
+  LogOut,
+  Bot,
+  Send,
 } from "lucide-react";
 import { Link } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
@@ -73,6 +93,8 @@ import {
   type DayDietPlan,
   type WeightLogEntry,
   type DietUserSettings,
+  type RecommendedExercise,
+  RECOMMENDED_EXERCISES,
   FOOD_DATABASE,
   HEALTH_GOALS,
   ACTIVITY_MULTIPLIERS,
@@ -100,8 +122,19 @@ export default function Diet() {
     setSelectedReportId,
   } = useActiveReport(panels);
 
-  // Active View Tab
-  const [activeTab, setActiveTab] = useState<"tracker" | "weekly_plan" | "weight_goals" | "biomarker_rx">("tracker");
+  // Active Navigation Mode for Nutrigo Sidebar
+  type DietNavTab = "dashboard" | "weekly_plan" | "biomarker_rx" | "messages" | "healthy_menu" | "food_diary" | "progress" | "exercises";
+  const [activeTab, setActiveTab] = useState<DietNavTab>("dashboard");
+
+  // AI Dietitian Chat Messages State
+  const [aiChatInput, setAiChatInput] = useState("");
+  const [aiChatLogs, setAiChatLogs] = useState<{ sender: "ai" | "user"; text: string; time: string }[]>([
+    {
+      sender: "ai",
+      text: "Hello! I am your Nutrigo AI Nutritionist. Based on your current biomarkers and calorie targets, I can suggest delicious antioxidant-rich meals, advise on low-sodium swaps, and optimize your macro intake. How can I help you today?",
+      time: "10:30 AM",
+    },
+  ]);
 
   // User Diet & Metabolic Settings
   const settingsStorageKey = `zebra_diet_settings_${profile?.id || "default"}`;
@@ -116,7 +149,7 @@ export default function Diet() {
       activityLevel: "moderate",
       goal: "maintain_longevity",
       targetWeightKg: profile?.weight_kg || 70,
-      weeklyPaceKg: 0,
+      weeklyPaceKg: -0.25,
       dailyWaterTargetMl: 2500,
       dietaryPreference: profile?.dietary_preference || "omnivore",
       foodAllergies: profile?.food_allergies || [],
@@ -153,7 +186,7 @@ export default function Diet() {
   const [editActivity, setEditActivity] = useState<ActivityLevel>(settings.activityLevel);
   const [editGoal, setEditGoal] = useState<HealthGoal>(settings.goal);
   const [editTargetWeight, setEditTargetWeight] = useState<string>(String(settings.targetWeightKg || 70));
-  const [editWeeklyPace, setEditWeeklyPace] = useState<string>(String(settings.weeklyPaceKg || 0));
+  const [editWeeklyPace, setEditWeeklyPace] = useState<string>(String(settings.weeklyPaceKg || -0.25));
   const [editWaterTarget, setEditWaterTarget] = useState<string>(String(settings.dailyWaterTargetMl || 2500));
   const [editDietPref, setEditDietPref] = useState<string>(settings.dietaryPreference);
 
@@ -163,16 +196,16 @@ export default function Diet() {
       setEditActivity(settings.activityLevel);
       setEditGoal(settings.goal);
       setEditTargetWeight(String(settings.targetWeightKg || profile?.weight_kg || 70));
-      setEditWeeklyPace(String(settings.weeklyPaceKg || 0));
+      setEditWeeklyPace(String(settings.weeklyPaceKg || -0.25));
       setEditWaterTarget(String(settings.dailyWaterTargetMl || 2500));
       setEditDietPref(settings.dietaryPreference);
     }
   }, [isCustomizeOpen, settings, profile]);
 
   // Calculations
-  const currentWeight = profile?.weight_kg || settings.targetWeightKg || 70;
+  const [currentWeight, setCurrentWeight] = useState<number>(() => profile?.weight_kg || 78);
   const currentHeight = profile?.height_cm || 175;
-  const bmr = useMemo(() => calculateBMR(currentWeight, currentHeight, 36, "male"), [currentWeight, currentHeight]);
+  const bmr = useMemo(() => calculateBMR(currentWeight, currentHeight, 34, "male"), [currentWeight, currentHeight]);
   const tdee = useMemo(() => calculateTDEE(bmr, settings.activityLevel), [bmr, settings.activityLevel]);
   const calorieTarget = useMemo(
     () => settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg),
@@ -199,60 +232,60 @@ export default function Diet() {
     } catch (e) {
       console.error(e);
     }
-    // Default initial demonstration logs
+    // Default demonstration logs matching Nutrigo mockup
     return [
       {
         id: "log_1",
-        name: "Rolled Steel Cut / Rolled Oats",
+        name: "Scrambled Eggs with Spinach & Whole Grain Toast",
         meal: "breakfast",
         servings: 1,
-        servingSize: "50g dry",
-        calories: 190,
-        protein: 7,
-        carbs: 34,
-        fat: 3.5,
-        fiber: 5,
-        sodium: 2,
+        servingSize: "1 plate",
+        calories: 300,
+        protein: 20,
+        carbs: 25,
+        fat: 12,
+        fiber: 6,
+        sodium: 240,
         loggedAt: new Date().toISOString(),
       },
       {
         id: "log_2",
-        name: "Organic Black Chia Seeds",
-        meal: "breakfast",
+        name: "Grilled Chicken Salad with Avocado and Quinoa",
+        meal: "lunch",
         servings: 1,
-        servingSize: "2 tbsp (24g)",
-        calories: 117,
-        protein: 4,
-        carbs: 10,
-        fat: 7.4,
-        fiber: 8.3,
-        sodium: 4,
+        servingSize: "1 bowl",
+        calories: 450,
+        protein: 36,
+        carbs: 40,
+        fat: 20,
+        fiber: 8,
+        sodium: 320,
         loggedAt: new Date().toISOString(),
       },
       {
         id: "log_3",
-        name: "Wild Organic Blueberries",
-        meal: "breakfast",
+        name: "Greek Yogurt with Mixed Berries and Almonds",
+        meal: "snack",
         servings: 1,
-        servingSize: "1 cup (148g)",
-        calories: 84,
-        protein: 1.1,
-        carbs: 21.4,
-        fat: 0.5,
-        fiber: 3.6,
-        sodium: 1,
+        servingSize: "1 bowl",
+        calories: 200,
+        protein: 12,
+        carbs: 18,
+        fat: 10,
+        fiber: 4,
+        sodium: 60,
         loggedAt: new Date().toISOString(),
       },
       {
         id: "log_4",
-        name: "Mediterranean Wild Salmon & Tri-Color Quinoa Bowl",
-        meal: "lunch",
+        name: "Grilled Chicken with Sweet Potato and Green Beans",
+        meal: "dinner",
         servings: 1,
-        servingSize: "1 bowl",
-        calories: 520,
-        protein: 42,
-        carbs: 44,
-        fat: 18,
+        servingSize: "1 plate",
+        calories: 500,
+        protein: 35,
+        carbs: 45,
+        fat: 20,
         fiber: 9,
         sodium: 380,
         loggedAt: new Date().toISOString(),
@@ -269,14 +302,14 @@ export default function Diet() {
     }
   }, [loggedFoods, logsStorageKey]);
 
-  // Water Intake State
+  // Water Intake State (Nutrigo widget)
   const waterStorageKey = `zebra_water_logs_${profile?.id || "default"}_${todayKey}`;
   const [waterConsumedMl, setWaterConsumedMl] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(waterStorageKey);
-      return saved ? Number(saved) : 1500;
+      return saved ? Number(saved) : 1300;
     } catch {
-      return 1500;
+      return 1300;
     }
   });
 
@@ -287,6 +320,23 @@ export default function Diet() {
       console.error(e);
     }
   }, [waterConsumedMl, waterStorageKey]);
+
+  const handleAddWater = (amountMl: number = 250) => {
+    setWaterConsumedMl((prev) => {
+      const next = prev + amountMl;
+      toast.success(`Hydration logged: +${amountMl}ml (Total: ${(next / 1000).toFixed(1)}L)`);
+      addActivity(`Logged +${amountMl}ml water (${(next / 1000).toFixed(1)}L / ${(settings.dailyWaterTargetMl / 1000).toFixed(1)}L target)`);
+      return next;
+    });
+  };
+
+  // Steps & Sleep Mock State (Nutrigo widget)
+  const [stepsCount] = useState<number>(8050);
+  const stepsGoal = 10000;
+  const stepsLeft = Math.max(0, stepsGoal - stepsCount);
+  const stepsPct = Math.round((stepsCount / stepsGoal) * 100);
+  const [sleepHours] = useState<number>(6.5);
+  const [burnedCalories] = useState<number>(510);
 
   // Calculate Totals Consumed
   const totalsConsumed = useMemo(() => {
@@ -303,7 +353,70 @@ export default function Diet() {
     );
   }, [loggedFoods]);
 
-  const caloriesRemaining = calorieTarget - totalsConsumed.calories;
+  const caloriesRemaining = Math.max(0, calorieTarget - totalsConsumed.calories);
+
+  // Macro percentages for progress bars
+  const carbProgressPct = Math.min(100, Math.round((totalsConsumed.carbs / Math.max(1, macroTargets.grams.carbs)) * 100));
+  const protProgressPct = Math.min(100, Math.round((totalsConsumed.protein / Math.max(1, macroTargets.grams.protein)) * 100));
+  const fatProgressPct = Math.min(100, Math.round((totalsConsumed.fat / Math.max(1, macroTargets.grams.fat)) * 100));
+
+  // Calendar Day Strip (Nutrigo mini-calendar)
+  const [selectedDayIdx, setSelectedDayIdx] = useState<number>(1); // Tuesday (Index 1) as active in mockup
+  const weekDays = [
+    { dayName: "Mon", dateNum: 4, full: "Monday, Sep 4" },
+    { dayName: "Tue", dateNum: 5, full: "Tuesday, Sep 5" },
+    { dayName: "Wed", dateNum: 6, full: "Wednesday, Sep 6" },
+    { dayName: "Thu", dateNum: 7, full: "Thursday, Sep 7" },
+    { dayName: "Fri", dateNum: 8, full: "Friday, Sep 8" },
+    { dayName: "Sat", dateNum: 9, full: "Saturday, Sep 9" },
+  ];
+
+  // Meal Accordion Open States (Nutrigo right panel)
+  const [openMealCategories, setOpenMealCategories] = useState<Record<MealCategory, boolean>>({
+    breakfast: true,
+    lunch: true,
+    snack: false,
+    dinner: false,
+  });
+
+  const toggleMealCategory = (category: MealCategory) => {
+    setOpenMealCategories((prev) => ({ ...prev, [category]: !prev[category] }));
+  };
+
+  // Recent Activity Feed
+  const [activityFeed, setActivityFeed] = useState<
+    { id: string; time: string; text: string; type: "bell" | "yoga" | "run" | "food" }[]
+  >([
+    {
+      id: "act_1",
+      time: "6:00 PM",
+      text: 'Notification sent: "Congratulations! You\'ve reached 75% of your cardio endurance goal!"',
+      type: "bell",
+    },
+    {
+      id: "act_2",
+      time: "5:15 PM",
+      text: "Completed 3rd stretching session for flexibility improvement",
+      type: "yoga",
+    },
+    {
+      id: "act_3",
+      time: "3:00 PM",
+      text: "Cardio progress updated – 7.5 km completed out of 10 km goal for endurance improvement",
+      type: "run",
+    },
+    {
+      id: "act_4",
+      time: "12:45 PM",
+      text: "Logged lunch meal: Grilled Chicken Wrap with Avocado and Spinach (450 kcal)",
+      type: "food",
+    },
+  ]);
+
+  const addActivity = (text: string, type: "bell" | "yoga" | "run" | "food" = "food") => {
+    const timeStr = new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    setActivityFeed((prev) => [{ id: `act_${Date.now()}`, time: timeStr, text, type }, ...prev]);
+  };
 
   // Add Food Modal State
   const [isAddFoodOpen, setIsAddFoodOpen] = useState(false);
@@ -346,6 +459,7 @@ export default function Diet() {
       loggedAt: new Date().toISOString(),
     };
     setLoggedFoods((prev) => [...prev, newEntry]);
+    addActivity(`Logged ${food.name} (${newEntry.calories} kcal) to ${selectedMealForAdd.toUpperCase()}`, "food");
     toast.success(`Logged ${food.name} to ${selectedMealForAdd.toUpperCase()}`);
     setIsAddFoodOpen(false);
     setFoodSearchQuery("");
@@ -377,6 +491,7 @@ export default function Diet() {
       loggedAt: new Date().toISOString(),
     };
     setLoggedFoods((prev) => [...prev, newEntry]);
+    addActivity(`Logged ${customFoodName} (${cal} kcal) to ${selectedMealForAdd.toUpperCase()}`, "food");
     toast.success(`Logged ${customFoodName} to ${selectedMealForAdd.toUpperCase()}`);
     setIsAddFoodOpen(false);
     setCustomFoodMode(false);
@@ -388,8 +503,11 @@ export default function Diet() {
   };
 
   const handleDeleteLoggedFood = (id: string) => {
-    setLoggedFoods((prev) => prev.filter((item) => item.id !== id));
-    toast.info("Food item removed from daily log");
+    const item = loggedFoods.find((f) => f.id === id);
+    setLoggedFoods((prev) => prev.filter((i) => i.id !== id));
+    if (item) {
+      toast.info(`Removed ${item.name}`);
+    }
   };
 
   // ==========================================
@@ -400,7 +518,6 @@ export default function Diet() {
     return generateWeeklyDietPlan(activePanel, biomarkerTrends, settings);
   });
 
-  // Regenerate weekly plan when settings or active panel change
   useEffect(() => {
     setWeeklyPlan(generateWeeklyDietPlan(activePanel, biomarkerTrends, settings));
   }, [activePanel, biomarkerTrends, settings]);
@@ -461,6 +578,7 @@ export default function Diet() {
       loggedAt: new Date().toISOString(),
     };
     setLoggedFoods((prev) => [...prev, newEntry]);
+    addActivity(`Logged ${recipe.title} (${recipe.calories} kcal) to ${recipe.mealType.toUpperCase()}`, "food");
     toast.success(`Logged "${recipe.title}" to Today's ${recipe.mealType.toUpperCase()}!`);
   };
 
@@ -488,75 +606,6 @@ export default function Diet() {
       return updated;
     });
   };
-
-  // ==========================================
-  // WEIGHT & METABOLIC GOALS STATE
-  // ==========================================
-  const weightHistoryKey = `zebra_weight_logs_${profile?.id || "default"}`;
-  const [weightLogs, setWeightLogs] = useState<WeightLogEntry[]>(() => {
-    try {
-      const saved = localStorage.getItem(weightHistoryKey);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return [
-      { id: "w_1", date: "2026-07-15", weightKg: (profile?.weight_kg || 74) + 2.5, notes: "Baseline check-in" },
-      { id: "w_2", date: "2026-07-28", weightKg: (profile?.weight_kg || 74) + 1.2, notes: "Consistent nutrition" },
-      { id: "w_3", date: "2026-08-10", weightKg: profile?.weight_kg || 74, notes: "Feeling energetic" },
-    ];
-  });
-
-  const [isLogWeightOpen, setIsLogWeightOpen] = useState(false);
-  const [newWeightInput, setNewWeightInput] = useState("");
-  const [newWeightDate, setNewWeightDate] = useState(todayKey);
-  const [newWeightNotes, setNewWeightNotes] = useState("");
-
-  const handleSaveWeightEntry = () => {
-    const val = parseFloat(newWeightInput);
-    if (!val || val <= 0) {
-      toast.error("Please enter a valid weight in kg");
-      return;
-    }
-    const entry: WeightLogEntry = {
-      id: `w_${Date.now()}`,
-      date: newWeightDate,
-      weightKg: val,
-      notes: newWeightNotes.trim() || undefined,
-    };
-    const updated = [entry, ...weightLogs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setWeightLogs(updated);
-    try {
-      localStorage.setItem(weightHistoryKey, JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
-
-    // Sync with profile
-    if (updateProfile) {
-      updateProfile({ weight_kg: val });
-    }
-    toast.success(`Logged weight ${val} kg for ${newWeightDate}`);
-    setIsLogWeightOpen(false);
-    setNewWeightInput("");
-    setNewWeightNotes("");
-  };
-
-  // Projected Goal Completion Date Calculation
-  const weightDifference = currentWeight - settings.targetWeightKg;
-  const projectedWeeks = useMemo(() => {
-    if (settings.weeklyPaceKg === 0 || Math.abs(weightDifference) < 0.2) return null;
-    const pace = Math.abs(settings.weeklyPaceKg);
-    const weeks = Math.abs(weightDifference) / pace;
-    return Math.ceil(weeks);
-  }, [weightDifference, settings.weeklyPaceKg]);
-
-  const projectedDate = useMemo(() => {
-    if (!projectedWeeks) return null;
-    const d = new Date();
-    d.setDate(d.getDate() + projectedWeeks * 7);
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-  }, [projectedWeeks]);
 
   // Save Settings from Quick Adjust Modal
   const handleSaveAdjustedGoals = () => {
@@ -587,1404 +636,1829 @@ export default function Diet() {
 
   if (reportsLoading || panelsLoading) {
     return (
-      <PatientPortalPage>
-        <p className="text-sm text-[#A1A1AA]">Loading Diet & Nutrition Hub...</p>
-      </PatientPortalPage>
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f8f5] text-slate-600">
+        <div className="flex items-center gap-3">
+          <RefreshCw className="h-5 w-5 animate-spin text-lime-500" />
+          <span className="text-sm font-medium">Loading Diet & Wellness Hub...</span>
+        </div>
+      </div>
     );
   }
 
   if (!hasLabReports) {
     return (
-      <LabReportsRequiredPlaceholder
-        title="Diet & Nutrition Hub"
-        description="Daily calorie/macro tracking, 7-day customizable meal plans, and precision clinical nutrition driven by your lab data."
-      />
+      <div className="p-6 bg-[#f6f8f5] min-h-full">
+        <LabReportsRequiredPlaceholder
+          title="Clinical Biomarker Lab Reports Required"
+          description="Upload your blood panel to unlock precision diet targets, metabolic BMR adjustments, and cardiovascular dietary prescriptions."
+        />
+      </div>
     );
   }
 
+  // Active recipes for recommended menu
+  const recommendedMenuBreakfast = weeklyPlan[0]?.meals?.breakfast;
+  const recommendedMenuLunch = weeklyPlan[0]?.meals?.lunch;
+
+  // Render sub-views or main Nutrigo dashboard with dedicated Left Sidebar
   return (
-    <PatientPortalPage>
-      {/* ========================================== */}
-      {/* 1. EXECUTIVE HEADER & CONTROLS            */}
-      {/* ========================================== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10 mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/25 to-teal-600/15 border border-emerald-500/35 shadow-[0_12px_28px_rgba(16,185,129,0.2)]">
-            <Utensils className="h-6 w-6 text-emerald-400" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Diet & Nutrition</h1>
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-300 uppercase tracking-wider">
-                Clinical Precision
+    <div className="min-h-screen bg-[#f4f7f1] text-slate-800 font-sans p-3 sm:p-4 lg:p-6 antialiased selection:bg-lime-500/20 selection:text-lime-900">
+      <div className="max-w-[1720px] mx-auto flex flex-col lg:flex-row gap-5 items-start">
+        
+        {/* ========================================================================= */}
+        {/* 1. NUTRIGO LEFT SIDEBAR (DEDICATED TO DIET SECTION) */}
+        {/* ========================================================================= */}
+        <aside className="w-full lg:w-[245px] xl:w-[255px] shrink-0 lg:sticky lg:top-4 bg-white rounded-[28px] p-4 sm:p-5 border border-slate-100/90 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between self-stretch lg:self-auto min-h-fit lg:min-h-[calc(100vh-3rem)] select-none">
+          {/* Brand Header */}
+          <div
+            onClick={() => setActiveTab("dashboard")}
+            className="flex items-center gap-3 pb-4 pt-1 px-1 border-b border-slate-100/70 cursor-pointer group"
+          >
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f4f8f1] border border-lime-100 shadow-sm transition-transform group-hover:scale-105">
+              <svg viewBox="0 0 32 32" fill="none" className="h-6 w-6">
+                <path d="M6 14C6 9.58172 9.58172 6 14 6H26C26 10.4183 22.4183 14 18 14H6Z" fill="#9de438" />
+                <path d="M6 18C6 18 8 26 16 26C24 26 26 18 26 18H6Z" fill="#f59e0b" />
+              </svg>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                Nutrigo
+              </span>
+              <span className="text-[10px] font-semibold text-slate-400 tracking-wider">
+                Health & Nutrition
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#b4c9e8] mt-1 font-medium">
-              {HEALTH_GOALS[settings.goal]?.label || "Precision Nutrition"} •{" "}
-              <span className="capitalize text-white font-semibold">{settings.dietaryPreference}</span> • Calorie Target:{" "}
-              <span className="text-emerald-400 font-semibold">{calorieTarget} kcal</span>
-            </p>
           </div>
-        </div>
 
-        <div className="flex items-center flex-wrap gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsCustomizeOpen(true)}
-            className="border-white/15 bg-white/[0.04] text-white hover:bg-white/10 hover:border-emerald-500/40 text-xs font-medium gap-1.5 transition-all shadow-sm"
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5 text-emerald-400" />
-            Adjust Goals & Macros
-          </Button>
-          <ReportScopeSelector
-            panels={panels}
-            selectedReportId={selectedReportId}
-            onSelectReportId={setSelectedReportId}
-            multiPanelMeta={multiPanelMeta}
-          />
-        </div>
-      </div>
-
-      {/* ========================================== */}
-      {/* 2. NAVIGATION TABS                         */}
-      {/* ========================================== */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6 p-1.5 rounded-2xl bg-white/[0.03] border border-white/10">
-        <button
-          onClick={() => setActiveTab("tracker")}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-            activeTab === "tracker"
-              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_4px_16px_rgba(16,185,129,0.3)]"
-              : "text-[#94a3b8] hover:text-white hover:bg-white/[0.05]"
-          }`}
-        >
-          <Flame className="h-4 w-4" />
-          Today's Tracker
-        </button>
-        <button
-          onClick={() => setActiveTab("weekly_plan")}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-            activeTab === "weekly_plan"
-              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_4px_16px_rgba(16,185,129,0.3)]"
-              : "text-[#94a3b8] hover:text-white hover:bg-white/[0.05]"
-          }`}
-        >
-          <Calendar className="h-4 w-4" />
-          7-Day Meal Plan
-        </button>
-        <button
-          onClick={() => setActiveTab("weight_goals")}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-            activeTab === "weight_goals"
-              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_4px_16px_rgba(16,185,129,0.3)]"
-              : "text-[#94a3b8] hover:text-white hover:bg-white/[0.05]"
-          }`}
-        >
-          <Scale className="h-4 w-4" />
-          Weight & Goals
-        </button>
-        <button
-          onClick={() => setActiveTab("biomarker_rx")}
-          className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
-            activeTab === "biomarker_rx"
-              ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_4px_16px_rgba(16,185,129,0.3)]"
-              : "text-[#94a3b8] hover:text-white hover:bg-white/[0.05]"
-          }`}
-        >
-          <HeartPulse className="h-4 w-4" />
-          Biomarker Food Rx
-        </button>
-      </div>
-
-      {/* ========================================== */}
-      {/* 3. TAB 1: TODAY'S TRACKER (MyFitnessPal)  */}
-      {/* ========================================== */}
-      {activeTab === "tracker" && (
-        <div className="space-y-6">
-          {/* Calorie & Macro Dashboard Card */}
-          <Card className={`${portalPanelClass} border-emerald-500/20 shadow-xl overflow-hidden`}>
-            <CardHeader className="pb-3 border-b border-white/5 bg-gradient-to-r from-emerald-950/30 via-slate-900/40 to-teal-950/20">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div>
-                  <CardTitle className="text-base sm:text-lg text-white flex items-center gap-2">
-                    <Flame className="h-5 w-5 text-emerald-400" />
-                    Daily Energy & Macro Balance
-                  </CardTitle>
-                  <CardDescription className="text-xs text-[#94a3b8]">
-                    Live tracker for {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className="text-[#94a3b8]">
-                    Goal: <strong className="text-white">{calorieTarget} kcal</strong>
-                  </span>
-                  <span className="text-[#94a3b8]">
-                    Food: <strong className="text-emerald-400">{totalsConsumed.calories} kcal</strong>
-                  </span>
-                  <span className="rounded-lg bg-white/10 px-2.5 py-1 text-white font-bold">
-                    {caloriesRemaining >= 0 ? `${caloriesRemaining} kcal remaining` : `${Math.abs(caloriesRemaining)} kcal over`}
-                  </span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              {/* Visual Calorie Bar */}
-              <div>
-                <div className="flex items-center justify-between text-xs mb-1.5 font-medium">
-                  <span className="text-white/80">Calorie Progress</span>
-                  <span className="text-emerald-400 font-bold">
-                    {Math.min(100, Math.round((totalsConsumed.calories / calorieTarget) * 100))}% of Daily Target
-                  </span>
-                </div>
-                <div className="h-3 w-full rounded-full bg-white/10 overflow-hidden p-0.5">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-amber-400 transition-all duration-500"
-                    style={{ width: `${Math.min(100, (totalsConsumed.calories / calorieTarget) * 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* 3 Macro Progress Gauges */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Protein */}
-                <div className="rounded-xl border border-blue-500/20 bg-blue-950/15 p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-blue-300">Protein (g)</span>
-                    <Badge variant="outline" className="border-blue-500/30 text-blue-300 text-[10px]">
-                      {macroTargets.split.proteinPct}% Cal
-                    </Badge>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <div className="text-xl font-bold text-white">
-                      {Math.round(totalsConsumed.protein)}g
-                    </div>
-                    <div className="text-xs text-[#94a3b8]">Target: {macroTargets.grams.protein}g</div>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-blue-950/60 overflow-hidden">
-                    <div
-                      className="h-full bg-blue-500 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (totalsConsumed.protein / (macroTargets.grams.protein || 1)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Carbs */}
-                <div className="rounded-xl border border-amber-500/20 bg-amber-950/15 p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-amber-300">Carbohydrates (g)</span>
-                    <Badge variant="outline" className="border-amber-500/30 text-amber-300 text-[10px]">
-                      {macroTargets.split.carbsPct}% Cal
-                    </Badge>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <div className="text-xl font-bold text-white">
-                      {Math.round(totalsConsumed.carbs)}g
-                    </div>
-                    <div className="text-xs text-[#94a3b8]">Target: {macroTargets.grams.carbs}g</div>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-amber-950/60 overflow-hidden">
-                    <div
-                      className="h-full bg-amber-500 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (totalsConsumed.carbs / (macroTargets.grams.carbs || 1)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* Fats */}
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/15 p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-emerald-300">Healthy Fats (g)</span>
-                    <Badge variant="outline" className="border-emerald-500/30 text-emerald-300 text-[10px]">
-                      {macroTargets.split.fatPct}% Cal
-                    </Badge>
-                  </div>
-                  <div className="flex items-baseline justify-between">
-                    <div className="text-xl font-bold text-white">
-                      {Math.round(totalsConsumed.fat)}g
-                    </div>
-                    <div className="text-xs text-[#94a3b8]">Target: {macroTargets.grams.fat}g</div>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-emerald-950/60 overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full transition-all"
-                      style={{ width: `${Math.min(100, (totalsConsumed.fat / (macroTargets.grams.fat || 1)) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Micronutrient Guard & Hydration Tracker Bar */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2 border-t border-white/10">
-                {/* Clinical Micronutrient Health Guard */}
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                      <ShieldCheck className="h-4 w-4 text-teal-400" />
-                      Clinical Micronutrient Guard
-                    </span>
-                    <span className="text-[11px] text-[#94a3b8]">Lab-Adjusted Limits</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <div className="rounded-lg bg-black/20 p-2 border border-white/5">
-                      <div className="flex justify-between text-white/70 mb-1">
-                        <span>Prebiotic Fiber</span>
-                        <span className="font-bold text-teal-300">{totalsConsumed.fiber}g / {microTargets.fiberG}g</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-white/10">
-                        <div
-                          className="h-full bg-teal-400 rounded-full"
-                          style={{ width: `${Math.min(100, (totalsConsumed.fiber / microTargets.fiberG) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="rounded-lg bg-black/20 p-2 border border-white/5">
-                      <div className="flex justify-between text-white/70 mb-1">
-                        <span>Sodium Guard</span>
-                        <span className={`font-bold ${totalsConsumed.sodium > microTargets.sodiumMg ? "text-rose-400" : "text-emerald-400"}`}>
-                          {totalsConsumed.sodium}mg / {microTargets.sodiumMg}mg
-                        </span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-white/10">
-                        <div
-                          className={`h-full rounded-full ${totalsConsumed.sodium > microTargets.sodiumMg ? "bg-rose-400" : "bg-emerald-400"}`}
-                          style={{ width: `${Math.min(100, (totalsConsumed.sodium / microTargets.sodiumMg) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Hydration Tracker */}
-                <div className="rounded-xl border border-sky-500/20 bg-sky-950/15 p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-sky-300 flex items-center gap-1.5">
-                      <Droplets className="h-4 w-4 text-sky-400" />
-                      Daily Hydration Tracker
-                    </span>
-                    <span className="text-xs text-white font-bold">
-                      {(waterConsumedMl / 1000).toFixed(2)}L / {(settings.dailyWaterTargetMl / 1000).toFixed(1)}L
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-3 rounded-full bg-sky-950/60 overflow-hidden p-0.5 border border-sky-500/20">
-                      <div
-                        className="h-full bg-gradient-to-r from-sky-500 to-blue-400 rounded-full transition-all"
-                        style={{ width: `${Math.min(100, (waterConsumedMl / (settings.dailyWaterTargetMl || 2500)) * 100)}%` }}
-                      />
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setWaterConsumedMl((prev) => Math.max(0, prev - 250))}
-                      className="h-7 px-2 text-xs border-sky-500/30 text-sky-300 hover:bg-sky-500/20"
-                    >
-                      -250ml
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setWaterConsumedMl((prev) => prev + 250);
-                        toast.success("Hydration updated! +250ml (+1 glass)");
-                      }}
-                      className="h-7 px-2.5 text-xs bg-sky-500 hover:bg-sky-600 text-white font-semibold"
-                    >
-                      + Glass (+250ml)
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* MEAL LOGS SECTION: Breakfast, Lunch, Dinner, Snacks */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-white flex items-center gap-2">
-                <Utensils className="h-4 w-4 text-emerald-400" />
-                Meals Logged Today
-              </h2>
-              <span className="text-xs text-[#94a3b8]">Click "+ Add Food" to record meals or search library</span>
-            </div>
-
-            {(["breakfast", "lunch", "dinner", "snack"] as MealCategory[]).map((mealType) => {
-              const mealItems = loggedFoods.filter((item) => item.meal === mealType);
-              const mealCalories = mealItems.reduce((acc, curr) => acc + curr.calories, 0);
-              const mealProtein = mealItems.reduce((acc, curr) => acc + curr.protein, 0);
-              const mealCarbs = mealItems.reduce((acc, curr) => acc + curr.carbs, 0);
-              const mealFat = mealItems.reduce((acc, curr) => acc + curr.fat, 0);
-
-              const mealTitle = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+          {/* Navigation Links */}
+          <nav className="my-3 space-y-1 flex-1 overflow-y-auto [scrollbar-width:none]">
+            {[
+              { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+              { id: "weekly_plan", label: "Calendar", icon: CalendarIcon },
+              { id: "messages", label: "Messages", icon: MessageSquare, badge: 6 },
+              { id: "healthy_menu", label: "Healthy Menu", icon: UtensilsCrossed },
+              { id: "weekly_plan", label: "Meal Plan", icon: ClipboardList, hasSubmenu: true },
+              { id: "food_diary", label: "Food Diary", icon: BookOpen },
+              { id: "progress", label: "Progress", icon: TrendingUp },
+              { id: "exercises", label: "Exercises", icon: Dumbbell },
+              { id: "biomarker_rx", label: "Health Insights", icon: HeartPulse },
+            ].map((item, idx) => {
+              const Icon = item.icon;
+              const active = activeTab === item.id;
 
               return (
-                <Card key={mealType} className={`${portalPanelClass} border-white/10 hover:border-white/20 transition-all`}>
-                  <CardHeader className="py-3.5 px-4 sm:px-6 flex flex-row items-center justify-between border-b border-white/5">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-emerald-400 font-bold text-xs capitalize">
-                        {mealType[0]}
-                      </div>
-                      <div>
-                        <CardTitle className="text-sm sm:text-base text-white">{mealTitle}</CardTitle>
-                        <CardDescription className="text-xs text-[#94a3b8]">
-                          {mealItems.length} item{mealItems.length !== 1 ? "s" : ""} • {mealCalories} kcal
-                        </CardDescription>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="hidden sm:flex items-center gap-3 text-xs text-[#94a3b8] mr-2">
-                        <span>P: <strong className="text-white">{Math.round(mealProtein)}g</strong></span>
-                        <span>C: <strong className="text-white">{Math.round(mealCarbs)}g</strong></span>
-                        <span>F: <strong className="text-white">{Math.round(mealFat)}g</strong></span>
-                      </div>
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedMealForAdd(mealType);
-                          setIsAddFoodOpen(true);
-                        }}
-                        className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-1 shadow-sm"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        Add Food
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-0 divide-y divide-white/5">
-                    {mealItems.length === 0 ? (
-                      <div className="py-5 px-6 text-center text-xs text-[#94a3b8] italic">
-                        No food items logged for {mealTitle} yet.
-                      </div>
-                    ) : (
-                      mealItems.map((item) => (
-                        <div key={item.id} className="py-3 px-4 sm:px-6 flex items-center justify-between hover:bg-white/[0.02] transition-colors">
-                          <div className="flex-1 pr-3">
-                            <p className="text-sm font-medium text-white">{item.name}</p>
-                            <p className="text-xs text-[#94a3b8]">
-                              {item.servings} x {item.servingSize} • P: {item.protein}g • C: {item.carbs}g • F: {item.fat}g
-                              {item.fiber ? ` • Fiber: ${item.fiber}g` : ""}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-emerald-400">{item.calories} kcal</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteLoggedFood(item.id)}
-                              className="h-8 w-8 p-0 text-white/40 hover:text-rose-400 hover:bg-rose-500/10"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ========================================== */}
-      {/* 4. TAB 2: WEEKLY MEAL PLAN & SWAPPER       */}
-      {/* ========================================== */}
-      {activeTab === "weekly_plan" && (
-        <div className="space-y-6">
-          {/* Weekly Plan Header & Controls */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border border-white/10 bg-white/[0.02]">
-            <div>
-              <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-emerald-400" />
-                7-Day Clinical Meal Schedule
-              </h2>
-              <p className="text-xs sm:text-sm text-[#94a3b8] mt-0.5">
-                Precision diet schedule synthesized for <span className="text-emerald-300 font-semibold">{settings.dietaryPreference}</span> with {calorieTarget} kcal daily balance.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant={grocerySubTab ? "default" : "outline"}
-                size="sm"
-                onClick={() => setGrocerySubTab(!grocerySubTab)}
-                className={`text-xs font-semibold gap-1.5 transition-all ${
-                  grocerySubTab
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-white"
-                    : "border-white/15 text-white hover:bg-white/10"
-                }`}
-              >
-                <ShoppingCart className="h-3.5 w-3.5" />
-                {grocerySubTab ? "View Daily Meals" : "Smart Grocery List"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setWeeklyPlan(generateWeeklyDietPlan(activePanel, biomarkerTrends, settings));
-                  toast.success("Regenerated 7-day meal plan based on current biomarkers & preferences!");
-                }}
-                className="border-white/15 text-white hover:bg-white/10 text-xs font-medium gap-1.5"
-              >
-                <RefreshCw className="h-3.5 w-3.5 text-emerald-400" />
-                Regenerate
-              </Button>
-            </div>
-          </div>
-
-          {/* GROCERY LIST VIEW */}
-          {grocerySubTab ? (
-            <Card className={`${portalPanelClass} border-white/10 p-6 space-y-6`}>
-              <div>
-                <CardTitle className="text-base sm:text-lg text-white flex items-center gap-2">
-                  <ShoppingCart className="h-5 w-5 text-emerald-400" />
-                  Consolidated Weekly Grocery Checklist
-                </CardTitle>
-                <CardDescription className="text-xs text-[#94a3b8]">
-                  Automatically aggregated ingredients for all 7 days categorized by aisle. Check items as you shop.
-                </CardDescription>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Produce */}
-                <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider border-b border-emerald-500/20 pb-1 flex items-center justify-between">
-                    <span>Fresh Produce ({groceryList.produce.length})</span>
-                    <Apple className="h-3.5 w-3.5" />
-                  </h3>
-                  <div className="space-y-2">
-                    {groceryList.produce.map((item, idx) => (
-                      <label
-                        key={idx}
-                        className={`flex items-start gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
-                          checkedGroceryItems[item.name]
-                            ? "bg-white/[0.02] border-white/5 text-white/40 line-through"
-                            : "bg-white/[0.04] border-white/10 text-white hover:border-emerald-500/30"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={Boolean(checkedGroceryItems[item.name])}
-                          onChange={() => toggleGroceryItem(item.name)}
-                          className="mt-0.5 rounded border-white/20 bg-black/40 text-emerald-500 focus:ring-0"
-                        />
-                        <div className="flex-1">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="block text-[10px] text-[#94a3b8]">{item.amount}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Proteins */}
-                <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-blue-400 uppercase tracking-wider border-b border-blue-500/20 pb-1 flex items-center justify-between">
-                    <span>Proteins & Seafood ({groceryList.protein.length})</span>
-                    <Utensils className="h-3.5 w-3.5" />
-                  </h3>
-                  <div className="space-y-2">
-                    {groceryList.protein.map((item, idx) => (
-                      <label
-                        key={idx}
-                        className={`flex items-start gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
-                          checkedGroceryItems[item.name]
-                            ? "bg-white/[0.02] border-white/5 text-white/40 line-through"
-                            : "bg-white/[0.04] border-white/10 text-white hover:border-blue-500/30"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={Boolean(checkedGroceryItems[item.name])}
-                          onChange={() => toggleGroceryItem(item.name)}
-                          className="mt-0.5 rounded border-white/20 bg-black/40 text-blue-500 focus:ring-0"
-                        />
-                        <div className="flex-1">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="block text-[10px] text-[#94a3b8]">{item.amount}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Pantry & Grains */}
-                <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider border-b border-amber-500/20 pb-1 flex items-center justify-between">
-                    <span>Pantry, Grains & Spices ({groceryList.pantry.length})</span>
-                    <Layers className="h-3.5 w-3.5" />
-                  </h3>
-                  <div className="space-y-2">
-                    {groceryList.pantry.map((item, idx) => (
-                      <label
-                        key={idx}
-                        className={`flex items-start gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
-                          checkedGroceryItems[item.name]
-                            ? "bg-white/[0.02] border-white/5 text-white/40 line-through"
-                            : "bg-white/[0.04] border-white/10 text-white hover:border-amber-500/30"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={Boolean(checkedGroceryItems[item.name])}
-                          onChange={() => toggleGroceryItem(item.name)}
-                          className="mt-0.5 rounded border-white/20 bg-black/40 text-amber-500 focus:ring-0"
-                        />
-                        <div className="flex-1">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="block text-[10px] text-[#94a3b8]">{item.amount}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Dairy & Plant Alts */}
-                <div className="space-y-3">
-                  <h3 className="text-xs font-bold text-teal-400 uppercase tracking-wider border-b border-teal-500/20 pb-1 flex items-center justify-between">
-                    <span>Dairy & Plant-Alts ({groceryList.dairy_alt.length})</span>
-                    <Droplets className="h-3.5 w-3.5" />
-                  </h3>
-                  <div className="space-y-2">
-                    {groceryList.dairy_alt.map((item, idx) => (
-                      <label
-                        key={idx}
-                        className={`flex items-start gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition-all ${
-                          checkedGroceryItems[item.name]
-                            ? "bg-white/[0.02] border-white/5 text-white/40 line-through"
-                            : "bg-white/[0.04] border-white/10 text-white hover:border-teal-500/30"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={Boolean(checkedGroceryItems[item.name])}
-                          onChange={() => toggleGroceryItem(item.name)}
-                          className="mt-0.5 rounded border-white/20 bg-black/40 text-teal-500 focus:ring-0"
-                        />
-                        <div className="flex-1">
-                          <span className="font-medium">{item.name}</span>
-                          <span className="block text-[10px] text-[#94a3b8]">{item.amount}</span>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ) : (
-            <>
-              {/* Day Selector Tabs (Day 1 - Day 7) */}
-              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-                {weeklyPlan.map((day) => (
-                  <button
-                    key={day.dayNumber}
-                    onClick={() => setSelectedPlanDay(day.dayNumber)}
-                    className={`py-3 px-1 rounded-xl border text-center transition-all ${
-                      selectedPlanDay === day.dayNumber
-                        ? "bg-emerald-600/30 border-emerald-500 text-white shadow-[0_4px_16px_rgba(16,185,129,0.2)]"
-                        : "bg-white/[0.02] border-white/10 text-[#94a3b8] hover:bg-white/[0.05] hover:text-white"
+                <button
+                  key={`${item.id}_${item.label}_${idx}`}
+                  type="button"
+                  onClick={() => setActiveTab(item.id as any)}
+                  className={`group flex w-full items-center gap-3.5 px-3.5 py-2.5 rounded-[16px] text-sm font-semibold transition-all duration-150 cursor-pointer ${
+                    active
+                      ? "bg-[#9de438] text-slate-900 shadow-sm shadow-lime-500/20 font-bold"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100/70"
+                  }`}
+                >
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center transition-colors ${
+                      active ? "text-slate-900" : "text-slate-400 group-hover:text-slate-700"
                     }`}
                   >
-                    <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider">
-                      {day.dayName.substring(0, 3)}
-                    </div>
-                    <div className="text-xs sm:text-sm font-bold text-white mt-0.5">Day {day.dayNumber}</div>
-                    <div className="text-[9px] text-emerald-400 font-medium hidden sm:block mt-1">
-                      {day.totalNutrition.calories} kcal
-                    </div>
-                  </button>
-                ))}
+                    <Icon className="h-5 w-5" strokeWidth={active ? 2.3 : 1.9} />
+                  </span>
+
+                  <span className="truncate text-[13px] font-medium leading-none">
+                    {item.label}
+                  </span>
+
+                  {item.badge !== undefined && (
+                    <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#ff7a29] px-1.5 text-[11px] font-bold text-white shadow-sm shadow-orange-500/20">
+                      {item.badge}
+                    </span>
+                  )}
+
+                  {item.hasSubmenu && !item.badge && (
+                    <ChevronDown
+                      className={`ml-auto h-4 w-4 transition-transform ${
+                        active ? "text-slate-900" : "text-slate-400 group-hover:text-slate-600"
+                      }`}
+                      strokeWidth={2}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Yellow Promotional Card */}
+          <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-b from-[#ffea75] via-[#ffd645] to-[#fec730] p-3.5 text-slate-900 shadow-[0_4px_16px_rgba(254,199,48,0.2)] border border-amber-200/50 mt-auto mb-2.5">
+            <div className="flex items-center justify-center pt-0.5 pb-1">
+              <div className="relative h-16 w-28 flex items-center justify-center">
+                <img
+                  src="/nutrigo_promo_vegetables.jpg"
+                  alt="Nutrigo fresh vegetables"
+                  className="h-16 w-auto object-contain drop-shadow-md transition-transform hover:scale-105"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    const fallback = e.currentTarget.parentElement?.querySelector(".promo-fallback");
+                    if (fallback) fallback.classList.remove("hidden");
+                  }}
+                />
+                <div className="promo-fallback hidden flex items-center justify-center text-3xl gap-1">
+                  <span>🥕</span>
+                  <span>🥬</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11.5px] font-medium leading-[1.3] text-slate-900 text-left px-0.5">
+              Start your health journey with a{" "}
+              <span className="font-bold text-slate-950">FREE 1-month</span> access to Nutrigo!
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                toast.success("🎉 1-Month Free Access Claimed!", {
+                  description: "Enjoy full AI biomarker insights, custom meal plans, and telehealth access.",
+                });
+              }}
+              className="mt-2.5 w-full rounded-full bg-[#9de438] hover:bg-[#8ed024] py-2 px-3 text-[11.5px] font-bold text-slate-950 shadow-sm border border-black/5 active:scale-95 transition-all text-center cursor-pointer"
+            >
+              Claim Now!
+            </button>
+          </div>
+
+          {/* Logout / Exit button */}
+          <Link
+            to="/patient"
+            className="flex w-full items-center gap-3 rounded-[14px] px-3.5 py-2 text-[13px] font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+          >
+            <LogOut className="h-4 w-4 stroke-[2]" />
+            <span>Exit to Portal</span>
+          </Link>
+        </aside>
+
+        {/* ========================================================================= */}
+        {/* 2. MAIN DIET CONTENT AREA */}
+        {/* ========================================================================= */}
+        <div className="flex-1 min-w-0 space-y-6">
+          
+          {/* TOP APP HEADER: BRAND / GREETING / SEARCH / SUB-TABS / LOG FOOD BUTTON */}
+          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-[24px] p-5 sm:p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
+                <Apple className="h-6 w-6 stroke-[2.2]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                    Hello, {profile?.full_name?.split(" ")[0] || "Adam"}!
+                  </h1>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2.5 py-0.5 text-xs font-semibold text-lime-800">
+                    <Sparkles className="h-3 w-3" /> Nutrigo Active
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Let's begin our journey to better health today
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="relative hidden md:block w-48 lg:w-60">
+                <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search anything..."
+                  value={foodSearchQuery}
+                  onChange={(e) => setFoodSearchQuery(e.target.value)}
+                  className="pl-9 h-11 rounded-2xl bg-slate-50 border-slate-200/70 text-xs text-slate-700"
+                />
               </div>
 
-              {/* Active Day Plan Detail */}
-              {(() => {
-                const currentDay = weeklyPlan.find((d) => d.dayNumber === selectedPlanDay) || weeklyPlan[0];
-                const meals = currentDay.meals;
+              <Button
+                onClick={() => setIsCustomizeOpen(true)}
+                variant="outline"
+                className="h-11 px-4 rounded-2xl border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 flex items-center gap-2 text-xs"
+              >
+                <SlidersHorizontal className="h-4 w-4 text-slate-500" />
+                Goals
+              </Button>
 
-                return (
-                  <div className="space-y-4">
-                    {/* Day Clinical Note */}
-                    <div className="p-4 rounded-xl border border-emerald-500/20 bg-emerald-950/20 flex items-start gap-3">
-                      <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-                      <div className="text-xs sm:text-sm text-emerald-200">
-                        <strong className="text-white font-semibold">{currentDay.dayName} Nutrition Focus: </strong>
-                        {currentDay.clinicalRationale}
-                        <div className="flex items-center gap-4 text-xs font-bold text-white mt-1.5">
-                          <span>Total: {currentDay.totalNutrition.calories} kcal</span>
-                          <span>Protein: {currentDay.totalNutrition.protein}g</span>
-                          <span>Carbs: {currentDay.totalNutrition.carbs}g</span>
-                          <span>Fats: {currentDay.totalNutrition.fat}g</span>
-                          <span>Fiber: {currentDay.totalNutrition.fiber}g</span>
+              <Button
+                onClick={() => {
+                  setSelectedMealForAdd("breakfast");
+                  setIsAddFoodOpen(true);
+                }}
+                className="h-11 px-5 rounded-2xl bg-[#84cc16] hover:bg-[#73b512] text-white font-semibold shadow-md shadow-lime-500/25 transition-all active:scale-[0.98] flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4 stroke-[2.5]" />
+                Log Food
+              </Button>
+            </div>
+          </header>
+
+        {/* ========================================================================= */}
+        {/* VIEW 1: NUTRIGO MAIN DAILY DASHBOARD */}
+        {/* ========================================================================= */}
+        {activeTab === "dashboard" && (
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+            
+            {/* LEFT 8 COLUMNS: Top Stats, Radial Gauges, Workout Banner, Recommended Menus & Exercises */}
+            <div className="xl:col-span-8 space-y-6">
+              
+              {/* --- ROW OF 4 QUICK METRICS (Weight, Steps, Sleep, Water) --- */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                {/* 1. Weight Ruler Card */}
+                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Weight</span>
+                    <span className="p-1.5 rounded-xl bg-lime-50 text-lime-600">
+                      <Scale className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div className="my-2">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl font-black text-slate-900 tracking-tight">{currentWeight}</span>
+                      <span className="text-xs font-semibold text-slate-400">kg</span>
+                    </div>
+                  </div>
+                  {/* Interactive Ruler scale slider */}
+                  <div className="relative pt-1">
+                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 pb-1">
+                      <span>85</span>
+                      <span>80</span>
+                      <span className="text-lime-600 font-bold">{currentWeight}</span>
+                      <span>70</span>
+                      <span>65</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
+                      <div
+                        className="h-full bg-lime-500 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, Math.max(10, ((85 - currentWeight) / 20) * 100))}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Steps Card */}
+                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Steps</span>
+                    <span className="p-1.5 rounded-xl bg-lime-50 text-lime-600">
+                      <Footprints className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div className="my-2">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl font-black text-slate-900 tracking-tight">
+                        {stepsCount.toLocaleString()}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400">steps</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 mb-1">
+                      <span className="text-lime-600 font-bold">{stepsPct}%</span>
+                      <span className="text-slate-400">{stepsLeft} steps left</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-lime-500 rounded-full transition-all duration-300"
+                        style={{ width: `${stepsPct}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Sleep Card */}
+                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sleep</span>
+                    <span className="p-1.5 rounded-xl bg-amber-50 text-amber-500">
+                      <Moon className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div className="my-2">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl font-black text-slate-900 tracking-tight">{sleepHours}</span>
+                      <span className="text-xs font-semibold text-slate-400">hours</span>
+                    </div>
+                  </div>
+                  {/* Vertical mini-bar chart */}
+                  <div className="flex items-end justify-between h-5 gap-1 pt-1">
+                    {[6, 7, 5.5, 8, 6.5, 7.5, 6.5].map((h, i) => (
+                      <div
+                        key={i}
+                        className={`w-full rounded-sm transition-all ${
+                          i === 4 ? "bg-orange-500" : "bg-orange-200"
+                        }`}
+                        style={{ height: `${(h / 8) * 100}%` }}
+                        title={`${h} hours`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* 4. Water Intake Card */}
+                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Water Intake</span>
+                    <button
+                      onClick={() => handleAddWater(250)}
+                      title="Drink 250ml"
+                      className="p-1.5 rounded-xl bg-lime-50 hover:bg-lime-100 text-lime-600 transition-colors"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="my-2">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-2xl font-black text-slate-900 tracking-tight">
+                        {Math.max(0, (settings.dailyWaterTargetMl - waterConsumedMl) / 1000).toFixed(1)}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-400">litre left</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 mb-1">
+                      <span className="text-amber-500 font-bold">
+                        {(waterConsumedMl / 1000).toFixed(1)}/{(settings.dailyWaterTargetMl / 1000).toFixed(1)} litre
+                      </span>
+                      <button
+                        onClick={() => handleAddWater(250)}
+                        className="text-[10px] text-lime-700 font-bold hover:underline"
+                      >
+                        + 250ml
+                      </button>
+                    </div>
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-300"
+                        style={{
+                          width: `${Math.min(100, Math.round((waterConsumedMl / settings.dailyWaterTargetMl) * 100))}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* --- HERO ROW: 2 GAUGE CARDS (Weight Semi-Circle & Calories Circular Ring) --- */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* 1. Weight Data Semi-Circle Gauge Card */}
+                <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between pb-2">
+                    <h3 className="font-bold text-slate-900 text-base">Weight Data</h3>
+                    <button
+                      onClick={() => setIsCustomizeOpen(true)}
+                      className="text-slate-400 hover:text-slate-600 text-xs font-semibold"
+                    >
+                      •••
+                    </button>
+                  </div>
+
+                  {/* Semi-Circular Radial Gauge */}
+                  <div className="relative flex flex-col items-center justify-center my-2 py-4">
+                    <svg className="w-56 h-32" viewBox="0 0 200 110">
+                      {/* Background arc */}
+                      <path
+                        d="M 20 100 A 80 80 0 0 1 180 100"
+                        fill="none"
+                        stroke="#f1f5f9"
+                        strokeWidth="16"
+                        strokeLinecap="round"
+                      />
+                      {/* Colored active gradient arc */}
+                      <defs>
+                        <linearGradient id="weightGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#f97316" />
+                          <stop offset="50%" stopColor="#facc15" />
+                          <stop offset="100%" stopColor="#84cc16" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M 20 100 A 80 80 0 0 1 180 100"
+                        fill="none"
+                        stroke="url(#weightGrad)"
+                        strokeWidth="16"
+                        strokeLinecap="round"
+                        strokeDasharray="251.2"
+                        strokeDashoffset={`${251.2 * (1 - Math.min(1, Math.max(0.15, (85 - currentWeight) / 20)))}`}
+                        className="transition-all duration-700 ease-out"
+                      />
+                    </svg>
+
+                    {/* Central Weight Display inside the arc */}
+                    <div className="absolute bottom-2 text-center">
+                      <div className="text-3xl font-black text-slate-900 tracking-tight">
+                        {currentWeight} <span className="text-base font-semibold text-slate-500">kg</span>
+                      </div>
+                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Current Weight</p>
+                      <p className="text-xs font-bold text-orange-500 mt-0.5">
+                        {Math.abs(currentWeight - settings.targetWeightKg).toFixed(1)} kg {currentWeight > settings.targetWeightKg ? "left to goal" : "gained"}
+                      </p>
+                    </div>
+
+                    {/* Scale tick numbers */}
+                    <div className="w-56 flex justify-between text-[11px] font-bold text-slate-400 px-2 mt-1">
+                      <span>85</span>
+                      <span>65</span>
+                    </div>
+                  </div>
+
+                  {/* Motivational / Biomarker Insight Note */}
+                  <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 mt-3 text-xs text-slate-600 leading-relaxed">
+                    <p className="font-medium text-slate-700">
+                      "Progress is progress, no matter how slow. Keep going, you're getting closer to your goal every day!"
+                    </p>
+                    {activePanel?.recorded_at && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-lime-700 font-semibold mt-1.5 pt-1.5 border-t border-slate-200/60">
+                        <ShieldCheck className="h-3.5 w-3.5 text-lime-600" />
+                        <span>Biomarker adjusted for active lab panel ({formatLabDate(activePanel.recorded_at)})</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 2. Calories Intake Circular Ring Gauge Card */}
+                <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+                  <div className="flex items-center justify-between pb-2">
+                    <h3 className="font-bold text-slate-900 text-base">Calories Intake</h3>
+                    <button
+                      onClick={() => setIsCustomizeOpen(true)}
+                      className="text-slate-400 hover:text-slate-600 text-xs font-semibold"
+                    >
+                      •••
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center my-2">
+                    
+                    {/* Left: Circular Ring Meter */}
+                    <div className="sm:col-span-5 flex flex-col items-center justify-center relative">
+                      <div className="relative w-36 h-36 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
+                          <circle
+                            cx="60"
+                            cy="60"
+                            r="48"
+                            fill="transparent"
+                            stroke="#f1f5f9"
+                            strokeWidth="10"
+                          />
+                          <circle
+                            cx="60"
+                            cy="60"
+                            r="48"
+                            fill="transparent"
+                            stroke="#f97316"
+                            strokeWidth="10"
+                            strokeLinecap="round"
+                            strokeDasharray="301.6"
+                            strokeDashoffset={`${301.6 * (1 - Math.min(1, totalsConsumed.calories / calorieTarget))}`}
+                            className="transition-all duration-700 ease-out"
+                          />
+                        </svg>
+                        <div className="absolute flex flex-col items-center justify-center text-center">
+                          <Zap className="h-4 w-4 text-orange-500 fill-orange-500 mb-0.5" />
+                          <span className="text-xl font-black text-slate-900 tracking-tight">{caloriesRemaining}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase">kcal left</span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Meal Cards */}
-                    {(["breakfast", "lunch", "dinner", "snack"] as MealCategory[]).map((mealType) => {
-                      const recipe = meals[mealType];
-                      const typeLabel = mealType.charAt(0).toUpperCase() + mealType.slice(1);
+                    {/* Right: Eaten vs Burned & Macro Bars */}
+                    <div className="sm:col-span-7 space-y-3">
+                      
+                      {/* Top Pill Badges: Eaten vs Burned */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-lime-50 rounded-xl p-2 flex items-center gap-2 border border-lime-100/60">
+                          <span className="h-6 w-6 rounded-lg bg-lime-500 text-white flex items-center justify-center text-[10px]">
+                            <Utensils className="h-3 w-3" />
+                          </span>
+                          <div>
+                            <div className="text-xs font-black text-slate-900">{totalsConsumed.calories} kcal</div>
+                            <div className="text-[9px] font-semibold text-slate-400">Eaten calories</div>
+                          </div>
+                        </div>
 
-                      return (
-                        <Card key={mealType} className={`${portalPanelClass} border-white/10 hover:border-emerald-500/30 transition-all`}>
-                          <CardHeader className="py-4 px-6 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/[0.01]">
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[10px] uppercase font-bold">
-                                  {typeLabel}
-                                </Badge>
-                                <span className="text-xs text-[#94a3b8] flex items-center gap-1">
-                                  <Clock className="h-3 w-3" /> {recipe.prepTimeMin} mins prep
-                                </span>
-                              </div>
-                              <CardTitle className="text-base sm:text-lg text-white mt-1">{recipe.title}</CardTitle>
-                            </div>
-                            <div className="flex items-center flex-wrap gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSwapTarget({
-                                    dayNum: currentDay.dayNumber,
-                                    mealType,
-                                    currentRecipeId: recipe.id,
-                                  });
-                                  setIsSwapModalOpen(true);
-                                }}
-                                className="h-8 text-xs border-white/15 text-white hover:bg-white/10 hover:border-emerald-500/40 gap-1.5"
-                              >
-                                <RotateCcw className="h-3 w-3 text-emerald-400" />
-                                Swap Meal
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleLogMealFromPlanToToday(recipe)}
-                                className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-1.5 shadow-sm"
-                              >
-                                <Check className="h-3.5 w-3.5" />
-                                Log to Today
-                              </Button>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-6 space-y-4">
-                            {/* Macro Pills */}
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-md bg-white/10 px-2.5 py-1 text-xs font-bold text-emerald-400">
-                                {recipe.calories} kcal
-                              </span>
-                              <span className="rounded-md bg-blue-500/15 border border-blue-500/30 px-2 py-0.5 text-xs text-blue-300">
-                                Protein: {recipe.protein}g
-                              </span>
-                              <span className="rounded-md bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 text-xs text-amber-300">
-                                Carbs: {recipe.carbs}g
-                              </span>
-                              <span className="rounded-md bg-teal-500/15 border border-teal-500/30 px-2 py-0.5 text-xs text-teal-300">
-                                Fats: {recipe.fat}g
-                              </span>
-                              <span className="rounded-md bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 text-xs text-purple-300">
-                                Fiber: {recipe.fiber}g
-                              </span>
-                            </div>
+                        <div className="flex-1 bg-orange-50 rounded-xl p-2 flex items-center gap-2 border border-orange-100/60">
+                          <span className="h-6 w-6 rounded-lg bg-orange-500 text-white flex items-center justify-center text-[10px]">
+                            <Flame className="h-3 w-3" />
+                          </span>
+                          <div>
+                            <div className="text-xs font-black text-slate-900">{burnedCalories} kcal</div>
+                            <div className="text-[9px] font-semibold text-slate-400">Burned calories</div>
+                          </div>
+                        </div>
+                      </div>
 
-                            {/* Clinical Benefits */}
-                            <div className="space-y-1.5">
-                              <span className="text-[11px] font-bold text-[#94a3b8] uppercase tracking-wider">
-                                Biomarker & Health Rationale:
-                              </span>
-                              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs text-[#cbd5e1]">
-                                {recipe.clinicalBenefits.map((b, i) => (
-                                  <li key={i} className="flex items-start gap-1.5">
-                                    <span className="text-emerald-400 mt-0.5">•</span>
-                                    <span>{b}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                      {/* Macro Progress Bars (Carbs, Protein, Fat) */}
+                      <div className="space-y-2 pt-1">
+                        {/* Carbohydrates */}
+                        <div>
+                          <div className="flex justify-between items-center text-xs font-semibold mb-1">
+                            <span className="text-slate-800">
+                              <span className="font-bold text-slate-900">{totalsConsumed.carbs}</span>
+                              <span className="text-slate-400 font-normal">/{macroTargets.grams.carbs}g</span>
+                            </span>
+                            <span className="text-[11px] text-slate-500">Carbohydrates</span>
+                            <span className="text-[11px] font-bold text-lime-600">{carbProgressPct}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-lime-500 rounded-full" style={{ width: `${carbProgressPct}%` }} />
+                          </div>
+                        </div>
 
-                            {/* Ingredients & Instructions Split */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-white/5 text-xs">
-                              {/* Ingredients */}
-                              <div className="space-y-1.5">
-                                <span className="font-semibold text-white">Ingredients:</span>
-                                <ul className="space-y-1 text-[#cbd5e1]">
-                                  {recipe.ingredients.map((ing, i) => (
-                                    <li key={i} className="flex justify-between bg-white/[0.02] p-1.5 rounded border border-white/5">
-                                      <span>{ing.name}</span>
-                                      <span className="text-[#94a3b8] font-medium">{ing.amount}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                              {/* Instructions */}
-                              <div className="space-y-1.5">
-                                <span className="font-semibold text-white">Preparation Steps:</span>
-                                <ol className="space-y-1 text-[#cbd5e1] list-decimal list-inside">
-                                  {recipe.instructions.map((step, i) => (
-                                    <li key={i} className="leading-relaxed pl-1">{step}</li>
-                                  ))}
-                                </ol>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </>
-          )}
-        </div>
-      )}
+                        {/* Proteins */}
+                        <div>
+                          <div className="flex justify-between items-center text-xs font-semibold mb-1">
+                            <span className="text-slate-800">
+                              <span className="font-bold text-slate-900">{totalsConsumed.protein}</span>
+                              <span className="text-slate-400 font-normal">/{macroTargets.grams.protein}g</span>
+                            </span>
+                            <span className="text-[11px] text-slate-500">Proteins</span>
+                            <span className="text-[11px] font-bold text-lime-600">{protProgressPct}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-lime-500 rounded-full" style={{ width: `${protProgressPct}%` }} />
+                          </div>
+                        </div>
 
-      {/* ========================================== */}
-      {/* 5. TAB 3: WEIGHT & METABOLIC GOALS         */}
-      {/* ========================================== */}
-      {activeTab === "weight_goals" && (
-        <div className="space-y-6">
-          {/* Goal Header Summary Card */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Current vs Target */}
-            <Card className={`${portalPanelClass} border-emerald-500/20 p-5 space-y-3`}>
-              <div className="flex items-center justify-between text-xs text-[#94a3b8]">
-                <span>Weight Progress</span>
-                <Badge variant="outline" className="border-emerald-500/30 text-emerald-400">
-                  {settings.goal === "fat_loss" ? "Deficit Phase" : "Energy Balance"}
-                </Badge>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <div>
-                  <div className="text-2xl sm:text-3xl font-extrabold text-white">{currentWeight} kg</div>
-                  <span className="text-xs text-[#94a3b8]">Current Weight</span>
-                </div>
-                <ArrowRight className="h-5 w-5 text-white/30" />
-                <div className="text-right">
-                  <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400">{settings.targetWeightKg} kg</div>
-                  <span className="text-xs text-[#94a3b8]">Target Goal</span>
-                </div>
-              </div>
-              <div className="text-xs text-[#cbd5e1] pt-2 border-t border-white/5 flex justify-between">
-                <span>Total Net Change:</span>
-                <strong className={currentWeight > settings.targetWeightKg ? "text-emerald-400" : "text-blue-400"}>
-                  {(currentWeight - settings.targetWeightKg).toFixed(1)} kg {currentWeight > settings.targetWeightKg ? "to lose" : "to gain"}
-                </strong>
-              </div>
-            </Card>
-
-            {/* Target Pace & Completion Date */}
-            <Card className={`${portalPanelClass} border-white/10 p-5 space-y-3`}>
-              <div className="flex items-center justify-between text-xs text-[#94a3b8]">
-                <span>Projected Timeline</span>
-                <Calendar className="h-4 w-4 text-emerald-400" />
-              </div>
-              <div>
-                <div className="text-lg sm:text-xl font-bold text-white">
-                  {projectedDate || "Goal Achieved / Maintained"}
-                </div>
-                <p className="text-xs text-[#94a3b8] mt-1">
-                  {projectedWeeks
-                    ? `Estimated ${projectedWeeks} weeks at current pace (${settings.weeklyPaceKg} kg/week)`
-                    : "Maintaining current weight equilibrium"}
-                </p>
-              </div>
-              <div className="text-xs text-[#cbd5e1] pt-2 border-t border-white/5">
-                <span>Daily Caloric Offset: </span>
-                <strong className="text-emerald-400">
-                  {settings.weeklyPaceKg !== 0 ? `${Math.round(settings.weeklyPaceKg * 1100)} kcal/day` : "0 kcal (Energy Balance)"}
-                </strong>
-              </div>
-            </Card>
-
-            {/* Metabolic Breakdown (BMR / TDEE) */}
-            <Card className={`${portalPanelClass} border-white/10 p-5 space-y-3`}>
-              <div className="flex items-center justify-between text-xs text-[#94a3b8]">
-                <span>Metabolic Engine</span>
-                <Activity className="h-4 w-4 text-teal-400" />
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="rounded-lg bg-white/[0.03] p-2.5 border border-white/5">
-                  <span className="text-[#94a3b8] block">Basal Rate (BMR)</span>
-                  <span className="text-lg font-bold text-white">{bmr}</span>
-                  <span className="text-[10px] text-white/50 block">kcal at rest</span>
-                </div>
-                <div className="rounded-lg bg-white/[0.03] p-2.5 border border-white/5">
-                  <span className="text-[#94a3b8] block">Maintenance (TDEE)</span>
-                  <span className="text-lg font-bold text-teal-300">{tdee}</span>
-                  <span className="text-[10px] text-teal-400/60 block">{settings.activityLevel}</span>
-                </div>
-              </div>
-              <div className="text-xs text-[#cbd5e1] pt-2 border-t border-white/5">
-                <span>Prescribed Calorie Intake: </span>
-                <strong className="text-emerald-400 font-bold">{calorieTarget} kcal/day</strong>
-              </div>
-            </Card>
-          </div>
-
-          {/* Weight Log History & Check-in */}
-          <Card className={`${portalPanelClass} border-white/10`}>
-            <CardHeader className="py-4 px-6 border-b border-white/5 flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-base text-white flex items-center gap-2">
-                  <Scale className="h-4 w-4 text-emerald-400" />
-                  Weight Check-In Log
-                </CardTitle>
-                <CardDescription className="text-xs text-[#94a3b8]">
-                  Track weigh-ins to dynamically calibrate metabolic requirements.
-                </CardDescription>
-              </div>
-              <Button
-                size="sm"
-                onClick={() => setIsLogWeightOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs gap-1.5 shadow-sm"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Log Weight
-              </Button>
-            </CardHeader>
-            <CardContent className="p-0 divide-y divide-white/5">
-              {weightLogs.map((entry) => (
-                <div key={entry.id} className="py-3 px-6 flex items-center justify-between hover:bg-white/[0.02]">
-                  <div className="flex items-center gap-4">
-                    <div className="h-9 w-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-white font-bold text-xs">
-                      <Scale className="h-4 w-4 text-emerald-400" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-white">{entry.weightKg} kg</div>
-                      <div className="text-xs text-[#94a3b8]">
-                        {new Date(entry.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        {entry.notes ? ` • "${entry.notes}"` : ""}
+                        {/* Fats */}
+                        <div>
+                          <div className="flex justify-between items-center text-xs font-semibold mb-1">
+                            <span className="text-slate-800">
+                              <span className="font-bold text-slate-900">{totalsConsumed.fat}</span>
+                              <span className="text-slate-400 font-normal">/{macroTargets.grams.fat}g</span>
+                            </span>
+                            <span className="text-[11px] text-slate-500">Fats</span>
+                            <span className="text-[11px] font-bold text-orange-500">{fatProgressPct}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-orange-400 rounded-full" style={{ width: `${fatProgressPct}%` }} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-xs font-semibold text-emerald-400">Recorded</span>
+                </div>
+              </div>
+
+              {/* --- WORKOUT PROGRESS BANNER (Horizontal Cards: Cardio, Strength, Flexibility) --- */}
+              <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 text-base">Workout Progress</h3>
+                  <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/60">
+                    <span>This Week</span>
+                    <ChevronDown className="h-3.5 w-3.5" />
                   </div>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
-      {/* ========================================== */}
-      {/* 6. TAB 4: BIOMARKER FOOD RX                */}
-      {/* ========================================== */}
-      {activeTab === "biomarker_rx" && (
-        <div className="space-y-6">
-          <Card className={`${portalPanelClass} border-emerald-500/20 p-6 space-y-4`}>
-            <div className="flex items-start gap-3">
-              <HeartPulse className="h-6 w-6 text-emerald-400 shrink-0 mt-1" />
-              <div>
-                <CardTitle className="text-base sm:text-lg text-white">
-                  Clinical Dietary Prescription Synthesizing Your Lab Panels
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm text-[#94a3b8] mt-1 leading-relaxed">
-                  Dietary interventions mapped to your latest lipid profile, fasting blood glucose, liver function, and electrolyte panels.
-                </CardDescription>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  
+                  {/* 1. Cardio - Running */}
+                  <div className="bg-[#f2fbe8] rounded-2xl p-4 border border-lime-200/60 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-sm">
+                        <Footprints className="h-5 w-5 text-lime-600" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Running 10 km</div>
+                        <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
+                          <span className="text-slate-900 font-bold">75%</span> (7/10)
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-lime-800 bg-lime-200/80 px-2.5 py-1 rounded-full">
+                      Cardio
+                    </span>
+                  </div>
+
+                  {/* 2. Strength - Squats */}
+                  <div className="bg-[#fffbeb] rounded-2xl p-4 border border-amber-200/60 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-sm">
+                        <Dumbbell className="h-5 w-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Squatting 50kg</div>
+                        <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
+                          <span className="text-slate-900 font-bold">60%</span> (5/8)
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-amber-800 bg-amber-200/80 px-2.5 py-1 rounded-full">
+                      Strength
+                    </span>
+                  </div>
+
+                  {/* 3. Flexibility - Stretching */}
+                  <div className="bg-[#fff7ed] rounded-2xl p-4 border border-orange-200/60 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-sm">
+                        <Activity className="h-5 w-5 text-orange-500" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Stretching to touch toes</div>
+                        <div className="text-[11px] font-semibold text-slate-600 mt-0.5">
+                          <span className="text-slate-900 font-bold">50%</span> (3/6)
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-mono font-semibold uppercase tracking-wider text-orange-800 bg-orange-200/80 px-2.5 py-1 rounded-full">
+                      Flexibility
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/10">
-              {/* Foods to Prioritize */}
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/20 p-4 space-y-3">
-                <h3 className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                  Foods to Prioritize (Clinical Rx)
-                </h3>
-                <ul className="space-y-2 text-xs text-[#cbd5e1]">
-                  <li className="p-2.5 rounded-lg bg-black/20 border border-emerald-500/10">
-                    <strong className="text-white block">Soluble Beta-Glucan & Pectin Fibers</strong>
-                    Steel-cut oats, barley, chia seeds, and whole apples bind intestinal bile acids to reduce LDL synthesis.
-                  </li>
-                  <li className="p-2.5 rounded-lg bg-black/20 border border-emerald-500/10">
-                    <strong className="text-white block">Polyphenol-Dense Extra Virgin Olive Oil</strong>
-                    Cold-pressed phenolic compounds enhance endothelial nitric oxide production and reduce oxidized LDL.
-                  </li>
-                  <li className="p-2.5 rounded-lg bg-black/20 border border-emerald-500/10">
-                    <strong className="text-white block">Cruciferous Sulforaphane Sources</strong>
-                    Steamed broccoli, arugula, and kale upregulate hepatic glutathione and phase-2 cellular detoxification.
-                  </li>
-                  <li className="p-2.5 rounded-lg bg-black/20 border border-emerald-500/10">
-                    <strong className="text-white block">High-Potassium Leafy Greens & Legumes</strong>
-                    Spreads sodium load, dampens sympathetic vascular tone, and stabilizes blood pressure.
-                  </li>
-                </ul>
-              </div>
+              {/* --- BOTTOM 2-COLUMN SECTION: RECOMMENDED MENU & RECOMMENDED EXERCISES --- */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                {/* Left: Recommended Menu */}
+                <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-slate-900 text-base">Recommended Menu</h3>
+                    <button
+                      onClick={() => setActiveTab("weekly_plan")}
+                      className="text-xs font-semibold text-lime-600 hover:text-lime-700 flex items-center gap-1"
+                    >
+                      View Full Plan <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
 
-              {/* Foods to Minimize */}
-              <div className="rounded-xl border border-rose-500/20 bg-rose-950/20 p-4 space-y-3">
-                <h3 className="text-xs font-bold text-rose-300 uppercase tracking-wider flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-rose-400" />
-                  Foods to Minimize or Avoid
-                </h3>
-                <ul className="space-y-2 text-xs text-[#cbd5e1]">
-                  <li className="p-2.5 rounded-lg bg-black/20 border border-rose-500/10">
-                    <strong className="text-white block">Ultra-Processed Refined Carbohydrates & HFCS</strong>
-                    Liquid fructose and white flour trigger hepatic de novo lipogenesis and elevate serum triglycerides.
-                  </li>
-                  <li className="p-2.5 rounded-lg bg-black/20 border border-rose-500/10">
-                    <strong className="text-white block">Excess Saturated Animal Fats & Palm Oils</strong>
-                    Downregulates hepatic LDL receptor clearance, elevating circulating ApoB atherogenic particles.
-                  </li>
-                  <li className="p-2.5 rounded-lg bg-black/20 border border-rose-500/10">
-                    <strong className="text-white block">Hidden High-Sodium Preserved Foods</strong>
-                    Canned soups, cured meats, and commercial dressings that exceed daily 2,000mg sodium threshold.
-                  </li>
-                  <li className="p-2.5 rounded-lg bg-black/20 border border-rose-500/10">
-                    <strong className="text-white block">Late-Night Heavy Acid-Inducing Meals (GERD Alert)</strong>
-                    Spicy or high-fat meals consumed within 3 hours of sleep trigger esophageal reflux and disrupt REM sleep.
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Breakfast Card */}
+                    {recommendedMenuBreakfast && (
+                      <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
+                        <div>
+                          {/* Image Thumbnail */}
+                          <div className="relative h-28 w-full rounded-xl overflow-hidden mb-3 bg-slate-200">
+                            <img
+                              src={recommendedMenuBreakfast.imageUrl || "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=400&q=80"}
+                              alt={recommendedMenuBreakfast.title}
+                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                              <span className="bg-lime-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                Breakfast
+                              </span>
+                              <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                {recommendedMenuBreakfast.calories} kcal
+                              </span>
+                            </div>
+                          </div>
 
-      {/* ========================================== */}
-      {/* MODAL 1: ADD / SEARCH FOOD DIALOG         */}
-      {/* ========================================== */}
-      <Dialog open={isAddFoodOpen} onOpenChange={setIsAddFoodOpen}>
-        <DialogContent className="max-w-xl bg-[#0e1626] border-white/15 text-white max-h-[85vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-5 border-b border-white/10 bg-white/[0.02]">
-            <DialogTitle className="text-lg font-bold flex items-center gap-2 text-white">
-              <Utensils className="h-5 w-5 text-emerald-400" />
-              Add Food to {selectedMealForAdd.toUpperCase()}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#94a3b8]">
-              Search the verified nutrition database or quick-add a custom item.
-            </DialogDescription>
-          </DialogHeader>
+                          {/* Macro Pills */}
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-1.5">
+                            <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recommendedMenuBreakfast.carbs}g</span>
+                            <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recommendedMenuBreakfast.protein}g</span>
+                            <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recommendedMenuBreakfast.fat}g</span>
+                          </div>
 
-          {/* Mode Switcher: Library vs Custom Food */}
-          <div className="flex border-b border-white/10 px-5 pt-3 gap-4 text-xs font-semibold">
-            <button
-              onClick={() => setCustomFoodMode(false)}
-              className={`pb-2.5 border-b-2 transition-all ${
-                !customFoodMode
-                  ? "border-emerald-400 text-emerald-400"
-                  : "border-transparent text-[#94a3b8] hover:text-white"
-              }`}
-            >
-              Food Database Library
-            </button>
-            <button
-              onClick={() => setCustomFoodMode(true)}
-              className={`pb-2.5 border-b-2 transition-all ${
-                customFoodMode
-                  ? "border-emerald-400 text-emerald-400"
-                  : "border-transparent text-[#94a3b8] hover:text-white"
-              }`}
-            >
-              Quick Custom Entry
-            </button>
-          </div>
+                          <h4 className="font-bold text-slate-900 text-xs line-clamp-1 mb-1">
+                            {recommendedMenuBreakfast.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                            {recommendedMenuBreakfast.clinicalBenefits[0] || "Rich in fiber and antioxidants, providing energy."}
+                          </p>
+                        </div>
 
-          <div className="p-5 flex-1 overflow-y-auto space-y-4">
-            {!customFoodMode ? (
-              <>
-                {/* Search Bar */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#94a3b8]" />
-                  <Input
-                    placeholder="Search chicken, oats, salmon, avocado, quinoa..."
-                    value={foodSearchQuery}
-                    onChange={(e) => setFoodSearchQuery(e.target.value)}
-                    className={`${portalInputClass} pl-9 text-xs`}
-                  />
+                        <Button
+                          onClick={() => handleLogMealFromPlanToToday(recommendedMenuBreakfast)}
+                          className="mt-3 h-8 w-full rounded-xl bg-white hover:bg-lime-50 text-lime-700 border border-lime-300 font-semibold text-xs transition-colors shadow-none"
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Log to Today
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Lunch Card */}
+                    {recommendedMenuLunch && (
+                      <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
+                        <div>
+                          {/* Image Thumbnail */}
+                          <div className="relative h-28 w-full rounded-xl overflow-hidden mb-3 bg-slate-200">
+                            <img
+                              src={recommendedMenuLunch.imageUrl || "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=400&q=80"}
+                              alt={recommendedMenuLunch.title}
+                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                              <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                Lunch
+                              </span>
+                              <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                                {recommendedMenuLunch.calories} kcal
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Macro Pills */}
+                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-1.5">
+                            <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recommendedMenuLunch.carbs}g</span>
+                            <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recommendedMenuLunch.protein}g</span>
+                            <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recommendedMenuLunch.fat}g</span>
+                          </div>
+
+                          <h4 className="font-bold text-slate-900 text-xs line-clamp-1 mb-1">
+                            {recommendedMenuLunch.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                            {recommendedMenuLunch.clinicalBenefits[0] || "Rich in protein and healthy fats for recovery."}
+                          </p>
+                        </div>
+
+                        <Button
+                          onClick={() => handleLogMealFromPlanToToday(recommendedMenuLunch)}
+                          className="mt-3 h-8 w-full rounded-xl bg-white hover:bg-orange-50 text-orange-700 border border-orange-300 font-semibold text-xs transition-colors shadow-none"
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Log to Today
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Category Pills */}
-                <div className="flex flex-wrap gap-1.5 text-xs">
-                  {["all", "proteins", "grains", "vegetables", "fruits", "fats", "beverages"].map((cat) => (
+                {/* Right: Recommended Exercises */}
+                <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-slate-900 text-base">Recommended Exercises</h3>
+                    <Link
+                      to="/patient/exercise"
+                      className="text-xs font-semibold text-lime-600 hover:text-lime-700 flex items-center gap-1"
+                    >
+                      Full Workout <ChevronRight className="h-3.5 w-3.5" />
+                    </Link>
+                  </div>
+
+                  <div className="space-y-3">
+                    {RECOMMENDED_EXERCISES.map((ex) => (
+                      <div
+                        key={ex.id}
+                        className="bg-slate-50/70 hover:bg-slate-100/80 rounded-2xl p-3 border border-slate-100 flex items-center justify-between transition-all"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-12 w-12 rounded-xl overflow-hidden bg-slate-200 shrink-0">
+                            <img src={ex.imageUrl} alt={ex.name} className="h-full w-full object-cover" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900">{ex.name}</h4>
+                            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mt-0.5">
+                              <span className="flex items-center gap-1 text-orange-500">
+                                <Flame className="h-3 w-3" /> {ex.calories} kcal
+                              </span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1 text-slate-500">
+                                <Clock className="h-3 w-3" /> {ex.durationMin} min
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <span
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+                            ex.difficulty === "Beginner"
+                              ? "bg-lime-100 text-lime-800"
+                              : ex.difficulty === "Intermediate"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-orange-100 text-orange-800"
+                          }`}
+                        >
+                          {ex.difficulty}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ===================================================================== */}
+            {/* RIGHT 4 COLUMNS: User Pill, Calendar Strip, Meal Timeline, Activity Feed */}
+            {/* ===================================================================== */}
+            <div className="xl:col-span-4 space-y-6">
+              
+              {/* 1. Mini Profile Header Pill */}
+              <div className="bg-white rounded-[24px] p-4 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-lime-400 to-emerald-600 flex items-center justify-center text-slate-950 font-black shadow-sm">
+                    {profile?.full_name?.charAt(0) || "A"}
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      {profile?.full_name || "Adam Vasylenko"}
+                    </h3>
+                    <p className="text-[11px] font-semibold text-slate-400">Premium Member</p>
+                  </div>
+                </div>
+                <div className="relative">
+                  <button className="h-9 w-9 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-600 flex items-center justify-center transition-colors">
+                    <Bell className="h-4 w-4" />
+                  </button>
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-orange-500" />
+                </div>
+              </div>
+
+              {/* 2. Mini Calendar Day-Strip (Nutrigo Month Header + Days) */}
+              <div className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 text-sm">September 2028</h4>
+                  <div className="flex items-center gap-1 text-slate-400">
+                    <button className="h-7 w-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
+                      <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <button className="h-7 w-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Weekday Pills */}
+                <div className="grid grid-cols-6 gap-1.5">
+                  {weekDays.map((d, idx) => {
+                    const isActive = idx === selectedDayIdx;
+                    return (
+                      <button
+                        key={d.dayName}
+                        onClick={() => setSelectedDayIdx(idx)}
+                        className={`flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all duration-150 ${
+                          isActive
+                            ? "bg-lime-500 text-white font-bold shadow-md shadow-lime-500/25 scale-[1.03]"
+                            : "bg-slate-50 hover:bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        <span className={`text-[10px] ${isActive ? "text-lime-100" : "text-slate-400"}`}>
+                          {d.dayName}
+                        </span>
+                        <span className="text-sm font-black mt-0.5">{d.dateNum}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 3. Daily Meal Timeline Accordions (Breakfast, Lunch, Snack, Dinner) */}
+              <div className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-3">
+                <div className="flex items-center justify-between pb-1">
+                  <h4 className="font-bold text-slate-900 text-sm">Today's Meals Timeline</h4>
+                  <button
+                    onClick={() => {
+                      setSelectedMealForAdd("breakfast");
+                      setIsAddFoodOpen(true);
+                    }}
+                    className="text-xs font-semibold text-lime-600 hover:text-lime-700 flex items-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> Add Meal
+                  </button>
+                </div>
+
+                {/* Accordions */}
+                <div className="space-y-2.5">
+                  
+                  {/* Breakfast */}
+                  <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
+                    <div
+                      onClick={() => toggleMealCategory("breakfast")}
+                      className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-lime-600 fill-lime-100" />
+                        <span className="text-xs font-bold text-slate-900">Breakfast</span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200/60">
+                          300 kcal
+                        </span>
+                      </div>
+                      <ChevronUp
+                        className={`h-4 w-4 text-slate-400 transition-transform ${
+                          openMealCategories.breakfast ? "" : "transform rotate-180"
+                        }`}
+                      />
+                    </div>
+
+                    {openMealCategories.breakfast && (
+                      <div className="px-3.5 pb-3.5 pt-1 space-y-2 border-t border-slate-100 bg-white">
+                        <div className="flex items-start gap-2.5">
+                          <img
+                            src="https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=200&q=80"
+                            alt="Scrambled eggs"
+                            className="h-12 w-12 rounded-xl object-cover shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-xs font-bold text-slate-900 leading-snug">
+                              Scrambled Eggs with Spinach & Whole Grain Toast
+                            </h5>
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 mt-1">
+                              <span>C 25g</span>
+                              <span>•</span>
+                              <span>P 20g</span>
+                              <span>•</span>
+                              <span>F 12g</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lunch */}
+                  <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
+                    <div
+                      onClick={() => toggleMealCategory("lunch")}
+                      className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-lime-600 fill-lime-100" />
+                        <span className="text-xs font-bold text-slate-900">Lunch</span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200/60">
+                          450 kcal
+                        </span>
+                      </div>
+                      <ChevronUp
+                        className={`h-4 w-4 text-slate-400 transition-transform ${
+                          openMealCategories.lunch ? "" : "transform rotate-180"
+                        }`}
+                      />
+                    </div>
+
+                    {openMealCategories.lunch && (
+                      <div className="px-3.5 pb-3.5 pt-1 space-y-2 border-t border-slate-100 bg-white">
+                        <div className="flex items-start gap-2.5">
+                          <img
+                            src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=200&q=80"
+                            alt="Grilled chicken salad"
+                            className="h-12 w-12 rounded-xl object-cover shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-xs font-bold text-slate-900 leading-snug">
+                              Grilled Chicken Salad with Avocado and Quinoa
+                            </h5>
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 mt-1">
+                              <span>C 40g</span>
+                              <span>•</span>
+                              <span>P 36g</span>
+                              <span>•</span>
+                              <span>F 20g</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Snack */}
+                  <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
+                    <div
+                      onClick={() => toggleMealCategory("snack")}
+                      className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-amber-500 fill-amber-100" />
+                        <span className="text-xs font-bold text-slate-900">Snack</span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200/60">
+                          200 kcal
+                        </span>
+                      </div>
+                      <ChevronUp
+                        className={`h-4 w-4 text-slate-400 transition-transform ${
+                          openMealCategories.snack ? "" : "transform rotate-180"
+                        }`}
+                      />
+                    </div>
+
+                    {openMealCategories.snack && (
+                      <div className="px-3.5 pb-3.5 pt-1 space-y-2 border-t border-slate-100 bg-white">
+                        <div className="flex items-start gap-2.5">
+                          <img
+                            src="https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=200&q=80"
+                            alt="Greek yogurt"
+                            className="h-12 w-12 rounded-xl object-cover shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-xs font-bold text-slate-900 leading-snug">
+                              Greek Yogurt with Mixed Berries and Almonds
+                            </h5>
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 mt-1">
+                              <span>C 18g</span>
+                              <span>•</span>
+                              <span>P 12g</span>
+                              <span>•</span>
+                              <span>F 10g</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Dinner */}
+                  <div className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50/50">
+                    <div
+                      onClick={() => toggleMealCategory("dinner")}
+                      className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-orange-500 fill-orange-100" />
+                        <span className="text-xs font-bold text-slate-900">Dinner</span>
+                        <span className="text-[11px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200/60">
+                          500 kcal
+                        </span>
+                      </div>
+                      <ChevronUp
+                        className={`h-4 w-4 text-slate-400 transition-transform ${
+                          openMealCategories.dinner ? "" : "transform rotate-180"
+                        }`}
+                      />
+                    </div>
+
+                    {openMealCategories.dinner && (
+                      <div className="px-3.5 pb-3.5 pt-1 space-y-2 border-t border-slate-100 bg-white">
+                        <div className="flex items-start gap-2.5">
+                          <img
+                            src="https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=200&q=80"
+                            alt="Grilled chicken sweet potato"
+                            className="h-12 w-12 rounded-xl object-cover shrink-0"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-xs font-bold text-slate-900 leading-snug">
+                              Grilled Chicken with Sweet Potato and Green Beans
+                            </h5>
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 mt-1">
+                              <span>C 45g</span>
+                              <span>•</span>
+                              <span>P 35g</span>
+                              <span>•</span>
+                              <span>F 20g</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. Recent Activity Stream */}
+              <div className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-900 text-sm">Recent Activity</h4>
+                  <button className="text-slate-400 hover:text-slate-600 text-xs font-semibold">•••</button>
+                </div>
+
+                <div className="space-y-3.5">
+                  {activityFeed.map((act) => (
+                    <div key={act.id} className="flex items-start gap-3">
+                      <div
+                        className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-xs ${
+                          act.type === "bell"
+                            ? "bg-lime-100 text-lime-700"
+                            : act.type === "yoga"
+                            ? "bg-amber-100 text-amber-700"
+                            : act.type === "run"
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-lime-100 text-lime-700"
+                        }`}
+                      >
+                        {act.type === "bell" && <Bell className="h-4 w-4" />}
+                        {act.type === "yoga" && <Activity className="h-4 w-4" />}
+                        {act.type === "run" && <Footprints className="h-4 w-4" />}
+                        {act.type === "food" && <Utensils className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-bold text-slate-400">{act.time}</div>
+                        <p className="text-xs text-slate-700 leading-relaxed font-medium mt-0.5">
+                          {act.text}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 2: 7-DAY MEAL PLANNER & SMART GROCERY LIST */}
+        {/* ========================================================================= */}
+        {activeTab === "weekly_plan" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">7-Day Biomarker-Guided Meal Plan</h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Clinically calibrated meals matching your metabolic target of {calorieTarget} kcal/day
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => setGrocerySubTab(!grocerySubTab)}
+                  className={`h-10 px-4 rounded-xl text-xs font-semibold transition-all ${
+                    grocerySubTab
+                      ? "bg-lime-500 text-white shadow-md shadow-lime-500/20"
+                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                  }`}
+                >
+                  <ShoppingCart className="h-4 w-4 mr-2" />
+                  {grocerySubTab ? "View Recipes" : "Grocery List"}
+                </Button>
+              </div>
+            </div>
+
+            {grocerySubTab ? (
+              /* Grocery List View */
+              <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5 text-lime-600" />
+                    Interactive Smart Grocery List
+                  </h3>
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        Object.entries(groceryList)
+                          .map(([cat, items]) => `${cat.toUpperCase()}:\n${items.map((i) => `- ${i.name} (${i.amount})`).join("\n")}`)
+                          .join("\n\n")
+                      );
+                      toast.success("Grocery list copied to clipboard!");
+                    }}
+                    className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+                  >
+                    Copy List
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {Object.entries(groceryList).map(([category, items]) => (
+                    <div key={category} className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100">
+                      <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+                        <span>{category.replace("_", " ")}</span>
+                        <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border">
+                          {items.length}
+                        </span>
+                      </h4>
+                      <div className="space-y-2">
+                        {items.map((item) => {
+                          const isChecked = !!checkedGroceryItems[item.name];
+                          return (
+                            <label
+                              key={item.name}
+                              onClick={() => toggleGroceryItem(item.name)}
+                              className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer p-1.5 rounded-lg hover:bg-white transition-colors"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {}}
+                                className="mt-0.5 rounded text-lime-600 focus:ring-lime-500"
+                              />
+                              <span className={isChecked ? "line-through text-slate-400" : ""}>
+                                {item.name} <span className="text-[10px] text-slate-400">({item.amount})</span>
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Weekly Recipes Plan View */
+              <div className="space-y-6">
+                {/* Day selector tabs */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 [scrollbar-width:none]">
+                  {weeklyPlan.map((day) => (
                     <button
-                      key={cat}
-                      onClick={() => setFoodCategoryFilter(cat)}
-                      className={`px-2.5 py-1 rounded-lg text-[11px] font-medium capitalize border transition-all ${
-                        foodCategoryFilter === cat
-                          ? "bg-emerald-600 border-emerald-500 text-white"
-                          : "bg-white/[0.04] border-white/10 text-[#94a3b8] hover:text-white"
+                      key={day.dayNumber}
+                      onClick={() => setSelectedPlanDay(day.dayNumber)}
+                      className={`px-5 py-3 rounded-2xl text-xs font-bold whitespace-nowrap transition-all ${
+                        selectedPlanDay === day.dayNumber
+                          ? "bg-lime-500 text-white shadow-md shadow-lime-500/25 scale-[1.02]"
+                          : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-100"
                       }`}
                     >
-                      {cat}
+                      Day {day.dayNumber}: {day.dayName}
                     </button>
                   ))}
                 </div>
 
-                {/* Servings multiplier */}
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white/[0.03] border border-white/10 text-xs">
-                  <span className="text-[#94a3b8]">Serving Size Multiplier:</span>
-                  <div className="flex items-center gap-2">
-                    {[0.5, 1, 1.5, 2].map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setCustomServings(s)}
-                        className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                          customServings === s
-                            ? "bg-emerald-500 text-white"
-                            : "bg-white/10 text-white/70 hover:bg-white/20"
-                        }`}
-                      >
-                        {s}x
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                {/* Active Day Meals */}
+                {(() => {
+                  const day = weeklyPlan.find((d) => d.dayNumber === selectedPlanDay) || weeklyPlan[0];
+                  if (!day) return null;
 
-                {/* Food Results List */}
-                <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-1">
-                  {filteredFoods.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-[#94a3b8]">
-                      No matching foods found. Try a different search term or use "Quick Custom Entry".
-                    </div>
-                  ) : (
-                    filteredFoods.map((food) => (
-                      <div
-                        key={food.id}
-                        className="p-3 rounded-xl border border-white/10 bg-white/[0.02] hover:border-emerald-500/40 hover:bg-white/[0.05] transition-all flex items-center justify-between gap-3"
-                      >
-                        <div className="flex-1">
-                          <h4 className="text-xs sm:text-sm font-semibold text-white">{food.name}</h4>
-                          <p className="text-[11px] text-[#94a3b8] mt-0.5">
-                            {food.servingSize} • P: {Math.round(food.protein * customServings * 10) / 10}g • C:{" "}
-                            {Math.round(food.carbs * customServings * 10) / 10}g • F:{" "}
-                            {Math.round(food.fat * customServings * 10) / 10}g
-                            {food.fiber ? ` • Fiber: ${Math.round(food.fiber * customServings * 10) / 10}g` : ""}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs sm:text-sm font-bold text-emerald-400">
-                            {Math.round(food.calories * customServings)} kcal
-                          </span>
-                          <Button
-                            size="sm"
-                            onClick={() => handleLogFoodItem(food)}
-                            className="h-7 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-medium gap-1"
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {(["breakfast", "lunch", "dinner", "snack"] as MealCategory[]).map((mealType) => {
+                        const recipe = day.meals[mealType];
+                        return (
+                          <div
+                            key={mealType}
+                            className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between"
                           >
-                            <Plus className="h-3 w-3" />
-                            Log
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </>
-            ) : (
-              /* Custom Food Form */
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-xs text-white">Food / Meal Name *</Label>
-                  <Input
-                    placeholder="e.g., Mom's Lentil Soup with Sourdough"
-                    value={customFoodName}
-                    onChange={(e) => setCustomFoodName(e.target.value)}
-                    className={`${portalInputClass} mt-1 text-xs`}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs text-white">Calories (kcal) *</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 350"
-                      value={customFoodCal}
-                      onChange={(e) => setCustomFoodCal(e.target.value)}
-                      className={`${portalInputClass} mt-1 text-xs`}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-white">Protein (g)</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 25"
-                      value={customFoodProt}
-                      onChange={(e) => setCustomFoodProt(e.target.value)}
-                      className={`${portalInputClass} mt-1 text-xs`}
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label className="text-xs text-white">Carbohydrates (g)</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 40"
-                      value={customFoodCarb}
-                      onChange={(e) => setCustomFoodCarb(e.target.value)}
-                      className={`${portalInputClass} mt-1 text-xs`}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-white">Fats (g)</Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g., 10"
-                      value={customFoodFat}
-                      onChange={(e) => setCustomFoodFat(e.target.value)}
-                      className={`${portalInputClass} mt-1 text-xs`}
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={handleLogCustomFood}
-                  className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs mt-2"
-                >
-                  Log Custom Food Entry
-                </Button>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+                            <div>
+                              <div className="relative h-36 w-full rounded-2xl overflow-hidden mb-3 bg-slate-200">
+                                <img
+                                  src={recipe.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80"}
+                                  alt={recipe.title}
+                                  className="h-full w-full object-cover"
+                                />
+                                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                                  <span className="bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                    {mealType}
+                                  </span>
+                                  <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    {recipe.calories} kcal
+                                  </span>
+                                </div>
+                              </div>
 
-      {/* ========================================== */}
-      {/* MODAL 2: SWAP MEAL ALTERNATIVES DIALOG     */}
-      {/* ========================================== */}
-      <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
-        <DialogContent className="max-w-lg bg-[#0e1626] border-white/15 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg text-white flex items-center gap-2">
-              <RotateCcw className="h-5 w-5 text-emerald-400" />
-              Swap Meal Alternatives
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#94a3b8]">
-              Select a clinically compatible alternative recipe tailored to your profile restrictions.
-            </DialogDescription>
-          </DialogHeader>
+                              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-2">
+                                <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recipe.carbs}g</span>
+                                <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recipe.protein}g</span>
+                                <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recipe.fat}g</span>
+                              </div>
 
-          <div className="space-y-3 max-h-[50vh] overflow-y-auto py-2 pr-1">
-            {swapAlternatives.length === 0 ? (
-              <div className="text-center py-6 text-xs text-[#94a3b8]">
-                No other alternative recipes in this exact category match your strict allergen/diet filters.
-              </div>
-            ) : (
-              swapAlternatives.map((alt) => (
-                <div
-                  key={alt.id}
-                  className="p-3.5 rounded-xl border border-white/10 bg-white/[0.03] hover:border-emerald-500/40 hover:bg-white/[0.06] transition-all space-y-2"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-semibold text-white">{alt.title}</h4>
-                      <p className="text-xs text-[#94a3b8] mt-0.5">
-                        {alt.prepTimeMin} mins prep • {alt.calories} kcal • P: {alt.protein}g • C: {alt.carbs}g • F: {alt.fat}g
-                      </p>
+                              <h4 className="font-bold text-slate-900 text-sm mb-1.5">{recipe.title}</h4>
+                              <p className="text-xs text-slate-500 leading-relaxed mb-3">
+                                {recipe.clinicalBenefits[0]}
+                              </p>
+
+                              {recipe.biomarkerBadges && (
+                                <div className="flex flex-wrap gap-1 mb-3">
+                                  {recipe.biomarkerBadges.map((badge, idx) => (
+                                    <span key={idx} className="text-[10px] font-semibold bg-lime-50 text-lime-800 px-2 py-0.5 rounded-md">
+                                      {badge}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                              <Button
+                                onClick={() => handleLogMealFromPlanToToday(recipe)}
+                                className="flex-1 h-9 rounded-xl bg-lime-500 hover:bg-lime-600 text-white text-xs font-semibold"
+                              >
+                                Log to Today
+                              </Button>
+                              <Button
+                                onClick={() => {
+                                  setSwapTarget({ dayNum: day.dayNumber, mealType, currentRecipeId: recipe.id });
+                                  setIsSwapModalOpen(true);
+                                }}
+                                className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+                              >
+                                Swap
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleApplyMealSwap(alt)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shrink-0"
-                    >
-                      Select
-                    </Button>
-                  </div>
-                  <div className="text-[11px] text-[#cbd5e1] flex items-center gap-1.5 italic">
-                    <span className="text-emerald-400">•</span>
-                    <span>{alt.clinicalBenefits[0]}</span>
-                  </div>
-                </div>
-              ))
+                  );
+                })()}
+              </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+        )}
 
-      {/* ========================================== */}
-      {/* MODAL 3: LOG WEIGHT DIALOG                 */}
-      {/* ========================================== */}
-      <Dialog open={isLogWeightOpen} onOpenChange={setIsLogWeightOpen}>
-        <DialogContent className="max-w-md bg-[#0e1626] border-white/15 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg text-white flex items-center gap-2">
-              <Scale className="h-5 w-5 text-emerald-400" />
-              Log Weight Entry
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#94a3b8]">
-              Record your morning weigh-in to keep metabolic calculations accurate.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div>
-              <Label className="text-xs text-white">Weight (kg) *</Label>
-              <Input
-                type="number"
-                step="0.1"
-                placeholder="e.g., 72.4"
-                value={newWeightInput}
-                onChange={(e) => setNewWeightInput(e.target.value)}
-                className={`${portalInputClass} mt-1 text-xs`}
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-white">Date *</Label>
-              <Input
-                type="date"
-                value={newWeightDate}
-                onChange={(e) => setNewWeightDate(e.target.value)}
-                className={`${portalInputClass} mt-1 text-xs`}
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-white">Notes / Context (Optional)</Label>
-              <Input
-                placeholder="e.g., Fasted morning weigh-in"
-                value={newWeightNotes}
-                onChange={(e) => setNewWeightNotes(e.target.value)}
-                className={`${portalInputClass} mt-1 text-xs`}
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsLogWeightOpen(false)}
-              className="border-white/15 text-white text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSaveWeightEntry}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs"
-            >
-              Save Weigh-in
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ========================================== */}
-      {/* MODAL 4: QUICK ADJUST GOALS & PREFERENCES  */}
-      {/* ========================================== */}
-      <Dialog open={isCustomizeOpen} onOpenChange={setIsCustomizeOpen}>
-        <DialogContent className="max-w-lg bg-[#0e1626] border-white/15 text-white max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
-              <SlidersHorizontal className="h-5 w-5 text-emerald-400" />
-              Adjust Diet & Metabolic Goals
-            </DialogTitle>
-            <DialogDescription className="text-xs text-[#94a3b8]">
-              Configure your health objective, activity multiplier, target weight, and pace.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            {/* Primary Health Goal */}
-            <div>
-              <Label className="text-xs text-white">Primary Health & Metabolic Goal</Label>
-              <Select value={editGoal} onValueChange={(val: HealthGoal) => setEditGoal(val)}>
-                <SelectTrigger className={`${portalInputClass} mt-1 text-xs`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0e1626] border-white/15 text-white text-xs">
-                  {Object.entries(HEALTH_GOALS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Activity Level */}
-            <div>
-              <Label className="text-xs text-white">Activity Level (TDEE Multiplier)</Label>
-              <Select value={editActivity} onValueChange={(val: ActivityLevel) => setEditActivity(val)}>
-                <SelectTrigger className={`${portalInputClass} mt-1 text-xs`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0e1626] border-white/15 text-white text-xs">
-                  {Object.entries(ACTIVITY_MULTIPLIERS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>
-                      {v.label} ({v.desc})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Target Weight & Weekly Pace */}
-            <div className="grid grid-cols-2 gap-3">
+        {/* ========================================================================= */}
+        {/* VIEW 3: BIOMARKER RX & CLINICAL LAB INSIGHTS */}
+        {/* ========================================================================= */}
+        {activeTab === "biomarker_rx" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <Label className="text-xs text-white">Target Weight (kg)</Label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  value={editTargetWeight}
-                  onChange={(e) => setEditTargetWeight(e.target.value)}
-                  className={`${portalInputClass} mt-1 text-xs`}
+                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                  <HeartPulse className="h-6 w-6 text-rose-500" />
+                  Clinical Biomarker Dietary Prescription
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Personalized dietary protocols derived from your uploaded lab panels
+                </p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <ReportScopeSelector
+                  panels={panels}
+                  uploads={uploads}
+                  selectedReportId={selectedReportId}
+                  onSelectReportId={setSelectedReportId}
+                  multiPanelMeta={multiPanelMeta}
+                  biomarkerTrends={biomarkerTrends}
                 />
               </div>
+            </div>
+
+            {/* Micronutrient Targets */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Fiber Target</span>
+                <div className="text-2xl font-black text-slate-900 mt-1">{microTargets.fiberG} g/day</div>
+                <p className="text-[11px] text-lime-700 font-medium mt-1">High soluble fiber for lipid clearance</p>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sodium Ceiling</span>
+                <div className="text-2xl font-black text-slate-900 mt-1">{microTargets.sodiumMg} mg/day</div>
+                <p className="text-[11px] text-orange-600 font-medium mt-1">DASH guideline for arterial pressure</p>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Potassium Target</span>
+                <div className="text-2xl font-black text-slate-900 mt-1">{microTargets.potassiumMg} mg/day</div>
+                <p className="text-[11px] text-lime-700 font-medium mt-1">Counters intracellular sodium load</p>
+              </div>
+
+              <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Water Target</span>
+                <div className="text-2xl font-black text-slate-900 mt-1">{(microTargets.waterMl / 1000).toFixed(1)} L/day</div>
+                <p className="text-[11px] text-lime-700 font-medium mt-1">Optimizes renal clearance rate</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 4: AI DIETITIAN MESSAGES CHAT */}
+        {/* ========================================================================= */}
+        {activeTab === "messages" && (
+          <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-11 w-11 rounded-2xl bg-lime-500/15 text-lime-700 flex items-center justify-center font-bold">
+                  <Bot className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900">Nutrigo AI Clinical Dietitian</h2>
+                  <p className="text-xs text-slate-500">Real-time biomarker meal guidance, ingredient swaps, and clinical nutrition Q&A</p>
+                </div>
+              </div>
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-lime-50 text-lime-700 text-xs font-bold border border-lime-200/60">
+                <span className="h-2 w-2 rounded-full bg-lime-500 animate-pulse" />
+                AI Dietitian Active
+              </span>
+            </div>
+
+            {/* Messages Thread */}
+            <div className="space-y-4 max-h-[480px] overflow-y-auto pr-1">
+              {aiChatLogs.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  {msg.sender === "ai" && (
+                    <div className="h-9 w-9 rounded-xl bg-lime-100 text-lime-800 flex items-center justify-center shrink-0 text-xs font-bold">
+                      AI
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-xl rounded-2xl p-4 text-xs leading-relaxed ${
+                      msg.sender === "user"
+                        ? "bg-slate-900 text-white rounded-br-none font-medium"
+                        : "bg-slate-50 border border-slate-100 text-slate-800 rounded-bl-none"
+                    }`}
+                  >
+                    <p>{msg.text}</p>
+                    <span className={`text-[10px] block mt-1.5 font-semibold ${msg.sender === "user" ? "text-slate-400" : "text-slate-400"}`}>
+                      {msg.time}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Input form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!aiChatInput.trim()) return;
+                const q = aiChatInput.trim();
+                const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                setAiChatLogs((prev) => [...prev, { sender: "user", text: q, time: timeNow }]);
+                setAiChatInput("");
+
+                setTimeout(() => {
+                  let reply = `Great question regarding "${q}". For your metabolic target (${calorieTarget} kcal/day), prioritizing high-potassium greens, lean proteins, and complex carbohydrates while keeping sodium under ${microTargets.sodiumMg}mg will optimize your cellular recovery.`;
+                  if (q.toLowerCase().includes("snack") || q.toLowerCase().includes("hungry")) {
+                    reply = "For a high-satiety low-glycemic snack, I recommend Greek yogurt with berries and crushed walnuts (approx. 180 kcal, 15g protein) or raw almond butter on crisp cucumber slices.";
+                  } else if (q.toLowerCase().includes("protein") || q.toLowerCase().includes("muscle")) {
+                    reply = `Your optimal daily protein target is ${macroTargets.proteinG}g (${macroTargets.proteinPct}% of total calories). Clean sources like wild salmon, eggs, tofu, lentils, and lean chicken will support your goal.`;
+                  }
+                  setAiChatLogs((prev) => [...prev, { sender: "ai", text: reply, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+                }, 600);
+              }}
+              className="flex gap-2 pt-2 border-t border-slate-100"
+            >
+              <Input
+                placeholder="Ask about healthy recipes, sodium swaps, or macro goals..."
+                value={aiChatInput}
+                onChange={(e) => setAiChatInput(e.target.value)}
+                className="h-11 rounded-2xl bg-slate-50 border-slate-200 text-xs flex-1"
+              />
+              <Button
+                type="submit"
+                className="h-11 px-5 rounded-2xl bg-[#84cc16] hover:bg-[#73b512] text-white font-semibold flex items-center gap-2"
+              >
+                <Send className="h-4 w-4" />
+                Send
+              </Button>
+            </form>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 5: CURATED HEALTHY MENU */}
+        {/* ========================================================================= */}
+        {activeTab === "healthy_menu" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <Label className="text-xs text-white">Weekly Target Pace</Label>
-                <Select value={editWeeklyPace} onValueChange={(val) => setEditWeeklyPace(val)}>
-                  <SelectTrigger className={`${portalInputClass} mt-1 text-xs`}>
+                <h2 className="text-xl font-bold text-slate-900">Curated Healthy Menus & Chef Recipes</h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Biomarker-optimized dishes prepared for your metabolic pace of {calorieTarget} kcal/day
+                </p>
+              </div>
+              <Button
+                onClick={() => setActiveTab("weekly_plan")}
+                className="h-10 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold text-xs shadow-md shadow-lime-500/20"
+              >
+                <ClipboardList className="h-4 w-4 mr-1.5" /> Full 7-Day Plan
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {FOOD_DATABASE.slice(0, 9).map((f) => (
+                <div key={f.id} className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-lg transition-all">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[11px] font-bold text-lime-700 bg-lime-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        {f.category}
+                      </span>
+                      <span className="text-xs font-black text-slate-900">{f.calories} kcal</span>
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm mb-1">{f.name}</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed mb-3">Standard serving: {f.servingSize}</p>
+                    <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-600 mb-3">
+                      <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md">Carbs {f.carbs}g</span>
+                      <span className="bg-lime-100 text-lime-800 px-2 py-0.5 rounded-md">Protein {f.protein}g</span>
+                      <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-md">Fat {f.fat}g</span>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleLogFoodItem(f)}
+                    className="w-full h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs"
+                  >
+                    + Log to Daily Diary
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 6: FOOD DIARY */}
+        {/* ========================================================================= */}
+        {activeTab === "food_diary" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Today's Food Diary & Meal Logs</h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  {totalEatenCalories} kcal logged of {calorieTarget} kcal target
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  setSelectedMealForAdd("breakfast");
+                  setIsAddFoodOpen(true);
+                }}
+                className="h-10 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold text-xs"
+              >
+                <Plus className="h-4 w-4 mr-1" /> Log New Food
+              </Button>
+            </div>
+
+            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
+              {loggedFoods.length === 0 ? (
+                <p className="text-center text-slate-400 py-8 text-xs font-medium">No foods logged yet today. Click "Log New Food" above!</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {loggedFoods.map((lf) => (
+                    <div key={lf.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">{lf.name}</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          <span className="capitalize text-lime-700 font-semibold">{lf.meal}</span> • {lf.servings} serving ({lf.servingSize}) • {lf.calories} kcal
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[11px] font-bold text-slate-700">C {lf.carbs}g • P {lf.protein}g • F {lf.fat}g</span>
+                        <button
+                          onClick={() => handleDeleteLoggedFood(lf.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 7: METABOLIC PROGRESS */}
+        {/* ========================================================================= */}
+        {activeTab === "progress" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Metabolic Progress & Weight Targets</h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Tracking current pace ({settings.weeklyPaceKg} kg/week) toward {settings.targetWeightKg} kg target
+                </p>
+              </div>
+              <Button
+                onClick={() => setIsCustomizeOpen(true)}
+                className="h-10 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold text-xs"
+              >
+                <SlidersHorizontal className="h-4 w-4 mr-1.5" /> Adjust Goals
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Weight</span>
+                <div className="text-3xl font-black text-slate-900 mt-1">{currentWeight} <span className="text-xs font-normal text-slate-400">kg</span></div>
+                <p className="text-[11px] text-lime-700 font-medium mt-1">Updated today</p>
+              </div>
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Goal</span>
+                <div className="text-3xl font-black text-slate-900 mt-1">{settings.targetWeightKg} <span className="text-xs font-normal text-slate-400">kg</span></div>
+                <p className="text-[11px] text-slate-500 font-medium mt-1">Goal weight</p>
+              </div>
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">BMR Baseline</span>
+                <div className="text-3xl font-black text-slate-900 mt-1">{bmr} <span className="text-xs font-normal text-slate-400">kcal</span></div>
+                <p className="text-[11px] text-slate-500 font-medium mt-1">Resting metabolic burn</p>
+              </div>
+              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Daily Target</span>
+                <div className="text-3xl font-black text-slate-900 mt-1">{calorieTarget} <span className="text-xs font-normal text-slate-400">kcal</span></div>
+                <p className="text-[11px] text-lime-700 font-medium mt-1">Calibrated for progress</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* VIEW 8: EXERCISES */}
+        {/* ========================================================================= */}
+        {activeTab === "exercises" && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Recommended Metabolic Exercises</h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                  Workouts designed to synergize with your current calorie target of {calorieTarget} kcal
+                </p>
+              </div>
+              <Link
+                to="/patient/exercise"
+                className="h-10 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-lime-500/20"
+              >
+                <Dumbbell className="h-4 w-4" /> Go to Full Workout Plan
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {RECOMMENDED_EXERCISES.map((ex) => (
+                <div key={ex.id} className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-lg transition-all">
+                  <div>
+                    <div className="relative h-40 w-full rounded-2xl overflow-hidden mb-3 bg-slate-200">
+                      <img src={ex.imageUrl} alt={ex.name} className="h-full w-full object-cover" />
+                      <span className="absolute top-2.5 right-2.5 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">
+                        {ex.difficulty}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm mb-1">{ex.name}</h3>
+                    <p className="text-xs text-slate-500 leading-relaxed mb-3">Duration: {ex.durationMin} minutes of active training</p>
+                  </div>
+                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                    <span className="flex items-center gap-1.5 text-orange-600 font-bold text-xs">
+                      <Flame className="h-4 w-4" /> {ex.calories} kcal burned
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500">{ex.durationMin} min</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        </div> {/* Close main area div */}
+
+        {/* ========================================================================= */}
+        {/* MODAL: ADD FOOD DIALOG */}
+        {/* ========================================================================= */}
+        <Dialog open={isAddFoodOpen} onOpenChange={setIsAddFoodOpen}>
+          <DialogContent className="sm:max-w-[550px] bg-white text-slate-900 rounded-[28px] p-6 border-slate-100 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold">Log Food to Daily Tracker</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Search verified food database or enter custom nutrition
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 my-2">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Search oatmeal, chicken, quinoa..."
+                    value={foodSearchQuery}
+                    onChange={(e) => setFoodSearchQuery(e.target.value)}
+                    className="pl-9 h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
+                  />
+                </div>
+                <Select value={selectedMealForAdd} onValueChange={(v) => setSelectedMealForAdd(v as MealCategory)}>
+                  <SelectTrigger className="w-[120px] h-10 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold capitalize">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-[#0e1626] border-white/15 text-white text-xs">
-                    <SelectItem value="-0.75">-0.75 kg / week (Aggressive)</SelectItem>
-                    <SelectItem value="-0.5">-0.5 kg / week (Recommended)</SelectItem>
-                    <SelectItem value="-0.25">-0.25 kg / week (Gradual)</SelectItem>
-                    <SelectItem value="0">0 kg / week (Maintain Equilibrium)</SelectItem>
-                    <SelectItem value="0.25">+0.25 kg / week (Lean Gain)</SelectItem>
-                    <SelectItem value="0.5">+0.5 kg / week (Bulking)</SelectItem>
+                  <SelectContent className="bg-white border-slate-100 shadow-xl rounded-xl">
+                    <SelectItem value="breakfast">Breakfast</SelectItem>
+                    <SelectItem value="lunch">Lunch</SelectItem>
+                    <SelectItem value="dinner">Dinner</SelectItem>
+                    <SelectItem value="snack">Snack</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Food Items List */}
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1 [scrollbar-width:thin]">
+                {filteredFoods.slice(0, 10).map((food) => (
+                  <div
+                    key={food.id}
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-lime-50/60 border border-slate-100 transition-colors"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">{food.name}</div>
+                      <div className="text-[11px] text-slate-500">
+                        {food.servingSize} • {food.calories} kcal (C {food.carbs}g, P {food.protein}g, F {food.fat}g)
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => handleLogFoodItem(food)}
+                      className="h-8 px-3 rounded-lg bg-lime-500 hover:bg-lime-600 text-white text-xs font-semibold shadow-none"
+                    >
+                      + Add
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Dietary Preference */}
-            <div>
-              <Label className="text-xs text-white">Dietary Pattern Preference</Label>
-              <Select value={editDietPref} onValueChange={(val) => setEditDietPref(val)}>
-                <SelectTrigger className={`${portalInputClass} mt-1 text-xs`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-[#0e1626] border-white/15 text-white text-xs">
-                  <SelectItem value="omnivore">Omnivore (Standard)</SelectItem>
-                  <SelectItem value="vegetarian">Vegetarian (Lacto-Veg)</SelectItem>
-                  <SelectItem value="vegan">Vegan (100% Plant-Based)</SelectItem>
-                  <SelectItem value="eggetarian">Eggetarian</SelectItem>
-                  <SelectItem value="pescatarian">Pescatarian (Fish & Veg)</SelectItem>
-                  <SelectItem value="jain">Jain Vegetarian (No Root Veg)</SelectItem>
-                  <SelectItem value="keto">Ketogenic / Low-Carb</SelectItem>
-                </SelectContent>
-              </Select>
+            <DialogFooter>
+              <Button
+                onClick={() => setIsAddFoodOpen(false)}
+                className="h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ========================================================================= */}
+        {/* MODAL: CUSTOMIZE GOALS & METABOLIC TARGETS */}
+        {/* ========================================================================= */}
+        <Dialog open={isCustomizeOpen} onOpenChange={setIsCustomizeOpen}>
+          <DialogContent className="sm:max-w-[500px] bg-white text-slate-900 rounded-[28px] p-6 border-slate-100 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold">Customize Diet & Health Goals</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Adjust metabolic pace, weight target, and water goals
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 my-2">
+              <div>
+                <Label className="text-xs font-semibold text-slate-600">Health Goal</Label>
+                <Select value={editGoal} onValueChange={(v) => setEditGoal(v as HealthGoal)}>
+                  <SelectTrigger className="mt-1 h-10 rounded-xl bg-slate-50 border-slate-200 text-xs font-semibold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-slate-100 shadow-xl rounded-xl">
+                    <SelectItem value="fat_loss">Fat Loss & Calorie Deficit</SelectItem>
+                    <SelectItem value="maintain_longevity">Maintenance & Longevity</SelectItem>
+                    <SelectItem value="muscle_gain">Lean Muscle Building</SelectItem>
+                    <SelectItem value="blood_sugar_balance">Blood Sugar & HbA1c Balance</SelectItem>
+                    <SelectItem value="heart_cardiovascular">Cardiovascular & Lipid Control</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-slate-600">Target Weight (kg)</Label>
+                  <Input
+                    type="number"
+                    value={editTargetWeight}
+                    onChange={(e) => setEditTargetWeight(e.target.value)}
+                    className="mt-1 h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-slate-600">Daily Water Target (ml)</Label>
+                  <Input
+                    type="number"
+                    value={editWaterTarget}
+                    onChange={(e) => setEditWaterTarget(e.target.value)}
+                    className="mt-1 h-10 rounded-xl bg-slate-50 border-slate-200 text-xs"
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Daily Water Target */}
-            <div>
-              <Label className="text-xs text-white">Daily Hydration Target (ml)</Label>
-              <Input
-                type="number"
-                step="250"
-                value={editWaterTarget}
-                onChange={(e) => setEditWaterTarget(e.target.value)}
-                className={`${portalInputClass} mt-1 text-xs`}
-              />
-            </div>
-          </div>
+            <DialogFooter>
+              <Button
+                onClick={() => setIsCustomizeOpen(false)}
+                className="h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveAdjustedGoals}
+                className="h-10 rounded-xl bg-lime-500 hover:bg-lime-600 text-white text-xs font-semibold shadow-md shadow-lime-500/20"
+              >
+                Save Goals
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsCustomizeOpen(false)}
-              className="border-white/15 text-white text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleSaveAdjustedGoals}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs"
-            >
-              Save Goals & Recalculate
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </PatientPortalPage>
+        {/* ========================================================================= */}
+        {/* MODAL: SWAP MEAL DIALOG */}
+        {/* ========================================================================= */}
+        <Dialog open={isSwapModalOpen} onOpenChange={setIsSwapModalOpen}>
+          <DialogContent className="sm:max-w-[550px] bg-white text-slate-900 rounded-[28px] p-6 border-slate-100 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold">Swap Meal Alternative</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Choose an alternative clinical recipe with matching calorie & macro targets
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="max-h-80 overflow-y-auto space-y-3 pr-1 my-2 [scrollbar-width:thin]">
+              {swapAlternatives.map((alt) => (
+                <div
+                  key={alt.id}
+                  className="p-3.5 rounded-2xl bg-slate-50 hover:bg-lime-50/50 border border-slate-100 flex items-center justify-between transition-all"
+                >
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-900">{alt.title}</h5>
+                    <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mt-1">
+                      <span className="text-lime-700">{alt.calories} kcal</span>
+                      <span>•</span>
+                      <span>C {alt.carbs}g</span>
+                      <span>•</span>
+                      <span>P {alt.protein}g</span>
+                      <span>•</span>
+                      <span>F {alt.fat}g</span>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleApplyMealSwap(alt)}
+                    className="h-8 px-3 rounded-xl bg-lime-500 hover:bg-lime-600 text-white text-xs font-semibold"
+                  >
+                    Select
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <DialogFooter>
+              <Button
+                onClick={() => setIsSwapModalOpen(false)}
+                className="h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
+              >
+                Cancel
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+      </div>
+    </div>
   );
 }
+

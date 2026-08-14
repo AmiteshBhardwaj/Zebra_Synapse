@@ -143,31 +143,31 @@ export default function PatientHome() {
   return (
     <PatientPortalPage>
       {/* 1. STITCH PATIENT WELCOME HERO BANNER */}
-      <div className="relative overflow-hidden rounded-[28px] border border-cyan-500/25 bg-[#0d131f] p-7 sm:p-9 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+      <div className="relative overflow-hidden rounded-[24px] border border-slate-100 bg-white p-6 sm:p-8 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-3.5 max-w-3xl">
-            {/* Perfectly Aligned Eyebrow Badge Row */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/40 bg-cyan-950/80 px-3.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+          <div className="space-y-3 max-w-3xl">
+            {/* Eyebrow Badge Row */}
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-lime-200 bg-lime-50 px-3 py-1 text-xs font-semibold text-lime-800">
+                <Sparkles className="h-3.5 w-3.5 text-lime-600" />
                 Patient Workspace
               </span>
-              <span className="h-1 w-1 rounded-full bg-cyan-400/50" />
-              <span className="text-xs font-mono text-cyan-200/80 tracking-wide">
+              <span className="h-1 w-1 rounded-full bg-slate-300" />
+              <span className="text-xs text-slate-500 font-medium">
                 {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
               </span>
             </div>
 
             {/* Main Greeting Headline */}
-            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white font-['Manrope'] leading-tight">
+            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 font-['Manrope'] leading-tight">
               {greeting},{" "}
-              <span className="bg-gradient-to-r from-cyan-300 via-sky-200 to-teal-300 bg-clip-text text-transparent drop-shadow-[0_0_25px_rgba(56,189,248,0.4)]">
+              <span className="text-lime-600">
                 {profile?.full_name ?? "Patient"}
               </span>
             </h1>
 
-            {/* Refined Descriptive Copy */}
-            <p className="max-w-2xl text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
+            {/* Descriptive Copy */}
+            <p className="max-w-2xl text-xs sm:text-sm text-slate-500 leading-relaxed font-normal">
               Welcome to your personal health intelligence vault. Upload a new lab report or review existing diagnostic panels below to analyze biomarker trends, body system stability, and clinical recommendations.
             </p>
           </div>
@@ -182,9 +182,9 @@ export default function PatientHome() {
           description="PDF and image uploads are stored securely, then pushed into the extraction pipeline that powers your structured insights."
         />
         <div
-          className={`mt-6 rounded-[28px] border border-dashed p-8 text-center transition-colors ${dragActive
-            ? "border-[#ff9b61]/70 bg-[#ff9b61]/10"
-            : "border-slate-800 bg-[#090d16] hover:border-[#ff9b61]/40"
+          className={`mt-5 rounded-[24px] border-2 border-dashed p-8 text-center transition-all ${dragActive
+            ? "border-lime-500 bg-lime-50/50"
+            : "border-slate-200 bg-slate-50/50 hover:border-lime-400 hover:bg-lime-50/20"
             }`}
           onDragOver={(e) => {
             e.preventDefault();
@@ -201,23 +201,23 @@ export default function PatientHome() {
             onChange={handleFileChange}
           />
           <label htmlFor="lab-upload" className="cursor-pointer">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[24px] bg-[linear-gradient(135deg,#ff7a33,#ff9b61)] shadow-[0_18px_36px_rgba(255,122,51,0.24)]">
-              <Upload className="h-7 w-7 text-white" />
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
+              <Upload className="h-6 w-6 stroke-[2.2]" />
             </div>
-            <p className="mb-2 text-sm font-medium text-white">
+            <p className="mb-1 text-sm font-bold text-slate-900">
               {selectedFile ? selectedFile.name : "Drag and drop a lab report or click to choose a file"}
             </p>
-            <p className="text-xs text-[#92a8c7]">PDF, PNG, or JPG up to 10MB</p>
+            <p className="text-xs text-slate-400">PDF, PNG, or JPG up to 10MB</p>
           </label>
         </div>
         {selectedFile ? (
-          <div className="mt-4 flex items-center gap-2 text-sm text-[#cfe9ff]">
-            <CheckCircle className="h-4 w-4 shrink-0 text-emerald-400" />
+          <div className="mt-3 flex items-center gap-2 text-xs font-medium text-lime-700">
+            <CheckCircle className="h-4 w-4 shrink-0 text-lime-600" />
             <span>Ready to upload and queue server-side analysis.</span>
           </div>
         ) : null}
         <Button
-          className={`mt-5 h-12 w-full rounded-2xl ${portalPrimaryButtonClass}`}
+          className={`mt-4 h-11 w-full rounded-2xl ${portalPrimaryButtonClass}`}
           disabled={!selectedFile || submitting}
           onClick={() => void handleSubmit()}
         >
@@ -227,16 +227,16 @@ export default function PatientHome() {
 
       {/* 3. REPORT SELECTION SECTION - EMPTIES AREA BELOW UNTIL REPORT IS CHOSEN */}
       {selectedReportId === "none" || !availableReports.some((r) => r.id === selectedReportId) ? (
-        <div className="flex flex-col items-center justify-center text-center px-4 py-12 rounded-[32px] border border-cyan-500/20 bg-[#0d131f] mt-6 shadow-2xl">
-          <div className="mx-auto mb-5 flex h-18 w-18 items-center justify-center rounded-[24px] bg-[#1a1310] border border-[#ff8a3d]/35 shadow-[0_10px_30px_rgba(255,122,51,0.15)]">
-            <FileText className="h-8 w-8 text-[#ff9b61]" />
+        <div className="flex flex-col items-center justify-center text-center px-4 py-12 rounded-[24px] border border-slate-100 bg-white mt-6 shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
+            <FileText className="h-7 w-7 stroke-[2.2]" />
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-2 font-['Manrope']">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 mb-2 font-['Manrope']">
             {availableReports.length > 0 ? "Please choose a medical report" : "No medical reports uploaded yet"}
           </h2>
 
-          <p className="max-w-md text-xs sm:text-sm text-[#92a8c7] leading-relaxed mb-6">
+          <p className="max-w-md text-xs sm:text-sm text-slate-500 leading-relaxed mb-5">
             {availableReports.length > 0
               ? "Select a medical report from your records below to inspect body system signals, biomarker boards, and clinical trends."
               : "Upload a lab report above to inspect biomarker boards, body system signals, and clinical trends."}
@@ -245,18 +245,18 @@ export default function PatientHome() {
           {availableReports.length > 0 ? (
             <div className="w-full max-w-sm sm:max-w-md">
               <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#090d16] px-4 text-xs sm:text-sm font-medium text-white shadow-lg hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+                <SelectTrigger className="h-11 w-full rounded-2xl border-slate-200 bg-slate-50/80 px-4 text-xs sm:text-sm font-medium text-slate-800 hover:border-lime-400 focus:ring-2 focus:ring-lime-500/20 transition-all cursor-pointer">
                   <SelectValue placeholder="Select a medical report..." />
                 </SelectTrigger>
-                <SelectContent className="border-cyan-500/20 bg-[#0d131f] text-white shadow-2xl rounded-2xl p-1.5">
-                  <SelectItem value="none" className="py-2.5 text-white/40 cursor-pointer">
+                <SelectContent className="border-slate-100 bg-white text-slate-800 shadow-xl rounded-2xl p-1.5">
+                  <SelectItem value="none" className="py-2.5 text-slate-400 cursor-pointer text-xs sm:text-sm">
                     -- Select a Medical Report --
                   </SelectItem>
                   {availableReports.map((report) => (
                     <SelectItem
                       key={report.id}
                       value={report.id}
-                      className="py-2.5 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl text-xs sm:text-sm"
+                      className="py-2.5 px-3 text-slate-800 font-medium focus:bg-lime-50 focus:text-lime-900 cursor-pointer rounded-xl text-xs sm:text-sm"
                     >
                       📄 {report.name} ({report.date})
                     </SelectItem>
@@ -270,14 +270,14 @@ export default function PatientHome() {
         /* UNLOCKED CLINICAL SIGNALS & BIOMARKERS DASHBOARD WHEN A REPORT IS SELECTED */
         <div className="mt-6 space-y-6">
           {/* Top Active Report Switcher Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-cyan-500/20 bg-[#0d131f] p-4 shadow-md">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff9c61]/15 border border-[#ff9c61]/30">
-                <FileText className="h-4.5 w-4.5 text-[#ff9c61]" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700">
+                <FileText className="h-4.5 w-4.5" />
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-white/45">Active Medical Record</p>
-                <p className="text-xs font-semibold text-white">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Active Medical Record</p>
+                <p className="text-xs font-bold text-slate-900">
                   {availableReports.find((r) => r.id === selectedReportId)?.name ?? "Selected Record"}
                 </p>
               </div>
@@ -285,15 +285,15 @@ export default function PatientHome() {
 
             <div className="w-full sm:w-auto min-w-[260px]">
               <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="h-10 w-full rounded-xl border-slate-800 bg-[#090d16] text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
+                <SelectTrigger className="h-9 w-full rounded-xl border-slate-200 bg-slate-50/80 text-xs font-medium text-slate-800 hover:border-lime-400 transition-all cursor-pointer">
                   <SelectValue placeholder="Change medical report..." />
                 </SelectTrigger>
-                <SelectContent className="border-cyan-500/20 bg-[#0d131f] text-white shadow-2xl rounded-xl p-1">
-                  <SelectItem value="none" className="py-2 text-white/40 cursor-pointer">
+                <SelectContent className="border-slate-100 bg-white text-slate-800 shadow-xl rounded-xl p-1">
+                  <SelectItem value="none" className="py-2 text-slate-400 cursor-pointer text-xs">
                     -- Clear Selection --
                   </SelectItem>
                   {availableReports.map((report) => (
-                    <SelectItem key={report.id} value={report.id} className="py-2 text-white text-xs cursor-pointer">
+                    <SelectItem key={report.id} value={report.id} className="py-2 text-slate-800 text-xs cursor-pointer focus:bg-lime-50 focus:text-lime-900 rounded-lg">
                       📄 {report.name} ({report.date})
                     </SelectItem>
                   ))}
@@ -302,8 +302,6 @@ export default function PatientHome() {
             </div>
           </div>
 
-
-
           <section className="space-y-6">
             <div className={`${portalPanelClass} p-5 sm:p-6`}>
               <SectionHeading
@@ -311,7 +309,7 @@ export default function PatientHome() {
                 title="Biomarker board"
                 description="Scan the highest-signal markers, then hover or focus to connect each marker back to the body-system view."
               />
-              <div className="mt-6">
+              <div className="mt-5">
                 <BiomarkerInsightsBoard
                   metrics={allMetrics}
                   focusedMetricKeys={focusedMetricKeys}

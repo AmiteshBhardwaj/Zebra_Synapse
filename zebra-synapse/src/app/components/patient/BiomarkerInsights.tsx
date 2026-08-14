@@ -15,10 +15,10 @@ type InsightStatus = "high" | "low" | "borderline" | "normal";
 type SectionTone = "critical" | "monitor" | "good";
 
 const STATUS_BADGE: Record<InsightStatus, string> = {
-  high: "border-[#FF6A00]/45 bg-[#FF6A00]/20 text-orange-100",
-  low: "border-[#6C5BD4]/45 bg-[#6C5BD4]/18 text-purple-100",
-  borderline: "border-amber-400/45 bg-amber-500/15 text-amber-100",
-  normal: "border-emerald-400/45 bg-emerald-500/15 text-emerald-100",
+  high: "border-rose-200 bg-rose-50 text-rose-700",
+  low: "border-sky-200 bg-sky-50 text-sky-700",
+  borderline: "border-amber-200 bg-amber-50 text-amber-700",
+  normal: "border-lime-200 bg-lime-50 text-lime-800",
 };
 
 const STATUS_LABEL: Record<InsightStatus, string> = {
@@ -30,19 +30,19 @@ const STATUS_LABEL: Record<InsightStatus, string> = {
 
 const SECTION_STYLES: Record<SectionTone, { ring: string; chip: string; title: string }> = {
   critical: {
-    ring: "border-[#FF6A00]/35 bg-[#FF6A00]/10",
-    chip: "bg-[#FF6A00]/20 text-[#ffd5bb]",
-    title: "text-[#ffb078]",
+    ring: "border-rose-100 bg-rose-50/40",
+    chip: "bg-rose-100 text-rose-800",
+    title: "text-rose-900",
   },
   monitor: {
-    ring: "border-amber-400/35 bg-amber-500/10",
-    chip: "bg-amber-500/20 text-amber-100",
-    title: "text-amber-200",
+    ring: "border-amber-100 bg-amber-50/40",
+    chip: "bg-amber-100 text-amber-800",
+    title: "text-amber-900",
   },
   good: {
-    ring: "border-emerald-400/30 bg-emerald-500/10",
-    chip: "bg-emerald-500/18 text-emerald-100",
-    title: "text-emerald-200",
+    ring: "border-lime-100 bg-lime-50/40",
+    chip: "bg-lime-100 text-lime-800",
+    title: "text-lime-900",
   },
 };
 
@@ -162,26 +162,26 @@ export function RangeBar({
   const pointer = computePosition(value, low, high);
 
   return (
-    <div className="space-y-1.5">
-      <div className="relative h-2.5 overflow-hidden rounded-full border border-white/15 bg-white/10">
-        <div className="absolute inset-y-0 left-0 w-1/3 bg-[#6C5BD4]/35" />
-        <div className="absolute inset-y-0 left-1/3 w-1/3 bg-emerald-500/30" />
-        <div className="absolute inset-y-0 left-2/3 w-1/3 bg-[#FF6A00]/35" />
+    <div className="space-y-1">
+      <div className="relative h-2 overflow-hidden rounded-full border border-slate-200 bg-slate-100">
+        <div className="absolute inset-y-0 left-0 w-1/3 bg-sky-200" />
+        <div className="absolute inset-y-0 left-1/3 w-1/3 bg-lime-300" />
+        <div className="absolute inset-y-0 left-2/3 w-1/3 bg-rose-200" />
         <div
           className={cn(
-            "absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_16px_rgba(255,106,0,0.45)]",
+            "absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border-2 border-white shadow-sm",
             metric.status === "high"
-              ? "bg-[#FF6A00]"
+              ? "bg-rose-500"
               : metric.status === "low"
-                ? "bg-[#6C5BD4]"
+                ? "bg-sky-500"
                 : metric.status === "borderline"
-                  ? "bg-amber-400"
-                  : "bg-emerald-500",
+                  ? "bg-amber-500"
+                  : "bg-lime-600",
           )}
           style={{ left: `calc(${pointer}% - 6px)` }}
         />
       </div>
-      <div className="flex items-center justify-between text-[11px] font-medium uppercase tracking-[0.12em] text-white/45">
+      <div className="flex items-center justify-between text-[10px] font-medium uppercase tracking-wider text-slate-400">
         <span>Low</span>
         <span>Normal</span>
         <span>High</span>
@@ -205,40 +205,40 @@ export function InsightCard({
     <Card
       id={`biomarker-card-${metric.key}`}
       className={cn(
-        "h-full rounded-2xl border border-white/10 bg-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.32)] backdrop-blur-xl transition-all duration-200 hover:scale-[1.01] hover:shadow-[0_18px_36px_rgba(108,91,212,0.18)]",
-        isFocused ? "ring-2 ring-[#FF6A00]/80 shadow-[0_0_32px_rgba(255,106,0,0.25)]" : "",
+        "h-full rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-200 hover:scale-[1.01] hover:shadow-md",
+        isFocused ? "ring-2 ring-lime-500 shadow-md" : "",
       )}
       onMouseEnter={() => onHoverMetric?.(metric.key)}
       onMouseLeave={() => onHoverMetric?.(null)}
     >
-      <CardContent className="flex h-full flex-col gap-4 p-5">
+      <CardContent className="flex h-full flex-col gap-3.5 p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-sm text-white/50">Biomarker</p>
-            <h4 className="text-base font-semibold text-white">{metric.label}</h4>
+            <p className="text-xs font-medium text-slate-400">Biomarker</p>
+            <h4 className="text-sm sm:text-base font-bold text-slate-900">{metric.label}</h4>
           </div>
-          <Badge variant="outline" className={cn("border", STATUS_BADGE[status])}>
+          <Badge variant="outline" className={cn("text-[11px] font-semibold", STATUS_BADGE[status])}>
             {STATUS_LABEL[status]}
           </Badge>
         </div>
 
         <div>
-          <p className="text-xl font-semibold text-white">{getMetricValueLabel(metric)}</p>
-          <p className="text-xs text-white/50">Reference: {metric.range}</p>
+          <p className="text-xl font-bold text-slate-900">{getMetricValueLabel(metric)}</p>
+          <p className="text-xs text-slate-400">Reference: {metric.range}</p>
         </div>
 
         <RangeBar metric={metric} />
 
-        <div className="space-y-2">
-          <p className="text-sm text-white/75">{explainMetric(metric)}</p>
-          <ul className="space-y-1 text-sm text-white/70">
-            <li className="flex items-start gap-2">
-              <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-[#FF6A00]" />
+        <div className="space-y-1.5 pt-1">
+          <p className="text-xs text-slate-600 leading-relaxed">{explainMetric(metric)}</p>
+          <ul className="space-y-1 text-xs text-slate-500">
+            <li className="flex items-start gap-1.5">
+              <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-lime-600" />
               <span>{suggestAction(metric)}</span>
             </li>
-            <li className="flex items-start gap-2">
-              <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-[#6C5BD4]" />
-              <span>Track this marker in your next panel to confirm direction of change.</span>
+            <li className="flex items-start gap-1.5">
+              <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-600" />
+              <span>Track this marker in your next panel to confirm trend.</span>
             </li>
           </ul>
         </div>
@@ -268,23 +268,23 @@ export function SectionGroup({
   const grouped = groupedByCategory(metrics);
 
   return (
-    <Accordion type="single" collapsible defaultValue={defaultOpen ? value : undefined} className="rounded-2xl border border-white/10 bg-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+    <Accordion type="single" collapsible defaultValue={defaultOpen ? value : undefined} className="rounded-2xl border border-slate-100 bg-white shadow-sm">
       <AccordionItem value={value} className="border-b-0">
-        <AccordionTrigger className={cn("px-5 py-4 hover:no-underline", style.ring)}>
+        <AccordionTrigger className={cn("px-5 py-4 hover:no-underline rounded-2xl", style.ring)}>
           <div className="flex items-center gap-3">
-            <p className={cn("text-base font-semibold", style.title)}>{title}</p>
-            <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", style.chip)}>{metrics.length}</span>
+            <p className={cn("text-sm sm:text-base font-bold", style.title)}>{title}</p>
+            <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-sm", style.chip)}>{metrics.length}</span>
           </div>
         </AccordionTrigger>
-        <AccordionContent className="px-5 pb-5">
+        <AccordionContent className="px-5 pb-5 pt-3">
           {metrics.length === 0 ? (
-            <p className="text-sm text-white/55">No biomarkers in this section.</p>
+            <p className="text-xs text-slate-400">No biomarkers in this section.</p>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {grouped.map((group) => (
-                <div key={group.category} className="space-y-3">
-                  <h5 className="text-sm font-semibold text-white/80">{group.category}</h5>
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <div key={group.category} className="space-y-2.5">
+                  <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500">{group.category}</h5>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {group.items.map((metric) => (
                       <InsightCard
                         key={metric.key}
@@ -322,36 +322,36 @@ export function HealthSummary({ metrics }: { metrics: MetricAssessment[] }) {
         : "All tracked biomarkers are currently in the normal range. Continue preventive habits and periodic checks.";
 
   return (
-    <Card className="overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(130deg,#211f2d_0%,#242424_55%,#2f241e_100%)] shadow-[0_18px_44px_rgba(0,0,0,0.36)]">
+    <Card className="overflow-hidden rounded-[24px] border border-slate-100 bg-white shadow-sm">
       <CardContent className="p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="max-w-3xl space-y-2">
-            <div className="flex items-center gap-2 text-[#b8afff]">
-              <Sparkles className="h-5 w-5" />
-              <p className="text-sm font-semibold uppercase tracking-[0.16em]">Health Summary</p>
+          <div className="max-w-3xl space-y-1.5">
+            <div className="flex items-center gap-2 text-lime-700">
+              <Sparkles className="h-4 w-4" />
+              <p className="text-xs font-semibold uppercase tracking-wider">Health Summary</p>
             </div>
-            <h3 className="text-2xl font-semibold text-white">{statusTitle}</h3>
-            <p className="text-sm text-white/75 sm:text-base">{summary}</p>
+            <h3 className="text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">{statusTitle}</h3>
+            <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{summary}</p>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:w-[380px]">
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">Total Issues</p>
-              <p className="mt-2 text-2xl font-semibold text-white">{issues}</p>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Issues</p>
+              <p className="mt-1 text-2xl font-bold text-slate-900">{issues}</p>
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4 sm:col-span-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-white/55">Critical Markers</p>
-              <div className="mt-2 space-y-1.5 text-sm text-white/80">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4 sm:col-span-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Critical Markers</p>
+              <div className="mt-1.5 space-y-1 text-xs text-slate-700 font-medium">
                 {topCritical.length > 0 ? (
                   topCritical.map((item) => (
-                    <div key={item.key} className="flex items-center gap-2">
-                      <CircleAlert className="h-3.5 w-3.5 text-[#FF6A00]" />
+                    <div key={item.key} className="flex items-center gap-1.5 text-rose-600">
+                      <CircleAlert className="h-3.5 w-3.5 shrink-0" />
                       <span className="truncate">{item.label}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-3.5 w-3.5 text-emerald-400" />
+                  <div className="flex items-center gap-1.5 text-emerald-600">
+                    <Activity className="h-3.5 w-3.5 shrink-0" />
                     <span>No critical markers</span>
                   </div>
                 )}
@@ -378,7 +378,7 @@ export function BiomarkerInsightsBoard({
   const normal = sortedMetrics(metrics.filter((m) => m.status === "normal"));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <HealthSummary metrics={metrics} />
 
       <SectionGroup

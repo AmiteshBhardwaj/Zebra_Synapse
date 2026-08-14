@@ -214,18 +214,18 @@ export function ChatSessionSidebar({
 
   // Content of the sidebar
   const renderSidebarContent = () => (
-    <div className="flex flex-col h-full w-full bg-[#0c101a] border-r border-slate-800/90 text-slate-200 select-none overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-full w-full bg-white border-r border-slate-200/80 text-slate-800 select-none overflow-hidden shadow-sm">
       {/* 1. Header Toolbar */}
-      <div className="h-16 shrink-0 px-4 border-b border-slate-800/90 flex items-center justify-between gap-2">
+      <div className="h-16 shrink-0 px-4 border-b border-slate-100 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700 shadow-sm">
             <MessageSquare className="h-4 w-4 stroke-[2.2]" />
           </div>
           <div className="overflow-hidden">
-            <h3 className="text-xs font-semibold text-white tracking-wide truncate font-['Manrope']">
+            <h3 className="text-xs font-bold text-slate-900 tracking-tight truncate font-['Manrope']">
               Chat Sessions
             </h3>
-            <p className="text-[10px] text-zinc-400 font-mono truncate">
+            <p className="text-[10px] text-slate-400 font-medium truncate">
               {actualConversationCount} {actualConversationCount === 1 ? "Conversation" : "Conversations"}
             </p>
           </div>
@@ -236,12 +236,11 @@ export function ChatSessionSidebar({
           type="button"
           onClick={onToggle}
           title="Collapse sidebar (Ctrl+B)"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-slate-800/70 transition-colors"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
         >
           <PanelLeftClose className="h-4 w-4" />
         </button>
       </div>
-
 
       {/* 2. Top Action: + New Chat Button */}
       <div className="p-3 pb-2 shrink-0">
@@ -253,16 +252,16 @@ export function ChatSessionSidebar({
           }}
           className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all group active:scale-[0.98] ${
             !activeSessionId
-              ? "bg-gradient-to-r from-cyan-500/25 to-sky-500/20 border border-cyan-400/60 text-white shadow-[0_0_20px_rgba(6,182,212,0.25)]"
-              : "bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-cyan-500/30 text-zinc-300 hover:text-white"
+              ? "bg-lime-50 border border-lime-200 text-lime-900 font-bold shadow-sm"
+              : "bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900"
           }`}
         >
           <div className="flex items-center gap-2.5 text-xs font-semibold">
             <div
               className={`flex h-5 w-5 items-center justify-center rounded-lg transition-transform group-hover:scale-110 ${
                 !activeSessionId
-                  ? "bg-cyan-400/30 text-cyan-200"
-                  : "bg-white/10 text-zinc-400 group-hover:text-cyan-300"
+                  ? "bg-lime-500 text-slate-950"
+                  : "bg-slate-200 text-slate-600 group-hover:text-lime-700"
               }`}
             >
               <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
@@ -272,8 +271,8 @@ export function ChatSessionSidebar({
           <span
             className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
               !activeSessionId
-                ? "text-cyan-300 bg-cyan-950/70 border-cyan-500/30"
-                : "text-zinc-400 bg-white/5 border-white/10"
+                ? "text-lime-800 bg-lime-100/70 border-lime-300"
+                : "text-slate-400 bg-white border-slate-200"
             }`}
           >
             Alt+N
@@ -284,19 +283,19 @@ export function ChatSessionSidebar({
       {/* 3. Search Bar */}
       <div className="px-3 pb-2 shrink-0">
         <div className="relative flex items-center">
-          <Search className="absolute left-3 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+          <Search className="absolute left-3 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search conversations..."
-            className="w-full h-8 pl-8 pr-7 rounded-lg bg-[#141620] border border-white/10 hover:border-white/20 focus:border-cyan-500/50 text-xs text-slate-100 placeholder:text-zinc-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/20 transition-all font-sans"
+            className="w-full h-8 pl-8 pr-7 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 focus:border-lime-500 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-lime-500/20 transition-all font-sans"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 text-zinc-500 hover:text-zinc-300"
+              className="absolute right-2.5 text-slate-400 hover:text-slate-600"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -305,27 +304,27 @@ export function ChatSessionSidebar({
       </div>
 
       {/* 4. Scrollable Session List */}
-      <div className="flex-1 overflow-y-auto px-3 py-1 space-y-4 [scrollbar-width:thin] scrollbar-thumb-white/10">
+      <div className="flex-1 overflow-y-auto px-3 py-1 space-y-4 [scrollbar-width:thin] scrollbar-thumb-slate-200">
         {uploads.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center p-6 text-zinc-400 space-y-3">
-            <div className="h-10 w-10 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-zinc-500">
+          <div className="flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-3">
+            <div className="h-10 w-10 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
               <Bot className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-medium text-slate-300">No lab reports found</p>
-              <p className="text-[11px] text-zinc-500 mt-0.5">Upload a report to begin clinical AI chat</p>
+              <p className="text-xs font-semibold text-slate-700">No lab reports found</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Upload a report to begin clinical AI chat</p>
             </div>
             <button
               type="button"
               onClick={() => navigate("/patient/medical-records")}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 text-xs text-cyan-300 font-medium transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-lime-50 hover:bg-lime-100 border border-lime-200 text-xs text-lime-800 font-semibold transition-all"
             >
               <FilePlus2 className="h-3.5 w-3.5" />
               <span>Upload PDF</span>
             </button>
           </div>
         ) : filteredSessions.length === 0 ? (
-          <div className="p-6 text-center text-xs text-zinc-500">
+          <div className="p-6 text-center text-xs text-slate-400">
             No conversations matching "{searchQuery}"
           </div>
         ) : (
@@ -339,11 +338,11 @@ export function ChatSessionSidebar({
       </div>
 
       {/* 5. Footer Doctor & Upload Bar */}
-      <div className="shrink-0 p-3 border-t border-white/[0.08] bg-[#0e0f17]/90 flex flex-col gap-2">
+      <div className="shrink-0 p-3 border-t border-slate-100 bg-slate-50/70 flex flex-col gap-2">
         {/* Doctor Status Card */}
         {connectedDoctor && (
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-emerald-950/30 border border-emerald-500/20 text-emerald-300">
-            <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400">
+          <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700">
               <Stethoscope className="h-3.5 w-3.5" />
               <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -351,10 +350,10 @@ export function ChatSessionSidebar({
               </span>
             </div>
             <div className="overflow-hidden min-w-0 flex-1">
-              <p className="text-[11px] font-semibold text-emerald-200 truncate">
+              <p className="text-[11px] font-bold text-emerald-900 truncate">
                 Dr. {connectedDoctor.name.replace(/^Dr\.\s*/i, "")}
               </p>
-              <p className="text-[9px] font-mono text-emerald-400/80 uppercase tracking-wider truncate">
+              <p className="text-[9px] font-semibold text-emerald-700 uppercase tracking-wider truncate">
                 Assigned Reviewer
               </p>
             </div>
@@ -365,9 +364,9 @@ export function ChatSessionSidebar({
         <button
           type="button"
           onClick={() => navigate("/patient/medical-records")}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-slate-300 hover:text-white transition-all group font-medium"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-xs text-slate-700 hover:text-slate-900 transition-all font-semibold shadow-sm"
         >
-          <FilePlus2 className="h-3.5 w-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+          <FilePlus2 className="h-3.5 w-3.5 text-lime-600" />
           <span>Upload Lab Report</span>
         </button>
       </div>
@@ -379,7 +378,7 @@ export function ChatSessionSidebar({
 
     return (
       <div className="space-y-1">
-        <h4 className="px-2 text-[10px] font-mono uppercase tracking-wider text-zinc-500 font-semibold">
+        <h4 className="px-2 text-[10px] uppercase tracking-wider text-slate-400 font-bold">
           {title}
         </h4>
         <div className="space-y-1">
@@ -398,13 +397,13 @@ export function ChatSessionSidebar({
                 }}
                 className={`group relative flex flex-col gap-1 px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
                   isSelected
-                    ? "bg-cyan-500/15 border border-cyan-500/40 text-cyan-100 shadow-[0_0_15px_rgba(6,182,212,0.12)]"
-                    : "hover:bg-white/[0.06] border border-transparent text-slate-300"
+                    ? "bg-lime-50 border border-lime-200 text-lime-950 font-semibold shadow-sm"
+                    : "hover:bg-slate-50 border border-transparent text-slate-700"
                 }`}
               >
                 {/* Active Indicator Left Glow Strip */}
                 {isSelected && (
-                  <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-cyan-400 shadow-[0_0_8px_#22d3ee]" />
+                  <div className="absolute left-0 top-2 bottom-2 w-1 rounded-r bg-lime-500" />
                 )}
 
                 {/* Main Session Title Line */}
@@ -412,7 +411,7 @@ export function ChatSessionSidebar({
                   <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
                     <FileText
                       className={`h-3.5 w-3.5 shrink-0 ${
-                        isSelected ? "text-cyan-400" : "text-zinc-400 group-hover:text-cyan-400"
+                        isSelected ? "text-lime-700" : "text-slate-400 group-hover:text-lime-600"
                       }`}
                     />
 
@@ -425,10 +424,10 @@ export function ChatSessionSidebar({
                         onKeyDown={(e) => handleKeyDownRename(e, item.uploadId)}
                         autoFocus
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-[#141620] border border-cyan-500 text-xs text-white px-1.5 py-0.5 rounded outline-none w-full"
+                        className="bg-white border border-lime-500 text-xs text-slate-900 px-1.5 py-0.5 rounded outline-none w-full"
                       />
                     ) : (
-                      <span className="text-xs font-medium truncate">{item.displayName}</span>
+                      <span className="text-xs font-semibold truncate">{item.displayName}</span>
                     )}
                   </div>
 
@@ -439,7 +438,7 @@ export function ChatSessionSidebar({
                         type="button"
                         onClick={(e) => handleStartRename(item, e)}
                         title="Rename conversation"
-                        className="p-1 hover:text-cyan-300 rounded hover:bg-white/10 text-zinc-400"
+                        className="p-1 hover:text-slate-900 rounded hover:bg-slate-100 text-slate-400"
                       >
                         <Edit2 className="h-3 w-3" />
                       </button>
@@ -450,7 +449,7 @@ export function ChatSessionSidebar({
                           onClearSessionHistory(item.uploadId);
                         }}
                         title="Delete conversation"
-                        className="p-1 hover:text-rose-400 rounded hover:bg-rose-500/15 text-zinc-400 transition-colors"
+                        className="p-1 hover:text-rose-600 rounded hover:bg-rose-50 text-slate-400 transition-colors"
                       >
                         <Trash2 className="h-3 w-3" />
                       </button>
@@ -458,27 +457,26 @@ export function ChatSessionSidebar({
                   )}
                 </div>
 
-
                 {/* Subtitle Line (Latest Query / Info) */}
                 {item.latestQueryText ? (
-                  <p className="text-[11px] text-zinc-400 line-clamp-1 pl-5">
+                  <p className="text-[11px] text-slate-500 line-clamp-1 pl-5">
                     {item.latestQueryText}
                   </p>
                 ) : (
-                  <p className="text-[10px] text-zinc-500 italic pl-5">No queries yet</p>
+                  <p className="text-[10px] text-slate-400 italic pl-5">No queries yet</p>
                 )}
 
                 {/* Badges / Metrics Row */}
                 <div className="flex items-center gap-2 pl-5 pt-0.5 text-[10px]">
                   {item.biomarkerCount > 0 && (
-                    <span className="inline-flex items-center gap-1 font-mono text-cyan-400/90">
+                    <span className="inline-flex items-center gap-1 font-semibold text-lime-700">
                       <Zap className="h-2.5 w-2.5" />
                       {item.biomarkerCount} bm
                     </span>
                   )}
 
                   {item.queriesCount > 0 && (
-                    <span className="font-mono text-zinc-500">
+                    <span className="text-slate-400">
                       {item.queriesCount} {item.queriesCount === 1 ? "query" : "queries"}
                     </span>
                   )}
@@ -486,7 +484,7 @@ export function ChatSessionSidebar({
                   {item.hasVerified && (
                     <span
                       title="Doctor verified clinical guidance included"
-                      className="inline-flex items-center gap-0.5 text-emerald-400 font-medium ml-auto"
+                      className="inline-flex items-center gap-0.5 text-emerald-700 font-semibold ml-auto"
                     >
                       <CheckCircle2 className="h-3 w-3" />
                       <span>Verified</span>
@@ -496,7 +494,7 @@ export function ChatSessionSidebar({
                   {!item.hasVerified && item.hasPending && (
                     <span
                       title="Awaiting physician verification"
-                      className="inline-flex items-center gap-0.5 text-amber-400/90 font-mono ml-auto"
+                      className="inline-flex items-center gap-0.5 text-amber-700 font-semibold ml-auto"
                     >
                       <Clock className="h-2.5 w-2.5 animate-pulse" />
                       <span>Pending</span>
@@ -515,7 +513,7 @@ export function ChatSessionSidebar({
     <>
       {/* Desktop Collapsible Container */}
       <aside
-        className={`hidden lg:flex flex-col h-full shrink-0 border-r border-white/[0.06] transition-[width,opacity] duration-300 ease-in-out overflow-hidden z-20 ${
+        className={`hidden lg:flex flex-col h-full shrink-0 border-r border-slate-200/80 transition-[width,opacity] duration-300 ease-in-out overflow-hidden z-20 ${
           isOpen ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none border-r-0"
         }`}
       >
@@ -525,9 +523,9 @@ export function ChatSessionSidebar({
       {/* Mobile / Tablet Drawer (Slide-over with Backdrop) */}
       {isMobileDrawerOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
-          {/* Frosted Dark Backdrop */}
+          {/* Frosted Backdrop */}
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
             onClick={() => setIsMobileDrawerOpen(false)}
           />
 

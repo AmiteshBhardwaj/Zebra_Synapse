@@ -162,15 +162,15 @@ export default function MedicalRecordsInsights() {
       {/* 1. INITIAL EMPTY STATE SCREEN UNTIL A MEDICAL REPORT IS SELECTED */}
       {selectedReportId === "none" || !availableReports.some((r) => r.id === selectedReportId) ? (
         <div className="flex min-h-[70vh] flex-col items-center justify-center text-center px-4 py-12">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_20px_50px_rgba(255,122,51,0.22)]">
-            <FileText className="h-9 w-9 text-[#ff9b61]" />
+          <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-[24px] bg-lime-500/15 text-lime-600 shadow-sm">
+            <FileText className="h-9 w-9 stroke-[2.2]" />
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 mb-2 font-['Manrope']">
             {availableReports.length > 0 ? "Please choose a medical report" : "No medical reports uploaded yet"}
           </h1>
 
-          <p className="max-w-md text-sm text-[#92a8c7] leading-relaxed mb-8">
+          <p className="max-w-md text-xs sm:text-sm text-slate-500 leading-relaxed mb-6">
             {availableReports.length > 0
               ? "Select a medical report from your records below to view extracted biomarker panels, trend movement, and record history."
               : "You do not have any uploaded medical reports. Upload a lab report on the Home page to view extracted biomarker panels and trend movement."}
@@ -179,18 +179,18 @@ export default function MedicalRecordsInsights() {
           {availableReports.length > 0 ? (
             <div className="w-full max-w-sm sm:max-w-md">
               <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-5 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+                <SelectTrigger className="h-11 w-full rounded-2xl border-slate-200 bg-white px-4 text-xs sm:text-sm font-medium text-slate-800 shadow-sm hover:border-lime-400 focus:ring-2 focus:ring-lime-500/20 transition-all cursor-pointer">
                   <SelectValue placeholder="Select a medical report..." />
                 </SelectTrigger>
-                <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-2xl p-1.5">
-                  <SelectItem value="none" className="py-3 text-white/40 cursor-pointer">
+                <SelectContent className="border-slate-100 bg-white text-slate-800 shadow-xl rounded-2xl p-1.5">
+                  <SelectItem value="none" className="py-2.5 text-slate-400 cursor-pointer text-xs sm:text-sm">
                     -- Select a Medical Report --
                   </SelectItem>
                   {availableReports.map((report) => (
                     <SelectItem
                       key={report.id}
                       value={report.id}
-                      className="py-3 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl"
+                      className="py-2.5 px-3 text-slate-800 font-medium focus:bg-lime-50 focus:text-lime-900 cursor-pointer rounded-xl text-xs sm:text-sm"
                     >
                       📄 {report.name} ({report.date})
                     </SelectItem>
@@ -204,14 +204,14 @@ export default function MedicalRecordsInsights() {
         /* 2. FULL MEDICAL RECORDS WORKSPACE WHEN A REPORT IS SELECTED */
         <>
           {/* Top Report Selector Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm mb-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff9c61]/15 border border-[#ff9c61]/30">
-                <FileText className="h-4.5 w-4.5 text-[#ff9c61]" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700">
+                <FileText className="h-4.5 w-4.5" />
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-white/45">Active Medical Record</p>
-                <p className="text-xs font-semibold text-white">
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400">Active Medical Record</p>
+                <p className="text-xs font-bold text-slate-900">
                   {availableReports.find((r) => r.id === selectedReportId)?.name ?? "Selected Record"}
                 </p>
               </div>
@@ -220,15 +220,15 @@ export default function MedicalRecordsInsights() {
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="w-full sm:w-auto min-w-[240px]">
                 <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                  <SelectTrigger className="h-10 w-full rounded-xl border-white/14 bg-[#0d1829]/90 text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
+                  <SelectTrigger className="h-9 w-full rounded-xl border-slate-200 bg-slate-50/80 text-xs font-medium text-slate-800 hover:border-lime-400 transition-all cursor-pointer">
                     <SelectValue placeholder="Change medical report..." />
                   </SelectTrigger>
-                  <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-xl p-1">
-                    <SelectItem value="none" className="py-2 text-white/40 cursor-pointer">
+                  <SelectContent className="border-slate-100 bg-white text-slate-800 shadow-xl rounded-xl p-1">
+                    <SelectItem value="none" className="py-2 text-slate-400 cursor-pointer text-xs">
                       -- Clear Selection --
                     </SelectItem>
                     {availableReports.map((report) => (
-                      <SelectItem key={report.id} value={report.id} className="py-2 text-white text-xs cursor-pointer">
+                      <SelectItem key={report.id} value={report.id} className="py-2 text-slate-800 text-xs cursor-pointer focus:bg-lime-50 focus:text-lime-900 rounded-lg">
                         📄 {report.name} ({report.date})
                       </SelectItem>
                     ))}
@@ -239,7 +239,7 @@ export default function MedicalRecordsInsights() {
               {selectedReportId !== "none" && (
                 <Button
                   onClick={() => navigate(`/patient/ai-chat?reportId=${selectedReportId}`)}
-                  className="h-10 px-4 rounded-xl bg-gradient-to-r from-cyan-400 to-sky-500 hover:from-cyan-300 hover:to-sky-400 text-slate-950 font-semibold text-xs gap-2 shadow-[0_0_15px_rgba(56,189,248,0.3)] transition-all shrink-0"
+                  className="h-9 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-2 shadow-sm transition-all shrink-0"
                 >
                   <Bot className="h-4 w-4" />
                   Ask AI About Report
@@ -248,26 +248,24 @@ export default function MedicalRecordsInsights() {
             </div>
           </div>
 
-
-
           <Card className={portalPanelClass}>
             <CardHeader>
-              <CardTitle className="text-white">Uploaded lab reports</CardTitle>
-              <CardDescription className="text-[#A1A1AA]">
+              <CardTitle className="text-slate-900 text-base font-bold">Uploaded lab reports</CardTitle>
+              <CardDescription className="text-slate-500 text-xs">
                 These files are stored for your account and feed the downstream record views.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-3 lg:grid-cols-2">
                 {uploads.map((test) => (
-                  <div key={test.id} className="group relative rounded-[1.2rem] border border-white/8 bg-[#111111]/80 p-4">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF6A00] to-[#FF8C42] shadow-[0_12px_28px_rgba(255,106,0,0.25)]">
-                        <FileText className="h-5 w-5 text-white" />
+                  <div key={test.id} className="group relative rounded-2xl border border-slate-100 bg-slate-50/70 p-4 hover:border-slate-200 transition-all">
+                    <div className="flex items-start gap-3.5">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700 shadow-sm">
+                        <FileText className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-white">{test.original_filename}</p>
-                        <p className="mt-1 text-sm text-[#A1A1AA]">
+                        <p className="truncate font-semibold text-xs sm:text-sm text-slate-900">{test.original_filename}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">
                           Uploaded {formatUploadedAt(test.created_at)}
                         </p>
                       </div>
@@ -275,7 +273,7 @@ export default function MedicalRecordsInsights() {
                         type="button"
                         title="Delete report"
                         onClick={() => setDeleteTargetId(test.id)}
-                        className="shrink-0 inline-flex items-center justify-center rounded-lg p-2 text-rose-400/70 transition-all hover:bg-rose-500/20 hover:text-rose-400"
+                        className="shrink-0 inline-flex items-center justify-center rounded-lg p-2 text-rose-400 transition-all hover:bg-rose-50 hover:text-rose-600"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -317,57 +315,44 @@ export default function MedicalRecordsInsights() {
             />
           ) : (
             /* No panel data yet — show a contextual status instead of a blank page */
-            <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-white/8 bg-white/[0.02] py-16 px-6 text-center">
+            <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-slate-100 bg-white py-14 px-6 text-center shadow-sm">
               {selectedUpload && isPendingUploadStatus(selectedUpload.analysis_status) ? (() => {
                 const progress = getUploadProgressMeta(selectedUpload.analysis_status);
                 return (
                   <>
                     {/* Percentage badge */}
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-400/10 shadow-[0_0_30px_rgba(34,211,238,0.2)]">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full border border-lime-200 bg-lime-50 shadow-sm">
                       {analyzingManual ? (
-                        <Loader2 className="h-7 w-7 text-cyan-300 animate-spin" />
+                        <Loader2 className="h-6 w-6 text-lime-600 animate-spin" />
                       ) : (
-                        <span className="text-xl font-bold text-cyan-300 tabular-nums">{progress.percent}%</span>
+                        <span className="text-lg font-bold text-lime-700 tabular-nums">{progress.percent}%</span>
                       )}
                     </div>
 
                     {/* Title + stage label */}
-                    <p className="text-base font-semibold text-white">
+                    <p className="text-base font-bold text-slate-900">
                       {analyzingManual ? "Extracting biomarker values…" : "Analysing your report…"}
                     </p>
-                    <p className="text-xs font-medium tracking-wide text-cyan-400/80 uppercase">
+                    <p className="text-xs font-semibold tracking-wider text-lime-700 uppercase">
                       {analyzingManual ? "Client AI Extraction Active" : progress.stageLabel}
                     </p>
 
                     {/* Progress bar */}
                     <div className="w-full max-w-md">
-                      <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06] border border-white/[0.06]">
+                      <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200">
                         {/* Filled track */}
                         <div
-                          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-500 via-teal-400 to-cyan-400 shadow-[0_0_14px_rgba(34,211,238,0.45)]"
+                          className="absolute inset-y-0 left-0 rounded-full bg-lime-500"
                           style={{
                             width: `${analyzingManual ? 85 : progress.percent}%`,
                             transition: "width 700ms cubic-bezier(0.4,0,0.2,1)",
                           }}
-                        >
-                          {/* Shimmer sweep */}
-                          <div
-                            className="absolute inset-0 rounded-full"
-                            style={{
-                              background:
-                                "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%)",
-                              backgroundSize: "200% 100%",
-                              animation: "shimmerSweep 2s ease-in-out infinite",
-                            }}
-                          />
-                          {/* Leading-edge glow dot */}
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2 h-3.5 w-3.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.7)] animate-pulse" />
-                        </div>
+                        />
                       </div>
                     </div>
 
                     {/* Summary text */}
-                    <p className="max-w-sm text-sm text-[#92a8c7] mt-1">
+                    <p className="max-w-sm text-xs text-slate-500 mt-1">
                       {analyzingManual
                         ? "Parsing lab document lines and matching against clinical biomarker catalog..."
                         : progress.summary}
@@ -378,7 +363,7 @@ export default function MedicalRecordsInsights() {
                       <Button
                         onClick={() => void handleTriggerAnalysis(selectedUpload.id)}
                         disabled={analyzingManual}
-                        className="h-10 px-5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-semibold text-xs gap-2 shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-all cursor-pointer"
+                        className="h-10 px-5 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-2 shadow-sm transition-all cursor-pointer"
                       >
                         {analyzingManual ? (
                           <>
@@ -393,22 +378,14 @@ export default function MedicalRecordsInsights() {
                         )}
                       </Button>
                     </div>
-
-                    {/* Inline keyframes for shimmer */}
-                    <style>{`
-                      @keyframes shimmerSweep {
-                        0%   { background-position: 200% 0; }
-                        100% { background-position: -200% 0; }
-                      }
-                    `}</style>
                   </>
                 );
               })()
               : selectedUpload?.analysis_status === "failed" ? (
                 <>
-                  <AlertCircle className="h-10 w-10 text-rose-400" />
-                  <p className="text-base font-semibold text-white">Extraction failed or incomplete</p>
-                  <p className="max-w-sm text-sm text-[#92a8c7]">
+                  <AlertCircle className="h-10 w-10 text-rose-500" />
+                  <p className="text-base font-bold text-slate-900">Extraction failed or incomplete</p>
+                  <p className="max-w-sm text-xs text-slate-500">
                     {selectedUpload.last_error ||
                       "We couldn't automatically extract biomarker data from this report. You can retry analysis or re-upload a cleaner PDF."}
                   </p>
@@ -416,7 +393,7 @@ export default function MedicalRecordsInsights() {
                     <Button
                       onClick={() => void handleTriggerAnalysis(selectedUpload.id)}
                       disabled={analyzingManual}
-                      className="h-10 px-5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-semibold text-xs gap-2 shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-all cursor-pointer"
+                      className="h-10 px-5 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-2 shadow-sm transition-all cursor-pointer"
                     >
                       {analyzingManual ? (
                         <>
@@ -433,7 +410,7 @@ export default function MedicalRecordsInsights() {
                     <Button
                       variant="outline"
                       onClick={() => setDeleteTargetId(selectedUpload.id)}
-                      className="h-10 px-4 rounded-xl border-rose-500/30 bg-rose-950/20 text-rose-300 hover:bg-rose-900/30 text-xs gap-1.5"
+                      className="h-10 px-4 rounded-xl border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs gap-1.5"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete Report
@@ -442,16 +419,16 @@ export default function MedicalRecordsInsights() {
                 </>
               ) : (
                 <>
-                  <FileText className="h-10 w-10 text-[#92a8c7]" />
-                  <p className="text-base font-semibold text-white">No biomarker data found</p>
-                  <p className="max-w-sm text-sm text-[#92a8c7]">
+                  <FileText className="h-10 w-10 text-slate-400" />
+                  <p className="text-base font-bold text-slate-900">No biomarker data found</p>
+                  <p className="max-w-sm text-xs text-slate-500">
                     No structured lab panel was linked to this report yet.
                   </p>
                   {selectedUpload && (
                     <Button
                       onClick={() => void handleTriggerAnalysis(selectedUpload.id)}
                       disabled={analyzingManual}
-                      className="mt-2 h-10 px-5 rounded-xl bg-gradient-to-r from-cyan-500 to-teal-500 hover:from-cyan-400 hover:to-teal-400 text-slate-950 font-semibold text-xs gap-2 shadow-[0_0_20px_rgba(34,211,238,0.3)] transition-all cursor-pointer"
+                      className="mt-2 h-10 px-5 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-2 shadow-sm transition-all cursor-pointer"
                     >
                       <Sparkles className="h-4 w-4" />
                       Run Analysis Now
@@ -487,8 +464,8 @@ export default function MedicalRecordsInsights() {
 
               <Card className={portalPanelClass}>
                 <CardHeader>
-                  <CardTitle className="text-white">Structured biomarker values</CardTitle>
-                  <CardDescription className="text-[#A1A1AA]">
+                  <CardTitle className="text-slate-900 text-base font-bold">Structured biomarker values</CardTitle>
+                  <CardDescription className="text-slate-500 text-xs">
                     Full breakdown of lab values extracted for {activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.
                   </CardDescription>
                 </CardHeader>
@@ -496,7 +473,7 @@ export default function MedicalRecordsInsights() {
                   <div className={portalTableWrapClass}>
                     <Table className={portalTableClass}>
                       <TableHeader>
-                        <TableRow className="border-white/10 hover:bg-transparent">
+                        <TableRow className="border-slate-100 hover:bg-transparent">
                           <TableHead className={portalTableHeadClass}>Biomarker</TableHead>
                           <TableHead className={portalTableHeadClass}>Value</TableHead>
                           <TableHead className={portalTableHeadClass}>Reference Range</TableHead>
@@ -506,7 +483,7 @@ export default function MedicalRecordsInsights() {
                       <TableBody>
                         {metrics.map((metric, idx) => (
                           <TableRow key={metric.key} className={portalTableRowClass(idx)}>
-                            <TableCell className={`${portalTableCellClass} font-medium text-white`}>
+                            <TableCell className={`${portalTableCellClass} font-semibold text-slate-900`}>
                               {metric.label}
                             </TableCell>
                             <TableCell className={portalTableCellClass}>
@@ -532,12 +509,12 @@ export default function MedicalRecordsInsights() {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
-        <AlertDialogContent className="border-rose-500/25 bg-[#0d131f] text-white shadow-2xl">
+        <AlertDialogContent className="border-slate-100 bg-white text-slate-800 shadow-2xl rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white">Delete lab report?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#92a8c7]">
+            <AlertDialogTitle className="text-slate-900 font-bold">Delete lab report?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 text-xs">
               This will permanently remove the file, all extracted biomarker panels, and any chat history linked to this report.
-              <span className="mt-2 block font-semibold text-rose-300">
+              <span className="mt-2 block font-semibold text-rose-600">
                 {uploads.find((u) => u.id === deleteTargetId)?.original_filename ?? ""}
               </span>
               This action cannot be undone.
@@ -545,7 +522,7 @@ export default function MedicalRecordsInsights() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel
-              className="border-white/15 bg-white/5 text-white hover:bg-white/10"
+              className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 rounded-xl text-xs"
               disabled={deleting}
             >
               Cancel
@@ -553,7 +530,7 @@ export default function MedicalRecordsInsights() {
             <AlertDialogAction
               onClick={() => void handleDeleteConfirm()}
               disabled={deleting}
-              className="bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500"
+              className="bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 rounded-xl text-xs font-semibold"
             >
               {deleting ? "Deleting..." : "Delete permanently"}
             </AlertDialogAction>

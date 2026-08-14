@@ -306,26 +306,26 @@ export default function Appointments() {
   return (
     <PatientPortalPage>
       <Dialog open={scheduleOpen} onOpenChange={handleScheduleOpenChange}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
           <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
-              <Calendar className="h-6 w-6 text-[#ff9c61]" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+              <Calendar className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Appointments</h1>
-                <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Appointments</h1>
+                <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider">
                   Care Coordination
                 </span>
               </div>
-              <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
                 Manage upcoming visits and review completed medical appointments.
               </p>
             </div>
           </div>
 
           <DialogTrigger asChild>
-            <Button className={`h-11 px-5 rounded-xl ${portalPrimaryButtonClass}`}>
+            <Button className={`h-11 px-5 rounded-2xl shadow-sm ${portalPrimaryButtonClass}`}>
               <Plus className="mr-2 h-4 w-4" />
               Schedule Appointment
             </Button>
@@ -334,14 +334,14 @@ export default function Appointments() {
 
         <DialogContent className={portalDialogClass}>
           <DialogHeader>
-            <DialogTitle className="text-white">Schedule New Appointment</DialogTitle>
-            <DialogDescription className="text-[#A1A1AA]">
+            <DialogTitle className="text-slate-900 font-bold">Schedule New Appointment</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
               Choose a doctor and preferred date & time for your clinic visit.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="doctor" className="text-sm text-white">
+              <Label htmlFor="doctor" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 Select Doctor
               </Label>
               <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
@@ -358,7 +358,7 @@ export default function Appointments() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="date" className="text-sm text-white">
+              <Label htmlFor="date" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 Date
               </Label>
               <Input
@@ -370,7 +370,7 @@ export default function Appointments() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="time" className="text-sm text-white">
+              <Label htmlFor="time" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 Time
               </Label>
               <Input
@@ -382,7 +382,7 @@ export default function Appointments() {
               />
             </div>
             <Button
-              className={`w-full active:scale-[0.98] ${portalPrimaryButtonClass}`}
+              className={`w-full rounded-2xl h-11 active:scale-[0.98] ${portalPrimaryButtonClass}`}
               onClick={handleScheduleAppointment}
               disabled={!isScheduleReady || isSavingSchedule}
             >
@@ -395,14 +395,14 @@ export default function Appointments() {
       <Dialog open={rescheduleOpen} onOpenChange={handleRescheduleOpenChange}>
         <DialogContent className={portalDialogClass}>
           <DialogHeader>
-            <DialogTitle className="text-white">Reschedule Appointment</DialogTitle>
-            <DialogDescription className="text-[#A1A1AA]">
+            <DialogTitle className="text-slate-900 font-bold">Reschedule Appointment</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
               Choose a new date and time for {selectedAppointment?.doctor ?? "this appointment"}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="reschedule-date" className="text-sm text-white">
+              <Label htmlFor="reschedule-date" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 New Date
               </Label>
               <Input
@@ -414,7 +414,7 @@ export default function Appointments() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="reschedule-time" className="text-sm text-white">
+              <Label htmlFor="reschedule-time" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 New Time
               </Label>
               <Input
@@ -426,7 +426,7 @@ export default function Appointments() {
               />
             </div>
             <Button
-              className={`w-full active:scale-[0.98] ${portalPrimaryButtonClass}`}
+              className={`w-full rounded-2xl h-11 active:scale-[0.98] ${portalPrimaryButtonClass}`}
               onClick={handleConfirmReschedule}
               disabled={!isRescheduleReady || isSavingReschedule}
             >
@@ -439,34 +439,34 @@ export default function Appointments() {
       <Dialog open={notesOpen} onOpenChange={setNotesOpen}>
         <DialogContent className={portalDialogClass}>
           <DialogHeader>
-            <DialogTitle className="text-white">Appointment Notes</DialogTitle>
-            <DialogDescription className="text-[#A1A1AA]">
+            <DialogTitle className="text-slate-900 font-bold">Appointment Notes</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
               Visit summary and follow-up details from your completed appointment.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="rounded-[1.1rem] border border-white/8 bg-white/[0.04] p-4">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Doctor</p>
-              <p className="mt-2 text-sm font-medium text-white">{selectedAppointment?.doctor ?? "—"}</p>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+              <p className="text-[11px] uppercase tracking-wider font-bold text-slate-400">Doctor</p>
+              <p className="mt-1 text-sm font-bold text-slate-900">{selectedAppointment?.doctor ?? "—"}</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[1.1rem] border border-white/8 bg-white/[0.04] p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Appointment Date</p>
-                <p className="mt-2 text-sm font-medium text-white">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <p className="text-[11px] uppercase tracking-wider font-bold text-slate-400">Appointment Date</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">
                   {selectedAppointment ? formatDisplayDate(selectedAppointment.date) : "—"}
                 </p>
               </div>
-              <div className="rounded-[1.1rem] border border-white/8 bg-white/[0.04] p-4">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-white/42">Time</p>
-                <p className="mt-2 text-sm font-medium text-white">{selectedAppointment?.time ?? "—"}</p>
+              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                <p className="text-[11px] uppercase tracking-wider font-bold text-slate-400">Time</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">{selectedAppointment?.time ?? "—"}</p>
               </div>
             </div>
-            <div className="rounded-[1.1rem] border border-white/8 bg-[#111111]/80 p-4">
-              <div className="mb-3 flex items-center gap-2 text-white">
-                <FileText className="h-4 w-4 text-[#ff9c61]" />
-                <p className="text-sm font-medium">Notes</p>
+            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+              <div className="mb-2 flex items-center gap-2 text-slate-900">
+                <FileText className="h-4 w-4 text-lime-600" />
+                <p className="text-sm font-bold">Clinical Notes</p>
               </div>
-              <p className="text-sm leading-7 text-[#D4D4D8]">
+              <p className="text-xs leading-relaxed text-slate-600">
                 {selectedAppointment?.notes ?? "Clinical notes will appear here after each completed visit."}
               </p>
             </div>
@@ -477,14 +477,14 @@ export default function Appointments() {
       <Dialog open={cancelOpen} onOpenChange={handleCancelOpenChange}>
         <DialogContent className={portalDialogClass}>
           <DialogHeader>
-            <div className="flex items-center gap-2 text-rose-400 text-xs font-mono font-semibold mb-1">
-              <AlertTriangle className="h-4 w-4 text-rose-400" />
-              <span>CANCEL APPOINTMENT</span>
+            <div className="flex items-center gap-2 text-rose-600 text-xs font-bold uppercase tracking-wider mb-1">
+              <AlertTriangle className="h-4 w-4 text-rose-500" />
+              <span>Cancel Appointment</span>
             </div>
-            <DialogTitle className="text-white text-xl font-bold">
+            <DialogTitle className="text-slate-900 text-lg font-bold">
               Cancel Visit with {appointmentToCancel?.doctor}?
             </DialogTitle>
-            <DialogDescription className="text-slate-400 text-xs mt-1">
+            <DialogDescription className="text-slate-500 text-xs mt-1">
               Are you sure you want to cancel your scheduled appointment on{" "}
               {appointmentToCancel ? formatDisplayDate(appointmentToCancel.date) : ""} at {appointmentToCancel?.time}?
             </DialogDescription>
@@ -492,7 +492,7 @@ export default function Appointments() {
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="cancel-reason" className="text-xs font-medium text-slate-200">
+              <Label htmlFor="cancel-reason" className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                 Reason for cancellation (optional)
               </Label>
               <Select value={cancelReason} onValueChange={setCancelReason}>
@@ -500,15 +500,16 @@ export default function Appointments() {
                   <SelectValue placeholder="Select a reason" />
                 </SelectTrigger>
                 <SelectContent className={portalSelectContentClass}>
-                  <SelectItem value="Schedule Conflict" className={portalSelectItemClass}>Schedule Conflict</SelectItem>
-                  <SelectItem value="Feeling Better / Resolved" className={portalSelectItemClass}>Feeling Better / Resolved</SelectItem>
-                  <SelectItem value="Need to Reschedule Later" className={portalSelectItemClass}>Need to Reschedule Later</SelectItem>
-                  <SelectItem value="Other" className={portalSelectItemClass}>Other</SelectItem>
+                  <SelectItem value="reschedule_needed" className={portalSelectItemClass}>Need to reschedule for later</SelectItem>
+                  <SelectItem value="symptoms_resolved" className={portalSelectItemClass}>Symptoms resolved</SelectItem>
+                  <SelectItem value="scheduling_conflict" className={portalSelectItemClass}>Scheduling conflict</SelectItem>
+                  <SelectItem value="transportation" className={portalSelectItemClass}>Transportation issue</SelectItem>
+                  <SelectItem value="other" className={portalSelectItemClass}>Other reason</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex justify-end gap-3 pt-3">
               <Button
                 variant="outline"
                 className={portalSecondaryButtonClass}
@@ -518,7 +519,7 @@ export default function Appointments() {
                 Keep Appointment
               </Button>
               <Button
-                className="bg-gradient-to-r from-rose-600 via-red-600 to-rose-700 text-white font-bold text-xs h-10 px-5 rounded-xl shadow-[0_0_20px_rgba(244,63,94,0.4)] hover:shadow-[0_0_30px_rgba(244,63,94,0.65)] hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-50"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-10 px-5 rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50"
                 onClick={handleConfirmCancel}
                 disabled={isCancelling}
               >
@@ -534,17 +535,17 @@ export default function Appointments() {
         <button
           type="button"
           onClick={() => setActiveTab("upcoming")}
-          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === "upcoming"
-              ? "bg-gradient-to-r from-[#ff7a33] to-[#ff9b61] text-white shadow-[0_8px_20px_rgba(255,122,51,0.3)]"
-              : "border border-white/10 bg-white/[0.04] text-[#92a8c7] hover:bg-white/10 hover:text-white"
+              ? "bg-lime-500 text-slate-950 shadow-sm"
+              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
           }`}
         >
           <Calendar className="h-4 w-4" />
           <span>Upcoming Visits</span>
           <span
-            className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-              activeTab === "upcoming" ? "bg-white/20 text-white" : "bg-white/10 text-white/70"
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === "upcoming" ? "bg-slate-950/15 text-slate-950" : "bg-slate-100 text-slate-600"
             }`}
           >
             {upcomingAppointments.length}
@@ -554,17 +555,17 @@ export default function Appointments() {
         <button
           type="button"
           onClick={() => setActiveTab("past")}
-          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
+          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
             activeTab === "past"
-              ? "bg-gradient-to-r from-[#ff7a33] to-[#ff9b61] text-white shadow-[0_8px_20px_rgba(255,122,51,0.3)]"
-              : "border border-white/10 bg-white/[0.04] text-[#92a8c7] hover:bg-white/10 hover:text-white"
+              ? "bg-lime-500 text-slate-950 shadow-sm"
+              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
           }`}
         >
           <Clock className="h-4 w-4" />
           <span>Past Visits</span>
           <span
-            className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-              activeTab === "past" ? "bg-white/20 text-white" : "bg-white/10 text-white/70"
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              activeTab === "past" ? "bg-slate-950/15 text-slate-950" : "bg-slate-100 text-slate-600"
             }`}
           >
             {pastAppointments.length}
@@ -580,33 +581,33 @@ export default function Appointments() {
               upcomingAppointments.map((appointment) => (
                 <article
                   key={appointment.id}
-                  className="rounded-[1.5rem] border border-white/8 bg-[rgba(255,255,255,0.03)] p-6 text-white shadow-[0_22px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#ff6a00]/30 hover:shadow-[0_28px_80px_rgba(255,106,0,0.12)]"
+                  className="rounded-[24px] border border-slate-100 bg-white p-6 text-slate-800 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6C5BD4] to-[#3b82f6] shadow-[0_12px_32px_rgba(108,91,212,0.28)]">
-                        <Stethoscope className="h-6 w-6 text-white" />
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+                        <Stethoscope className="h-6 w-6" />
                       </div>
                       <div>
                         <div className="flex flex-wrap items-center gap-3">
-                          <h3 className="text-xl font-semibold text-white">{appointment.doctor}</h3>
+                          <h3 className="text-lg sm:text-xl font-bold text-slate-900 font-['Manrope']">{appointment.doctor}</h3>
                           <StatusPill status={appointment.status} />
                         </div>
-                        <p className="mt-1 text-sm text-[#A1A1AA]">{appointment.specialty}</p>
+                        <p className="mt-0.5 text-xs text-slate-500 font-medium">{appointment.specialty}</p>
                       </div>
                     </div>
                     <div className={portalMutedPanelClass}>
-                      <div className="grid gap-3 px-4 py-3 text-sm text-[#E5E7EB] sm:grid-cols-3">
+                      <div className="grid gap-3 px-4 py-3 text-xs font-semibold text-slate-700 sm:grid-cols-3">
                         <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-[#ff9c61]" />
+                          <Calendar className="h-4 w-4 text-lime-600" />
                           <span>{formatDisplayDate(appointment.date)}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-[#ff9c61]" />
+                          <Clock className="h-4 w-4 text-lime-600" />
                           <span>{appointment.time}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-[#8f83ff]" />
+                          <MapPin className="h-4 w-4 text-sky-600" />
                           <span>{appointment.location || "Clinic Center"}</span>
                         </div>
                       </div>
@@ -615,24 +616,24 @@ export default function Appointments() {
                   <div className="mt-5 flex flex-wrap items-center gap-3">
                     <Button
                       variant="outline"
-                      className={`active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                      className={`active:scale-[0.98] rounded-2xl text-xs ${portalSecondaryButtonClass}`}
                       onClick={() => handleReschedule(appointment)}
                     >
                       Reschedule
                     </Button>
                     <Button
                       variant="outline"
-                      className="border-rose-500/30 bg-rose-950/20 text-rose-300 hover:bg-rose-950/50 hover:border-rose-500/50 text-xs font-semibold rounded-xl h-10 px-4 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
+                      className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold rounded-2xl h-10 px-4 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
                       onClick={() => handleCancelClick(appointment)}
                     >
-                      <XCircle className="mr-1.5 h-4 w-4 text-rose-400" />
+                      <XCircle className="mr-1.5 h-4 w-4 text-rose-500" />
                       Cancel Appointment
                     </Button>
                   </div>
                 </article>
               ))
             ) : (
-              <div className={`${portalPanelClass} p-8 text-center text-sm text-[#92a8c7]`}>
+              <div className={`${portalPanelClass} p-8 text-center text-xs text-slate-400`}>
                 No upcoming visits scheduled. Click &quot;Schedule Appointment&quot; above to book your next visit.
               </div>
             )}
@@ -647,37 +648,37 @@ export default function Appointments() {
               pastAppointments.map((appointment) => (
                 <article
                   key={appointment.id}
-                  className="rounded-[1.5rem] border border-white/8 bg-[#171717]/90 p-6 text-white shadow-[0_18px_45px_rgba(0,0,0,0.3)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-white/15"
+                  className="rounded-[24px] border border-slate-100 bg-white p-6 text-slate-800 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-start gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.05]">
-                        <Stethoscope className="h-5 w-5 text-white/70" />
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 border border-slate-200 text-slate-600">
+                        <Stethoscope className="h-5 w-5" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-white">{appointment.doctor}</h3>
-                        <p className="mt-1 text-sm text-[#A1A1AA]">{appointment.specialty}</p>
+                        <h3 className="text-base font-bold text-slate-900 font-['Manrope']">{appointment.doctor}</h3>
+                        <p className="mt-0.5 text-xs text-slate-500">{appointment.specialty}</p>
                       </div>
                     </div>
                     <StatusPill status={appointment.status} />
                   </div>
-                  <div className="mt-4 grid gap-3 text-sm text-[#D4D4D8] sm:grid-cols-3">
+                  <div className="mt-4 grid gap-3 text-xs font-semibold text-slate-700 sm:grid-cols-3">
                     <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-[#ff9c61]" />
+                      <Calendar className="h-4 w-4 text-lime-600" />
                       <span>{formatDisplayDate(appointment.date)}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-[#ff9c61]" />
+                      <Clock className="h-4 w-4 text-lime-600" />
                       <span>{appointment.time}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-[#8f83ff]" />
+                      <MapPin className="h-4 w-4 text-sky-600" />
                       <span>{appointment.location || "In-Person"}</span>
                     </div>
                   </div>
                   <Button
                     variant="outline"
-                    className={`mt-5 active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                    className={`mt-5 active:scale-[0.98] rounded-2xl text-xs ${portalSecondaryButtonClass}`}
                     onClick={() => handleViewNotes(appointment)}
                   >
                     View Notes
@@ -685,7 +686,7 @@ export default function Appointments() {
                 </article>
               ))
             ) : (
-              <div className={`${portalPanelClass} p-8 text-center text-sm text-[#92a8c7]`}>
+              <div className={`${portalPanelClass} p-8 text-center text-xs text-slate-400`}>
                 No past visits on record.
               </div>
             )}
@@ -695,4 +696,3 @@ export default function Appointments() {
     </PatientPortalPage>
   );
 }
-

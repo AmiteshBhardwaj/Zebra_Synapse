@@ -412,19 +412,19 @@ export default function ProfileSettings() {
   return (
     <PatientPortalPage>
       {/* Sleek Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
-            <UserCircle2 className="h-6 w-6 text-[#ff9c61]" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+            <UserCircle2 className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Account Settings</h1>
-              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Account Settings</h1>
+              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider">
                 {profile.role}
               </span>
             </div>
-            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
               {profile.role === "patient"
                 ? "Manage your personal credentials, height, weight, and clinical connection ID."
                 : "Manage your display name, physician credentials, and portal identity preferences."}
@@ -433,8 +433,8 @@ export default function ProfileSettings() {
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-slate-700 font-medium shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             Connected
           </span>
         </div>
@@ -448,17 +448,17 @@ export default function ProfileSettings() {
           <Card className={`${portalPanelClass} p-2`}>
             <CardHeader>
               <div className="flex items-center gap-2.5">
-                <Sparkles className="h-4.5 w-4.5 text-[#ff9c61]" />
-                <CardTitle className="text-base text-white">Profile Information</CardTitle>
+                <Sparkles className="h-4.5 w-4.5 text-lime-600" />
+                <CardTitle className="text-base font-bold text-slate-900">Profile Information</CardTitle>
               </div>
-              <CardDescription className="text-xs text-[#92a8c7]">
+              <CardDescription className="text-xs text-slate-500">
                 Update your display name and credentials used across the clinical portal.
               </CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <div className="space-y-1.5">
-                <Label htmlFor="full_name" className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                <Label htmlFor="full_name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                   Display Name
                 </Label>
                 <Input
@@ -473,7 +473,7 @@ export default function ProfileSettings() {
 
               {profile.role === "doctor" ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor="license" className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                  <Label htmlFor="license" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     Medical License Number
                   </Label>
                   <Input
@@ -494,23 +494,23 @@ export default function ProfileSettings() {
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <HeartPulse className="h-4.5 w-4.5 text-cyan-400" />
-                    <CardTitle className="text-base text-white">Height & Weight Settings</CardTitle>
+                    <HeartPulse className="h-4.5 w-4.5 text-lime-600" />
+                    <CardTitle className="text-base font-bold text-slate-900">Height & Weight Settings</CardTitle>
                   </div>
-                  <CardDescription className="text-xs text-[#92a8c7] mt-1">
+                  <CardDescription className="text-xs text-slate-500 mt-0.5">
                     Keep your body metrics up to date for precise clinical risk tracking and personalized insights.
                   </CardDescription>
                 </div>
 
                 {/* Unit Switcher Button Group */}
-                <div className="flex items-center gap-1 bg-[#090e17] p-1 rounded-xl border border-white/10 shrink-0 self-start sm:self-auto">
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0 self-start sm:self-auto">
                   <button
                     type="button"
                     onClick={() => setUnitSystem("metric")}
-                    className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                       unitSystem === "metric"
-                        ? "bg-[#ff8a3d] text-white shadow-sm font-semibold"
-                        : "text-[#92a8c7] hover:text-white"
+                        ? "bg-white text-lime-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
                     Metric (cm / kg)
@@ -518,10 +518,10 @@ export default function ProfileSettings() {
                   <button
                     type="button"
                     onClick={() => setUnitSystem("imperial")}
-                    className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
+                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
                       unitSystem === "imperial"
-                        ? "bg-[#ff8a3d] text-white shadow-sm font-semibold"
-                        : "text-[#92a8c7] hover:text-white"
+                        ? "bg-white text-lime-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
                     Imperial (ft-in / lbs)
@@ -533,13 +533,13 @@ export default function ProfileSettings() {
                 {/* Inputs Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Height Field */}
-                  <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3.5">
+                  <div className="space-y-1.5 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
-                        <Ruler className="h-3.5 w-3.5 text-cyan-400" />
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <Ruler className="h-3.5 w-3.5 text-sky-600" />
                         Height
                       </Label>
-                      <span className="text-[11px] text-[#92a8c7]">
+                      <span className="text-[11px] text-slate-400">
                         {unitSystem === "metric" ? "Centimeters" : "Feet & Inches"}
                       </span>
                     </div>
@@ -557,7 +557,7 @@ export default function ProfileSettings() {
                           placeholder="e.g. 175"
                           className={`${portalInputClass} pr-12`}
                         />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-[#92a8c7]">
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
                           cm
                         </span>
                       </div>
@@ -574,7 +574,7 @@ export default function ProfileSettings() {
                             placeholder="5"
                             className={`${portalInputClass} pr-8`}
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-[#92a8c7]">
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
                             ft
                           </span>
                         </div>
@@ -590,7 +590,7 @@ export default function ProfileSettings() {
                             placeholder="9"
                             className={`${portalInputClass} pr-8`}
                           />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-[#92a8c7]">
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
                             in
                           </span>
                         </div>
@@ -599,13 +599,13 @@ export default function ProfileSettings() {
                   </div>
 
                   {/* Weight Field */}
-                  <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-3.5">
+                  <div className="space-y-1.5 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
-                        <Scale className="h-3.5 w-3.5 text-emerald-400" />
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                        <Scale className="h-3.5 w-3.5 text-emerald-600" />
                         Weight
                       </Label>
-                      <span className="text-[11px] text-[#92a8c7]">
+                      <span className="text-[11px] text-slate-400">
                         {unitSystem === "metric" ? "Kilograms" : "Pounds"}
                       </span>
                     </div>
@@ -623,7 +623,7 @@ export default function ProfileSettings() {
                           placeholder="e.g. 70"
                           className={`${portalInputClass} pr-12`}
                         />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-[#92a8c7]">
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
                           kg
                         </span>
                       </div>
@@ -640,7 +640,7 @@ export default function ProfileSettings() {
                           placeholder="e.g. 154"
                           className={`${portalInputClass} pr-12`}
                         />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-[#92a8c7]">
+                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
                           lbs
                         </span>
                       </div>
@@ -649,15 +649,15 @@ export default function ProfileSettings() {
                 </div>
 
                 {/* Real-time Calculated BMI Banner */}
-                <div className="rounded-2xl border border-white/10 bg-gradient-to-r from-white/[0.03] to-[#ff8a3d]/[0.04] p-4.5">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4.5">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-start sm:items-center gap-3.5">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-[#090e17] shadow-inner">
-                        <Activity className="h-5 w-5 text-[#ff9c61]" />
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <Activity className="h-5 w-5 text-lime-600" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-white/70">
+                          <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
                             Body Mass Index (BMI)
                           </p>
                           <span
@@ -666,7 +666,7 @@ export default function ProfileSettings() {
                             {bmiCategory.label}
                           </span>
                         </div>
-                        <p className="text-xs text-[#92a8c7] mt-0.5">
+                        <p className="text-xs text-slate-500 mt-0.5">
                           {liveBmi != null
                             ? `Calculated dynamically from your recorded height & weight.`
                             : "Enter both height and weight above to calculate your BMI."}
@@ -675,14 +675,14 @@ export default function ProfileSettings() {
                     </div>
 
                     <div className="text-left sm:text-right shrink-0">
-                      <p className="text-2xl font-bold font-mono text-white tracking-tight">
+                      <p className="text-2xl font-bold font-mono text-slate-900 tracking-tight">
                         {liveBmi != null ? liveBmi : "—"}
-                        <span className="text-xs font-normal text-[#92a8c7] ml-1">kg/m²</span>
+                        <span className="text-xs font-normal text-slate-400 ml-1">kg/m²</span>
                       </p>
                       {healthyWeightRange && (
-                        <p className="text-[11px] text-[#92a8c7] mt-0.5">
+                        <p className="text-[11px] text-slate-500 mt-0.5">
                           Healthy target:{" "}
-                          <span className="text-white/90 font-medium">
+                          <span className="text-slate-800 font-semibold">
                             {unitSystem === "metric"
                               ? healthyWeightRange.metric
                               : healthyWeightRange.imperial}
@@ -694,18 +694,18 @@ export default function ProfileSettings() {
 
                   {/* BMI Spectrum Visual Bar */}
                   {liveBmi != null && (
-                    <div className="mt-4 pt-3 border-t border-white/10 space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-mono text-white/50">
+                    <div className="mt-4 pt-3 border-t border-slate-200/80 space-y-1.5">
+                      <div className="flex justify-between text-[10px] font-mono text-slate-400">
                         <span>Underweight (&lt;18.5)</span>
                         <span>Normal (18.5–24.9)</span>
                         <span>Overweight (25–29.9)</span>
                         <span>Obese (≥30)</span>
                       </div>
-                      <div className="h-2 w-full rounded-full bg-white/10 overflow-hidden flex">
-                        <div className="h-full bg-amber-400/70" style={{ width: "25%" }} />
-                        <div className="h-full bg-emerald-400/80" style={{ width: "30%" }} />
-                        <div className="h-full bg-orange-400/80" style={{ width: "25%" }} />
-                        <div className="h-full bg-rose-400/80" style={{ width: "20%" }} />
+                      <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden flex">
+                        <div className="h-full bg-amber-400" style={{ width: "25%" }} />
+                        <div className="h-full bg-lime-500" style={{ width: "30%" }} />
+                        <div className="h-full bg-orange-400" style={{ width: "25%" }} />
+                        <div className="h-full bg-rose-500" style={{ width: "20%" }} />
                       </div>
                     </div>
                   )}
@@ -719,10 +719,10 @@ export default function ProfileSettings() {
             <Card className={`${portalPanelClass} p-2`}>
               <CardHeader>
                 <div className="flex items-center gap-2.5">
-                  <Utensils className="h-4.5 w-4.5 text-emerald-400" />
-                  <CardTitle className="text-base text-white">Dietary Preferences & Health Conditions</CardTitle>
+                  <Utensils className="h-4.5 w-4.5 text-lime-600" />
+                  <CardTitle className="text-base font-bold text-slate-900">Dietary Preferences & Health Conditions</CardTitle>
                 </div>
-                <CardDescription className="text-xs text-[#92a8c7]">
+                <CardDescription className="text-xs text-slate-500">
                   Configure your food choices, intolerances, and gastrointestinal conditions to personalize meal plans and clinical alerts.
                 </CardDescription>
               </CardHeader>
@@ -731,11 +731,11 @@ export default function ProfileSettings() {
                 {/* 1. Primary Diet Type */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-                      <Leaf className="w-3.5 h-3.5 text-emerald-400" />
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Leaf className="w-3.5 h-3.5 text-lime-600" />
                       Primary Diet Type
                     </Label>
-                    <span className="text-[11px] text-white/50 font-medium">Select 1 option</span>
+                    <span className="text-[11px] text-slate-400 font-medium">Select 1 option</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -746,19 +746,19 @@ export default function ProfileSettings() {
                           key={dt.id}
                           type="button"
                           onClick={() => setDietaryPreference(dt.id)}
-                          className={`flex flex-col text-left p-3 rounded-xl border transition-all ${
+                          className={`flex flex-col text-left p-3 rounded-2xl border transition-all ${
                             isSelected
-                              ? "border-emerald-500/60 bg-emerald-500/15 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/40"
-                              : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20"
+                              ? "border-lime-400 bg-lime-50 text-lime-950 font-semibold shadow-sm ring-1 ring-lime-400"
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-1.5">
-                            <span className={`text-xs font-semibold ${isSelected ? "text-emerald-300" : "text-white"}`}>
+                            <span className={`text-xs font-bold ${isSelected ? "text-lime-900" : "text-slate-900"}`}>
                               {dt.label}
                             </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-lime-600 shrink-0" />}
                           </div>
-                          <p className="mt-1 text-[11px] text-[#92a8c7] leading-relaxed line-clamp-2">
+                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed line-clamp-2">
                             {dt.desc}
                           </p>
                         </button>
@@ -768,13 +768,13 @@ export default function ProfileSettings() {
                 </div>
 
                 {/* 2. Food Intolerances & Allergies */}
-                <div className="space-y-3 pt-4 border-t border-white/10">
+                <div className="space-y-3 pt-4 border-t border-slate-100">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-                      <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
                       Food Allergies & Intolerances
                     </Label>
-                    <span className="text-[11px] text-white/50 font-medium">
+                    <span className="text-[11px] text-slate-400 font-medium">
                       {foodAllergies.length > 0 ? `${foodAllergies.length} selected` : "Select all that apply"}
                     </span>
                   </div>
@@ -789,13 +789,13 @@ export default function ProfileSettings() {
                           onClick={() => toggleAllergy(allergy.id)}
                           className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
                             isSelected
-                              ? "border-amber-500/60 bg-amber-500/20 text-amber-200 shadow-[0_0_12px_rgba(245,158,11,0.15)] ring-1 ring-amber-500/40"
-                              : "border-white/10 bg-white/[0.02] text-white/70 hover:bg-white/[0.05] hover:text-white"
+                              ? "border-amber-400 bg-amber-50 text-amber-900 shadow-sm font-semibold ring-1 ring-amber-400"
+                              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                           }`}
                         >
-                          <span className={`h-2 w-2 rounded-full ${isSelected ? "bg-amber-400" : "bg-white/20"}`} />
+                          <span className={`h-2 w-2 rounded-full ${isSelected ? "bg-amber-500" : "bg-slate-300"}`} />
                           {allergy.label}
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${isSelected ? "bg-amber-400/20 text-amber-300" : "bg-white/5 text-white/40"}`}>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${isSelected ? "bg-amber-100 text-amber-800 font-bold" : "bg-slate-100 text-slate-500"}`}>
                             {allergy.badge}
                           </span>
                         </button>
@@ -805,13 +805,13 @@ export default function ProfileSettings() {
                 </div>
 
                 {/* 3. Digestive & Health Conditions */}
-                <div className="space-y-3 pt-4 border-t border-white/10">
+                <div className="space-y-3 pt-4 border-t border-slate-100">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-                      <Flame className="w-3.5 h-3.5 text-rose-400" />
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Flame className="w-3.5 h-3.5 text-rose-500" />
                       Digestive & Dietary Health Conditions
                     </Label>
-                    <span className="text-[11px] text-white/50 font-medium">
+                    <span className="text-[11px] text-slate-400 font-medium">
                       {dietaryConditions.length > 0 ? `${dietaryConditions.length} selected` : "Select all that apply"}
                     </span>
                   </div>
@@ -824,19 +824,19 @@ export default function ProfileSettings() {
                           key={cond.id}
                           type="button"
                           onClick={() => toggleCondition(cond.id)}
-                          className={`flex flex-col text-left p-3 rounded-xl border transition-all ${
+                          className={`flex flex-col text-left p-3 rounded-2xl border transition-all ${
                             isSelected
-                              ? "border-rose-500/60 bg-rose-500/15 shadow-[0_0_15px_rgba(244,63,94,0.15)] ring-1 ring-rose-500/40"
-                              : "border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20"
+                              ? "border-rose-400 bg-rose-50 text-rose-900 font-semibold shadow-sm ring-1 ring-rose-400"
+                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-1.5">
-                            <span className={`text-xs font-semibold ${isSelected ? "text-rose-300" : "text-white"}`}>
+                            <span className={`text-xs font-bold ${isSelected ? "text-rose-900" : "text-slate-900"}`}>
                               {cond.label}
                             </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-rose-400 shrink-0" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />}
                           </div>
-                          <p className="mt-1 text-[11px] text-[#92a8c7] leading-relaxed">
+                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
                             {cond.desc}
                           </p>
                         </button>
@@ -846,23 +846,23 @@ export default function ProfileSettings() {
                 </div>
 
                 {/* 4. Metabolic Goals & Activity Multiplier */}
-                <div className="space-y-4 pt-4 border-t border-white/10">
+                <div className="space-y-4 pt-4 border-t border-slate-100">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-                      <Scale className="w-3.5 h-3.5 text-emerald-400" />
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Scale className="w-3.5 h-3.5 text-lime-600" />
                       Metabolic Targets & Caloric Goals
                     </Label>
-                    <span className="text-[11px] text-emerald-400 font-medium">Syncs with Diet Mini-App</span>
+                    <span className="text-[11px] text-lime-700 font-semibold">Syncs with Diet Mini-App</span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Primary Health Goal */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-white/80">Primary Metabolic Goal</Label>
+                      <Label className="text-xs font-medium text-slate-700">Primary Metabolic Goal</Label>
                       <select
                         value={dietGoal}
                         onChange={(e) => setDietGoal(e.target.value)}
-                        className={`${portalInputClass} text-xs bg-[#0c121e]`}
+                        className={`${portalInputClass} text-xs bg-white`}
                       >
                         <option value="fat_loss">Fat Loss & Caloric Deficit (-0.5 kg/wk)</option>
                         <option value="maintain_longevity">Maintenance & Metabolic Longevity</option>
@@ -874,11 +874,11 @@ export default function ProfileSettings() {
 
                     {/* Activity Level */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-white/80">Daily Activity Level</Label>
+                      <Label className="text-xs font-medium text-slate-700">Daily Activity Level</Label>
                       <select
                         value={activityLevel}
                         onChange={(e) => setActivityLevel(e.target.value)}
-                        className={`${portalInputClass} text-xs bg-[#0c121e]`}
+                        className={`${portalInputClass} text-xs bg-white`}
                       >
                         <option value="sedentary">Sedentary (Desk Job, 1.2x TDEE)</option>
                         <option value="light">Lightly Active (1-3 days/wk, 1.375x TDEE)</option>
@@ -888,9 +888,9 @@ export default function ProfileSettings() {
                       </select>
                     </div>
 
-                    {/* Target Weight & Weekly Pace */}
+                    {/* Target Weight */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-white/80">Target Goal Weight (kg)</Label>
+                      <Label className="text-xs font-medium text-slate-700">Target Goal Weight (kg)</Label>
                       <Input
                         type="number"
                         step="0.5"
@@ -903,7 +903,7 @@ export default function ProfileSettings() {
 
                     {/* Daily Water Target */}
                     <div className="space-y-1.5">
-                      <Label className="text-xs text-white/80">Daily Hydration Target (ml)</Label>
+                      <Label className="text-xs font-medium text-slate-700">Daily Hydration Target (ml)</Label>
                       <Input
                         type="number"
                         step="250"
@@ -917,9 +917,9 @@ export default function ProfileSettings() {
                 </div>
 
                 {/* 5. Custom Dietary Notes */}
-                <div className="space-y-2 pt-4 border-t border-white/10">
-                  <Label htmlFor="dietary_notes" className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-                    <Apple className="w-3.5 h-3.5 text-sky-400" />
+                <div className="space-y-2 pt-4 border-t border-slate-100">
+                  <Label htmlFor="dietary_notes" className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    <Apple className="w-3.5 h-3.5 text-lime-600" />
                     Custom Dietary Notes & Food Dislikes
                   </Label>
                   <Textarea
@@ -930,7 +930,7 @@ export default function ProfileSettings() {
                     rows={3}
                     className={`${portalInputClass} resize-none`}
                   />
-                  <p className="text-[11px] text-[#92a8c7]">
+                  <p className="text-[11px] text-slate-400">
                     These personal restrictions will guide your AI nutrition suggestions and be visible to your physician.
                   </p>
                 </div>
@@ -943,12 +943,12 @@ export default function ProfileSettings() {
             <Card className={`${portalPanelClass} p-2`}>
               <CardHeader>
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700">
                     <Dumbbell className="h-4 w-4" />
                   </div>
                   <div>
-                    <CardTitle className="text-base text-white">Physical Activity & Fitness Preferences</CardTitle>
-                    <CardDescription className="text-xs text-[#92a8c7]">
+                    <CardTitle className="text-base font-bold text-slate-900">Physical Activity & Fitness Preferences</CardTitle>
+                    <CardDescription className="text-xs text-slate-500">
                       Customize your weekly training intensity, available equipment, and orthopedic considerations for AI exercise prescriptions.
                     </CardDescription>
                   </div>
@@ -958,8 +958,8 @@ export default function ProfileSettings() {
               <CardContent className="space-y-6">
                 {/* 1. Fitness Level */}
                 <div className="space-y-3">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    <Activity className="w-3.5 h-3.5 text-lime-600" />
                     Training Experience Level
                   </Label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -970,19 +970,19 @@ export default function ProfileSettings() {
                           key={lvl.id}
                           type="button"
                           onClick={() => setFitnessLevel(lvl.id)}
-                          className={`p-3 rounded-xl border text-left transition-all ${
+                          className={`p-3 rounded-2xl border text-left transition-all ${
                             isSelected
-                              ? "bg-cyan-500/15 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
-                              : "bg-[#090e17]/80 border-white/5 hover:border-white/15 hover:bg-white/[0.02]"
+                              ? "bg-lime-50 border-lime-400 text-lime-950 font-semibold shadow-sm ring-1 ring-lime-400"
+                              : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className={`text-xs font-semibold ${isSelected ? "text-cyan-300" : "text-white"}`}>
+                            <span className={`text-xs font-bold ${isSelected ? "text-lime-900" : "text-slate-900"}`}>
                               {lvl.label}
                             </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-lime-600 shrink-0" />}
                           </div>
-                          <p className="mt-1 text-[11px] text-[#92a8c7] leading-relaxed">
+                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
                             {lvl.desc}
                           </p>
                         </button>
@@ -992,9 +992,9 @@ export default function ProfileSettings() {
                 </div>
 
                 {/* 2. Workout Environment */}
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-                    <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    <Dumbbell className="w-3.5 h-3.5 text-emerald-600" />
                     Workout Environment & Equipment
                   </Label>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -1005,19 +1005,19 @@ export default function ProfileSettings() {
                           key={env.id}
                           type="button"
                           onClick={() => setWorkoutEnv(env.id)}
-                          className={`p-3 rounded-xl border text-left transition-all ${
+                          className={`p-3 rounded-2xl border text-left transition-all ${
                             isSelected
-                              ? "bg-emerald-500/15 border-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
-                              : "bg-[#090e17]/80 border-white/5 hover:border-white/15 hover:bg-white/[0.02]"
+                              ? "bg-emerald-50 border-emerald-400 text-emerald-950 font-semibold shadow-sm ring-1 ring-emerald-400"
+                              : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className={`text-xs font-semibold ${isSelected ? "text-emerald-300" : "text-white"}`}>
+                            <span className={`text-xs font-bold ${isSelected ? "text-emerald-900" : "text-slate-900"}`}>
                               {env.label}
                             </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
                           </div>
-                          <p className="mt-1 text-[11px] text-[#92a8c7] leading-relaxed">
+                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
                             {env.desc}
                           </p>
                         </button>
@@ -1027,9 +1027,9 @@ export default function ProfileSettings() {
                 </div>
 
                 {/* 3. Physical Limitations */}
-                <div className="space-y-3 pt-4 border-t border-white/10">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-white/70 flex items-center gap-1.5">
-                    <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
                     Joint Sensitivity & Physical Limitations
                   </Label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
@@ -1040,19 +1040,19 @@ export default function ProfileSettings() {
                           key={lim.id}
                           type="button"
                           onClick={() => toggleLimitation(lim.id)}
-                          className={`p-3 rounded-xl border text-left transition-all ${
+                          className={`p-3 rounded-2xl border text-left transition-all ${
                             isSelected
-                              ? "bg-amber-500/15 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
-                              : "bg-[#090e17]/80 border-white/5 hover:border-white/15 hover:bg-white/[0.02]"
+                              ? "bg-amber-50 border-amber-400 text-amber-950 font-semibold shadow-sm ring-1 ring-amber-400"
+                              : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className={`text-xs font-semibold ${isSelected ? "text-amber-300" : "text-white"}`}>
+                            <span className={`text-xs font-bold ${isSelected ? "text-amber-900" : "text-slate-900"}`}>
                               {lim.label}
                             </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
                           </div>
-                          <p className="mt-1 text-[11px] text-[#92a8c7] leading-relaxed">
+                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
                             {lim.desc}
                           </p>
                         </button>
@@ -1065,7 +1065,7 @@ export default function ProfileSettings() {
           )}
 
           {/* Submit Profile Changes */}
-          <Button type="submit" disabled={saving} className={`w-full h-11 rounded-xl ${portalPrimaryButtonClass}`}>
+          <Button type="submit" disabled={saving} className={`w-full h-11 rounded-2xl ${portalPrimaryButtonClass}`}>
             {saving ? "Saving Changes…" : "Save Profile Changes"}
           </Button>
         </form>
@@ -1074,10 +1074,10 @@ export default function ProfileSettings() {
         <Card className={`${portalPanelClass} p-2`}>
           <CardHeader>
             <div className="flex items-center gap-2.5">
-              <KeyRound className="h-4.5 w-4.5 text-sky-400" />
-              <CardTitle className="text-base text-white">Security & Connection ID</CardTitle>
+              <KeyRound className="h-4.5 w-4.5 text-sky-600" />
+              <CardTitle className="text-base font-bold text-slate-900">Security & Connection ID</CardTitle>
             </div>
-            <CardDescription className="text-xs text-[#92a8c7]">
+            <CardDescription className="text-xs text-slate-500">
               {profile.role === "patient"
                 ? "Share this unique Profile ID with your physician to link your records."
                 : "Your unique system identification code."}
@@ -1086,34 +1086,34 @@ export default function ProfileSettings() {
 
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-white/70">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                 Your Connection Profile ID
               </Label>
               <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-xl border border-white/10 bg-[#090e17] px-3.5 py-2.5 text-xs font-mono text-[#E5E7EB]">
+                <code className="flex-1 truncate rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-mono text-slate-800">
                   {user.id}
                 </code>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  className={`${portalSecondaryButtonClass} h-10 px-4 shrink-0 rounded-xl text-xs`}
+                  className={`${portalSecondaryButtonClass} h-10 px-4 shrink-0 rounded-2xl text-xs`}
                   onClick={() => void copyId()}
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
                   {copied ? "Copied" : "Copy ID"}
                 </Button>
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3.5">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
               <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#3B82F6]/25 bg-[#3B82F6]/12">
-                  <ShieldCheck className="h-4.5 w-4.5 text-[#93c5fd]" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sky-200 bg-sky-50">
+                  <ShieldCheck className="h-4.5 w-4.5 text-sky-600" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-white">Portal Identity & Privacy</p>
-                  <p className="mt-0.5 text-[11px] text-[#92a8c7] leading-relaxed">
+                  <p className="text-xs font-bold text-slate-900">Portal Identity & Privacy</p>
+                  <p className="mt-0.5 text-[11px] text-slate-500 leading-relaxed">
                     Your profile details are encrypted end-to-end and synced securely across patient and doctor workspaces.
                   </p>
                 </div>

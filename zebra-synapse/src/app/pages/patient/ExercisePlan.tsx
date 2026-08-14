@@ -215,19 +215,19 @@ export default function ExercisePlan() {
   return (
     <PatientPortalPage>
       {/* Executive Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-6">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500/25 to-blue-600/15 border border-cyan-400/35 shadow-[0_12px_28px_rgba(6,182,212,0.2)]">
-            <Dumbbell className="h-6 w-6 text-cyan-400" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+            <Dumbbell className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">7-Day Exercise Plan</h1>
-              <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2.5 py-0.5 text-[10px] font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-cyan-400" /> AI Prescription
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">7-Day Exercise Plan</h1>
+              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="h-3 w-3 text-lime-600" /> AI Prescription
               </span>
             </div>
-            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
               {isAllReports
                 ? `Evidence-based physical conditioning tailored to your longitudinal lab profile (${panels.length} reports) and biometric vitals.`
                 : `Conditioning protocol calibrated for report dated ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
@@ -241,16 +241,16 @@ export default function ExercisePlan() {
             variant="outline"
             size="sm"
             onClick={() => setIsCustomizeOpen(true)}
-            className="h-9 border-white/15 bg-white/[0.04] text-slate-200 hover:bg-white/[0.08] hover:text-white rounded-xl text-xs gap-1.5 shadow-sm"
+            className={`h-9 rounded-2xl text-xs gap-1.5 shadow-sm ${portalSecondaryButtonClass}`}
           >
-            <SlidersHorizontal className="h-3.5 w-3.5 text-cyan-400" />
+            <SlidersHorizontal className="h-3.5 w-3.5 text-lime-700" />
             Customize Plan
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleResetProgress}
-            className="h-9 border-white/10 bg-white/[0.02] text-slate-400 hover:bg-white/[0.06] hover:text-slate-200 rounded-xl text-xs gap-1"
+            className="h-9 border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-2xl text-xs gap-1 shadow-sm"
             title="Reset weekly completed checkboxes"
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -275,8 +275,8 @@ export default function ExercisePlan() {
       {/* 7-Day Interactive Day Selector Tabs */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-cyan-400" /> 7-Day Weekly Schedule
+          <h2 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-lime-600" /> 7-Day Weekly Schedule
           </h2>
           <span className="text-xs text-slate-400">
             Click a day to view daily workout circuits
@@ -299,12 +299,12 @@ export default function ExercisePlan() {
               <button
                 key={day.dayNumber}
                 onClick={() => setSelectedDayNum(day.dayNumber)}
-                className={`p-3 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
+                className={`p-3 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between relative overflow-hidden cursor-pointer shadow-sm ${
                   isSelected
-                    ? "bg-gradient-to-b from-cyan-500/20 to-cyan-950/40 border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.25)] text-white"
+                    ? "bg-lime-500 border-lime-400 text-slate-950 font-bold"
                     : isDayFinished
-                    ? "bg-emerald-950/20 border-emerald-500/40 text-slate-300 hover:border-emerald-500/60"
-                    : "bg-[#0f1422]/80 border-slate-800 hover:border-slate-700 text-slate-400"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
                 }`}
               >
                 {/* Status Indicator */}
@@ -313,19 +313,19 @@ export default function ExercisePlan() {
                     {day.dayName.slice(0, 3)}
                   </span>
                   {isDayFinished ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                   ) : day.restDay ? (
-                    <span className="text-[9px] px-1 rounded bg-slate-800 text-slate-400 font-mono">Rest</span>
+                    <span className="text-[9px] px-1 rounded bg-slate-100 text-slate-500 font-mono">Rest</span>
                   ) : (
-                    <Circle className="h-3.5 w-3.5 text-slate-600" />
+                    <Circle className="h-3.5 w-3.5 text-slate-300" />
                   )}
                 </div>
 
                 <div className="mt-2.5">
-                  <div className={`text-xs font-semibold line-clamp-1 ${isSelected ? "text-cyan-200" : "text-slate-200"}`}>
+                  <div className={`text-xs font-bold line-clamp-1 ${isSelected ? "text-slate-950" : "text-slate-800"}`}>
                     {day.focus}
                   </div>
-                  <div className="flex items-center gap-1.5 mt-1 text-[10px] text-slate-400 font-mono">
+                  <div className={`flex items-center gap-1.5 mt-1 text-[10px] font-mono ${isSelected ? "text-slate-800" : "text-slate-400"}`}>
                     <Clock className="h-2.5 w-2.5" />
                     <span>{day.estimatedDurationMin} min</span>
                     <span>•</span>
@@ -346,33 +346,33 @@ export default function ExercisePlan() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant="outline" className="text-xs font-mono border-cyan-400/30 text-cyan-300 bg-cyan-400/10">
+                  <Badge variant="outline" className="text-xs font-bold border-lime-200 text-lime-800 bg-lime-50">
                     Day {currentDayWorkout.dayNumber} • {currentDayWorkout.dayName}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className={`text-xs ${
+                    className={`text-xs font-bold ${
                       currentDayWorkout.restDay
-                        ? "border-purple-500/30 text-purple-300 bg-purple-500/10"
-                        : "border-emerald-500/30 text-emerald-300 bg-emerald-500/10"
+                        ? "border-purple-200 text-purple-800 bg-purple-50"
+                        : "border-emerald-200 text-emerald-800 bg-emerald-50"
                     }`}
                   >
                     {currentDayWorkout.intensity}
                   </Badge>
-                  <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                    <Flame className="h-3.5 w-3.5 text-amber-400" /> ~{currentDayWorkout.estimatedCalories} kcal
+                  <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
+                    <Flame className="h-3.5 w-3.5 text-amber-500" /> ~{currentDayWorkout.estimatedCalories} kcal
                   </span>
-                  <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
-                    <Clock className="h-3.5 w-3.5 text-cyan-400" /> {currentDayWorkout.estimatedDurationMin} mins
+                  <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
+                    <Clock className="h-3.5 w-3.5 text-lime-600" /> {currentDayWorkout.estimatedDurationMin} mins
                   </span>
                 </div>
-                <h2 className="text-lg sm:text-xl font-bold text-white mt-2">
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900 mt-2 font-['Manrope']">
                   {currentDayWorkout.focus}
                 </h2>
                 {currentDayWorkout.targetHeartRateBpm && (
-                  <p className="text-xs text-slate-300 mt-1 flex items-center gap-1.5">
-                    <HeartPulse className="h-3.5 w-3.5 text-rose-400 shrink-0" />
-                    Target Exertion Zone: <span className="font-mono text-cyan-300">{currentDayWorkout.targetHeartRateBpm}</span>
+                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                    <HeartPulse className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                    Target Exertion Zone: <span className="font-mono font-bold text-slate-800">{currentDayWorkout.targetHeartRateBpm}</span>
                   </p>
                 )}
               </div>
@@ -382,10 +382,10 @@ export default function ExercisePlan() {
                 <Button
                   variant="outline"
                   onClick={() => toggleItemCompletion(`day_rest_${currentDayWorkout.dayNumber}`)}
-                  className={`h-9 text-xs rounded-xl border ${
+                  className={`h-9 text-xs rounded-2xl border ${
                     completedItems[`day_rest_${currentDayWorkout.dayNumber}`]
-                      ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
-                      : "border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-800 font-bold"
+                      : "border-purple-200 bg-purple-50 text-purple-800 hover:bg-purple-100"
                   }`}
                 >
                   <Check className="h-3.5 w-3.5 mr-1" />
@@ -395,10 +395,10 @@ export default function ExercisePlan() {
             </div>
 
             {currentDayWorkout.recoveryTip && (
-              <div className="mt-4 p-3 rounded-xl bg-purple-950/30 border border-purple-500/20 text-xs text-purple-200/90 leading-relaxed flex items-start gap-2">
-                <Info className="h-4 w-4 text-purple-400 shrink-0 mt-0.5" />
+              <div className="mt-4 p-3.5 rounded-2xl bg-purple-50 border border-purple-200 text-xs text-purple-900 leading-relaxed flex items-start gap-2">
+                <Info className="h-4 w-4 text-purple-600 shrink-0 mt-0.5" />
                 <div>
-                  <strong className="text-purple-300 font-semibold">Physiological Recovery Rationale: </strong>
+                  <strong className="text-purple-950 font-bold">Physiological Recovery Rationale: </strong>
                   {currentDayWorkout.recoveryTip}
                 </div>
               </div>
@@ -409,8 +409,8 @@ export default function ExercisePlan() {
           {currentDayWorkout.warmup && currentDayWorkout.warmup.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-amber-300 uppercase tracking-wider flex items-center gap-2">
-                  <Flame className="h-3.5 w-3.5" /> Phase 1: Dynamic Warm-Up & Joint Activation (~5 mins)
+                <h3 className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-2">
+                  <Flame className="h-3.5 w-3.5 text-amber-500" /> Phase 1: Dynamic Warm-Up & Joint Activation (~5 mins)
                 </h3>
               </div>
               <div className="grid grid-cols-1 gap-2.5">
@@ -430,8 +430,8 @@ export default function ExercisePlan() {
           {currentDayWorkout.mainWorkout && currentDayWorkout.mainWorkout.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-2">
-                  <Zap className="h-3.5 w-3.5" /> Phase 2: Main Conditioning & Strength Routine
+                <h3 className="text-xs font-bold text-lime-900 uppercase tracking-wider flex items-center gap-2">
+                  <Zap className="h-3.5 w-3.5 text-lime-600" /> Phase 2: Main Conditioning & Strength Routine
                 </h3>
               </div>
               <div className="grid grid-cols-1 gap-2.5">
@@ -451,8 +451,8 @@ export default function ExercisePlan() {
           {currentDayWorkout.cooldown && currentDayWorkout.cooldown.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-2">
-                  <Activity className="h-3.5 w-3.5" /> Phase 3: Cool-Down, Mobility & Breathwork (~5 mins)
+                <h3 className="text-xs font-bold text-emerald-900 uppercase tracking-wider flex items-center gap-2">
+                  <Activity className="h-3.5 w-3.5 text-emerald-600" /> Phase 3: Cool-Down, Mobility & Breathwork (~5 mins)
                 </h3>
               </div>
               <div className="grid grid-cols-1 gap-2.5">
@@ -472,12 +472,12 @@ export default function ExercisePlan() {
 
       {/* Customize & Regenerate Modal */}
       <Dialog open={isCustomizeOpen} onOpenChange={setIsCustomizeOpen}>
-        <DialogContent className="sm:max-w-md bg-[#0c101a] border-slate-800 text-slate-100">
+        <DialogContent className="sm:max-w-md bg-white border-slate-100 text-slate-800 rounded-[24px] shadow-lg">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 text-cyan-400" /> Customize Exercise Prescription
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-lime-600" /> Customize Exercise Prescription
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-400">
+            <DialogDescription className="text-xs text-slate-500">
               Adjust your training parameters. The AI will recalculate the weekly routine while strictly adhering to your lab safety guidelines.
             </DialogDescription>
           </DialogHeader>
@@ -485,12 +485,12 @@ export default function ExercisePlan() {
           <div className="space-y-4 py-2">
             {/* Fitness Level */}
             <div>
-              <Label className="text-xs text-slate-300 font-medium">Fitness Experience Level</Label>
+              <Label className="text-xs text-slate-700 font-semibold uppercase tracking-wider">Fitness Experience Level</Label>
               <Select value={fitnessLevel} onValueChange={(v: FitnessLevel) => setFitnessLevel(v)}>
-                <SelectTrigger className="mt-1.5 bg-slate-900 border-slate-800 text-xs">
+                <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 text-xs rounded-xl">
                   <SelectValue placeholder="Select level" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0f1422] border-slate-800 text-slate-200">
+                <SelectContent className="bg-white border-slate-200 text-slate-800">
                   <SelectItem value="beginner" className="text-xs">Beginner (Gentle pacing, form foundation)</SelectItem>
                   <SelectItem value="intermediate" className="text-xs">Intermediate (Progressive overload)</SelectItem>
                   <SelectItem value="advanced" className="text-xs">Advanced (Higher volume & intensity)</SelectItem>
@@ -500,12 +500,12 @@ export default function ExercisePlan() {
 
             {/* Equipment Access */}
             <div>
-              <Label className="text-xs text-slate-300 font-medium">Available Workout Environment</Label>
+              <Label className="text-xs text-slate-700 font-semibold uppercase tracking-wider">Available Workout Environment</Label>
               <Select value={equipment} onValueChange={(v: EquipmentAccess) => setEquipment(v)}>
-                <SelectTrigger className="mt-1.5 bg-slate-900 border-slate-800 text-xs">
+                <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 text-xs rounded-xl">
                   <SelectValue placeholder="Select equipment" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0f1422] border-slate-800 text-slate-200">
+                <SelectContent className="bg-white border-slate-200 text-slate-800">
                   <SelectItem value="home_minimal" className="text-xs">Home Fitness (Dumbbells / Resistance Bands / Bodyweight)</SelectItem>
                   <SelectItem value="bodyweight" className="text-xs">Bodyweight Only (No equipment needed)</SelectItem>
                   <SelectItem value="gym" className="text-xs">Full Gym Access (Barbells, Cables, Cardio Machines)</SelectItem>
@@ -515,12 +515,12 @@ export default function ExercisePlan() {
 
             {/* Primary Goal */}
             <div>
-              <Label className="text-xs text-slate-300 font-medium">Primary Conditioning Goal</Label>
+              <Label className="text-xs text-slate-700 font-semibold uppercase tracking-wider">Primary Conditioning Goal</Label>
               <Select value={primaryGoal} onValueChange={(v: PrimaryGoal) => setPrimaryGoal(v)}>
-                <SelectTrigger className="mt-1.5 bg-slate-900 border-slate-800 text-xs">
+                <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 text-xs rounded-xl">
                   <SelectValue placeholder="Select goal" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0f1422] border-slate-800 text-slate-200">
+                <SelectContent className="bg-white border-slate-200 text-slate-800">
                   <SelectItem value="general_health" className="text-xs">Cardiometabolic & General Health</SelectItem>
                   <SelectItem value="weight_loss" className="text-xs">Fat Oxidation & Weight Management</SelectItem>
                   <SelectItem value="cardio_endurance" className="text-xs">Cardiovascular Stamina & Endurance</SelectItem>
@@ -532,12 +532,12 @@ export default function ExercisePlan() {
 
             {/* Session Duration */}
             <div>
-              <Label className="text-xs text-slate-300 font-medium">Daily Target Workout Duration</Label>
+              <Label className="text-xs text-slate-700 font-semibold uppercase tracking-wider">Daily Target Workout Duration</Label>
               <Select value={durationMin.toString()} onValueChange={(v) => setDurationMin(Number(v))}>
-                <SelectTrigger className="mt-1.5 bg-slate-900 border-slate-800 text-xs">
+                <SelectTrigger className="mt-1.5 bg-slate-50 border-slate-200 text-xs rounded-xl">
                   <SelectValue placeholder="Select duration" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#0f1422] border-slate-800 text-slate-200">
+                <SelectContent className="bg-white border-slate-200 text-slate-800">
                   <SelectItem value="15" className="text-xs">15 Minutes (Express)</SelectItem>
                   <SelectItem value="30" className="text-xs">30 Minutes (Recommended)</SelectItem>
                   <SelectItem value="45" className="text-xs">45 Minutes (Standard)</SelectItem>
@@ -552,7 +552,7 @@ export default function ExercisePlan() {
               variant="outline"
               size="sm"
               onClick={() => setIsCustomizeOpen(false)}
-              className="border-white/10 text-slate-300 hover:bg-white/5 text-xs rounded-xl"
+              className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs rounded-2xl"
             >
               Cancel
             </Button>
@@ -562,7 +562,7 @@ export default function ExercisePlan() {
                 setIsCustomizeOpen(false);
                 toast.success("Regenerating tailored exercise plan...");
               }}
-              className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-xs rounded-xl"
+              className="bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs rounded-2xl"
             >
               Apply & Regenerate
             </Button>
@@ -586,17 +586,17 @@ function ExerciseRow({
   return (
     <div
       onClick={onToggle}
-      className={`p-3.5 rounded-2xl border transition-all duration-200 cursor-pointer flex items-start gap-3.5 group ${
+      className={`p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex items-start gap-3.5 group shadow-sm ${
         isCompleted
-          ? "bg-emerald-950/20 border-emerald-500/30 opacity-75"
-          : "bg-[#0f1422]/90 border-slate-800 hover:border-slate-700 hover:bg-slate-900/90"
+          ? "bg-emerald-50/60 border-emerald-200 opacity-80"
+          : "bg-white border-slate-200/90 hover:border-slate-300 hover:bg-slate-50/80 text-slate-800"
       }`}
     >
       <div className="mt-0.5 shrink-0">
         {isCompleted ? (
-          <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+          <CheckCircle2 className="h-5 w-5 text-emerald-600" />
         ) : (
-          <Circle className="h-5 w-5 text-slate-500 group-hover:text-cyan-400 transition-colors" />
+          <Circle className="h-5 w-5 text-slate-300 group-hover:text-lime-600 transition-colors" />
         )}
       </div>
 
@@ -604,20 +604,20 @@ function ExerciseRow({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h4
-              className={`text-sm font-semibold tracking-tight ${
-                isCompleted ? "line-through text-slate-400" : "text-white"
+              className={`text-sm font-bold tracking-tight ${
+                isCompleted ? "line-through text-slate-400" : "text-slate-900"
               }`}
             >
               {exercise.name}
             </h4>
             {exercise.intensity && (
               <span
-                className={`text-[9px] px-2 py-0.5 rounded-full font-mono font-medium ${
+                className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
                   exercise.intensity === "high"
-                    ? "bg-rose-500/15 text-rose-300 border border-rose-500/30"
+                    ? "bg-rose-50 text-rose-800 border border-rose-200"
                     : exercise.intensity === "moderate"
-                    ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-                    : "bg-cyan-500/15 text-cyan-300 border border-cyan-500/30"
+                    ? "bg-amber-50 text-amber-800 border border-amber-200"
+                    : "bg-lime-50 text-lime-800 border border-lime-200"
                 }`}
               >
                 {exercise.intensity.toUpperCase()}
@@ -626,14 +626,14 @@ function ExerciseRow({
           </div>
 
           {/* Volume stats (Sets, Reps, Rest) */}
-          <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400 shrink-0">
+          <div className="flex items-center gap-2 text-[11px] font-mono text-slate-500 shrink-0">
             {exercise.sets && exercise.reps && (
-              <span className="text-cyan-300 font-semibold">
+              <span className="text-lime-800 font-bold">
                 {exercise.sets} sets × {exercise.reps}
               </span>
             )}
             {exercise.durationMin && (
-              <span className="text-emerald-300 font-semibold">
+              <span className="text-emerald-800 font-bold">
                 {exercise.durationMin} mins
               </span>
             )}
@@ -644,25 +644,25 @@ function ExerciseRow({
         </div>
 
         {/* Target muscles & equipment */}
-        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-          <span className="text-slate-300 font-medium">Target:</span> {exercise.targetMuscles}
+        <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500">
+          <span className="text-slate-700 font-semibold">Target:</span> {exercise.targetMuscles}
           {exercise.equipment && (
             <>
               <span>•</span>
-              <span className="text-slate-400">Equip: {exercise.equipment}</span>
+              <span className="text-slate-500">Equip: {exercise.equipment}</span>
             </>
           )}
         </div>
 
         {/* Exercise instruction cues */}
-        <p className="text-xs text-slate-300/90 mt-2 leading-relaxed">
+        <p className="text-xs text-slate-600 mt-2 leading-relaxed font-normal">
           {exercise.instructions}
         </p>
 
         {/* Safety Note */}
         {exercise.safetyNote && (
-          <div className="mt-2 text-[11px] text-amber-300/90 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
-            <ShieldCheck className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+          <div className="mt-2 text-[11px] text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 font-medium">
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-600 shrink-0" />
             <span>{exercise.safetyNote}</span>
           </div>
         )}

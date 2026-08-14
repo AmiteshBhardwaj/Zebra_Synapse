@@ -54,9 +54,9 @@ type VitalsSummary = {
 };
 
 function statusBadgeClass(status: VitalsStatus) {
-  if (status === "normal") return "border border-green-500/20 bg-green-500/20 text-green-400";
-  if (status === "elevated") return "border border-yellow-500/20 bg-yellow-500/20 text-yellow-400";
-  return "border border-red-500/20 bg-red-500/20 text-red-400";
+  if (status === "normal") return "border border-lime-200 bg-lime-50 text-lime-800 font-bold";
+  if (status === "elevated") return "border border-amber-200 bg-amber-50 text-amber-800 font-bold";
+  return "border border-rose-200 bg-rose-50 text-rose-800 font-bold";
 }
 
 function statusLabel(status: VitalsStatus) {
@@ -164,7 +164,7 @@ export default function Vitals() {
   if (loading || vitalsLoading || panelsLoading) {
     return (
       <PatientPortalPage>
-        <p className="text-sm text-[#A1A1AA]">Loading...</p>
+        <p className="text-sm text-slate-400">Loading...</p>
       </PatientPortalPage>
     );
   }
@@ -180,41 +180,41 @@ export default function Vitals() {
 
   return (
     <PatientPortalPage>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-white/10 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_12px_28px_rgba(255,122,51,0.2)]">
-            <Activity className="h-6 w-6 text-[#ff9c61]" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+            <Activity className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">Vitals</h1>
-              <span className="rounded-full border border-[#ff8a3d]/30 bg-[#ff8a3d]/12 px-2.5 py-0.5 text-[10px] font-semibold text-[#ff9c61] uppercase tracking-wider">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Vitals</h1>
+              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider">
                 Body Signals
               </span>
             </div>
-            <p className="text-sm sm:text-base text-[#b4c9e8] mt-1 font-medium leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
               Track heart rate, blood pressure, glucose, and metabolic status in real time.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-1.5 text-white/70">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-1.5 text-slate-700 font-semibold shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             {summary?.statusLabel ?? "Active Tracking"}
           </span>
         </div>
       </div>
 
       {loadError ? (
-        <section className={`${portalPanelClass} border-red-500/20 bg-red-500/[0.08] p-6`}>
+        <section className={`${portalPanelClass} border-rose-200 bg-rose-50/50 p-6 shadow-sm`}>
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/12">
-              <AlertTriangle className="h-5 w-5 text-red-400" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-300 bg-rose-100">
+              <AlertTriangle className="h-5 w-5 text-rose-600" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Could not load vitals</h2>
-              <p className="mt-2 text-sm leading-7 text-red-100/85">{loadError}</p>
+              <h2 className="text-lg font-bold text-slate-900">Could not load vitals</h2>
+              <p className="mt-1 text-sm text-rose-800">{loadError}</p>
             </div>
           </div>
         </section>
@@ -226,24 +226,24 @@ export default function Vitals() {
             <Card className={portalPanelClass}>
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center gap-2">
-                  <HeartPulse className="h-4 w-4 text-[#ff9c61]" />
-                  <p className="text-sm text-white/50">Heart Rate</p>
+                  <HeartPulse className="h-4 w-4 text-rose-500" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Heart Rate</p>
                 </div>
-                <p className="text-3xl font-semibold text-white">
+                <p className="text-3xl font-extrabold text-slate-900 font-['Manrope']">
                   {summary.heartRate != null ? `${summary.heartRate}` : "—"}
                 </p>
-                <p className="mt-1 text-sm text-white/60">bpm</p>
+                <p className="mt-1 text-xs text-slate-500 font-medium">bpm</p>
               </CardContent>
             </Card>
 
             <Card className={portalPanelClass}>
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-[#3B82F6]" />
-                  <p className="text-sm text-white/50">Blood Pressure</p>
+                  <Activity className="h-4 w-4 text-sky-600" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Blood Pressure</p>
                 </div>
-                <p className="text-3xl font-semibold text-white">{summary.bloodPressure ?? "—"}</p>
-                <p className="mt-1 text-sm text-white/60">
+                <p className="text-3xl font-extrabold text-slate-900 font-['Manrope']">{summary.bloodPressure ?? "—"}</p>
+                <p className="mt-1 text-xs text-slate-500 font-medium">
                   {summary.bloodPressure ? "mmHg" : "No linked reading"}
                 </p>
               </CardContent>
@@ -252,43 +252,43 @@ export default function Vitals() {
             <Card className={portalPanelClass}>
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-[#6C5BD4]" />
-                  <p className="text-sm text-white/50">Glucose</p>
+                  <TrendingUp className="h-4 w-4 text-lime-600" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Glucose</p>
                 </div>
-                <p className="text-3xl font-semibold text-white">
+                <p className="text-3xl font-extrabold text-slate-900 font-['Manrope']">
                   {summary.glucose != null ? `${summary.glucose}` : "—"}
                 </p>
-                <p className="mt-1 text-sm text-white/60">mg/dL</p>
+                <p className="mt-1 text-xs text-slate-500 font-medium">mg/dL</p>
               </CardContent>
             </Card>
 
             <Card className={portalPanelClass}>
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-[#FFC857]" />
-                  <p className="text-sm text-white/50">
+                  <ShieldCheck className="h-4 w-4 text-amber-500" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                     {summary.source === "lab" ? "Lab Status" : "Clinical Status"}
                   </p>
                 </div>
                 <Badge className={statusBadgeClass(summary.status)}>
                   {summary.statusLabel}
                 </Badge>
-                <p className="mt-3 text-sm text-white/60">Updated {summary.lastUpdated}</p>
+                <p className="mt-3 text-xs text-slate-500 font-medium">Updated {summary.lastUpdated}</p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2 mt-6">
             <Card className={portalPanelClass}>
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-[#ff9c61]" />
-                  <p className="text-sm text-white/50">Hemoglobin A1c</p>
+                  <TrendingUp className="h-4 w-4 text-lime-600" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Hemoglobin A1c</p>
                 </div>
-                <p className="text-3xl font-semibold text-white">
+                <p className="text-3xl font-extrabold text-slate-900 font-['Manrope']">
                   {summary.a1c != null ? `${summary.a1c}` : "—"}
                 </p>
-                <p className="mt-1 text-sm text-white/60">
+                <p className="mt-1 text-xs text-slate-500 font-medium">
                   {summary.a1c != null ? "%" : "Available after structured lab extraction"}
                 </p>
               </CardContent>
@@ -297,13 +297,13 @@ export default function Vitals() {
             <Card className={portalPanelClass}>
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center gap-2">
-                  <Clock3 className="h-4 w-4 text-[#93c5fd]" />
-                  <p className="text-sm text-white/50">Data Source</p>
+                  <Clock3 className="h-4 w-4 text-sky-600" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Data Source</p>
                 </div>
-                <p className="text-xl font-semibold text-white">
-                  {summary.source === "care" ? "Linked care record" : "Latest lab panel"}
+                <p className="text-xl font-bold text-slate-900 font-['Manrope']">
+                  {summary.source === "care" ? "Linked Care Record" : "Latest Lab Panel"}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-white/60">
+                <p className="mt-1.5 text-xs text-slate-500 leading-relaxed font-medium">
                   {summary.source === "care"
                     ? "These readings came from your linked doctor record."
                     : "These values were derived from your latest uploaded structured lab report."}
@@ -312,30 +312,30 @@ export default function Vitals() {
             </Card>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+          <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr] mt-6">
             <Card className={portalPanelClass}>
               <CardHeader>
-                <CardTitle className="text-white">
-                  {summary.source === "care" ? "Latest linked vitals" : "Latest lab-derived metrics"}
+                <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">
+                  {summary.source === "care" ? "Latest Linked Vitals" : "Latest Lab-Derived Metrics"}
                 </CardTitle>
-                <CardDescription className="text-white/60">
+                <CardDescription className="text-xs text-slate-500">
                   {summary.source === "care"
                     ? "Current readings available from your linked care record."
                     : "Structured markers from your latest uploaded lab panel."}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Primary Condition</p>
-                  <p className="mt-2 text-sm font-medium text-white">{summary.condition}</p>
+              <CardContent className="space-y-3">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
+                  <p className="text-[11px] uppercase font-bold tracking-wider text-slate-400">Primary Condition</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">{summary.condition}</p>
                 </div>
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Last Updated</p>
-                  <p className="mt-2 text-sm font-medium text-white">{summary.lastUpdated}</p>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
+                  <p className="text-[11px] uppercase font-bold tracking-wider text-slate-400">Last Updated</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">{summary.lastUpdated}</p>
                 </div>
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Source</p>
-                  <p className="mt-2 text-sm font-medium text-white">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
+                  <p className="text-[11px] uppercase font-bold tracking-wider text-slate-400">Source</p>
+                  <p className="mt-1 text-sm font-bold text-slate-900">
                     {summary.source === "care" ? "Care team record" : "Lab panel extraction"}
                   </p>
                 </div>
@@ -344,10 +344,10 @@ export default function Vitals() {
 
             <Card className={portalPanelClass}>
               <CardHeader>
-                <CardTitle className="text-white">
-                  {summary.source === "care" ? "Risk flags" : "Lab interpretation"}
+                <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">
+                  {summary.source === "care" ? "Risk Flags" : "Lab Interpretation"}
                 </CardTitle>
-                <CardDescription className="text-white/60">
+                <CardDescription className="text-xs text-slate-500">
                   {summary.source === "care"
                     ? "Highlights associated with your latest linked vitals."
                     : "Context around the latest structured lab snapshot."}
@@ -360,23 +360,23 @@ export default function Vitals() {
                       <Badge
                         key={flag}
                         variant="outline"
-                        className="border-white/10 bg-white/[0.04] px-3 py-1 text-white/80"
+                        className="border-slate-200 bg-slate-100 px-3 py-1 text-slate-700 font-semibold"
                       >
                         {flag}
                       </Badge>
                     ))}
                   </div>
                 ) : summary.source === "lab" && activePanel ? (
-                  <div className={`${portalInsetClass} p-4`}>
-                    <p className="text-sm leading-7 text-white/70">
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
                       {labStatus?.summary ??
                         "Structured lab values are available, but no additional interpretation has been generated yet."}
                     </p>
                   </div>
                 ) : (
-                  <div className={`${portalInsetClass} flex items-center gap-3 p-4`}>
-                    <Clock3 className="h-4 w-4 text-[#ff9c61]" />
-                    <p className="text-sm text-white/70">
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/70 flex items-center gap-3 p-4">
+                    <Clock3 className="h-4 w-4 text-lime-600" />
+                    <p className="text-xs sm:text-sm text-slate-600 font-medium">
                       No risk flags were recorded with your latest vitals snapshot.
                     </p>
                   </div>
@@ -391,51 +391,51 @@ export default function Vitals() {
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <Activity className="h-4.5 w-4.5 text-cyan-400" />
-                    <CardTitle className="text-base text-white">Body Metrics & Configured Health Profile</CardTitle>
+                    <Activity className="h-4.5 w-4.5 text-lime-600" />
+                    <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">Body Metrics & Configured Health Profile</CardTitle>
                   </div>
-                  <Badge className="border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-mono">
+                  <Badge className="border border-lime-200 bg-lime-50 text-lime-800 text-xs font-bold">
                     From Settings
                   </Badge>
                 </div>
-                <CardDescription className="text-xs text-[#92a8c7]">
+                <CardDescription className="text-xs text-slate-500">
                   Baseline measurements and dietary parameters configured in your profile.
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">Height</p>
-                  <p className="mt-1.5 text-lg font-semibold text-white">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Height</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900 font-['Manrope']">
                     {profile.height_cm ? `${profile.height_cm} cm` : "Not set"}
                   </p>
                   {profile.height_cm && (
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-slate-500">
                       {Math.floor(profile.height_cm / 2.54 / 12)} ft {Math.round((profile.height_cm / 2.54) % 12)} in
                     </p>
                   )}
                 </div>
 
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">Weight</p>
-                  <p className="mt-1.5 text-lg font-semibold text-white">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Weight</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900 font-['Manrope']">
                     {profile.weight_kg ? `${profile.weight_kg} kg` : "Not set"}
                   </p>
                   {profile.weight_kg && (
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-slate-500">
                       {Math.round(profile.weight_kg * 2.20462)} lbs
                     </p>
                   )}
                 </div>
 
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">BMI</p>
-                  <p className="mt-1.5 text-lg font-semibold text-cyan-300">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">BMI</p>
+                  <p className="mt-1 text-lg font-bold text-lime-700 font-['Manrope']">
                     {profile.height_cm && profile.weight_kg
                       ? `${(profile.weight_kg / Math.pow(profile.height_cm / 100, 2)).toFixed(1)} kg/m²`
                       : "—"}
                   </p>
                   {profile.height_cm && profile.weight_kg && (
-                    <p className="text-xs text-white/50">
+                    <p className="text-xs text-slate-500">
                       {(() => {
                         const bmi = profile.weight_kg / Math.pow(profile.height_cm / 100, 2);
                         if (bmi < 18.5) return "Underweight";
@@ -447,12 +447,12 @@ export default function Vitals() {
                   )}
                 </div>
 
-                <div className={`${portalInsetClass} p-4`}>
-                  <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">Active Diet</p>
-                  <p className="mt-1.5 text-lg font-semibold text-emerald-400 capitalize">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                  <p className="text-[11px] uppercase tracking-wider text-slate-400 font-bold">Active Diet</p>
+                  <p className="mt-1 text-lg font-bold text-slate-900 capitalize font-['Manrope']">
                     {profile.dietary_preference || "Omnivore"}
                   </p>
-                  <p className="text-xs text-white/50">
+                  <p className="text-xs text-slate-500">
                     {profile.food_allergies?.length
                       ? `${profile.food_allergies.length} allergies`
                       : "No allergies recorded"}
@@ -466,11 +466,11 @@ export default function Vitals() {
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
           <Card className={portalPanelClass}>
             <CardHeader>
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
-                <Activity className="h-5 w-5 text-[#ff9c61]" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+                <Activity className="h-5 w-5" />
               </div>
-              <CardTitle className="text-white">No vitals to show yet</CardTitle>
-              <CardDescription className="text-white/60">
+              <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">No vitals to show yet</CardTitle>
+              <CardDescription className="text-xs text-slate-500">
                 Your account has uploads, but no linked vitals have been recorded yet from a care
                 relationship or device integration.
               </CardDescription>
@@ -479,8 +479,8 @@ export default function Vitals() {
 
           <Card className={portalPanelClass}>
             <CardHeader>
-              <CardTitle className="text-white">What unlocks this section</CardTitle>
-              <CardDescription className="text-white/60">
+              <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">What unlocks this section</CardTitle>
+              <CardDescription className="text-xs text-slate-500">
                 This view turns on when your care record includes heart rate, blood pressure, glucose,
                 or future wearable data.
               </CardDescription>
@@ -488,34 +488,34 @@ export default function Vitals() {
             <CardContent className="space-y-3">
               {[
                 {
-                  label: "Heart and activity streams",
+                  label: "Heart and Activity Streams",
                   value: "Heart rate and future device-linked activity summaries appear here.",
                   icon: HeartPulse,
-                  tone: "text-[#ff9c61]",
+                  tone: "text-rose-500",
                 },
                 {
-                  label: "Device integrations",
+                  label: "Device Integrations",
                   value: "Wearable links can populate this area without mixing in fabricated numbers.",
                   icon: Watch,
-                  tone: "text-[#b4abff]",
+                  tone: "text-lime-600",
                 },
                 {
-                  label: "Clinical reliability",
+                  label: "Clinical Reliability",
                   value: "Every value shown here stays tied to your own uploads and monitoring sources.",
                   icon: ShieldCheck,
-                  tone: "text-[#93c5fd]",
+                  tone: "text-sky-600",
                 },
               ].map((item) => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.label} className={`${portalInsetClass} p-4`}>
+                  <div key={item.label} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
                     <div className="flex items-start gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04]">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-sm">
                         <Icon className={`h-4 w-4 ${item.tone}`} />
                       </span>
                       <div>
-                        <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">{item.label}</p>
-                        <p className="mt-2 text-sm leading-6 text-white/75">{item.value}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{item.label}</p>
+                        <p className="mt-1 text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">{item.value}</p>
                       </div>
                     </div>
                   </div>

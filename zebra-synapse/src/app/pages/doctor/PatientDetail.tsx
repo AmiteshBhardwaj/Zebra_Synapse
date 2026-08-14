@@ -879,7 +879,7 @@ export default function PatientDetail() {
     (r) => r.status === "completed",
   );
   const detailPageClass =
-    "min-h-full bg-[#090b10] px-4 py-5 text-white sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-[1600px] mx-auto font-sans [&_[data-slot=card]]:rounded-[1.5rem] [&_[data-slot=card]]:border [&_[data-slot=card]]:border-slate-800 [&_[data-slot=card]]:bg-[#11141e] [&_[data-slot=card]]:text-white [&_[data-slot=card]]:shadow-[0_8px_32px_rgba(0,0,0,0.5)] [&_[data-slot=card-title]]:text-white [&_[data-slot=card-description]]:text-white/60 [&_[data-slot=tabs-list]]:h-auto [&_[data-slot=tabs-list]]:w-full [&_[data-slot=tabs-list]]:rounded-2xl [&_[data-slot=tabs-list]]:border [&_[data-slot=tabs-list]]:border-slate-800 [&_[data-slot=tabs-list]]:bg-[#0d0f17] [&_[data-slot=tabs-list]]:p-1.5 [&_[data-slot=tabs-trigger]]:rounded-xl [&_[data-slot=tabs-trigger]]:px-4 [&_[data-slot=tabs-trigger]]:py-2.5 [&_[data-slot=tabs-trigger]]:text-white/60 [&_[data-slot=tabs-trigger][data-state=active]]:border-transparent [&_[data-slot=tabs-trigger][data-state=active]]:bg-gradient-to-r [&_[data-slot=tabs-trigger][data-state=active]]:from-orange-500 [&_[data-slot=tabs-trigger][data-state=active]]:to-orange-600 [&_[data-slot=tabs-trigger][data-state=active]]:text-white [&_[data-slot=tabs-trigger][data-state=active]]:shadow-lg [&_[data-slot=tabs-trigger][data-state=active]]:shadow-orange-500/20 [&_label]:text-white [&_input]:text-white [&_input]:placeholder:text-white/40 [&_textarea]:border-slate-800 [&_textarea]:bg-[#090b10] [&_textarea]:text-white [&_textarea]:placeholder:text-white/40 [&_textarea]:focus-visible:border-orange-500 [&_textarea]:focus-visible:ring-orange-500/30";
+    "min-h-full bg-[#f6f8f5] px-4 py-5 text-slate-900 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-[1600px] mx-auto font-sans [&_[data-slot=card]]:rounded-[24px] [&_[data-slot=card]]:border [&_[data-slot=card]]:border-slate-100 [&_[data-slot=card]]:bg-white [&_[data-slot=card]]:text-slate-900 [&_[data-slot=card]]:shadow-sm [&_[data-slot=card-title]]:text-slate-900 [&_[data-slot=card-description]]:text-slate-500 [&_[data-slot=tabs-list]]:h-auto [&_[data-slot=tabs-list]]:w-full [&_[data-slot=tabs-list]]:rounded-2xl [&_[data-slot=tabs-list]]:border [&_[data-slot=tabs-list]]:border-slate-200 [&_[data-slot=tabs-list]]:bg-white [&_[data-slot=tabs-list]]:p-1.5 [&_[data-slot=tabs-trigger]]:rounded-xl [&_[data-slot=tabs-trigger]]:px-4 [&_[data-slot=tabs-trigger]]:py-2.5 [&_[data-slot=tabs-trigger]]:text-slate-600 [&_[data-slot=tabs-trigger][data-state=active]]:border-transparent [&_[data-slot=tabs-trigger][data-state=active]]:bg-lime-500 [&_[data-slot=tabs-trigger][data-state=active]]:text-slate-950 [&_[data-slot=tabs-trigger][data-state=active]]:font-bold [&_[data-slot=tabs-trigger][data-state=active]]:shadow-sm [&_label]:text-slate-700 [&_input]:text-slate-900 [&_input]:placeholder:text-slate-400 [&_textarea]:border-slate-200 [&_textarea]:bg-white [&_textarea]:text-slate-900 [&_textarea]:placeholder:text-slate-400 [&_textarea]:focus-visible:border-lime-500 [&_textarea]:focus-visible:ring-lime-500/30";
 
   if (loading) {
     return (
@@ -1043,26 +1043,26 @@ export default function PatientDetail() {
         Back to Patients
       </Button>
 
-      <div className="mb-8 rounded-2xl border border-slate-800 bg-[#11141e] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] sm:p-6">
+      <div className="mb-8 rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-start gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[1.25rem] border border-slate-700 bg-[#151926] text-white">
-              <span className="text-xl font-bold">{initials(patient.name)}</span>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-900 font-bold">
+              <span className="text-lg">{initials(patient.name)}</span>
             </div>
             <div className="min-w-0">
-              <h1 className="break-words text-3xl text-white sm:text-4xl">{patient.name}</h1>
-              <p className="mt-1 text-white/60">
+              <h1 className="break-words text-2xl sm:text-3xl font-bold text-slate-900 font-['Manrope']">{patient.name}</h1>
+              <p className="mt-0.5 text-xs sm:text-sm text-slate-500 font-medium">
                 {patientIdentityLine}
               </p>
-              <p className="mt-1 text-sm text-white/50">
+              <p className="mt-0.5 text-xs text-slate-400">
                 {patientContactLine}
               </p>
             </div>
           </div>
-          <Badge className={`w-fit ${
-            patient.status === "normal" ? "border border-green-500/20 bg-green-500/20 text-green-400" :
-            patient.status === "elevated" ? "border border-yellow-500/20 bg-yellow-500/20 text-yellow-400" :
-            "border border-red-500/20 bg-red-500/20 text-red-400"
+          <Badge className={`w-fit font-bold text-xs ${
+            patient.status === "normal" ? "border border-lime-200 bg-lime-50 text-lime-800" :
+            patient.status === "elevated" ? "border border-amber-200 bg-amber-50 text-amber-800" :
+            "border border-rose-200 bg-rose-50 text-rose-800"
           }`}>
             {patient.status.toUpperCase()}
           </Badge>
@@ -1072,71 +1072,71 @@ export default function PatientDetail() {
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-8">
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Heart className="w-4 h-4 text-red-500" />
-              <p className="text-xs text-white/50">Heart Rate</p>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Heart className="w-4 h-4 text-rose-500" />
+              <p className="text-xs text-slate-400 font-medium">Heart Rate</p>
             </div>
-            <p className="text-xl font-bold text-white">
+            <p className="text-xl font-bold text-slate-900">
               {vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "—"}
             </p>
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="w-4 h-4 text-blue-500" />
-              <p className="text-xs text-white/50">Blood Pressure</p>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Activity className="w-4 h-4 text-lime-600" />
+              <p className="text-xs text-slate-400 font-medium">Blood Pressure</p>
             </div>
-            <p className="text-xl font-bold text-white">{vitalsSummary.bloodPressure ?? "—"}</p>
+            <p className="text-xl font-bold text-slate-900">{vitalsSummary.bloodPressure ?? "—"}</p>
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp className="w-4 h-4 text-purple-500" />
-              <p className="text-xs text-white/50">Glucose</p>
+            <div className="flex items-center gap-2 mb-1.5">
+              <TrendingUp className="w-4 h-4 text-sky-600" />
+              <p className="text-xs text-slate-400 font-medium">Glucose</p>
             </div>
-            <p className="text-xl font-bold text-white">
+            <p className="text-xl font-bold text-slate-900">
               {vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "—"}
             </p>
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Ruler className="w-4 h-4 text-cyan-400" />
-              <p className="text-xs text-white/50">Height</p>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Ruler className="w-4 h-4 text-purple-600" />
+              <p className="text-xs text-slate-400 font-medium">Height</p>
             </div>
-            <p className="text-xl font-bold text-white truncate" title={formatHeight(vitalsSummary.height)}>
+            <p className="text-xl font-bold text-slate-900 truncate" title={formatHeight(vitalsSummary.height)}>
               {vitalsSummary.height ? `${vitalsSummary.height} cm` : "—"}
             </p>
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Scale className="w-4 h-4 text-emerald-400" />
-              <p className="text-xs text-white/50">Weight</p>
+            <div className="flex items-center gap-2 mb-1.5">
+              <Scale className="w-4 h-4 text-emerald-600" />
+              <p className="text-xs text-slate-400 font-medium">Weight</p>
             </div>
-            <p className="text-xl font-bold text-white truncate" title={formatWeight(vitalsSummary.weight)}>
+            <p className="text-xl font-bold text-slate-900 truncate" title={formatWeight(vitalsSummary.weight)}>
               {vitalsSummary.weight ? `${vitalsSummary.weight} kg` : "—"}
             </p>
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-1 mb-2">
+            <div className="flex items-center justify-between gap-1 mb-1.5">
               <div className="flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-[#ff9c61]" />
-                <p className="text-xs text-white/50">BMI</p>
+                <Activity className="w-4 h-4 text-lime-600" />
+                <p className="text-xs text-slate-400 font-medium">BMI</p>
               </div>
               {vitalsSummary.bmi != null && (
-                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${vitalsSummary.bmiCategory.badgeClass}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${vitalsSummary.bmiCategory.badgeClass}`}>
                   {vitalsSummary.bmiCategory.label}
                 </span>
               )}
             </div>
-            <p className="text-xl font-bold text-white">
+            <p className="text-xl font-bold text-slate-900">
               {vitalsSummary.bmi != null ? vitalsSummary.bmi : "—"}
             </p>
           </CardContent>

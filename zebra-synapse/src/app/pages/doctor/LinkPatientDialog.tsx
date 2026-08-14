@@ -155,28 +155,28 @@ export default function LinkPatientDialog({ onLinked }: Props) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button type="button" className={`rounded-xl shadow-lg shadow-orange-500/30 hover:opacity-90 ${portalPrimaryButtonClass}`}>
+        <Button type="button" className={`rounded-2xl shadow-sm hover:opacity-95 ${portalPrimaryButtonClass}`}>
           <UserPlus className="w-4 h-4 mr-2" />
-          Link patient
+          Link Patient
         </Button>
       </DialogTrigger>
       <DialogContent className={`${portalDialogClass} max-h-[90vh] overflow-y-auto sm:max-w-md`}>
         <form onSubmit={(e) => void handleSubmit(e)}>
           <DialogHeader>
-            <DialogTitle className="text-white">Link a patient</DialogTitle>
-            <DialogDescription className="text-[#A1A1AA]">
+            <DialogTitle className="text-slate-900 font-bold font-['Manrope']">Link a Patient</DialogTitle>
+            <DialogDescription className="text-slate-500 text-xs">
               Select a patient from the list or paste their profile ID from their{" "}
-              <span className="font-medium text-white">Account settings</span>.
+              <span className="font-bold text-slate-800">Account settings</span>.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             {availablePatients.length > 0 && (
               <div className="space-y-2">
-                <Label className="text-white font-medium text-xs text-orange-400">
+                <Label className="text-lime-800 font-bold text-xs">
                   Select Registered Patient
                 </Label>
                 <select
-                  className={`${portalSelectTriggerClass} flex h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm text-white shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl focus-visible:outline-none`}
+                  className={`${portalSelectTriggerClass} flex h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-800 focus-visible:outline-none`}
                   onChange={(e) => {
                     if (e.target.value) {
                       setPatientId(e.target.value);
@@ -197,7 +197,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="link_patient_id" className="text-white">Patient profile ID</Label>
+              <Label htmlFor="link_patient_id" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Patient Profile ID</Label>
               <Input
                 id="link_patient_id"
                 value={patientId}
@@ -209,7 +209,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="link_last_visit" className="text-white">Last visit (optional)</Label>
+              <Label htmlFor="link_last_visit" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Last Visit (Optional)</Label>
               <Input
                 id="link_last_visit"
                 type="date"
@@ -219,7 +219,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="link_condition" className="text-white">Primary condition (optional)</Label>
+              <Label htmlFor="link_condition" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Primary Condition (Optional)</Label>
               <Input
                 id="link_condition"
                 value={primaryCondition}
@@ -230,7 +230,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="link_hr" className="text-white">Heart rate</Label>
+                <Label htmlFor="link_hr" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Heart Rate</Label>
                 <Input
                   id="link_hr"
                   inputMode="numeric"
@@ -241,7 +241,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="link_glucose" className="text-white">Glucose</Label>
+                <Label htmlFor="link_glucose" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Glucose</Label>
                 <Input
                   id="link_glucose"
                   inputMode="numeric"
@@ -254,7 +254,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="link_bps" className="text-white">BP systolic</Label>
+                <Label htmlFor="link_bps" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">BP Systolic</Label>
                 <Input
                   id="link_bps"
                   inputMode="numeric"
@@ -264,7 +264,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="link_bpd" className="text-white">BP diastolic</Label>
+                <Label htmlFor="link_bpd" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">BP Diastolic</Label>
                 <Input
                   id="link_bpd"
                   inputMode="numeric"
@@ -275,10 +275,10 @@ export default function LinkPatientDialog({ onLinked }: Props) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="link_status" className="text-white">Health status</Label>
+              <Label htmlFor="link_status" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Health Status</Label>
               <select
                 id="link_status"
-                className={`${portalSelectTriggerClass} flex h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-1 text-sm text-white shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-xl focus-visible:outline-none`}
+                className={`${portalSelectTriggerClass} flex h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-800 focus-visible:outline-none`}
                 value={healthStatus}
                 onChange={(e) =>
                   setHealthStatus(e.target.value as "normal" | "elevated" | "risk")
@@ -290,7 +290,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
               </select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="link_flags" className="text-white">Risk flags (optional)</Label>
+              <Label htmlFor="link_flags" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Risk Flags (Optional)</Label>
               <Input
                 id="link_flags"
                 value={riskFlags}
@@ -300,12 +300,12 @@ export default function LinkPatientDialog({ onLinked }: Props) {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" className={portalPrimaryButtonClass} disabled={submitting}>
-              {submitting ? "Linking…" : "Link patient"}
+              {submitting ? "Linking…" : "Link Patient"}
             </Button>
           </DialogFooter>
         </form>

@@ -3,57 +3,58 @@ import type { LucideIcon } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { cn } from "../ui/utils";
 
-export const portalShellClass = "min-h-full text-slate-100 p-6 sm:p-8 lg:p-10 max-w-[1600px] mx-auto font-sans selection:bg-cyan-500/20 selection:text-cyan-300";
+export const portalShellClass =
+  "min-h-full text-slate-800 p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto font-sans selection:bg-lime-500/20 selection:text-lime-900 bg-[#f6f8f5]";
 
 export const portalContentClass = "flex flex-col gap-6 lg:gap-8 relative z-10";
 
 export const portalPanelClass =
-  "rounded-[24px] bg-[#0d131f] border border-cyan-500/20 hover:border-cyan-400/40 shadow-[0_8px_24px_rgba(0,0,0,0.5)] transition-all duration-200 text-slate-100";
+  "rounded-[24px] bg-white border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] transition-all duration-200 text-slate-800";
 
 export const portalMutedPanelClass =
-  "rounded-[22px] border border-cyan-500/15 bg-[#0a0f19] shadow-md";
+  "rounded-[22px] border border-slate-100 bg-[#f8fafc] shadow-sm text-slate-800";
 
 export const portalInsetClass =
-  "rounded-[20px] border border-cyan-500/15 bg-[#070b13] shadow-inner";
+  "rounded-[20px] border border-slate-100 bg-[#f8fafc] shadow-inner text-slate-800";
 
 export const portalPrimaryButtonClass =
-  "border-transparent bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 text-slate-950 font-semibold shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_28px_rgba(56,189,248,0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-150";
+  "border-transparent bg-[#84cc16] hover:bg-[#73b512] text-white font-semibold shadow-sm hover:shadow-md hover:shadow-lime-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all duration-150 rounded-2xl";
 
 export const portalSecondaryButtonClass =
-  "border-slate-800 bg-[#0e1422] text-slate-200 hover:border-cyan-500/40 hover:bg-[#141b2e] hover:text-white shadow-sm transition-all duration-150";
+  "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm transition-all duration-150 rounded-2xl";
 
 export const portalDangerButtonClass =
-  "border-rose-500/30 bg-rose-950/40 text-rose-200 hover:border-rose-400/50 hover:bg-rose-900/60 hover:text-white shadow-sm transition-all duration-150";
+  "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300 shadow-sm transition-all duration-150 rounded-2xl";
 
 export const portalInputClass =
-  "h-12 rounded-2xl border border-slate-800 bg-[#090d16] px-4 text-slate-100 placeholder:text-slate-500 focus-visible:border-cyan-400 focus-visible:ring-[2px] focus-visible:ring-cyan-400/20 transition-all";
+  "h-12 rounded-2xl border border-slate-200 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-lime-500 focus-visible:ring-[2px] focus-visible:ring-lime-500/20 transition-all";
 
 export const portalSelectTriggerClass =
-  "h-12 rounded-2xl border-slate-800 bg-[#090d16] text-slate-100 data-[placeholder]:text-slate-500 focus-visible:border-cyan-400 focus-visible:ring-cyan-400/20 transition-all";
+  "h-12 rounded-2xl border-slate-200 bg-white text-slate-900 data-[placeholder]:text-slate-400 focus-visible:border-lime-500 focus-visible:ring-lime-500/20 transition-all";
 
 export const portalSelectContentClass =
-  "border-cyan-500/20 bg-[#0d131f] text-slate-100 shadow-[0_18px_48px_rgba(0,0,0,0.8)]";
+  "border-slate-100 bg-white text-slate-900 shadow-xl rounded-2xl p-1.5 z-50";
 
 export const portalSelectItemClass =
-  "rounded-lg text-slate-200 focus:bg-cyan-500/20 focus:text-cyan-200 cursor-pointer";
+  "rounded-xl text-slate-700 focus:bg-lime-50 focus:text-lime-900 cursor-pointer text-xs sm:text-sm";
 
 export const portalDialogClass =
-  "border-cyan-500/25 bg-[#0d131f] text-slate-100 shadow-[0_30px_80px_rgba(0,0,0,0.85)]";
+  "border-slate-100 bg-white text-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.08)] rounded-[28px]";
 
 export const portalTableWrapClass =
-  "overflow-hidden rounded-[22px] border border-cyan-500/15 bg-[#0a0f19] shadow-lg";
+  "overflow-hidden rounded-[22px] border border-slate-100 bg-white shadow-sm";
 
-export const portalTableClass = "text-sm text-slate-200";
+export const portalTableClass = "text-sm text-slate-700";
 
 export const portalTableHeadClass =
-  "h-12 border-b border-cyan-500/15 bg-[#0e1524] px-4 text-xs font-mono font-semibold uppercase tracking-[0.18em] text-cyan-400/80";
+  "h-12 border-b border-slate-100 bg-slate-50/80 px-4 text-xs font-mono font-semibold uppercase tracking-[0.18em] text-slate-500";
 
-export const portalTableCellClass = "px-4 py-4 align-top text-slate-200 border-b border-slate-800/60";
+export const portalTableCellClass = "px-4 py-4 align-top text-slate-700 border-b border-slate-100";
 
 export function portalTableRowClass(index: number) {
   return cn(
-    "transition-colors hover:bg-cyan-500/10",
-    index % 2 === 0 ? "bg-[#0c121e]" : "bg-[#090e18]",
+    "transition-colors hover:bg-lime-50/30",
+    index % 2 === 0 ? "bg-white" : "bg-slate-50/50",
   );
 }
 
@@ -61,23 +62,22 @@ export function statusPillClass(status: string) {
   switch (status.toLowerCase()) {
     case "confirmed":
     case "normal":
-      return "border-emerald-500/30 bg-emerald-500/15 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.2)]";
+      return "border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm";
     case "completed":
-      return "border-cyan-500/30 bg-cyan-500/15 text-cyan-300 shadow-[0_0_10px_rgba(56,189,248,0.2)]";
+      return "border-lime-200 bg-lime-50 text-lime-700 shadow-sm";
     case "cancelled":
     case "canceled":
-      return "border-rose-500/30 bg-rose-500/15 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.2)]";
     case "high":
     case "risk":
-      return "border-rose-500/30 bg-rose-500/15 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.2)]";
+      return "border-rose-200 bg-rose-50 text-rose-700 shadow-sm";
     case "low":
-      return "border-sky-500/30 bg-sky-500/15 text-sky-300 shadow-[0_0_10px_rgba(14,165,233,0.2)]";
+      return "border-sky-200 bg-sky-50 text-sky-700 shadow-sm";
     case "borderline":
     case "moderate":
     case "elevated":
-      return "border-amber-500/30 bg-amber-500/15 text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.2)]";
+      return "border-amber-200 bg-amber-50 text-amber-700 shadow-sm";
     default:
-      return "border-slate-700 bg-slate-900 text-slate-300";
+      return "border-slate-200 bg-slate-100 text-slate-700";
   }
 }
 
@@ -86,7 +86,7 @@ export function StatusPill({ status, className }: { status: string; className?: 
     <Badge
       variant="outline"
       className={cn(
-        "rounded-full border px-3 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.18em]",
+        "rounded-full border px-3 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.14em]",
         statusPillClass(status),
         className,
       )}
@@ -127,29 +127,29 @@ export function PatientPageHero({
   const actionContent = actions || action;
 
   return (
-    <section className={cn(portalPanelClass, "relative overflow-hidden px-6 py-7 sm:px-8 lg:px-10 lg:py-8 border-cyan-500/30 bg-[#0d131f] shadow-[0_10px_30px_rgba(0,0,0,0.5)]")}>
+    <section className={cn(portalPanelClass, "relative overflow-hidden px-6 py-7 sm:px-8 lg:px-10 lg:py-8")}>
       <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <span className="rounded-full border border-cyan-500/30 bg-cyan-950/80 px-3.5 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.24em] text-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.2)]">
+            <span className="rounded-full border border-lime-200 bg-lime-50 px-3.5 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.2em] text-lime-800">
               {eyebrowText}
             </span>
             {Icon && (
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/30 bg-[#070b13] text-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
-                <Icon className="h-5 w-5" />
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
+                <Icon className="h-5 w-5 stroke-[2.2]" />
               </span>
             )}
           </div>
-          <h1 className="max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl md:text-5xl font-['Manrope']">
+          <h1 className="max-w-2xl text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl md:text-5xl font-['Manrope']">
             {title}
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300 md:text-base">{description}</p>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-500 md:text-base">{description}</p>
           {meta?.length ? (
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {meta.map((item) => (
-                <div key={item.label} className="rounded-[20px] border border-cyan-500/20 bg-[#080c16] px-4 py-3">
-                  <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-cyan-400/70">{item.label}</p>
-                  <p className="mt-2 text-sm font-medium text-slate-100">{item.value}</p>
+                <div key={item.label} className="rounded-[20px] border border-slate-100 bg-slate-50/80 px-4 py-3">
+                  <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-slate-400">{item.label}</p>
+                  <p className="mt-1.5 text-sm font-semibold text-slate-900">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -173,13 +173,13 @@ export function SectionHeading({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-2xl">
         {eyebrow ? (
-          <p className="text-[11px] font-mono uppercase tracking-[0.28em] text-cyan-400">{eyebrow}</p>
+          <p className="text-[11px] font-mono uppercase tracking-[0.24em] font-semibold text-lime-600">{eyebrow}</p>
         ) : null}
-        <h2 className="mt-1 text-2xl font-semibold text-white tracking-tight font-['Manrope']">{title}</h2>
-        {description ? <p className="mt-2 text-sm leading-6 text-slate-300">{description}</p> : null}
+        <h2 className="mt-1 text-2xl font-bold text-slate-900 tracking-tight font-['Manrope']">{title}</h2>
+        {description ? <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -200,25 +200,38 @@ export function MetricCard({
   tone?: "blue" | "orange" | "purple" | "green" | "rose";
 }) {
   const toneClass =
-    tone === "orange" || tone === "purple" || tone === "blue"
-      ? "border-cyan-500/30 bg-[#0e1628] text-cyan-200 shadow-[0_0_20px_rgba(56,189,248,0.1)]"
+    tone === "orange"
+      ? "border-orange-100 bg-orange-50/30 text-slate-900"
       : tone === "green"
-      ? "border-emerald-500/30 bg-[#0c1a1f] text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+      ? "border-lime-100 bg-lime-50/30 text-slate-900"
       : tone === "rose"
-      ? "border-rose-500/30 bg-[#1f0f18] text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.1)]"
-      : "border-sky-500/30 bg-[#0e172a] text-sky-200 shadow-[0_0_20px_rgba(14,165,233,0.1)]";
+      ? "border-rose-100 bg-rose-50/30 text-slate-900"
+      : tone === "purple"
+      ? "border-purple-100 bg-purple-50/30 text-slate-900"
+      : "border-sky-100 bg-sky-50/30 text-slate-900";
+
+  const iconToneClass =
+    tone === "orange"
+      ? "bg-orange-100 text-orange-600"
+      : tone === "green"
+      ? "bg-lime-100 text-lime-700"
+      : tone === "rose"
+      ? "bg-rose-100 text-rose-600"
+      : tone === "purple"
+      ? "bg-purple-100 text-purple-600"
+      : "bg-sky-100 text-sky-600";
 
   return (
     <div className={cn(portalPanelClass, "p-6 transition-all duration-200 hover:scale-[1.01]", toneClass)}>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-cyan-400/80">{label}</p>
-          <p className="mt-3 text-3xl font-semibold text-white tracking-tight">{value}</p>
-          <p className="mt-2 text-sm leading-6 text-slate-300">{detail}</p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+          <p className="mt-2 text-3xl font-bold text-slate-900 tracking-tight">{value}</p>
+          <p className="mt-1.5 text-xs text-slate-500">{detail}</p>
         </div>
         {Icon ? (
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-500/30 bg-[#070b13] text-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.2)]">
-            <Icon className="h-5 w-5" />
+          <span className={cn("flex h-11 w-11 items-center justify-center rounded-2xl shadow-sm", iconToneClass)}>
+            <Icon className="h-5 w-5 stroke-[2.2]" />
           </span>
         ) : null}
       </div>
@@ -238,18 +251,17 @@ export function EmptyStateCard({
   action?: ReactNode;
 }) {
   return (
-    <div className={cn(portalPanelClass, "max-w-3xl border-cyan-500/30 bg-[#0d131f]")}>
-      <div className="space-y-4 p-7">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-500/30 bg-[#070b13] text-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-          <Icon className="h-6 w-6" strokeWidth={1.7} />
+    <div className={cn(portalPanelClass, "max-w-3xl")}>
+      <div className="space-y-4 p-8">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
+          <Icon className="h-6 w-6 stroke-[2.2]" />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold text-white font-['Manrope']">{title}</h2>
-          <p className="max-w-2xl text-sm leading-7 text-slate-300">{description}</p>
+        <div className="space-y-1.5">
+          <h2 className="text-xl font-bold text-slate-900 font-['Manrope']">{title}</h2>
+          <p className="max-w-2xl text-sm leading-relaxed text-slate-500">{description}</p>
         </div>
-        {action ? <div>{action}</div> : null}
+        {action ? <div className="pt-2">{action}</div> : null}
       </div>
     </div>
   );
 }
-

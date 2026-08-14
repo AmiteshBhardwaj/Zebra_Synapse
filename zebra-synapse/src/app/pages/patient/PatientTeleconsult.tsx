@@ -147,53 +147,53 @@ export default function PatientTeleconsult() {
 
       {mode === "idle" && (
         <section className="space-y-6 max-w-4xl mx-auto my-4">
-          <div className="rounded-[2rem] border border-cyan-500/30 bg-gradient-to-b from-[#0e1726]/90 via-[#0a111c]/95 to-[#060a12]/98 p-8 text-white shadow-[0_24px_70px_rgba(6,182,212,0.18)] backdrop-blur-2xl text-center space-y-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 shadow-[0_12px_36px_rgba(6,182,212,0.4)] mx-auto">
-              <Video className="h-10 w-10 text-white" />
+          <div className="rounded-[24px] border border-slate-100 bg-white p-8 text-slate-800 shadow-sm text-center space-y-6">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm mx-auto">
+              <Video className="h-8 w-8" />
             </div>
 
             <div className="space-y-2 max-w-xl mx-auto">
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3.5 py-1 text-xs font-semibold text-cyan-300">
-                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-lime-200 bg-lime-50 px-3.5 py-1 text-xs font-semibold text-lime-800">
+                <Sparkles className="h-3.5 w-3.5 text-lime-600" />
                 <span>Instant Physician Match</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-['Manrope']">
                 Request Live Teleconsultation
               </h2>
-              <p className="text-sm text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                 Click below to broadcast your consultation request to active doctors on duty. Once an available doctor accepts your request, your encrypted HD video call will launch automatically.
               </p>
             </div>
 
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button
-                className={`h-12 px-8 text-sm font-bold shadow-[0_0_30px_rgba(56,189,248,0.5)] ${portalPrimaryButtonClass}`}
+                className={`h-11 px-8 text-xs sm:text-sm font-bold shadow-sm ${portalPrimaryButtonClass}`}
                 onClick={handleStartSearching}
               >
-                <Search className="mr-2 h-5 w-5" />
+                <Search className="mr-2 h-4 w-4" />
                 Start Searching for Doctors
               </Button>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-4 pt-6 border-t border-white/10 text-left text-xs text-slate-300">
-              <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3.5">
-                <Radio className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
+            <div className="grid sm:grid-cols-3 gap-3.5 pt-6 border-t border-slate-100 text-left text-xs text-slate-600">
+              <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
+                <Radio className="h-4 w-4 text-lime-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-white">Live Broadcast Queue</p>
+                  <p className="font-bold text-slate-900">Live Broadcast Queue</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">Notifies online doctors in real-time</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3.5">
-                <UserCheck className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
+                <UserCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-white">Automatic Roster Addition</p>
+                  <p className="font-bold text-slate-900">Automatic Roster Addition</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">Auto-links records with accepting doctor</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.02] p-3.5">
-                <ShieldCheck className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />
+              <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
+                <ShieldCheck className="h-4 w-4 text-sky-600 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-white">End-to-End HD Video</p>
+                  <p className="font-bold text-slate-900">End-to-End HD Video</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">Encrypted WebRTC peer-to-peer stream</p>
                 </div>
               </div>
@@ -204,24 +204,23 @@ export default function PatientTeleconsult() {
 
       {mode === "searching" && (
         <section className="space-y-6 max-w-2xl mx-auto my-8">
-          <div className="rounded-[2rem] border border-cyan-400/40 bg-gradient-to-b from-[#0a1526]/95 to-[#060b14]/98 p-10 text-center space-y-6 shadow-[0_0_50px_rgba(6,182,212,0.25)] backdrop-blur-2xl relative overflow-hidden">
+          <div className="rounded-[24px] border border-lime-200 bg-white p-10 text-center space-y-6 shadow-sm relative overflow-hidden">
             {/* Animated Pulsing Radar Background */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-              <div className="h-72 w-72 rounded-full border border-cyan-400 animate-ping" />
-              <div className="h-96 w-96 rounded-full border border-sky-400 animate-pulse absolute" />
+              <div className="h-64 w-64 rounded-full border border-lime-400 animate-ping" />
             </div>
 
-            <div className="relative z-10 flex h-20 w-20 items-center justify-center rounded-3xl bg-cyan-500/20 border border-cyan-400/40 text-cyan-300 mx-auto">
-              <Loader2 className="h-10 w-10 animate-spin text-cyan-400" />
+            <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl bg-lime-50 text-lime-700 mx-auto">
+              <Loader2 className="h-8 w-8 animate-spin" />
             </div>
 
             <div className="relative z-10 space-y-2">
-              <div className="inline-flex items-center gap-2 text-cyan-400 text-xs font-mono font-semibold uppercase tracking-wider">
-                <Radio className="h-4 w-4 animate-pulse text-cyan-400" />
+              <div className="inline-flex items-center gap-2 text-lime-700 text-xs font-semibold uppercase tracking-wider">
+                <Radio className="h-4 w-4 animate-pulse" />
                 <span>Live Searching Queue Active</span>
               </div>
-              <h2 className="text-2xl font-bold text-white">Searching for Available Doctors...</h2>
-              <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">Searching for Available Doctors...</h2>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
                 Your request has been broadcasted to doctors currently in the Teleconsultation portal. Please stay on this screen.
               </p>
             </div>
@@ -229,7 +228,7 @@ export default function PatientTeleconsult() {
             <div className="relative z-10 pt-2 flex justify-center">
               <Button
                 variant="outline"
-                className="border-rose-500/40 bg-rose-950/20 text-rose-300 hover:bg-rose-950/50 hover:border-rose-500/60 text-xs font-semibold rounded-xl h-11 px-6"
+                className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold rounded-xl h-10 px-6"
                 onClick={handleCancelSearch}
               >
                 Cancel Search Request
@@ -253,21 +252,21 @@ export default function PatientTeleconsult() {
             </div>
 
             <div className={`${portalPanelClass} p-6 space-y-4`}>
-              <div className="flex items-center gap-2 text-cyan-400 font-semibold text-sm tracking-wide uppercase font-mono">
+              <div className="flex items-center gap-2 text-lime-800 font-bold text-xs tracking-wider uppercase">
                 <Clock className="h-4 w-4" />
                 <span>Session Guidelines</span>
               </div>
-              <ul className="space-y-2.5 text-xs text-slate-300 leading-relaxed">
+              <ul className="space-y-2.5 text-xs text-slate-600 leading-relaxed">
                 <li className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">•</span>
+                  <span className="text-lime-600 font-bold">•</span>
                   <span>Ensure your camera and microphone are enabled in your browser settings.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">•</span>
+                  <span className="text-lime-600 font-bold">•</span>
                   <span>Use headphones to prevent audio echo during the consultation.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-cyan-400 font-bold">•</span>
+                  <span className="text-lime-600 font-bold">•</span>
                   <span>Your doctor can update clinical notes live during or after the call.</span>
                 </li>
               </ul>
@@ -277,17 +276,17 @@ export default function PatientTeleconsult() {
       )}
 
       {mode === "completed" && (
-        <div className={`${portalPanelClass} p-10 text-center space-y-5 max-w-xl mx-auto my-8`}>
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 mx-auto">
-            <UserCheck className="h-8 w-8" />
+        <div className={`${portalPanelClass} p-10 text-center space-y-4 max-w-xl mx-auto my-8`}>
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 mx-auto">
+            <UserCheck className="h-7 w-7" />
           </div>
-          <h2 className="text-2xl font-bold text-white">Consultation Completed</h2>
-          <p className="text-sm text-slate-300">
+          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">Consultation Completed</h2>
+          <p className="text-xs sm:text-sm text-slate-500">
             Thank you for attending your video consultation with {activeDoctorName}. Your appointment and care records have been saved.
           </p>
           <div className="pt-2 flex justify-center gap-4">
             <Button
-              className="border-transparent bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 text-slate-950 font-semibold"
+              className="bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs h-10 px-5 rounded-xl shadow-sm"
               onClick={() => navigate("/patient/appointments")}
             >
               Return to Appointments
