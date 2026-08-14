@@ -1,96 +1,121 @@
-# Zebra Synapse Codebase Guide
+# Zebra Synapse — Codebase Navigation & Architecture Map
 
-This guide explains where to work safely. Canonical setup and deploy instructions stay in [`../README.md`](../README.md). Canonical system design stays in [`../architecture.md`](../architecture.md).
+This guide provides an architectural map of the codebase for developers modifying or extending Zebra Synapse. Canonical setup and operations stay in [`../README.md`](../README.md). Canonical system architecture stays in [`../architecture.md`](../architecture.md).
 
-## Top-Level Ownership
+---
 
-- `src/`: product routes, UI, hooks, and business logic
-- `public/`: static assets used by product runtime
-- `supabase/`: database schema, migrations, local config, and Edge Functions
-- `scripts/`: repeatable tooling scripts
-- `docs/`: supplementary development docs
-- `research/`: archived experiments and research outputs, not runtime
-- `screenshots/`: demo and submission imagery
+## 1. Top-Level Directory Ownership
 
-## Entry Points
+- **`src/`:** Production application code (React 18, TypeScript, TailwindCSS v4, Vite 6).
+- **`public/`:** Static web assets and demo files.
+- **`supabase/`:** Database migrations (001–017), seed data, and Deno Edge Functions.
+- **`scripts/`:** Repeatable developer tooling (e.g. `write-local-env.mjs`).
+- **`docs/`:** Supplementary documentation, codebase maps, and third-party attributions.
+- **`research/`:** Archived multimodal machine learning experiments (MIMIC-IV); not part of runtime or web build.
+- **`screenshots/`:** Submission imagery and visual assets.
 
-- `src/main.tsx`: React bootstrap and global styles
-- `src/app/App.tsx`: auth context, router, and toasts
-- `src/app/routes.tsx`: public, patient, and doctor route graph
+---
 
-## Feature Areas
+## 2. Core Entry Points
 
-### Authentication
+- **`src/main.tsx`:** React DOM bootstrap, root mounting, and global styles import.
+- **`src/app/App.tsx`:** Application shell providing `AuthContext`, router outlet, and toast notifications.
+- **`src/app/routes.tsx`:** Complete route definition graph for public, patient, and clinician routes.
 
-- `src/auth/AuthContext.tsx`
-- `src/auth/types.ts`
-- `src/lib/supabase.ts`
-- `src/lib/authErrors.ts`
+---
 
-Use for session bootstrap, role-aware routing, profile loading, and auth redirect handling.
+## 3. Feature Area Directory & File Mapping
 
-### Doctor Workflow
+### Authentication & Authorization
+- **`src/auth/AuthContext.tsx`:** Centralized authentication state, login/signup handlers, and demo mode fallback.
+- **`src/auth/types.ts`:** User role definitions (`patient`, `doctor`), profile models, and session types.
+- **`src/lib/supabase.ts`:** Initialized Supabase client singleton with environment validation.
+- **`src/lib/security.ts`:** Inactivity timer tracking (15-min timeout) and password validation rules.
+- **`src/lib/authErrors.ts`:** Human-friendly authentication error parsing.
+- **`src/app/layouts/RequirePatientPortal.tsx` & `RequireDoctorPortal.tsx`:** Route protection guards.
 
-- `src/app/pages/doctor/`
-- `src/lib/careRelationships.ts`
-- `src/lib/prescriptions.ts`
-- `src/lib/careActions.ts`
+### Patient Portal & Workspaces
+- **`src/app/pages/patient/PatientHome.tsx`:** Patient dashboard with health metrics, active prescriptions, and care action feed.
+- **`src/app/pages/patient/MedicalRecordsInsights.tsx`:** Report upload zone, pipeline status indicators, and longitudinal Recharts trends.
+- **`src/hooks/useActiveReport.ts`:** Active report state persisted in `sessionStorage` for unified report context across all insight tabs.
+- **`src/hooks/usePatientLabReports.ts`:** Real-time fetching of uploaded lab report metadata.
+- **`src/hooks/usePatientLabPanels.ts`:** Fetching published biomarker records.
+- **`src/hooks/usePatientLabReportExtractions.ts`:** Reviewing extraction drafts and confidence scores.
 
-Use for linked patient management, prescriptions, notes, and persisted care activity.
+### Interactive AI Lab Report Chat & Clinician Verification
+- **`src/app/pages/patient/PatientLabChat.tsx`:** Conversational lab assistant UI with 3D glowing robot mascot, voice input (Web Speech API), and message bubbles.
+- **`src/app/components/patient/ChatSessionSidebar.tsx`:** Collapsible chat history, report filtering, search, and token usage tracker.
+- **`src/lib/labReportChat.ts`:** Core chat logic:
+  - Context assembly (biomarker findings + reference ranges + report text snippets).
+  - Gemini 2.5 Flash prompting and automated fallback to rule-based symptom-to-biomarker inference engine.
+  - CRUD operations on `lab_report_queries` table (`submitLabReportQuery`, `verifyLabReportQuery`, `rejectAndReplaceLabReportQuery`, `clearQueriesForReport`).
+- **`supabase/migrations/016_lab_report_queries.sql` & `017_lab_report_queries_delete_policy.sql`:** Database table, RLS policies, and deletion triggers.
 
-### Patient Workflow
+### Deterministic Clinical Insights Engine
+- **`src/lib/biomarkerCatalog.ts`:** Comprehensive catalog of 57+ standardized biomarkers, units, reference ranges, and severity thresholds.
+- **`src/lib/labInsights.ts`:** Deterministic clinical calculation engine:
+  - Multi-organ assessments: Cardiovascular, Hematologic, Hepatic, Renal, Metabolic, Endocrine.
+  - Overall health score calculation and risk indicator generation.
+  - Disease risk prediction algorithms (Diabetes, Atherosclerosis, Anemia, CKD, Liver Disease).
+  - ClinicalTrials.gov query formulation based on lab abnormalities.
+- **`src/app/pages/patient/DiseasePrediction.tsx`:** Deterministic disease risk dashboard.
+- **`src/app/pages/patient/Nutrition.tsx`:** Biomarker-grounded nutritional guidance.
+- **`src/app/pages/patient/ClinicalTrials.tsx`:** Clinical trials matching interface.
+- **`src/app/pages/patient/WellnessTips.tsx`:** Actionable lifestyle tips.
 
-- `src/app/pages/patient/`
-- `src/hooks/usePatientLabReports.ts`
-- `src/hooks/usePatientLabReportExtractions.ts`
-- `src/hooks/usePatientLabPanels.ts`
+### Clinician (Doctor) Workspace
+- **`src/app/pages/doctor/PatientsList.tsx`:** Roster table with risk flags, search/filter, and patient linking dialog.
+- **`src/app/pages/doctor/LinkPatientDialog.tsx`:** Modal for establishing care relationships by email/ID.
+- **`src/app/pages/doctor/PatientDetail.tsx`:** Comprehensive patient chart:
+  - Vitals, longitudinal biomarker trends, and historical lab panels.
+  - Electronic prescription authoring (`src/lib/prescriptions.ts`).
+  - Care action timeline: notes, referrals, follow-ups, lab requests (`src/lib/careActions.ts`).
+  - AI lab report extraction draft review & publishing tool.
+  - AI query review panel (verify or revise patient AI questions).
 
-Use for report upload, extraction review, published panel review, prescriptions, and insight screens.
+### Virtual Teleconsultation & Real-Time Sync
+- **`src/app/pages/patient/PatientTeleconsult.tsx` & `DoctorTeleconsult.tsx`:** Teleconsultation views.
+- **`src/app/components/teleconsult/VideoCall.tsx`:** PeerJS WebRTC video/audio peer-to-peer connection over Google STUN servers.
+- **`src/app/components/teleconsult/RealtimeNote.tsx`:** Doctor-to-patient live clinical note streaming via Supabase Realtime broadcast channels (`consultation-{id}`).
 
-### Lab Analysis and Insights
+### Serverless Lab Extraction Pipeline
+- **`supabase/functions/process-lab-report/`:** Deno Edge Function extracting text via PDF.js and performing structured Gemini OCR.
+- **`supabase/functions/process-lab-report-queue/`:** Asynchronous queue worker processing backlog extraction jobs.
+- **`src/lib/labReportAnalysis.ts` & `labReportExtraction.ts`:** Client-side triggers, draft management, and manual overrides.
 
-- `src/lib/labReportAnalysis.ts`
-- `src/lib/labPanels.ts`
-- `src/lib/labInsights.ts`
-- `supabase/functions/_shared/lab-report-analysis.ts`
-- `supabase/functions/process-lab-report/`
-- `supabase/functions/process-lab-report-queue/`
+---
 
-Use for PDF understanding, biomarker normalization, extraction review, panel persistence, and deterministic interpretation.
+## 4. Primary Database Tables (Supabase Postgres)
 
-## Data Surfaces
+1. **`public.profiles`:** User identity, roles (`patient`, `doctor`), names, license numbers.
+2. **`public.care_relationships`:** Doctor-patient links and clinical snapshot status.
+3. **`public.prescriptions`:** Medication records authored by doctors.
+4. **`public.lab_report_uploads`:** File upload metadata in `lab-reports` storage bucket.
+5. **`public.lab_report_extractions`:** Reviewable AI extraction drafts with field confidence.
+6. **`public.lab_panels`:** Published biomarker records.
+7. **`public.care_actions`:** Clinical actions (notes, follow-ups, requests, referrals).
+8. **`public.lab_report_queries`:** Patient AI chat inquiries, AI responses, and doctor verification status (`pending_review`, `verified`, `rejected_and_replaced`).
 
-Primary tables:
+---
 
-- `profiles`
-- `care_relationships`
-- `prescriptions`
-- `lab_report_uploads`
-- `lab_report_extractions`
-- `lab_panels`
-- `care_actions`
+## 5. Rules for Safe Code Modifications
 
-Storage bucket:
+1. **Maintain Runtime Boundaries:** All product code must remain within `zebra-synapse/src/`, `zebra-synapse/public/`, and `zebra-synapse/supabase/`. Never move runtime dependencies into `research/` or root wrapper directories.
+2. **Deterministic Clinical Logic:** Never replace deterministic clinical risk calculations in `labInsights.ts` with ungrounded generative AI text calls.
+3. **Preserve Database Invariants:** When authoring new SQL migrations, always maintain Row-Level Security (RLS) and PHI mutation audit triggers (`audit_phi_mutation`).
+4. **Validation Checklist:** Before submitting changes, execute:
+   ```bash
+   npm run typecheck
+   npm run build
+   npm run check
+   ```
 
-- `lab-reports`
+---
 
-## Safe Change Rules
+## 6. Attributions & Third-Party Licenses
 
-- Do not move runtime code outside `zebra-synapse/`.
-- Do not place research artifacts in `src/`, `public/`, or `supabase/`.
-- Do not treat `research/` as deployment dependency.
-- Keep one concern per change when touching migrations or auth-sensitive code.
+- **UI Components:** Built using [shadcn/ui](https://ui.shadcn.com/) components and primitives under the [MIT License](https://github.com/shadcn-ui/ui/blob/main/LICENSE.md).
+- **Photography & Visuals:** Includes photos and media from [Unsplash](https://unsplash.com) used under the [Unsplash License](https://unsplash.com/license).
+- **Icons:** [Lucide React](https://lucide.dev/) icons used under the [ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE).
 
-## Verification
 
-- `npm run typecheck`
-- `npm run build`
-- `npm run check`
-
-Manual smoke focus:
-
-- auth for doctor and patient roles
-- lab upload and extraction lifecycle
-- doctor patient detail actions and timeline
-- patient insight screens populated from published lab data
-- prescription create and patient visibility

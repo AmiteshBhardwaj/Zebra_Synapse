@@ -1,14 +1,17 @@
-# Documentation
+# Zebra Synapse Documentation Directory
 
-This folder is for supplementary documentation only. Canonical setup, deployment, and operations live in [`../README.md`](../README.md). Canonical system design lives in [`../architecture.md`](../architecture.md).
+This folder contains supplementary documentation and developer guides. Canonical setup, deployment, and operations live in [`../README.md`](../README.md). Canonical system architecture lives in [`../architecture.md`](../architecture.md).
 
 ## Contents
 
-- [codebase.md](./codebase.md): development map and change-safe ownership guide
-- [attributions.md](./attributions.md): third-party attributions
+- [`codebase.md`](./codebase.md): Comprehensive codebase navigation map, directory ownership, safe change rules, and third-party attributions.
 
-## Rules
 
-- Do not duplicate setup, deploy, or architecture as parallel source-of-truth docs.
-- Extend the main documents instead of rewriting them.
-- Keep runbooks or troubleshooting notes here only when they are truly supplementary.
+## Documentation Hierarchy & Source of Truth
+
+1. **Root Navigation:** [`../../README.md`](../../README.md)
+2. **Consolidated Knowledge Base:** [`../../info.md`](../../info.md)
+3. **Canonical Setup & Operations:** [`../README.md`](../README.md)
+4. **Canonical System Architecture:** [`../architecture.md`](../architecture.md)
+5. **Judge Demo & Walkthrough Guide:** [`../demo.md`](../demo.md)
+6. **Supplementary Developer Docs:** [`./codebase.md`](./codebase.md)
