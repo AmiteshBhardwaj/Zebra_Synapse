@@ -139,12 +139,6 @@ function extractValueFromLines(
   units: string[],
   exclude?: RegExp[],
 ): number | null {
-  const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
-  const unitPattern = units.filter((unit) => unit.trim().length > 0).map(escapeRegex).join("|");
-  const valuePattern = hasUnitConstraint
-    ? new RegExp(`(\\d+(?:\\.\\d+)?)(?=\\s*(?:${unitPattern})(?:\\s|$))`, "gi")
-    : /(?:^|\s)(\d+(?:\.\d+)?)(?=\s|$)/gi;
-
   for (const line of lines) {
     if (exclude?.some((pattern) => pattern.test(line))) continue;
 
@@ -153,12 +147,31 @@ function extractValueFromLines(
 
     const startIndex = line.search(labelMatch);
     const afterLabel = startIndex >= 0 ? line.slice(startIndex) : line;
-    const resultMatch = valuePattern.exec(afterLabel);
-    valuePattern.lastIndex = 0;
 
-    if (!resultMatch?.[1]) continue;
-    const value = Number(resultMatch[1]);
-    if (Number.isFinite(value)) return value;
+    // 1. Try matching with unit constraint if units are defined
+    const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
+    if (hasUnitConstraint) {
+      const unitPatternStr = units
+        .filter((u) => u.trim().length > 0)
+        .map(escapeRegex)
+        .join("|");
+      const unitRegex = new RegExp(
+        `(\\d+(?:\\.\\d+)?)\\s*(?:${unitPatternStr})`,
+        "i",
+      );
+      const matchWithUnit = afterLabel.match(unitRegex);
+      if (matchWithUnit?.[1]) {
+        const val = Number(matchWithUnit[1]);
+        if (Number.isFinite(val)) return val;
+      }
+    }
+
+    // 2. Fallback: extract the first number appearing after the label on this line
+    const matchNumber = afterLabel.match(/(\d+(?:\.\d+)?)/);
+    if (matchNumber?.[1]) {
+      const val = Number(matchNumber[1]);
+      if (Number.isFinite(val)) return val;
+    }
   }
 
   return null;
@@ -204,7 +217,7 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
       extractValue(
         normalized,
         definition.patterns.map(
-          (pattern) => new RegExp(`${pattern.source}\\s*[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`, pattern.flags),
+          (pattern) => new RegExp(`${pattern.source}[\\s\\S]{0,30}?[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`, pattern.flags),
         ),
       );
     if (extracted != null) {
