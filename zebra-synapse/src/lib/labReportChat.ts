@@ -271,6 +271,14 @@ export type LabReportContext = {
   biomarkers?: Record<string, number> | null;
   metrics?: MetricAssessment[];
   rawSnippet?: string | null;
+  dietaryPreference?: string | null;
+  foodAllergies?: string[] | null;
+  dietaryConditions?: string[] | null;
+  dietaryNotes?: string | null;
+  heightCm?: number | null;
+  weightKg?: number | null;
+  bmi?: number | null;
+  bmiCategory?: string | null;
 };
 
 export type GroundedFinding = {
@@ -342,16 +350,32 @@ ${biomarkerSummaries.length > 0 ? biomarkerSummaries.join("\n") : "No specific s
 
 ${context.rawSnippet ? `EXTRACTED REPORT TEXT SNIPPET:\n${context.rawSnippet.slice(0, 1000)}\n` : ""}
 
+PATIENT'S CONFIGURED PROFILE & HEALTH SETTINGS:
+- Primary Diet Preference: ${context.dietaryPreference ? context.dietaryPreference.toUpperCase() : "Omnivore"}
+- Food Allergies & Intolerances: ${context.foodAllergies && context.foodAllergies.length > 0 ? context.foodAllergies.join(", ") : "None reported"}
+- Digestive & Health Conditions: ${context.dietaryConditions && context.dietaryConditions.length > 0 ? context.dietaryConditions.map(c => c.toUpperCase()).join(", ") : "None reported"}
+- Custom Dietary Notes: ${context.dietaryNotes || "None"}
+- Height / Weight: ${context.heightCm ? `${context.heightCm} cm` : "N/A"} / ${context.weightKg ? `${context.weightKg} kg` : "N/A"}${context.bmi ? ` (BMI: ${context.bmi} kg/m²${context.bmiCategory ? `, ${context.bmiCategory}` : ""})` : ""}
+
 PATIENT'S QUESTION:
 "${userQuery}"
 
-CRITICAL INSTRUCTIONS:
-1. START DIRECTLY by answering the patient's specific question/symptom in the very first sentence using their relevant lab values.
+CRITICAL INSTRUCTIONS & GUARDRAILS:
+1. DO NOT INDIVIDUALLY ASK the patient for their dietary preferences, food allergies, height/weight, or health conditions! All necessary data is already configured in the profile settings above.
+2. STRICTLY HONOR THE PATIENT'S DIETARY PREFERENCE:
+   - If VEGAN: Recommend ONLY 100% plant-based foods, proteins (tofu, tempeh, lentils, beans, edamame, chia seeds, nuts), and plant milks. NEVER recommend meat, poultry, fish, seafood, eggs, milk, cheese, or dairy.
+   - If VEGETARIAN: No meat, poultry, fish, or seafood.
+   - If JAIN: No root vegetables, no animal meats.
+   - If LACTOSE INTOLERANT: Avoid dairy / cow's milk.
+   - If GLUTEN-FREE: Recommend gluten-free grains (quinoa, brown rice, certified GF oats); avoid wheat, barley, rye.
+   - If GERD / ACID REFLUX: Avoid citrus, tomatoes, deep-fried foods, heavy spices, late-night meals.
+   - If HYPERTENSION: Enforce low-sodium DASH diet guidelines (< 1,500-2,000 mg/day).
+3. START DIRECTLY by answering the patient's specific question/symptom in the very first sentence using their relevant lab values.
    - Example style: "You might feel dizzy because your Potassium (2 mmol/L), Calcium (5 mg/dL), and Vitamin B12 (12 pg/mL) levels are significantly lower than standard reference ranges."
    - DO NOT start with generic robotic greetings or an unhelpful raw data dump.
-2. EXPLAIN THE CLINICAL MECHANISM: Explain in clear, patient-friendly terms why these specific abnormal values cause the symptom they asked about (e.g., how low potassium and low calcium disrupt nerve signaling, vascular tone, and cause lightheadedness; how low B12 causes neurological symptoms and orthostatic dizziness; how low MCHC/hemoglobin reduces oxygen delivery).
-3. STRICTLY RELEVANT BIOMARKERS ONLY: ONLY mention and discuss biomarkers that are directly relevant to the patient's question. DO NOT include or dump unrelated out-of-range biomarkers (for example, if they ask about dizziness or fatigue, DO NOT list unrelated uric acid, liver enzymes, or cholesterol unless they directly contribute). Keep your answer strictly focused on what answers their query.
-4. NEXT STEPS: Provide supportive, actionable next steps and remind the patient that their connected doctor has automatically received this query for review and verification.
+4. EXPLAIN THE CLINICAL MECHANISM: Explain in clear, patient-friendly terms why these specific abnormal values cause the symptom they asked about (e.g., how low potassium and low calcium disrupt nerve signaling, vascular tone, and cause lightheadedness; how low B12 causes neurological symptoms and orthostatic dizziness; how low MCHC/hemoglobin reduces oxygen delivery).
+5. STRICTLY RELEVANT BIOMARKERS ONLY: ONLY mention and discuss biomarkers that are directly relevant to the patient's question. DO NOT include or dump unrelated out-of-range biomarkers.
+6. NEXT STEPS: Provide supportive, actionable next steps aligned with their configured diet and remind the patient that their connected doctor has automatically received this query for review and verification.
 `.trim();
 
       const response = await fetch(
@@ -382,7 +406,7 @@ CRITICAL INSTRUCTIONS:
   }
 
   // 3. Robust Clinical Inference Engine (offline / keyless)
-  return generateGroundedRuleBasedAnswer(queryLower, relevantFindings, context.reportName);
+  return generateGroundedRuleBasedAnswer(queryLower, relevantFindings, context.reportName, context);
 }
 
 /**
@@ -398,7 +422,8 @@ function findFinding(findings: GroundedFinding[], pattern: RegExp): GroundedFind
 function generateGroundedRuleBasedAnswer(
   query: string,
   findings: GroundedFinding[],
-  reportName: string
+  reportName: string,
+  context?: LabReportContext,
 ): string {
   const isDizzy = /dizz|lightheaded|vertigo|spinning|faint|fainting|unsteady|balance|loss of balance|woozy|giddy|passed out/i.test(query);
   const isWeakness = /weak|tired|fatigue|exhaust|energy|low energy|drowsy|sleepy|lazy|brain fog|sluggish|letharg|malaise|worn out/i.test(query);
@@ -838,12 +863,15 @@ function generateGroundedRuleBasedAnswer(
         ? `Regarding your **blood sugar and metabolic questions**, your ${leadSuspects.join(" and ")} levels are currently elevated above standard healthy targets.`
         : `Your glycemic and metabolic markers indicate elevated blood sugar levels.`;
 
+      const dietPref = (context?.dietaryPreference || "").toLowerCase();
+      const isVegan = dietPref === "vegan";
+
       return (
         `${summaryPrefix}\n\n` +
         `Here is the clinical breakdown:\n\n` +
         reasons.join("\n\n") +
         `\n\n**Recommended Next Steps:**\n` +
-        `Discuss with your doctor whether lifestyle adjustments (low glycemic diet, consistent cardio/strength training) or medical therapy are indicated.`
+        `Discuss with your doctor whether lifestyle adjustments (${isVegan ? "low-glycemic plant-based whole foods with post-meal walks" : "low-glycemic nutrition with post-meal walks"}, consistent cardio/strength training) or medical therapy are indicated.`
       );
     }
   }
@@ -873,11 +901,21 @@ function generateGroundedRuleBasedAnswer(
     }
 
     if (reasons.length > 0) {
+      const dietPref = (context?.dietaryPreference || "").toLowerCase();
+      const isVegan = dietPref === "vegan";
+      const isVeg = isVegan || dietPref === "vegetarian" || dietPref === "jain" || dietPref === "eggetarian";
+
+      const dietAdvice = isVegan
+        ? "high-fiber plant-based whole foods (oats, beans, lentils, chia seeds, flaxseed, avocados, olive oil) and reduced saturated fats"
+        : isVeg
+        ? "high-fiber whole grains, legumes, chia, flaxseed, walnuts, olive oil, and low-fat dairy"
+        : "high-fiber Mediterranean dietary habits (legumes, oats, olive oil, omega-3 rich fish), and reduced saturated fats";
+
       return (
         `Here is the cardiovascular and lipid breakdown from your report (${reportName}):\n\n` +
         reasons.join("\n") +
         `\n\n**Clinical Takeaway:**\n` +
-        `Elevated LDL or triglycerides indicate increased risk of plaque accumulation. Cardiovascular health improves with high-fiber Mediterranean dietary habits, daily brisk cardio, and reduced saturated fats.`
+        `Elevated LDL or triglycerides indicate increased risk of arterial plaque accumulation. Cardiovascular health improves with ${dietAdvice}, regular aerobic exercise, and reduced refined sugars.`
       );
     }
   }

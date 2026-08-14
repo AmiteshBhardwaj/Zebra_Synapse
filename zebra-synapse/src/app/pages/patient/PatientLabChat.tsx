@@ -214,7 +214,7 @@ const QUICK_PROMPT_PILLS = [
 ];
 
 export default function PatientLabChat() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -534,6 +534,12 @@ export default function PatientLabChat() {
         biomarkers: activeExtraction?.biomarkers_json || activePanel?.biomarkers || null,
         metrics: activeMetrics,
         rawSnippet: activeExtraction?.ocr_text || activeExtraction?.raw_text || null,
+        dietaryPreference: profile?.dietary_preference,
+        foodAllergies: profile?.food_allergies,
+        dietaryConditions: profile?.dietary_conditions,
+        dietaryNotes: profile?.dietary_notes,
+        heightCm: profile?.height_cm,
+        weightKg: profile?.weight_kg,
       });
 
       // 2. Persist to database with status: 'pending_review'

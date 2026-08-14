@@ -984,15 +984,76 @@ export function getDiseasePredictions(
   return list;
 }
 
+export type DietaryProfileInput = {
+  dietaryPreference?: string | null;
+  foodAllergies?: string[] | null;
+  dietaryConditions?: string[] | null;
+  dietaryNotes?: string | null;
+};
+
 export function getNutritionPlans(
   panel: LabPanelRow,
   trends?: BiomarkerTrendMap,
+  dietaryProfile?: DietaryProfileInput,
 ): NutritionPlan[] {
   const plans: NutritionPlan[] = [];
+  const dietPref = (dietaryProfile?.dietaryPreference || "").toLowerCase();
+  const allergies = (dietaryProfile?.foodAllergies || []).map((a) => a.toLowerCase());
+  const conditions = (dietaryProfile?.dietaryConditions || []).map((c) => c.toLowerCase());
+  const isVeg = dietPref === "vegetarian" || dietPref === "vegan" || dietPref === "jain" || dietPref === "eggetarian";
+  const isVegan = dietPref === "vegan";
+  const isLactoseIntolerant = allergies.includes("lactose") || isVegan;
+  const isGlutenFree = allergies.includes("gluten") || dietPref === "gluten-free";
+  const hasGerd = conditions.includes("gerd");
+  const hasIbs = conditions.includes("ibs");
+  const hasGastritis = conditions.includes("gastritis");
+  const hasHypertension = conditions.includes("hypertension");
+  const hasGout = conditions.includes("gout");
 
+  // 1. GERD / Acid Reflux Dedicated Protocol
+  if (hasGerd) {
+    plans.push({
+      headline: "Acid Reflux & GERD Guardrails",
+      focus: "Protect esophageal lining and eliminate nocturnal acid triggers.",
+      actions: [
+        "Avoid acidic and spicy triggers: citrus fruits, tomato sauces, vinegar, raw onions, and heavy chili powders.",
+        "Limit reflux-triggering foods and drinks: coffee/caffeine, carbonated sodas, chocolate, and deep-fried dishes.",
+        "Eat smaller, more frequent meals and stop eating at least 3 hours before lying down or going to sleep.",
+      ],
+    });
+  }
+
+  // 2. IBS & Gut Health Protocol
+  if (hasIbs) {
+    plans.push({
+      headline: "Gentle Gut & IBS Strategy",
+      focus: "Soothe intestinal sensitivity and minimize abdominal distension.",
+      actions: [
+        "Follow a low-FODMAP meal structure: limit excess onions, garlic, and high-fructose sweeteners if experiencing bloating.",
+        "Choose well-tolerated fibers: cooked carrots, zucchini, peeled squash, and rolled oats over raw coarse vegetables.",
+        "Chew food thoroughly, drink lukewarm water or ginger tea, and space meals evenly throughout the day.",
+      ],
+    });
+  }
+
+  // 3. Gastritis Protocol
+  if (hasGastritis && !hasGerd) {
+    plans.push({
+      headline: "Gastric Soothing Protocol",
+      focus: "Protect gastric mucosa and avoid acute acid irritation.",
+      actions: [
+        "Avoid black pepper, vinegar dressings, fried snacks, and strong caffeinated beverages.",
+        "Opt for soothing, easy-to-digest staples: cooked oatmeal, bananas, stewed apples, and light broths.",
+        "Never skip meals or leave the stomach completely empty for prolonged periods.",
+      ],
+    });
+  }
+
+  // 4. Glucose / Diabetes Plan
   const glucoseVal = panel.fasting_glucose ?? panel.biomarkers?.fasting_glucose;
   const a1cVal = panel.hemoglobin_a1c ?? panel.biomarkers?.hemoglobin_a1c;
-  if ((a1cVal != null && a1cVal >= 5.7) || (glucoseVal != null && glucoseVal >= 100)) {
+  const hasDiabetesCondition = conditions.includes("diabetes");
+  if ((a1cVal != null && a1cVal >= 5.7) || (glucoseVal != null && glucoseVal >= 100) || hasDiabetesCondition) {
     const isWorsening =
       trends?.fasting_glucose?.direction === "worsening" ||
       trends?.hemoglobin_a1c?.direction === "worsening";
@@ -1000,10 +1061,20 @@ export function getNutritionPlans(
       trends?.fasting_glucose?.direction === "improving" ||
       trends?.hemoglobin_a1c?.direction === "improving";
 
+    const proteinSources = isVegan
+      ? "tofu, tempeh, lentils, edamame, and chia seeds"
+      : isVeg
+      ? "paneer, Greek yogurt, lentils, tofu, and legumes"
+      : "lean poultry, fish, eggs, tofu, and lentils";
+
+    const grainChoice = isGlutenFree
+      ? "quinoa, brown rice, or certified gluten-free oats"
+      : "whole grains, oats, or millets";
+
     const actions = [
-      "Center meals on lean protein, vegetables, beans, and high-fiber carbs.",
-      "Reduce sugary drinks, juices, desserts, and large refined-carb portions.",
-      "Aim for a 10 to 15 minute walk after meals when possible.",
+      `Center meals on clean protein (${proteinSources}), non-starchy vegetables, and low-GI ${grainChoice}.`,
+      "Reduce sugary drinks, fruit juices, refined desserts, and oversized simple carbohydrate portions.",
+      "Aim for a 10 to 15 minute brisk walk immediately after heavy meals when possible.",
     ];
 
     if (isWorsening) {
@@ -1019,6 +1090,7 @@ export function getNutritionPlans(
     });
   }
 
+  // 5. Lipid / Cardiovascular Improvement Plan
   const ldlVal = panel.ldl ?? panel.biomarkers?.ldl;
   const tgVal = panel.triglycerides ?? panel.biomarkers?.triglycerides;
   const hdlVal = panel.hdl ?? panel.biomarkers?.hdl;
@@ -1030,9 +1102,13 @@ export function getNutritionPlans(
       trends?.ldl?.direction === "improving" ||
       trends?.triglycerides?.direction === "improving";
 
+    const fatSources = allergies.includes("tree_nuts") || allergies.includes("peanuts")
+      ? "olive oil, avocado, pumpkin seeds, and chia seeds"
+      : "walnuts, almonds, olive oil, flaxseeds, and avocado";
+
     const actions = [
-      "Increase soluble fiber from oats, beans, lentils, fruit, and vegetables.",
-      "Replace fried foods and processed snacks with nuts, seeds, olive oil, and fish.",
+      `Increase soluble fiber from oats, beans, lentils, psyllium, and colorful vegetables.`,
+      `Replace fried foods and saturated fats with heart-healthy lipids (${fatSources}${!isVeg && !isVegan && (dietPref === "omnivore" || dietPref === "pescatarian") ? " and omega-3 fish" : ""}).`,
       "Limit alcohol and added sugar if triglycerides are elevated.",
     ];
 
@@ -1049,6 +1125,20 @@ export function getNutritionPlans(
     });
   }
 
+  // 6. Hypertension / Low Sodium Plan
+  if (hasHypertension) {
+    plans.push({
+      headline: "DASH & Low-Sodium Balance",
+      focus: "Manage vascular tone and lower arterial pressure via sodium control.",
+      actions: [
+        "Cap daily sodium under 1,500–2,000 mg: avoid canned foods, salted snacks, pickles, and processed condiments.",
+        "Emphasize potassium-rich foods like leafy greens, bananas, sweet potatoes, and avocados to counterbalance sodium.",
+        "Season meals with fragrant herbs, garlic, lemon, and spices rather than added table salt.",
+      ],
+    });
+  }
+
+  // 7. Liver & Hepatic Support
   const biliVal = panel.biomarkers?.total_bilirubin;
   const sgptVal = panel.biomarkers?.sgpt;
   const albVal = panel.biomarkers?.albumin;
@@ -1064,40 +1154,64 @@ export function getNutritionPlans(
     });
   }
 
+  // 8. Calcium & Bone Support
   const calciumVal = panel.biomarkers?.calcium;
   if (calciumVal != null && calciumVal < 8.4) {
+    const calciumFoods = isLactoseIntolerant || isVegan
+      ? "fortified plant milks (almond/soy), ragi, sesame seeds (tahini), chia seeds, almonds, and dark leafy greens (bok choy, kale)"
+      : "low-fat yogurt, milk, paneer, ragi, sesame seeds, almonds, and green leafy vegetables";
+
     plans.push({
       headline: "Calcium & bone support",
       focus: "Increase bioavailable dietary calcium and supportive co-factors.",
       actions: [
-        "Include calcium-rich foods like low-fat dairy, ragi, sesame seeds, almonds, and green leafy vegetables.",
-        "Pair calcium sources with Vitamin D (sunlight exposure/supplements) for optimal intestinal absorption.",
+        `Include calcium-rich items: ${calciumFoods}.`,
+        "Pair calcium sources with Vitamin D (safe sunlight exposure / clinician-advised supplements) for optimal intestinal absorption.",
         "Limit excess caffeine, soft drinks, and alcohol, which inhibit calcium retention.",
       ],
     });
   }
 
+  // 9. Iron-supportive meals
   const hbVal = panel.hemoglobin ?? panel.biomarkers?.hemoglobin;
   if (hbVal != null && hbVal < 12) {
+    const ironFoods = isVeg || isVegan
+      ? "lentils, chickpeas, spinach, pumpkin seeds, moringa, ragi, and fortified oats"
+      : "lean red meats, poultry, lentils, leafy greens, and pumpkin seeds";
+
     plans.push({
       headline: "Iron-supportive meals",
       focus: "Support low hemoglobin with nutrient-dense food choices.",
       actions: [
-        "Include iron-rich foods such as legumes, leafy greens, lean meats, or fortified cereals.",
-        "Pair iron sources with vitamin C foods like citrus, berries, or peppers.",
-        "Ask your clinician before starting iron supplements on your own.",
+        `Include iron-rich foods: ${ironFoods}.`,
+        `Pair non-heme iron with Vitamin C sources ${hasGerd ? "(bell peppers, broccoli, amla, non-acidic greens)" : "(citrus, berries, bell peppers, tomatoes)"} to maximize uptake.`,
+        "Avoid drinking tea or coffee within 1 hour of iron-rich meals, as tannins hinder absorption.",
+      ],
+    });
+  }
+
+  // 10. Gout Protocol
+  if (hasGout) {
+    plans.push({
+      headline: "Low-Purine Gout Diet",
+      focus: "Reduce circulating uric acid and prevent crystal flare-ups.",
+      actions: [
+        "Avoid high-purine items: organ meats (liver, kidneys), red meat, sardines, anchovies, and shellfish.",
+        "Eliminate high-fructose corn syrup beverages and strictly avoid beer and grain spirits.",
+        `Maintain high water intake (3+ liters daily) and include cherries and ${isVegan || isLactoseIntolerant ? "vitamin-C rich plant foods" : "low-fat dairy if tolerated"}.`,
       ],
     });
   }
 
   if (plans.length === 0) {
+    const dietLabel = dietPref ? (dietPref.charAt(0).toUpperCase() + dietPref.slice(1)) : "Balanced";
     plans.push({
-      headline: "Maintenance plan",
-      focus: "Keep current markers stable with broadly heart-healthy habits.",
+      headline: `${dietLabel} Nutrition Strategy`,
+      focus: `Keep current markers stable with ${dietPref || "heart-healthy"} nutrition aligned to your profile.`,
       actions: [
-        "Keep meals mostly minimally processed and rich in fiber.",
-        "Stay hydrated and keep protein distributed across the day.",
-        "Repeat labs on schedule to catch any trend changes early.",
+        `Keep meals minimally processed, rich in dietary fiber, and tailored to your ${dietPref || "balanced"} diet.`,
+        `Distribute ${isVegan ? "clean plant protein (tofu, tempeh, lentils, edamame)" : isVeg ? "vegetarian protein (paneer, yogurt, lentils, tofu)" : "clean protein"} evenly across the day.`,
+        "Stay consistently hydrated and repeat labs on schedule to catch trend changes early.",
       ],
     });
   }

@@ -10,7 +10,15 @@ export type CareRelationshipListRow = {
   health_status: "normal" | "elevated" | "risk";
   risk_flags: string[];
   created_at: string;
-  patient: { full_name: string | null } | null;
+  patient: {
+    full_name: string | null;
+    height_cm?: number | null;
+    weight_kg?: number | null;
+    dietary_preference?: string | null;
+    food_allergies?: string[] | null;
+    dietary_conditions?: string[] | null;
+    dietary_notes?: string | null;
+  } | null;
 };
 
 export type DoctorPatientListItem = {
@@ -38,7 +46,7 @@ export const CARE_RELATIONSHIPS_LIST_SELECT = `
   health_status,
   risk_flags,
   created_at,
-  patient:profiles!care_relationships_patient_id_fkey ( full_name )
+  patient:profiles!care_relationships_patient_id_fkey ( full_name, height_cm, weight_kg, dietary_preference, food_allergies, dietary_conditions, dietary_notes )
 `.trim();
 
 export function formatDisplayDate(value: string | null | undefined): string {
@@ -58,6 +66,72 @@ export function formatBloodPressure(
 ): string | null {
   if (sys == null || dia == null) return null;
   return `${sys}/${dia}`;
+}
+
+export function calculateBmi(
+  heightCm: number | null | undefined,
+  weightKg: number | null | undefined,
+): number | null {
+  if (!heightCm || !weightKg || heightCm <= 0 || weightKg <= 0) return null;
+  const heightM = heightCm / 100;
+  const bmi = weightKg / (heightM * heightM);
+  return Number.isFinite(bmi) ? Math.round(bmi * 10) / 10 : null;
+}
+
+export type BmiCategoryInfo = {
+  label: "Underweight" | "Normal" | "Overweight" | "Obese" | "Unknown";
+  badgeClass: string;
+  textClass: string;
+};
+
+export function getBmiCategory(bmi: number | null | undefined): BmiCategoryInfo {
+  if (bmi == null || !Number.isFinite(bmi)) {
+    return {
+      label: "Unknown",
+      badgeClass: "border-white/10 bg-white/5 text-white/60",
+      textClass: "text-white/60",
+    };
+  }
+  if (bmi < 18.5) {
+    return {
+      label: "Underweight",
+      badgeClass: "border-amber-500/30 bg-amber-500/15 text-amber-300",
+      textClass: "text-amber-400",
+    };
+  }
+  if (bmi < 25) {
+    return {
+      label: "Normal",
+      badgeClass: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+      textClass: "text-emerald-400",
+    };
+  }
+  if (bmi < 30) {
+    return {
+      label: "Overweight",
+      badgeClass: "border-orange-500/30 bg-orange-500/15 text-orange-300",
+      textClass: "text-orange-400",
+    };
+  }
+  return {
+    label: "Obese",
+    badgeClass: "border-rose-500/30 bg-rose-500/15 text-rose-300",
+    textClass: "text-rose-400",
+  };
+}
+
+export function formatHeight(heightCm: number | null | undefined): string {
+  if (!heightCm || heightCm <= 0) return "—";
+  const totalInches = heightCm / 2.54;
+  const feet = Math.floor(totalInches / 12);
+  const inches = Math.round(totalInches % 12);
+  return `${heightCm} cm (${feet}'${inches}")`;
+}
+
+export function formatWeight(weightKg: number | null | undefined): string {
+  if (!weightKg || weightKg <= 0) return "—";
+  const lbs = Math.round(weightKg * 2.20462 * 10) / 10;
+  return `${weightKg} kg (${lbs} lbs)`;
 }
 
 export function mapRowToListItem(row: CareRelationshipListRow): DoctorPatientListItem {
@@ -80,3 +154,4 @@ export function mapRowToListItem(row: CareRelationshipListRow): DoctorPatientLis
     riskFlags: Array.isArray(row.risk_flags) ? row.risk_flags : [],
   };
 }
+

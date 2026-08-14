@@ -1,5 +1,7 @@
-import { Apple, Leaf, ShieldCheck, Utensils, Info, Tag } from "lucide-react";
+import { Apple, Leaf, ShieldCheck, Utensils, Info, Tag, Flame, ShieldAlert, Settings, Sparkles } from "lucide-react";
 import { useMemo } from "react";
+import { Link } from "react-router";
+import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
@@ -15,6 +17,7 @@ import { useActiveReport } from "../../../hooks/useActiveReport";
 import { getNutritionPlans } from "../../../lib/labInsights";
 
 export default function Nutrition() {
+  const { profile } = useAuth();
   const { hasLabReports, uploads, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
   const {
@@ -26,9 +29,19 @@ export default function Nutrition() {
     setSelectedReportId,
   } = useActiveReport(panels);
 
+  const dietaryProfile = useMemo(
+    () => ({
+      dietaryPreference: profile?.dietary_preference,
+      foodAllergies: profile?.food_allergies,
+      dietaryConditions: profile?.dietary_conditions,
+      dietaryNotes: profile?.dietary_notes,
+    }),
+    [profile],
+  );
+
   const plans = useMemo(
-    () => (activePanel ? getNutritionPlans(activePanel, biomarkerTrends) : []),
-    [activePanel, biomarkerTrends],
+    () => (activePanel ? getNutritionPlans(activePanel, biomarkerTrends, dietaryProfile) : []),
+    [activePanel, biomarkerTrends, dietaryProfile],
   );
 
   if (loading || panelsLoading) {
@@ -47,6 +60,17 @@ export default function Nutrition() {
       />
     );
   }
+
+  const dietTypeLabel = profile?.dietary_preference
+    ? profile.dietary_preference.charAt(0).toUpperCase() + profile.dietary_preference.slice(1)
+    : "Omnivore (Standard)";
+
+  const hasDietaryCustomizations = Boolean(
+    profile?.dietary_preference ||
+    (profile?.food_allergies && profile.food_allergies.length > 0) ||
+    (profile?.dietary_conditions && profile.dietary_conditions.length > 0) ||
+    profile?.dietary_notes
+  );
 
   return (
     <PatientPortalPage>
@@ -77,6 +101,79 @@ export default function Nutrition() {
             {hasPanels && activePanel ? `${plans.length} Custom Meal Plans` : "Awaiting Biomarkers"}
           </span>
         </div>
+      </div>
+
+      {/* Active Dietary Guardrails Card */}
+      <div className="mb-6 max-w-4xl">
+        <Card className={`${portalPanelClass} p-2 border-emerald-500/20 bg-gradient-to-r from-emerald-950/20 via-slate-900/40 to-slate-900/20`}>
+          <CardHeader className="pb-3 flex flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <Utensils className="h-4 w-4 text-emerald-400" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold text-white">Active Dietary & Digestive Guardrails</CardTitle>
+                <CardDescription className="text-xs text-[#92a8c7]">
+                  Meal recommendations automatically adapt to your preferences and gastrointestinal profile.
+                </CardDescription>
+              </div>
+            </div>
+
+            <Link
+              to="/patient/settings"
+              className="flex items-center gap-1.5 text-xs text-[#ff9c61] hover:text-[#ffb788] transition-colors font-medium shrink-0 bg-white/[0.04] hover:bg-white/[0.08] px-3 py-1.5 rounded-xl border border-white/10"
+            >
+              <Settings className="w-3.5 h-3.5" />
+              Edit Preferences
+            </Link>
+          </CardHeader>
+
+          <CardContent className="space-y-3 pt-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="border border-emerald-500/40 bg-emerald-500/15 text-emerald-300 font-semibold px-2.5 py-1 text-xs gap-1.5">
+                <Leaf className="w-3 h-3" />
+                Diet: {dietTypeLabel}
+              </Badge>
+
+              {profile?.food_allergies && profile.food_allergies.length > 0 ? (
+                profile.food_allergies.map((allergy) => (
+                  <Badge
+                    key={allergy}
+                    className="border border-amber-500/40 bg-amber-500/15 text-amber-300 font-medium px-2.5 py-1 text-xs gap-1.5"
+                  >
+                    <ShieldAlert className="w-3 h-3 text-amber-400" />
+                    Allergy: {allergy.charAt(0).toUpperCase() + allergy.slice(1).replace("_", " ")}
+                  </Badge>
+                ))
+              ) : null}
+
+              {profile?.dietary_conditions && profile.dietary_conditions.length > 0 ? (
+                profile.dietary_conditions.map((cond) => (
+                  <Badge
+                    key={cond}
+                    className="border border-rose-500/40 bg-rose-500/15 text-rose-300 font-medium px-2.5 py-1 text-xs gap-1.5"
+                  >
+                    <Flame className="w-3 h-3 text-rose-400" />
+                    Condition: {cond.toUpperCase()}
+                  </Badge>
+                ))
+              ) : null}
+
+              {!hasDietaryCustomizations && (
+                <span className="text-xs text-white/50 italic">
+                  Standard omnivore profile active. Set custom dietary allergies or GERD/IBS in Settings.
+                </span>
+              )}
+            </div>
+
+            {profile?.dietary_notes && (
+              <p className="text-xs text-[#b4c9e8] bg-white/[0.02] p-2.5 rounded-xl border border-white/5 italic">
+                <span className="font-semibold text-white/70 not-italic mr-1.5">Personal Notes:</span>
+                "{profile.dietary_notes}"
+              </p>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Scope Selector Control */}

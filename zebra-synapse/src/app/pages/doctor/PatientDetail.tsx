@@ -33,6 +33,12 @@ import {
   Stethoscope,
   XCircle,
   Edit3,
+  Ruler,
+  Scale,
+  Utensils,
+  ShieldAlert,
+  Flame,
+  Leaf,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
@@ -40,6 +46,10 @@ import {
   CARE_RELATIONSHIPS_LIST_SELECT,
   formatBloodPressure,
   formatDisplayDate,
+  calculateBmi,
+  getBmiCategory,
+  formatHeight,
+  formatWeight,
   type CareRelationshipListRow,
 } from "../../../lib/careRelationships";
 import {
@@ -608,6 +618,14 @@ export default function PatientDetail() {
     [patient.phone, patient.email],
     "No contact details on file",
   );
+  const patientHeight = rel?.patient?.height_cm;
+  const patientWeight = rel?.patient?.weight_kg;
+  const patientDietaryPreference = rel?.patient?.dietary_preference;
+  const patientFoodAllergies = rel?.patient?.food_allergies;
+  const patientDietaryConditions = rel?.patient?.dietary_conditions;
+  const patientDietaryNotes = rel?.patient?.dietary_notes;
+  const patientBmi = calculateBmi(patientHeight, patientWeight);
+  const patientBmiCategory = getBmiCategory(patientBmi);
 
   const vitalsSummary = {
     heartRate: rel?.heart_rate,
@@ -616,13 +634,28 @@ export default function PatientDetail() {
       rel?.blood_pressure_diastolic ?? null,
     ),
     glucose: rel?.glucose,
+    height: patientHeight,
+    weight: patientWeight,
+    bmi: patientBmi,
+    bmiCategory: patientBmiCategory,
+    dietaryPreference: patientDietaryPreference,
+    foodAllergies: patientFoodAllergies,
+    dietaryConditions: patientDietaryConditions,
+    dietaryNotes: patientDietaryNotes,
   };
   const latestLabPanel = getLatestLabPanel(labPanels);
   const synthesizedLab = useMemo(() => synthesizeMultiPanelData(labPanels), [labPanels]);
   const activeDoctorPanel = labPanels.length > 0 ? synthesizedLab.panel : latestLabPanel;
   const latestLabStatus = activeDoctorPanel ? getOverallStatus(activeDoctorPanel, synthesizedLab.metadata) : null;
   const diseasePredictions = activeDoctorPanel ? getDiseasePredictions(activeDoctorPanel, synthesizedLab.trends) : [];
-  const nutritionPlans = activeDoctorPanel ? getNutritionPlans(activeDoctorPanel, synthesizedLab.trends) : [];
+  const nutritionPlans = activeDoctorPanel
+    ? getNutritionPlans(activeDoctorPanel, synthesizedLab.trends, {
+        dietaryPreference: patientDietaryPreference,
+        foodAllergies: patientFoodAllergies,
+        dietaryConditions: patientDietaryConditions,
+        dietaryNotes: patientDietaryNotes,
+      })
+    : [];
   const wellnessTips = activeDoctorPanel ? getWellnessTips(activeDoctorPanel, synthesizedLab.trends) : [];
   const relationshipInsights = buildRelationshipInsights({
     glucose: rel?.glucose,
@@ -784,10 +817,19 @@ export default function PatientDetail() {
       `Last visit: ${patient.lastVisit}`,
       `Next appointment: ${nextAppointmentLabel}`,
       "",
-      "Latest vitals",
-      `- Heart rate: ${vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "â€”"}`,
-      `- Blood pressure: ${vitalsSummary.bloodPressure ?? "â€”"}`,
-      `- Glucose: ${vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "â€”"}`,
+      "Latest vitals & body metrics",
+      `- Heart rate: ${vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "—"}`,
+      `- Blood pressure: ${vitalsSummary.bloodPressure ?? "—"}`,
+      `- Glucose: ${vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "—"}`,
+      `- Height: ${formatHeight(vitalsSummary.height)}`,
+      `- Weight: ${formatWeight(vitalsSummary.weight)}`,
+      `- Body Mass Index (BMI): ${vitalsSummary.bmi != null ? `${vitalsSummary.bmi} kg/m² (${vitalsSummary.bmiCategory.label})` : "—"}`,
+      "",
+      "Dietary preferences & conditions",
+      `- Diet type: ${patientDietaryPreference ? patientDietaryPreference.charAt(0).toUpperCase() + patientDietaryPreference.slice(1) : "Omnivore"}`,
+      `- Food allergies: ${patientFoodAllergies?.length ? patientFoodAllergies.join(", ") : "None reported"}`,
+      `- Digestive & health conditions: ${patientDietaryConditions?.length ? patientDietaryConditions.map((c) => c.toUpperCase()).join(", ") : "None reported"}`,
+      ...(patientDietaryNotes ? [`- Notes: ${patientDietaryNotes}`] : []),
       "",
       "Risk flags",
       ...(rel?.risk_flags?.length
@@ -814,7 +856,7 @@ export default function PatientDetail() {
       actionType: "report",
       title: "Clinical summary generated",
       details:
-        "Downloaded a text summary with current vitals, prescriptions, risk flags, and care activity.",
+        "Downloaded a text summary with current vitals, body metrics, prescriptions, risk flags, and care activity.",
       status: "completed",
     });
     if (!ok) return;
@@ -923,8 +965,8 @@ export default function PatientDetail() {
           <Button
             type="button"
             className={portalPrimaryButtonClass}
-            onClick={() => void handleQuickActionSubmit()}
             disabled={careActionSaving}
+            onClick={() => void handleQuickActionSubmit()}
           >
             {careActionSaving ? "Saving..." : "Save Action"}
           </Button>
@@ -932,71 +974,53 @@ export default function PatientDetail() {
       </DialogContent>
     </Dialog>
 
-    {/* Reject and Replace Clinical Response Dialog */}
     <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
       <DialogContent className={portalDialogClass}>
         <DialogHeader>
-          <DialogTitle className="text-white flex items-center gap-2">
-            <Stethoscope className="h-5 w-5 text-cyan-400" />
-            Clinical Revision: Replace AI Response
-          </DialogTitle>
+          <DialogTitle className="text-white">Reject & Replace AI Response</DialogTitle>
           <DialogDescription className="text-white/60">
-            Provide your clinical explanation to replace the AI-generated answer. The patient will see your advice marked as verified clinical guidance.
+            Override the automated AI response with your verified clinical guidance for the patient.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {selectedQueryForReject && (
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1.5 text-xs">
-              <p className="text-cyan-400 font-mono uppercase tracking-wider">Patient's Question:</p>
-              <p className="text-white font-medium">"{selectedQueryForReject.user_query}"</p>
-              <p className="text-slate-400 mt-2 font-mono uppercase tracking-wider">Original AI Proposal (To be replaced):</p>
-              <p className="text-slate-300 line-clamp-3 italic">{selectedQueryForReject.ai_response}</p>
+            <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 space-y-1">
+              <p className="text-xs font-semibold text-white/50">Patient Query:</p>
+              <p className="text-sm text-white/90 italic">"{selectedQueryForReject.user_query}"</p>
             </div>
           )}
-
           <div className="space-y-2">
-            <Label htmlFor="doctor_response" className="text-xs font-mono uppercase text-cyan-300">
-              Your Clinical Guidance (Shown to Patient) *
-            </Label>
+            <Label htmlFor="doctor_response">Your Clinical Guidance (Sent to Patient)</Label>
             <Textarea
               id="doctor_response"
               value={customDoctorResponse}
               onChange={(e) => setCustomDoctorResponse(e.target.value)}
               rows={5}
-              placeholder="E.g., Your vitamin D is indeed low at 18 ng/mL, but I also recommend checking iron and staying well hydrated..."
-              className="bg-slate-950/80 border-slate-700 text-slate-100 placeholder:text-slate-500 rounded-xl"
+              placeholder="Enter your clinical instructions and advice for the patient..."
             />
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="doctor_reject_notes" className="text-xs font-mono uppercase text-slate-400">
-              Internal Clinical Notes (Optional)
-            </Label>
+            <Label htmlFor="doctor_notes">Internal Clinician Notes (Optional)</Label>
             <Input
-              id="doctor_reject_notes"
+              id="doctor_notes"
               value={doctorRejectNotes}
               onChange={(e) => setDoctorRejectNotes(e.target.value)}
-              placeholder="Notes for chart or follow-up reason"
+              placeholder="Why was the AI response rejected? (Internal record)"
               className={portalInputClass}
             />
           </div>
         </div>
         <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            className={portalSecondaryButtonClass}
-            onClick={() => setRejectDialogOpen(false)}
-          >
+          <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => setRejectDialogOpen(false)}>
             Cancel
           </Button>
           <Button
             type="button"
             className={portalPrimaryButtonClass}
-            onClick={() => void handleSubmitRejectAndReplace()}
             disabled={queryActionSaving || !customDoctorResponse.trim()}
+            onClick={() => void handleSubmitRejectAndReplace()}
           >
-            {queryActionSaving ? "Saving Revision..." : "Replace & Approve Guidance"}
+            {queryActionSaving ? "Saving..." : "Submit Guidance"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1034,15 +1058,15 @@ export default function PatientDetail() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-8">
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Heart className="w-4 h-4 text-red-500" />
-              <p className="text-sm text-white/40">Heart Rate</p>
+              <p className="text-xs text-white/50">Heart Rate</p>
             </div>
-            <p className="text-2xl font-bold text-white">
-              {vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "-"}
+            <p className="text-xl font-bold text-white">
+              {vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "—"}
             </p>
           </CardContent>
         </Card>
@@ -1050,29 +1074,60 @@ export default function PatientDetail() {
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="w-4 h-4 text-blue-500" />
-              <p className="text-sm text-white/40">Blood Pressure</p>
+              <p className="text-xs text-white/50">Blood Pressure</p>
             </div>
-            <p className="text-2xl font-bold text-white">{vitalsSummary.bloodPressure ?? "-"}</p>
+            <p className="text-xl font-bold text-white">{vitalsSummary.bloodPressure ?? "—"}</p>
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="w-4 h-4 text-purple-500" />
-              <p className="text-sm text-white/40">Glucose</p>
+              <p className="text-xs text-white/50">Glucose</p>
             </div>
-            <p className="text-2xl font-bold text-white">
-              {vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "-"}
+            <p className="text-xl font-bold text-white">
+              {vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "—"}
             </p>
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-2">
-              <Calendar className="w-4 h-4 text-green-500" />
-              <p className="text-sm text-white/40">Next Appointment</p>
+              <Ruler className="w-4 h-4 text-cyan-400" />
+              <p className="text-xs text-white/50">Height</p>
             </div>
-            <p className="text-lg font-bold text-white">{nextAppointmentLabel}</p>
+            <p className="text-xl font-bold text-white truncate" title={formatHeight(vitalsSummary.height)}>
+              {vitalsSummary.height ? `${vitalsSummary.height} cm` : "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Scale className="w-4 h-4 text-emerald-400" />
+              <p className="text-xs text-white/50">Weight</p>
+            </div>
+            <p className="text-xl font-bold text-white truncate" title={formatWeight(vitalsSummary.weight)}>
+              {vitalsSummary.weight ? `${vitalsSummary.weight} kg` : "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-1 mb-2">
+              <div className="flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-[#ff9c61]" />
+                <p className="text-xs text-white/50">BMI</p>
+              </div>
+              {vitalsSummary.bmi != null && (
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full border ${vitalsSummary.bmiCategory.badgeClass}`}>
+                  {vitalsSummary.bmiCategory.label}
+                </span>
+              )}
+            </div>
+            <p className="text-xl font-bold text-white">
+              {vitalsSummary.bmi != null ? vitalsSummary.bmi : "—"}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -1120,6 +1175,77 @@ export default function PatientDetail() {
                   <p className="text-sm text-white/40">Contact</p>
                   <p className="font-semibold text-white">{patient.phone}</p>
                   <p className="text-sm text-white/60">{patient.email}</p>
+                </div>
+                <div className="grid grid-cols-3 gap-3 pt-3 border-t border-white/10">
+                  <div>
+                    <p className="text-xs text-white/40">Height</p>
+                    <p className="text-sm font-semibold text-white">{formatHeight(vitalsSummary.height)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/40">Weight</p>
+                    <p className="text-sm font-semibold text-white">{formatWeight(vitalsSummary.weight)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-white/40">BMI</p>
+                    <p className="text-sm font-semibold text-white">
+                      {vitalsSummary.bmi != null ? `${vitalsSummary.bmi} (${vitalsSummary.bmiCategory.label})` : "—"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Dietary Profile & Food Restrictions in Overview */}
+                <div className="pt-3 border-t border-white/10 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-white/50 flex items-center gap-1.5">
+                      <Utensils className="w-3.5 h-3.5 text-emerald-400" />
+                      Diet & Food Profile
+                    </p>
+                    <span className="text-[11px] font-semibold text-emerald-300">
+                      {patientDietaryPreference
+                        ? patientDietaryPreference.charAt(0).toUpperCase() + patientDietaryPreference.slice(1)
+                        : "Omnivore"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {patientFoodAllergies && patientFoodAllergies.length > 0 ? (
+                      patientFoodAllergies.map((allergy) => (
+                        <span
+                          key={allergy}
+                          className="inline-flex items-center gap-1 text-[10px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full"
+                        >
+                          <ShieldAlert className="w-2.5 h-2.5 text-amber-400" />
+                          {allergy.charAt(0).toUpperCase() + allergy.slice(1).replace("_", " ")}
+                        </span>
+                      ))
+                    ) : null}
+
+                    {patientDietaryConditions && patientDietaryConditions.length > 0 ? (
+                      patientDietaryConditions.map((cond) => (
+                        <span
+                          key={cond}
+                          className="inline-flex items-center gap-1 text-[10px] font-medium bg-rose-500/15 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded-full"
+                        >
+                          <Flame className="w-2.5 h-2.5 text-rose-400" />
+                          {cond.toUpperCase()}
+                        </span>
+                      ))
+                    ) : null}
+
+                    {(!patientFoodAllergies || patientFoodAllergies.length === 0) &&
+                      (!patientDietaryConditions || patientDietaryConditions.length === 0) && (
+                        <span className="text-xs text-white/40 italic">
+                          No food allergies or GI conditions recorded
+                        </span>
+                      )}
+                  </div>
+
+                  {patientDietaryNotes && (
+                    <p className="text-[11px] text-[#b4c9e8] bg-white/[0.03] p-2 rounded-lg border border-white/5 italic">
+                      <span className="font-semibold text-white/70 not-italic mr-1">Notes:</span>
+                      "{patientDietaryNotes}"
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

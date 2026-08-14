@@ -66,7 +66,7 @@ function statusLabel(status: VitalsStatus) {
 }
 
 export default function Vitals() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { hasLabReports, loading } = usePatientLabReports();
   const { panels, loading: panelsLoading } = usePatientLabPanels();
   const [vitalsRow, setVitalsRow] = useState<PatientVitalsRow | null>(null);
@@ -384,6 +384,83 @@ export default function Vitals() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Configured Body Metrics & Dietary Guardrails (from Settings) */}
+          {(profile?.height_cm || profile?.weight_kg || profile?.dietary_preference) && (
+            <Card className={`${portalPanelClass} mt-6`}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Activity className="h-4.5 w-4.5 text-cyan-400" />
+                    <CardTitle className="text-base text-white">Body Metrics & Configured Health Profile</CardTitle>
+                  </div>
+                  <Badge className="border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-mono">
+                    From Settings
+                  </Badge>
+                </div>
+                <CardDescription className="text-xs text-[#92a8c7]">
+                  Baseline measurements and dietary parameters configured in your profile.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className={`${portalInsetClass} p-4`}>
+                  <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">Height</p>
+                  <p className="mt-1.5 text-lg font-semibold text-white">
+                    {profile.height_cm ? `${profile.height_cm} cm` : "Not set"}
+                  </p>
+                  {profile.height_cm && (
+                    <p className="text-xs text-white/50">
+                      {Math.floor(profile.height_cm / 2.54 / 12)} ft {Math.round((profile.height_cm / 2.54) % 12)} in
+                    </p>
+                  )}
+                </div>
+
+                <div className={`${portalInsetClass} p-4`}>
+                  <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">Weight</p>
+                  <p className="mt-1.5 text-lg font-semibold text-white">
+                    {profile.weight_kg ? `${profile.weight_kg} kg` : "Not set"}
+                  </p>
+                  {profile.weight_kg && (
+                    <p className="text-xs text-white/50">
+                      {Math.round(profile.weight_kg * 2.20462)} lbs
+                    </p>
+                  )}
+                </div>
+
+                <div className={`${portalInsetClass} p-4`}>
+                  <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">BMI</p>
+                  <p className="mt-1.5 text-lg font-semibold text-cyan-300">
+                    {profile.height_cm && profile.weight_kg
+                      ? `${(profile.weight_kg / Math.pow(profile.height_cm / 100, 2)).toFixed(1)} kg/m²`
+                      : "—"}
+                  </p>
+                  {profile.height_cm && profile.weight_kg && (
+                    <p className="text-xs text-white/50">
+                      {(() => {
+                        const bmi = profile.weight_kg / Math.pow(profile.height_cm / 100, 2);
+                        if (bmi < 18.5) return "Underweight";
+                        if (bmi < 25) return "Normal weight";
+                        if (bmi < 30) return "Overweight";
+                        return "Obese";
+                      })()}
+                    </p>
+                  )}
+                </div>
+
+                <div className={`${portalInsetClass} p-4`}>
+                  <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">Active Diet</p>
+                  <p className="mt-1.5 text-lg font-semibold text-emerald-400 capitalize">
+                    {profile.dietary_preference || "Omnivore"}
+                  </p>
+                  <p className="text-xs text-white/50">
+                    {profile.food_allergies?.length
+                      ? `${profile.food_allergies.length} allergies`
+                      : "No allergies recorded"}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       ) : (
         <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">

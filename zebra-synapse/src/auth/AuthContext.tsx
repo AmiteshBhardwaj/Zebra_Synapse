@@ -31,6 +31,7 @@ type AuthContextValue = {
   loading: boolean;
   configured: boolean;
   refreshProfile: () => Promise<void>;
+  updateProfile: (patch: Partial<Profile>) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   setDemoSession: (role: "patient" | "doctor", email: string) => void;
 };
@@ -43,7 +44,7 @@ async function fetchProfile(
 ): Promise<Profile | null> {
   const { data, error } = await sb
     .from("profiles")
-    .select("id, role, full_name, license_number")
+    .select("id, role, full_name, license_number, height_cm, weight_kg, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
     .eq("id", userId)
     .maybeSingle();
 
@@ -52,7 +53,17 @@ async function fetchProfile(
     return null;
   }
   if (!data) return null;
-  return data as Profile;
+
+  const baseProfile = data as Profile;
+  try {
+    const localOverride = localStorage.getItem(`zebra_profile_${userId}`);
+    if (localOverride) {
+      const parsed = JSON.parse(localOverride);
+      return { ...baseProfile, ...parsed };
+    }
+  } catch {}
+
+  return baseProfile;
 }
 
 const DEMO_STORAGE_KEY = "zebra-synapse.demo_session";
@@ -90,6 +101,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const inactivityTimeoutMs = getAuthInactivityTimeoutMs();
 
   const setDemoSession = useCallback((role: "patient" | "doctor", email: string) => {
+    let existingProfile: Partial<Profile> = {};
+    try {
+      const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed?.profile?.role === role) {
+          existingProfile = parsed.profile;
+        }
+      }
+    } catch {}
+
     const demoData = {
       user: { id: `demo-${role}-id`, email },
       profile: {
@@ -97,10 +119,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role,
         full_name: role === "patient" ? "Patient User" : "Dr. Alex Smith",
         license_number: role === "doctor" ? "MD-98421" : null,
+        height_cm: role === "patient" ? 175 : null,
+        weight_kg: role === "patient" ? 70 : null,
+        dietary_preference: role === "patient" ? "vegan" : null,
+        food_allergies: role === "patient" ? ["lactose"] : null,
+        dietary_conditions: role === "patient" ? ["gerd"] : null,
+        dietary_notes: role === "patient" ? "Prefers low-sodium and avoid spicy evening dinners" : null,
+        ...existingProfile,
       },
     };
     try {
       localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(demoData));
+      localStorage.setItem(`zebra_profile_${demoData.user.id}`, JSON.stringify(demoData.profile));
     } catch {}
     setDemoUser(demoData.user);
     setDemoProfile(demoData.profile);
@@ -125,12 +155,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sb = getSupabase();
     const uid = session?.user?.id;
     if (!sb || !uid) {
-      setProfile(null);
+      if (demoUser?.id) {
+        try {
+          const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.profile) setDemoProfile(parsed.profile);
+          }
+        } catch {}
+      }
       return;
     }
     const p = await fetchProfile(sb, uid);
-    setProfile(p);
-  }, [session?.user?.id]);
+    if (p) {
+      setProfile(p);
+    }
+  }, [session?.user?.id, demoUser?.id]);
+
+  const updateProfile = useCallback(
+    async (patch: Partial<Profile>): Promise<{ error: Error | null }> => {
+      const activeUid = session?.user?.id ?? demoUser?.id;
+      if (!activeUid) {
+        return { error: new Error("No active user logged in") };
+      }
+
+      const current: Profile = (session?.user ? profile : demoProfile) ?? {
+        id: activeUid,
+        role: "patient" as const,
+        full_name: "Patient User",
+        license_number: null,
+      };
+
+      const updated: Profile = {
+        ...current,
+        ...patch,
+        license_number: patch.license_number !== undefined ? patch.license_number : (current.license_number ?? null),
+      };
+
+      // 1. Instant state update
+      if (session?.user) {
+        setProfile(updated);
+      } else {
+        setDemoProfile(updated);
+      }
+
+      // 2. Persist to localStorage caches
+      try {
+        localStorage.setItem(`zebra_profile_${activeUid}`, JSON.stringify(updated));
+        const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+        const parsed = stored ? JSON.parse(stored) : {};
+        parsed.profile = updated;
+        if (!parsed.user && demoUser) parsed.user = demoUser;
+        localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(parsed));
+      } catch (e) {
+        console.warn("[auth] localStorage update error:", e);
+      }
+
+      // 3. Persist to Supabase if connected
+      const sb = getSupabase();
+      if (sb && session?.user?.id) {
+        try {
+          const { error } = await sb
+            .from("profiles")
+            .update(patch)
+            .eq("id", session.user.id);
+          if (error) {
+            console.error("[auth] supabase updateProfile error:", error.message);
+            return { error: new Error(error.message) };
+          }
+        } catch (err: any) {
+          console.error("[auth] supabase updateProfile exception:", err);
+          return { error: err instanceof Error ? err : new Error(String(err)) };
+        }
+      }
+
+      return { error: null };
+    },
+    [session?.user, session?.user?.id, demoUser, profile, demoProfile],
+  );
 
   useEffect(() => {
     const sb = getSupabase();
@@ -306,10 +408,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       configured: isSupabaseConfigured(),
       refreshProfile,
+      updateProfile,
       signOut,
       setDemoSession,
     }),
-    [session, activeUser, activeProfile, loading, refreshProfile, signOut, setDemoSession],
+    [session, activeUser, activeProfile, loading, refreshProfile, updateProfile, signOut, setDemoSession],
   );
 
   return (
