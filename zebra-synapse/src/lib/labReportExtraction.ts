@@ -40,11 +40,35 @@ type TextItem = {
 };
 
 function normalizeText(text: string): string {
-  return text.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").replace(/\r/g, "\n");
+  return text
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u03bc\u00b5]/g, "μ")
+    .replace(/\bT\s+otal\b/g, "Total")
+    .replace(/de\s+fi\s+ned/gi, "defined")
+    .replace(/a\s+ff\s+ect/gi, "affect")
+    .replace(/Re\s+fl\s+ects/gi, "Reflects")
+    .replace(/signi\s+fi\s+cant/gi, "significant")
+    .replace(/clari\s+fi\s+cations/gi, "clarifications")
+    .replace(/recti\s+fi\s+cations/gi, "rectifications")
+    .replace(/fl\s+uctuations/gi, "fluctuations")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\r/g, "\n");
 }
 
 function normalizeLine(text: string): string {
-  return text.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").trim();
+  return text
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u03bc\u00b5]/g, "μ")
+    .replace(/\bT\s+otal\b/g, "Total")
+    .replace(/de\s+fi\s+ned/gi, "defined")
+    .replace(/a\s+ff\s+ect/gi, "affect")
+    .replace(/Re\s+fl\s+ects/gi, "Reflects")
+    .replace(/signi\s+fi\s+cant/gi, "significant")
+    .replace(/clari\s+fi\s+cations/gi, "clarifications")
+    .replace(/recti\s+fi\s+cations/gi, "rectifications")
+    .replace(/fl\s+uctuations/gi, "fluctuations")
+    .replace(/[ \t]+/g, " ")
+    .trim();
 }
 
 function escapeRegex(value: string): string {
@@ -98,6 +122,22 @@ function toIsoDate(value: string): string | null {
     return direct.toISOString().slice(0, 10);
   }
 
+  const alphaMonth = trimmed.match(/^(\d{1,2})[-\s]([A-Za-z]{3})[-\s](\d{2,4})/);
+  if (alphaMonth) {
+    const day = Number(alphaMonth[1]);
+    const monthStr = alphaMonth[2].toLowerCase();
+    const yearStr = alphaMonth[3];
+    const year = Number(yearStr.length === 2 ? `20${yearStr}` : yearStr);
+    const months: Record<string, number> = {
+      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+    };
+    if (monthStr in months) {
+      const parsed = new Date(Date.UTC(year, months[monthStr], day));
+      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10);
+    }
+  }
+
   const slash = trimmed.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})$/);
   if (!slash) return null;
   const month = Number(slash[1]);
@@ -110,8 +150,9 @@ function toIsoDate(value: string): string | null {
 
 function extractRecordedAt(text: string): string {
   const patterns = [
-    /(?:collected|collection date|specimen date|reported|report date|date)\s*[:\-]?\s*([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})/i,
-    /(?:collected|collection date|specimen date|reported|report date|date)\s*[:\-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i,
+    /(?:collected\s+on|collection\s+date|specimen\s+date|reported\s+on|report\s+date|registration\s+on|date)\s*[:\-]?\s*([A-Za-z]{3,9}\s+\d{1,2},\s+\d{4})/i,
+    /(?:collected\s+on|collection\s+date|specimen\s+date|reported\s+on|report\s+date|registration\s+on|date)\s*[:\-]?\s*(\d{1,2}[-\s][A-Za-z]{3}[-\s]\d{2,4})/i,
+    /(?:collected\s+on|collection\s+date|specimen\s+date|reported\s+on|report\s+date|registration\s+on|date)\s*[:\-]?\s*(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})/i,
   ];
 
   for (const pattern of patterns) {
@@ -123,16 +164,6 @@ function extractRecordedAt(text: string): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function extractValue(text: string, patterns: RegExp[]): number | null {
-  for (const pattern of patterns) {
-    const match = text.match(pattern);
-    if (!match?.[1]) continue;
-    const value = Number(match[1]);
-    if (Number.isFinite(value)) return value;
-  }
-  return null;
-}
-
 const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number }> = {
   hemoglobin_a1c: { min: 3.0, max: 20.0 },
   fasting_glucose: { min: 20.0, max: 800.0 },
@@ -140,6 +171,7 @@ const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number }> = {
   ldl: { min: 10.0, max: 600.0 },
   hdl: { min: 10.0, max: 200.0 },
   triglycerides: { min: 20.0, max: 2000.0 },
+  vldl: { min: 1.0, max: 300.0 },
   hemoglobin: { min: 3.0, max: 25.0 },
   wbc: { min: 200.0, max: 100000.0 },
   platelets: { min: 10000.0, max: 1500000.0 },
@@ -150,27 +182,68 @@ const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number }> = {
   mch: { min: 10.0, max: 60.0 },
   mchc: { min: 20.0, max: 50.0 },
   rdw_cv: { min: 5.0, max: 40.0 },
+  esr: { min: 0.0, max: 200.0 },
+  tsh: { min: 0.01, max: 150.0 },
+  t3: { min: 0.1, max: 30.0 },
+  t4: { min: 0.1, max: 50.0 },
+  iron: { min: 5.0, max: 1000.0 },
+  tibc: { min: 50.0, max: 1500.0 },
+  transferrin_saturation: { min: 1.0, max: 100.0 },
+  vitamin_d_25_oh: { min: 2.0, max: 300.0 },
+  vitamin_b12: { min: 20.0, max: 5000.0 },
+  urea: { min: 2.0, max: 300.0 },
+  blood_urea_nitrogen: { min: 1.0, max: 150.0 },
+  uric_acid: { min: 0.5, max: 30.0 },
+  calcium: { min: 2.0, max: 25.0 },
+  sgpt: { min: 1.0, max: 2000.0 },
+  sgot: { min: 1.0, max: 2000.0 },
+  total_bilirubin: { min: 0.05, max: 40.0 },
+  conjugated_bilirubin: { min: 0.0, max: 30.0 },
+  unconjugated_bilirubin: { min: 0.0, max: 30.0 },
+  sodium: { min: 80.0, max: 200.0 },
+  potassium: { min: 1.0, max: 15.0 },
+  chloride: { min: 50.0, max: 180.0 },
+  total_protein: { min: 2.0, max: 15.0 },
+  albumin: { min: 1.0, max: 10.0 },
+  globulin: { min: 0.5, max: 10.0 },
+  ag_ratio: { min: 0.1, max: 10.0 },
   neutrophils_percent: { min: 0.0, max: 100.0 },
   lymphocytes_percent: { min: 0.0, max: 100.0 },
   eosinophils_percent: { min: 0.0, max: 100.0 },
   monocytes_percent: { min: 0.0, max: 100.0 },
   basophils_percent: { min: 0.0, max: 100.0 },
-  esr: { min: 0.0, max: 200.0 },
-  vldl: { min: 1.0, max: 300.0 },
-  chol_hdl_ratio: { min: 0.5, max: 30.0 },
-  ldl_hdl_ratio: { min: 0.2, max: 20.0 },
-  t3: { min: 0.1, max: 20.0 },
-  t4: { min: 0.1, max: 40.0 },
 };
+
+function isExemptNoteOrGuidelineLine(line: string): boolean {
+  return /^(?:note|remarks|clinical\s+notes|interpretation|factors\s+that|presence\s+of|target\s+goals|sample\s+report|scan\s+to\s+validate|analyzer|technology|accession\s+no|collected\s+on|received\s+on|approved\s+on|patient\s+name|page\s+\d+\s+of\s+\d+|observation\s+result)/i.test(line) ||
+    /(?:deficiency\s+is\s+defined|insufficiency\s+has\s+been\s+defined|sufficiency\s+has\s+been\s+defined|toxicity\s+is\s+observed|interpretation\s+as\s+per)/i.test(line) ||
+    /(?:reference\s+group|non\s+diabetic\s+adults|at\s+risk\s+\(prediabetes\)|diagnosing\s+diabetes|therapeutic\s+goals)/i.test(line);
+}
 
 function sanitizeLineText(text: string): string {
   return text
-    .replace(/\(\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?\s*(?:[\-\–\—|to]\s*\d+(?:\.\d+)?)?\s*%?\s*\)/gi, " ")
+    .replace(/\(\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?\s*(?:[\-\–\—~|to]\s*\d+(?:\.\d+)?)?\s*%?\s*\)/gi, " ")
     .replace(/\([^)]*\)/g, " ")
     .replace(/\[[^\]]*\]/g, " ")
-    .replace(/\b\d+(?:\.\d+)?\s*(?:[\-\–\—]|to)\s*\d+(?:\.\d+)?\b/gi, " ")
+    .replace(/\b\d+(?:\.\d+)?\s*(?:[\-\–\—~]|to)\s*\d+(?:\.\d+)?\b/gi, " ")
     .replace(/(?:<|<=|>|>=)\s*\d+(?:\.\d+)?/g, " ")
     .replace(/(?:ref|reference|normal|range|interval|desirable|optimal|borderline)\s*[:\-]?\s*[\d\.\s\-\<\>\=]+/gi, " ");
+}
+
+function scaleBiomarkerValue(biomarkerKey: string, val: number, lineText: string): number {
+  if (biomarkerKey === "platelets") {
+    const isLakhs = /lakh/i.test(lineText) || val < 20;
+    const isThousands = /10\^?3|thousand|k\/ul/i.test(lineText) || (val >= 50 && val <= 1000);
+    if (isLakhs) return Math.round(val * 100000);
+    if (isThousands) return Math.round(val * 1000);
+  }
+
+  if (biomarkerKey === "wbc") {
+    const isThousands = /10\^?3|thousand|k\/ul/i.test(lineText) || (val >= 1.0 && val <= 30.0);
+    if (isThousands) return Math.round(val * 1000);
+  }
+
+  return val;
 }
 
 function extractValueFromLines(
@@ -184,34 +257,53 @@ function extractValueFromLines(
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
+    if (isExemptNoteOrGuidelineLine(line)) continue;
     if (exclude?.some((pattern) => pattern.test(line))) continue;
 
     const labelMatch = labels.find((pattern) => pattern.test(line));
     if (!labelMatch) continue;
 
-    // Multi-line window search (lines i to i+3) to catch card layouts e.g. Dr Lal PathLabs
-    const windowLines = lines.slice(i, i + 4);
-    const combinedWindowText = windowLines.join(" ");
-
-    // 1. Check for "Value : X" or "Value: X" in card layouts
-    const cardMatch = combinedWindowText.match(/Value\s*:\s*(?:>|<|=)?\s*(\d+(?:\.\d+)?)/i);
+    // Multi-line card check (e.g. Dr Lal PathLabs with "Value : X" on subsequent line)
+    const windowLines = lines.slice(i, i + 3);
+    const combinedWindow = windowLines.join(" ");
+    const cardMatch = combinedWindow.match(/Value\s*:\s*(?:>|<|=)?\s*(\d+(?:\.\d+)?)/i);
     if (cardMatch?.[1]) {
       let val = Number(cardMatch[1]);
       if (Number.isFinite(val)) {
-        if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
-        if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
+        val = scaleBiomarkerValue(biomarkerKey, val, combinedWindow);
         if (!bounds || (val >= bounds.min && val <= bounds.max)) {
           return val;
         }
       }
     }
 
-    const startIndex = line.search(labelMatch);
-    const afterLabel = startIndex >= 0 ? line.slice(startIndex) : line;
+    const matchExec = labelMatch.exec(line);
+    if (!matchExec) continue;
+    const startIndex = matchExec.index;
+    const afterLabel = line.slice(startIndex + matchExec[0].length).trim();
 
-    const cleanedAfterLabel = sanitizeLineText(afterLabel);
+    // 1. Structured Tabular Result Extraction
+    // In table: [Label] [Result] [Unit] [Ref Range] [Method]
+    // Example: "HbA1C 5.7 % 4.8-5.7 HPLC" -> afterLabel is "5.7 % 4.8-5.7 HPLC"
+    // Example: "Iron 129 μg/dL 49-181 Pyridylazo Dye" -> afterLabel is "129 μg/dL 49-181 Pyridylazo Dye"
+    // Example: "ESR 9 mm/hr <20 Modified Westergren" -> afterLabel is "9 mm/hr <20 Modified Westergren"
+    const cleaned = sanitizeLineText(afterLabel);
 
-    // 2. Try matching with unit constraint if units are defined
+    // Try matching first numeric token in cleaned text
+    const firstNumMatch = cleaned.match(/^(?:[:\-]|is)?\s*(?:>|<|=)?\s*(\d+(?:\.\d+)?)/i) ||
+      cleaned.match(/(?:>|<|=)?\s*(\d+(?:\.\d+)?)/);
+
+    if (firstNumMatch?.[1]) {
+      let val = Number(firstNumMatch[1]);
+      if (Number.isFinite(val)) {
+        val = scaleBiomarkerValue(biomarkerKey, val, line);
+        if (!bounds || (val >= bounds.min && val <= bounds.max)) {
+          return val;
+        }
+      }
+    }
+
+    // 2. Unit-constrained match fallback
     const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
     if (hasUnitConstraint) {
       const unitPatternStr = units
@@ -219,32 +311,17 @@ function extractValueFromLines(
         .map(escapeRegex)
         .join("|");
       const unitRegex = new RegExp(
-        `(\\d+(?:\\.\d+)?)\\s*(?:${unitPatternStr})`,
+        `(?:>|<|=)?\\s*(\\d+(?:\\.\\d+)?)\\s*(?:${unitPatternStr})`,
         "i",
       );
-      const matchWithUnit = cleanedAfterLabel.match(unitRegex);
+      const matchWithUnit = cleaned.match(unitRegex);
       if (matchWithUnit?.[1]) {
         let val = Number(matchWithUnit[1]);
         if (Number.isFinite(val)) {
-          if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
-          if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
+          val = scaleBiomarkerValue(biomarkerKey, val, line);
           if (!bounds || (val >= bounds.min && val <= bounds.max)) {
             return val;
           }
-        }
-      }
-    }
-
-    // 3. Fallback: inspect remaining numbers on the sanitized line
-    const matches = Array.from(cleanedAfterLabel.matchAll(/(\d+(?:\.\d+)?)/g));
-    for (const match of matches) {
-      if (!match[1]) continue;
-      let val = Number(match[1]);
-      if (Number.isFinite(val)) {
-        if (biomarkerKey === "platelets" && val > 50 && val < 1000) val *= 1000;
-        if (biomarkerKey === "wbc" && val > 1 && val < 200) val *= 1000;
-        if (!bounds || (val >= bounds.min && val <= bounds.max)) {
-          return val;
         }
       }
     }
@@ -288,14 +365,14 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
 
   const biomarkers: Record<string, number> = {};
   for (const definition of BIOMARKER_DEFINITIONS) {
-    const extracted =
-      extractValueFromLines(lines, definition.patterns, definition.units, definition.key, definition.exclude) ??
-      extractValue(
-        normalized,
-        definition.patterns.map(
-          (pattern) => new RegExp(`${pattern.source}[\\s\\S]{0,30}?[:\\-]?\\s*(\\d+(?:\\.\\d+)?)`, pattern.flags),
-        ),
-      );
+    const extracted = extractValueFromLines(
+      lines,
+      definition.patterns,
+      definition.units,
+      definition.key,
+      definition.exclude,
+    );
+
     if (extracted != null) {
       const bounds = BIOMARKER_SANITY_BOUNDS[definition.key];
       if (!bounds || (extracted >= bounds.min && extracted <= bounds.max)) {

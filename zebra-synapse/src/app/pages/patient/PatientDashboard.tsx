@@ -14,6 +14,7 @@ import {
   Settings,
   Sparkles,
   TrendingUp,
+  Video,
 } from "lucide-react";
 
 export default function PatientDashboard() {
@@ -34,6 +35,7 @@ export default function PatientDashboard() {
     { path: "/patient", icon: Home, label: "Health Overview" },
     { path: "/patient/medical-records", icon: FileText, label: "Medical Records" },
     { path: "/patient/appointments", icon: Calendar, label: "Appointments" },
+    { path: "/patient/teleconsult", icon: Video, label: "Teleconsultation" },
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },
     { path: "/patient/disease-prediction", icon: TrendingUp, label: "Disease Prediction" },
     { path: "/patient/nutrition", icon: Apple, label: "Nutrition" },

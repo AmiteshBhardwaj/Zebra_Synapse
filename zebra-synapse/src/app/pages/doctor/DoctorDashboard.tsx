@@ -1,7 +1,7 @@
 import { useRef, useLayoutEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
-import { Activity, Users, LogOut, Settings, Stethoscope } from "lucide-react";
+import { Activity, Users, LogOut, Settings, Stethoscope, Video } from "lucide-react";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
@@ -76,6 +76,23 @@ export default function DoctorDashboard() {
             </span>
             <span className="text-xs whitespace-nowrap transition-opacity overflow-hidden opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150">
               My Patients
+            </span>
+          </button>
+
+          <button
+            onClick={() => navigate("/doctor/teleconsult")}
+            title="Teleconsultations"
+            className={`w-full h-8 rounded-md flex items-center transition-colors duration-150 ${
+              location.pathname === "/doctor/teleconsult"
+                ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20 font-medium"
+                : "text-white/55 hover:bg-white/[0.06] hover:text-white border border-transparent"
+            }`}
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center">
+              <Video className="h-4 w-4 text-cyan-400" strokeWidth={1.8} />
+            </span>
+            <span className="text-xs whitespace-nowrap transition-opacity overflow-hidden opacity-0 delay-0 duration-100 group-hover/sidebar:opacity-100 group-hover/sidebar:delay-75 group-hover/sidebar:duration-150">
+              Teleconsultations
             </span>
           </button>
 

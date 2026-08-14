@@ -8,6 +8,7 @@ import {
   Search,
   TrendingUp,
   Users,
+  Video,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
 import {
@@ -107,7 +108,19 @@ export default function PatientsList() {
         title="Scan the roster before risk becomes noise."
         description="Search linked patients, skim current status, and open structured detail pages from one calmer clinical review surface."
         icon={Users}
-        actions={<LinkPatientDialog onLinked={() => void load()} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              className="flex items-center rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 text-white font-semibold text-xs px-4 h-10 shadow-lg shadow-cyan-500/25 hover:opacity-90 transition-all cursor-pointer"
+              onClick={() => navigate("/doctor/teleconsult")}
+            >
+              <Video className="w-4 h-4 mr-2 text-cyan-200" />
+              Live Teleconsultations
+            </button>
+            <LinkPatientDialog onLinked={() => void load()} />
+          </div>
+        }
         meta={[
           { label: "Linked patients", value: patients.length },
           { label: "Normal", value: summary.normal },
