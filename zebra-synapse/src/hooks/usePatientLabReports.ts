@@ -196,6 +196,8 @@ export function usePatientLabReports() {
               extractedDirectly = true;
               directMessage = `Successfully extracted ${result.panel.matchedCount} biomarkers from ${file.name}.`;
             }
+          } else if (result.status === "unsupported" || result.status === "no_data") {
+            directMessage = `Uploaded ${file.name}. ${result.reason ?? "You can review or enter values in Medical Records."}`;
           }
         }
       } catch (clientParseErr) {
@@ -211,7 +213,7 @@ export function usePatientLabReports() {
         queued: !extractedDirectly,
         extracted: extractedDirectly,
         uploadId,
-        message: extractedDirectly
+        message: directMessage.length > 0
           ? directMessage
           : `Upload complete. ${statusLabel} for server-side analysis.`,
       };
