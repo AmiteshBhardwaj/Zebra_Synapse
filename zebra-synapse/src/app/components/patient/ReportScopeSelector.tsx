@@ -65,35 +65,7 @@ export default function ReportScopeSelector({
   }, [panels, uploads, multiPanelMeta]);
 
   if (panels.length <= 1) {
-    // If there's only 0 or 1 report, show a clean indicator without complicated dropdown
-    return (
-      <div
-        className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0d131f]/80 p-3.5 backdrop-blur-md ${className}`}
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-cyan-500/30 bg-cyan-500/10 text-cyan-400">
-            <FileText className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-white">
-                {panels.length === 1
-                  ? `Report: ${formatLabDate(panels[0].recorded_at)}`
-                  : "Awaiting Lab Uploads"}
-              </span>
-              <Badge className="border-cyan-500/30 bg-cyan-500/15 text-[10px] text-cyan-300">
-                {panels.length === 1 ? "Active Panel" : "No Data"}
-              </Badge>
-            </div>
-            <p className="text-[11px] text-[#92a8c7]">
-              {panels.length === 1
-                ? `${multiPanelMeta.uniqueBiomarkersCount} biomarkers extracted from this report`
-                : "Upload lab reports in Medical Records to generate automated insights"}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

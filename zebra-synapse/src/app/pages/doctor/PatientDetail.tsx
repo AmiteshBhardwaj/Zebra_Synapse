@@ -39,9 +39,11 @@ import {
   ShieldAlert,
   Flame,
   Leaf,
+  Dumbbell,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
+import { generateDeterministicExercisePlan } from "../../../lib/exercisePlan";
 import {
   CARE_RELATIONSHIPS_LIST_SELECT,
   formatBloodPressure,
@@ -657,6 +659,15 @@ export default function PatientDetail() {
       })
     : [];
   const wellnessTips = activeDoctorPanel ? getWellnessTips(activeDoctorPanel, synthesizedLab.trends) : [];
+  const exercisePlan = activeDoctorPanel
+    ? generateDeterministicExercisePlan(activeDoctorPanel, synthesizedLab.trends, {
+        heightCm: patientHeight,
+        weightKg: patientWeight,
+        heartRate: rel?.heart_rate,
+        systolicBp: rel?.blood_pressure_systolic,
+        diastolicBp: rel?.blood_pressure_diastolic,
+      })
+    : null;
   const relationshipInsights = buildRelationshipInsights({
     glucose: rel?.glucose,
     bloodPressureSystolic: rel?.blood_pressure_systolic,
@@ -1667,6 +1678,58 @@ export default function PatientDetail() {
                     ))}
                   </CardContent>
                 </Card>
+
+                {exercisePlan && (
+                  <Card className={portalPanelClass}>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <Dumbbell className="h-5 w-5 text-cyan-400" />
+                            AI Physical Activity & Exercise Plan
+                          </CardTitle>
+                          <CardDescription>Synthesized from lab biomarkers, BMI ({exercisePlan.bmiSummary.bmi || "Calculated"} kg/m²), and vitals</CardDescription>
+                        </div>
+                        <Badge variant="outline" className="border-cyan-500/30 text-cyan-300 bg-cyan-500/10 text-xs">
+                          {exercisePlan.weeklyTotals.totalActiveMinutes} mins / week
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Safety precautions */}
+                      {exercisePlan.safetyPrecautions && exercisePlan.safetyPrecautions.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Clinical Exercise Guardrails</p>
+                          <div className="grid grid-cols-1 gap-2">
+                            {exercisePlan.safetyPrecautions.slice(0, 2).map((sp) => (
+                              <div key={sp.id} className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 text-xs">
+                                <div className="font-semibold text-amber-200">{sp.title}</div>
+                                <div className="text-white/70 mt-1">{sp.reason}</div>
+                                <div className="text-cyan-300 mt-1">{sp.guidance}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Days preview */}
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-white/70">7-Day Conditioning Schedule</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {exercisePlan.days.slice(0, 4).map((d) => (
+                            <div key={d.dayNumber} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-semibold text-white">{d.dayName}</span>
+                                <span className="text-cyan-300 font-mono">{d.estimatedDurationMin}m • {d.estimatedCalories} kcal</span>
+                              </div>
+                              <p className="text-xs text-white/60 mt-1 line-clamp-1">{d.focus}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             ) : null}
           </div>

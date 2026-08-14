@@ -11,6 +11,7 @@ import Appointments from "./pages/patient/Appointments";
 import Prescription from "./pages/patient/Prescription";
 import DiseasePrediction from "./pages/patient/DiseasePredictionInsights";
 import Nutrition from "./pages/patient/NutritionInsights";
+import ExercisePlan from "./pages/patient/ExercisePlanInsights";
 import ClinicalTrials from "./pages/patient/ClinicalTrialsInsights";
 import WellnessTips from "./pages/patient/WellnessTipsInsights";
 import ProfileSettings from "./pages/ProfileSettings";
@@ -62,6 +63,7 @@ export const router = createBrowserRouter([
       { path: "prescription", Component: Prescription },
       { path: "disease-prediction", Component: DiseasePrediction },
       { path: "nutrition", Component: Nutrition },
+      { path: "exercise", Component: ExercisePlan },
       { path: "clinical-trials", Component: ClinicalTrials },
       { path: "wellness-tips", Component: WellnessTips },
       { path: "settings", Component: ProfileSettings },

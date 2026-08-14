@@ -204,12 +204,40 @@ export function sortBiomarkerKeys(keys: string[]): string[] {
   });
 }
 
+const LEGACY_COLUMN_BOUNDS: Record<LegacyField, { min: number; max: number; decimals: number }> = {
+  hemoglobin_a1c: { min: -999.9, max: 999.9, decimals: 1 },
+  fasting_glucose: { min: -9999.9, max: 9999.9, decimals: 1 },
+  total_cholesterol: { min: -9999.9, max: 9999.9, decimals: 1 },
+  ldl: { min: -9999.9, max: 9999.9, decimals: 1 },
+  hdl: { min: -9999.9, max: 9999.9, decimals: 1 },
+  triglycerides: { min: -99999.9, max: 99999.9, decimals: 1 },
+  hemoglobin: { min: -999.9, max: 999.9, decimals: 1 },
+  wbc: { min: -99999.9, max: 99999.9, decimals: 1 },
+  platelets: { min: -999999.9, max: 999999.9, decimals: 1 },
+  creatinine: { min: -99.99, max: 99.99, decimals: 2 },
+};
+
 export function mapBiomarkersToLegacyFields(biomarkers: Record<string, number>) {
   const legacy: Partial<Record<LegacyField, number | null>> = {};
-  for (const [key, value] of Object.entries(biomarkers)) {
+  for (const [key, rawValue] of Object.entries(biomarkers)) {
     const legacyField = LEGACY_FIELD_BY_KEY.get(key);
     if (!legacyField) continue;
-    legacy[legacyField] = value;
+    const value = typeof rawValue === "number" ? rawValue : Number(rawValue);
+    if (!Number.isFinite(value)) {
+      legacy[legacyField] = null;
+      continue;
+    }
+    const bounds = LEGACY_COLUMN_BOUNDS[legacyField];
+    if (bounds) {
+      if (value >= bounds.min && value <= bounds.max) {
+        legacy[legacyField] = Number(value.toFixed(bounds.decimals));
+      } else {
+        // Exceeds legacy database numeric precision; preserve in biomarkers jsonb only
+        legacy[legacyField] = null;
+      }
+    } else {
+      legacy[legacyField] = value;
+    }
   }
   return legacy;
 }

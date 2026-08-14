@@ -79,36 +79,53 @@ function parseNullableNumber(value: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function clampNumber(value: number | null, max: number, decimals = 1): number | null {
+  if (value == null || !Number.isFinite(value)) return null;
+  if (value > max || value < -max) return null;
+  return Number(value.toFixed(decimals));
+}
+
 export function buildLabPanelInsertPayload(
   patientId: string,
   input: LabPanelInput,
 ) {
+  const hba1c = parseNullableNumber(input.hemoglobinA1c);
+  const fglu = parseNullableNumber(input.fastingGlucose);
+  const tchol = parseNullableNumber(input.totalCholesterol);
+  const ldl = parseNullableNumber(input.ldl);
+  const hdl = parseNullableNumber(input.hdl);
+  const trig = parseNullableNumber(input.triglycerides);
+  const hgb = parseNullableNumber(input.hemoglobin);
+  const wbc = parseNullableNumber(input.wbc);
+  const plt = parseNullableNumber(input.platelets);
+  const creat = parseNullableNumber(input.creatinine);
+
   return {
     patient_id: patientId,
     upload_id: input.uploadId || null,
     recorded_at: input.recordedAt,
     biomarkers: {
-      ...(parseNullableNumber(input.hemoglobinA1c) != null ? { hemoglobin_a1c: parseNullableNumber(input.hemoglobinA1c)! } : {}),
-      ...(parseNullableNumber(input.fastingGlucose) != null ? { fasting_glucose: parseNullableNumber(input.fastingGlucose)! } : {}),
-      ...(parseNullableNumber(input.totalCholesterol) != null ? { total_cholesterol: parseNullableNumber(input.totalCholesterol)! } : {}),
-      ...(parseNullableNumber(input.ldl) != null ? { ldl: parseNullableNumber(input.ldl)! } : {}),
-      ...(parseNullableNumber(input.hdl) != null ? { hdl: parseNullableNumber(input.hdl)! } : {}),
-      ...(parseNullableNumber(input.triglycerides) != null ? { triglycerides: parseNullableNumber(input.triglycerides)! } : {}),
-      ...(parseNullableNumber(input.hemoglobin) != null ? { hemoglobin: parseNullableNumber(input.hemoglobin)! } : {}),
-      ...(parseNullableNumber(input.wbc) != null ? { wbc: parseNullableNumber(input.wbc)! } : {}),
-      ...(parseNullableNumber(input.platelets) != null ? { platelets: parseNullableNumber(input.platelets)! } : {}),
-      ...(parseNullableNumber(input.creatinine) != null ? { creatinine: parseNullableNumber(input.creatinine)! } : {}),
+      ...(hba1c != null ? { hemoglobin_a1c: hba1c } : {}),
+      ...(fglu != null ? { fasting_glucose: fglu } : {}),
+      ...(tchol != null ? { total_cholesterol: tchol } : {}),
+      ...(ldl != null ? { ldl: ldl } : {}),
+      ...(hdl != null ? { hdl: hdl } : {}),
+      ...(trig != null ? { triglycerides: trig } : {}),
+      ...(hgb != null ? { hemoglobin: hgb } : {}),
+      ...(wbc != null ? { wbc: wbc } : {}),
+      ...(plt != null ? { platelets: plt } : {}),
+      ...(creat != null ? { creatinine: creat } : {}),
     },
-    hemoglobin_a1c: parseNullableNumber(input.hemoglobinA1c),
-    fasting_glucose: parseNullableNumber(input.fastingGlucose),
-    total_cholesterol: parseNullableNumber(input.totalCholesterol),
-    ldl: parseNullableNumber(input.ldl),
-    hdl: parseNullableNumber(input.hdl),
-    triglycerides: parseNullableNumber(input.triglycerides),
-    hemoglobin: parseNullableNumber(input.hemoglobin),
-    wbc: parseNullableNumber(input.wbc),
-    platelets: parseNullableNumber(input.platelets),
-    creatinine: parseNullableNumber(input.creatinine),
+    hemoglobin_a1c: clampNumber(hba1c, 999.9, 1),
+    fasting_glucose: clampNumber(fglu, 9999.9, 1),
+    total_cholesterol: clampNumber(tchol, 9999.9, 1),
+    ldl: clampNumber(ldl, 9999.9, 1),
+    hdl: clampNumber(hdl, 9999.9, 1),
+    triglycerides: clampNumber(trig, 99999.9, 1),
+    hemoglobin: clampNumber(hgb, 999.9, 1),
+    wbc: clampNumber(wbc, 99999.9, 1),
+    platelets: clampNumber(plt, 999999.9, 1),
+    creatinine: clampNumber(creat, 99.99, 2),
     notes: input.notes.trim() || null,
   };
 }

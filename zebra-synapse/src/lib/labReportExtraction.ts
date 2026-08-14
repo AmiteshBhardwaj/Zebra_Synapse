@@ -350,34 +350,109 @@ export async function extractTextFromPdfBlob(file: Blob): Promise<ExtractedPdfTe
   };
 }
 
-export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResult> {
-  if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+export async function extractLabPanelFromPdf(
+  file: File | Blob,
+  filename?: string,
+): Promise<ExtractionResult> {
+  const name = filename || (file instanceof File ? file.name : "report.pdf");
+  if (!name.toLowerCase().endsWith(".pdf") && file.type && file.type !== "application/pdf") {
     return { status: "unsupported", reason: "Only PDF lab reports can be auto-extracted." };
   }
 
-  const { text: normalized, lines } = await extractTextFromPdfBlob(file);
-  if (normalized.trim().length < 20) {
-    return {
-      status: "unsupported",
-      reason: "The PDF does not contain readable text. It is probably a scanned image PDF.",
-    };
+  let normalized = "";
+  let lines: string[] = [];
+  try {
+    const extracted = await extractTextFromPdfBlob(file);
+    normalized = extracted.text;
+    lines = extracted.lines;
+  } catch (err) {
+    console.warn("[pdf text extract warning]", err);
   }
 
   const biomarkers: Record<string, number> = {};
-  for (const definition of BIOMARKER_DEFINITIONS) {
-    const extracted = extractValueFromLines(
-      lines,
-      definition.patterns,
-      definition.units,
-      definition.key,
-      definition.exclude,
-    );
 
-    if (extracted != null) {
-      const bounds = BIOMARKER_SANITY_BOUNDS[definition.key];
-      if (!bounds || (extracted >= bounds.min && extracted <= bounds.max)) {
-        biomarkers[definition.key] = extracted;
+  // 1. Regex Extraction from PDF text
+  if (lines.length > 0) {
+    for (const definition of BIOMARKER_DEFINITIONS) {
+      const extracted = extractValueFromLines(
+        lines,
+        definition.patterns,
+        definition.units,
+        definition.key,
+        definition.exclude,
+      );
+
+      if (extracted != null) {
+        const bounds = BIOMARKER_SANITY_BOUNDS[definition.key];
+        if (!bounds || (extracted >= bounds.min && extracted <= bounds.max)) {
+          biomarkers[definition.key] = extracted;
+        }
       }
+    }
+  }
+
+  // 2. Gemini Client-Side Fallback / Enhancement if API Key is available
+  const geminiApiKey =
+    (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_GEMINI_API_KEY) ||
+    ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
+    "";
+
+  if (geminiApiKey && (Object.keys(biomarkers).length === 0 || normalized.length >= 40)) {
+    try {
+      const supportedKeys = BIOMARKER_DEFINITIONS.map((d) => d.key).join(", ");
+      const prompt = `
+Extract numerical biomarker lab values from the following medical report text.
+Supported biomarker keys: ${supportedKeys}.
+
+Return a JSON object in this exact format:
+{
+  "recorded_at": "YYYY-MM-DD or null",
+  "biomarkers": {
+    "key_name": 12.34
+  }
+}
+
+Only return numerical values for matched supported keys.
+
+REPORT TEXT:
+${normalized.slice(0, 15000)}
+`.trim();
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        const textContent =
+          data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+        if (textContent) {
+          const parsed = JSON.parse(textContent);
+          if (parsed?.biomarkers && typeof parsed.biomarkers === "object") {
+            for (const [k, v] of Object.entries(parsed.biomarkers)) {
+              const num = typeof v === "number" ? v : Number(v);
+              if (Number.isFinite(num) && num > 0) {
+                const bounds = BIOMARKER_SANITY_BOUNDS[k];
+                if (!bounds || (num >= bounds.min && num <= bounds.max)) {
+                  if (biomarkers[k] == null) {
+                    biomarkers[k] = num;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (geminiErr) {
+      console.warn("[gemini client extract fallback]", geminiErr);
     }
   }
 

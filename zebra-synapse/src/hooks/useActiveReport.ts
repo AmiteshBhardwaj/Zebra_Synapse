@@ -12,9 +12,9 @@ export function useActiveReport(panels: LabPanelRow[]) {
   const [selectedReportId, setSelectedReportIdState] = useState<string>(() => {
     try {
       const stored = sessionStorage.getItem(REPORT_STORAGE_KEY);
-      return stored && stored !== "none" ? stored : "all";
+      return stored && stored !== "none" ? stored : "none";
     } catch {
-      return "all";
+      return "none";
     }
   });
 
@@ -82,9 +82,9 @@ export function useActiveReport(panels: LabPanelRow[]) {
     }
 
     return {
-      activePanel: multiPanelSynthesis.panel,
-      isAllReports: true,
-      biomarkerTrends: multiPanelSynthesis.trends,
+      activePanel: null,
+      isAllReports: false,
+      biomarkerTrends: {} as BiomarkerTrendMap,
       multiPanelMeta: multiPanelSynthesis.metadata,
     };
   }, [panels, selectedReportId, multiPanelSynthesis]);

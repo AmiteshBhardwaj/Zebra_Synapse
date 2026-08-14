@@ -76,18 +76,6 @@ export default function PatientHome() {
           date: formatLabDate(p.recorded_at),
         });
       });
-    } else {
-      // Demo report options so the user can test & select immediately
-      list.push({
-        id: "demo-report-1",
-        name: "cn2.pdf (Apr 1, 2026)",
-        date: "Apr 1, 2026",
-      });
-      list.push({
-        id: "demo-report-2",
-        name: "Comprehensive Metabolic Panel & CBC.pdf",
-        date: "Mar 15, 2026",
-      });
     }
     return list;
   }, [uploads, panels]);
@@ -238,41 +226,45 @@ export default function PatientHome() {
       </section>
 
       {/* 3. REPORT SELECTION SECTION - EMPTIES AREA BELOW UNTIL REPORT IS CHOSEN */}
-      {selectedReportId === "none" ? (
+      {selectedReportId === "none" || !availableReports.some((r) => r.id === selectedReportId) ? (
         <div className="flex flex-col items-center justify-center text-center px-4 py-12 rounded-[32px] border border-cyan-500/20 bg-[#0d131f] mt-6 shadow-2xl">
           <div className="mx-auto mb-5 flex h-18 w-18 items-center justify-center rounded-[24px] bg-[#1a1310] border border-[#ff8a3d]/35 shadow-[0_10px_30px_rgba(255,122,51,0.15)]">
             <FileText className="h-8 w-8 text-[#ff9b61]" />
           </div>
 
           <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-2 font-['Manrope']">
-            Please choose a medical report
+            {availableReports.length > 0 ? "Please choose a medical report" : "No medical reports uploaded yet"}
           </h2>
 
           <p className="max-w-md text-xs sm:text-sm text-[#92a8c7] leading-relaxed mb-6">
-            Select a medical report from your records below to inspect body system signals, biomarker boards, and clinical trends.
+            {availableReports.length > 0
+              ? "Select a medical report from your records below to inspect body system signals, biomarker boards, and clinical trends."
+              : "Upload a lab report above to inspect biomarker boards, body system signals, and clinical trends."}
           </p>
 
-          <div className="w-full max-w-sm sm:max-w-md">
-            <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-              <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#090d16] px-4 text-xs sm:text-sm font-medium text-white shadow-lg hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
-                <SelectValue placeholder="Select a medical report..." />
-              </SelectTrigger>
-              <SelectContent className="border-cyan-500/20 bg-[#0d131f] text-white shadow-2xl rounded-2xl p-1.5">
-                <SelectItem value="none" className="py-2.5 text-white/40 cursor-pointer">
-                  -- Select a Medical Report --
-                </SelectItem>
-                {availableReports.map((report) => (
-                  <SelectItem
-                    key={report.id}
-                    value={report.id}
-                    className="py-2.5 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl text-xs sm:text-sm"
-                  >
-                    📄 {report.name} ({report.date})
+          {availableReports.length > 0 ? (
+            <div className="w-full max-w-sm sm:max-w-md">
+              <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+                <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#090d16] px-4 text-xs sm:text-sm font-medium text-white shadow-lg hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+                  <SelectValue placeholder="Select a medical report..." />
+                </SelectTrigger>
+                <SelectContent className="border-cyan-500/20 bg-[#0d131f] text-white shadow-2xl rounded-2xl p-1.5">
+                  <SelectItem value="none" className="py-2.5 text-white/40 cursor-pointer">
+                    -- Select a Medical Report --
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  {availableReports.map((report) => (
+                    <SelectItem
+                      key={report.id}
+                      value={report.id}
+                      className="py-2.5 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl text-xs sm:text-sm"
+                    >
+                      📄 {report.name} ({report.date})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
         </div>
       ) : (
         /* UNLOCKED CLINICAL SIGNALS & BIOMARKERS DASHBOARD WHEN A REPORT IS SELECTED */

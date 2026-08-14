@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { FileText } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../components/ui/alert-dialog";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
@@ -62,7 +72,7 @@ function toneClass(status: ReturnType<typeof getUploadStatusMeta>["tone"]) {
 }
 
 export default function MedicalRecords() {
-  const { uploads, refetch: refetchUploads } = usePatientLabReports();
+  const { uploads, refetch: refetchUploads, deleteLabReport } = usePatientLabReports();
   const { panels, refetch: refetchPanels } = usePatientLabPanels();
   const { extractions, publishReviewedExtraction, refetch: refetchExtractions } = usePatientLabReportExtractions();
   const { selectedReportId, setSelectedReportId, activePanel } = useActiveReport(panels);
@@ -85,18 +95,6 @@ export default function MedicalRecords() {
           name: `Structured Lab Panel`,
           date: formatLabDate(p.recorded_at),
         });
-      });
-    } else {
-      // Demo medical reports so the user can select & test immediately
-      list.push({
-        id: "demo-report-1",
-        name: "Comprehensive Metabolic Panel (CMP) - Apr 2026.pdf",
-        date: "Apr 1, 2026",
-      });
-      list.push({
-        id: "demo-report-2",
-        name: "Complete Blood Count (CBC) & Lipid Profile.pdf",
-        date: "Mar 15, 2026",
       });
     }
     return list;
@@ -124,6 +122,25 @@ export default function MedicalRecords() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewValues, setReviewValues] = useState<Record<string, string>>({});
   const [publishing, setPublishing] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTargetId) return;
+    setDeleting(true);
+    try {
+      await deleteLabReport(deleteTargetId);
+      await Promise.all([refetchUploads(), refetchPanels(), refetchExtractions()]);
+      // If the deleted report was the active selection, reset to none
+      if (selectedReportId === deleteTargetId) setSelectedReportId("none");
+      toast.success("Lab report deleted successfully.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete lab report.");
+    } finally {
+      setDeleting(false);
+      setDeleteTargetId(null);
+    }
+  };
 
   useEffect(() => {
     if (!selectedExtraction) {
@@ -183,41 +200,45 @@ export default function MedicalRecords() {
   return (
     <PatientPortalPage>
       {/* 1. EMPTY STATE UNTIL A MEDICAL REPORT IS SELECTED */}
-      {selectedReportId === "none" ? (
+      {selectedReportId === "none" || !availableReports.some((r) => r.id === selectedReportId) ? (
         <div className="flex min-h-[70vh] flex-col items-center justify-center text-center px-4 py-12">
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_20px_50px_rgba(255,122,51,0.22)]">
             <FileText className="h-9 w-9 text-[#ff9b61]" />
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">
-            Please choose a medical report
+            {availableReports.length > 0 ? "Please choose a medical report" : "No medical reports uploaded yet"}
           </h1>
 
           <p className="max-w-md text-sm text-[#92a8c7] leading-relaxed mb-8">
-            Select a medical report from your records below to view extraction details, low-confidence fields, and published biomarker panels.
+            {availableReports.length > 0
+              ? "Select a medical report from your records below to view extraction details, low-confidence fields, and published biomarker panels."
+              : "You do not have any uploaded medical records. Upload a lab report on the Home page to view extraction details and published biomarker panels."}
           </p>
 
-          <div className="w-full max-w-sm sm:max-w-md">
-            <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-              <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-5 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
-                <SelectValue placeholder="Select a medical report..." />
-              </SelectTrigger>
-              <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-2xl p-1.5">
-                <SelectItem value="none" className="py-3 text-white/40 cursor-pointer">
-                  -- Select a Medical Report --
-                </SelectItem>
-                {availableReports.map((report) => (
-                  <SelectItem
-                    key={report.id}
-                    value={report.id}
-                    className="py-3 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl"
-                  >
-                    📄 {report.name} ({report.date})
+          {availableReports.length > 0 ? (
+            <div className="w-full max-w-sm sm:max-w-md">
+              <Select value={selectedReportId} onValueChange={setSelectedReportId}>
+                <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-5 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+                  <SelectValue placeholder="Select a medical report..." />
+                </SelectTrigger>
+                <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-2xl p-1.5">
+                  <SelectItem value="none" className="py-3 text-white/40 cursor-pointer">
+                    -- Select a Medical Report --
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  {availableReports.map((report) => (
+                    <SelectItem
+                      key={report.id}
+                      value={report.id}
+                      className="py-3 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl"
+                    >
+                      📄 {report.name} ({report.date})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
         </div>
       ) : (
         /* 2. FULL MEDICAL RECORDS WORKSPACE WHEN A REPORT IS SELECTED */
@@ -429,19 +450,30 @@ export default function MedicalRecords() {
                       <th className="pb-3 px-2">Filename</th>
                       <th className="pb-3 px-2">Date Added</th>
                       <th className="pb-3 px-2">Status</th>
+                      <th className="pb-3 px-2 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {uploads.map((upload) => {
                       const meta = getUploadStatusMeta(upload.analysis_status);
                       return (
-                        <tr key={upload.id} className="hover:bg-white/5 transition-colors">
+                        <tr key={upload.id} className="hover:bg-white/5 transition-colors group">
                           <td className="py-3 px-2 font-medium text-white">{upload.original_filename}</td>
                           <td className="py-3 px-2 text-[#A1A1AA]">{formatUploadedAt(upload.created_at)}</td>
                           <td className="py-3 px-2">
                             <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${toneClass(meta.tone)}`}>
                               {meta.label}
                             </span>
+                          </td>
+                          <td className="py-3 px-2 text-right">
+                            <button
+                              type="button"
+                              title="Delete report"
+                              onClick={() => setDeleteTargetId(upload.id)}
+                              className="inline-flex items-center justify-center rounded-lg p-1.5 text-rose-400/60 opacity-0 group-hover:opacity-100 transition-all hover:bg-rose-500/15 hover:text-rose-400 focus:opacity-100"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
                           </td>
                         </tr>
                       );
@@ -453,6 +485,39 @@ export default function MedicalRecords() {
           </Card>
         </>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>
+        <AlertDialogContent className="border-rose-500/25 bg-[#0d131f] text-white shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white">
+              Delete lab report?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[#92a8c7]">
+              This will permanently remove the file, all extracted biomarker panels, and any chat history linked to this report.
+              <span className="mt-2 block font-semibold text-rose-300">
+                {uploads.find((u) => u.id === deleteTargetId)?.original_filename ?? ""}
+              </span>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="border-white/15 bg-white/5 text-white hover:bg-white/10"
+              disabled={deleting}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleDeleteConfirm()}
+              disabled={deleting}
+              className="bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500"
+            >
+              {deleting ? "Deleting..." : "Delete permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PatientPortalPage>
   );
 }

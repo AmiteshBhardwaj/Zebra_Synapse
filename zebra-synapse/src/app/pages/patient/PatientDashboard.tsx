@@ -6,6 +6,7 @@ import {
   Apple,
   Bot,
   Calendar,
+  Dumbbell,
   FileText,
   FlaskConical,
   Home,
@@ -41,6 +42,7 @@ export default function PatientDashboard() {
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },
     { path: "/patient/disease-prediction", icon: TrendingUp, label: "Disease Prediction" },
     { path: "/patient/nutrition", icon: Apple, label: "Nutrition" },
+    { path: "/patient/exercise", icon: Dumbbell, label: "Exercise Plan" },
     { path: "/patient/clinical-trials", icon: FlaskConical, label: "Clinical Trials" },
     { path: "/patient/wellness-tips", icon: Sparkles, label: "Wellness Tips" },
   ];
