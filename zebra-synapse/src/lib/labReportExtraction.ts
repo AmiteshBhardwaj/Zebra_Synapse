@@ -133,12 +133,55 @@ function extractValue(text: string, patterns: RegExp[]): number | null {
   return null;
 }
 
+const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number }> = {
+  hemoglobin_a1c: { min: 3.0, max: 20.0 },
+  fasting_glucose: { min: 20.0, max: 800.0 },
+  total_cholesterol: { min: 40.0, max: 800.0 },
+  ldl: { min: 10.0, max: 600.0 },
+  hdl: { min: 10.0, max: 200.0 },
+  triglycerides: { min: 20.0, max: 2000.0 },
+  hemoglobin: { min: 3.0, max: 25.0 },
+  wbc: { min: 200.0, max: 100000.0 },
+  platelets: { min: 10000.0, max: 1500000.0 },
+  creatinine: { min: 0.1, max: 25.0 },
+  rbc_count: { min: 1.0, max: 10.0 },
+  hematocrit: { min: 10.0, max: 75.0 },
+  mcv: { min: 40.0, max: 140.0 },
+  mch: { min: 10.0, max: 60.0 },
+  mchc: { min: 20.0, max: 50.0 },
+  rdw_cv: { min: 5.0, max: 40.0 },
+  neutrophils_percent: { min: 0.0, max: 100.0 },
+  lymphocytes_percent: { min: 0.0, max: 100.0 },
+  eosinophils_percent: { min: 0.0, max: 100.0 },
+  monocytes_percent: { min: 0.0, max: 100.0 },
+  basophils_percent: { min: 0.0, max: 100.0 },
+  esr: { min: 0.0, max: 200.0 },
+  vldl: { min: 1.0, max: 300.0 },
+  chol_hdl_ratio: { min: 0.5, max: 30.0 },
+  ldl_hdl_ratio: { min: 0.2, max: 20.0 },
+  t3: { min: 0.1, max: 20.0 },
+  t4: { min: 0.1, max: 40.0 },
+};
+
+function sanitizeLineText(text: string): string {
+  return text
+    .replace(/\(\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?\s*(?:[\-\–\—|to]\s*\d+(?:\.\d+)?)?\s*%?\s*\)/gi, " ")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\[[^\]]*\]/g, " ")
+    .replace(/\b\d+(?:\.\d+)?\s*(?:[\-\–\—]|to)\s*\d+(?:\.\d+)?\b/gi, " ")
+    .replace(/(?:<|<=|>|>=)\s*\d+(?:\.\d+)?/g, " ")
+    .replace(/(?:ref|reference|normal|range|interval|desirable|optimal|borderline)\s*[:\-]?\s*[\d\.\s\-\<\>\=]+/gi, " ");
+}
+
 function extractValueFromLines(
   lines: string[],
   labels: RegExp[],
   units: string[],
+  biomarkerKey: string,
   exclude?: RegExp[],
 ): number | null {
+  const bounds = BIOMARKER_SANITY_BOUNDS[biomarkerKey];
+
   for (const line of lines) {
     if (exclude?.some((pattern) => pattern.test(line))) continue;
 
@@ -146,13 +189,10 @@ function extractValueFromLines(
     if (!labelMatch) continue;
 
     const startIndex = line.search(labelMatch);
-    const afterLabel = startIndex >= 0 ? line.slice(startIndex) : line;
+    if (startIndex < 0) continue;
+    const afterLabel = line.slice(startIndex);
 
-    // Clean out parenthesized reference ranges e.g. "(70 - 99)", "(4.0 - 5.6%)", "(12.0 - 17.0)"
-    const cleanedAfterLabel = afterLabel.replace(
-      /\(\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?\s*(?:[\-\–\—]\s*\d+(?:\.\d+)?)?\s*%?\s*\)/gi,
-      " ",
-    );
+    const cleanedAfterLabel = sanitizeLineText(afterLabel);
 
     // 1. Try matching with unit constraint if units are defined
     const hasUnitConstraint = units.some((unit) => unit.trim().length > 0);
@@ -168,20 +208,20 @@ function extractValueFromLines(
       const matchWithUnit = cleanedAfterLabel.match(unitRegex);
       if (matchWithUnit?.[1]) {
         const val = Number(matchWithUnit[1]);
-        if (Number.isFinite(val)) return val;
+        if (Number.isFinite(val) && (!bounds || (val >= bounds.min && val <= bounds.max))) {
+          return val;
+        }
       }
     }
 
-    // 2. Fallback: strip reference clauses ("Ref: 70 - 99", "Normal 12 - 17") and pick the result number
-    const noRefLine = cleanedAfterLabel.replace(
-      /(?:ref|reference|normal|range|interval)\s*[:\-]?\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?(?:\s*[\-\–\—]\s*\d+(?:\.\d+)?)?/gi,
-      " ",
-    );
-
-    const matchNumber = noRefLine.match(/(\d+(?:\.\d+)?)/);
-    if (matchNumber?.[1]) {
-      const val = Number(matchNumber[1]);
-      if (Number.isFinite(val)) return val;
+    // 2. Fallback: inspect remaining numbers on the sanitized line
+    const matches = Array.from(cleanedAfterLabel.matchAll(/(\d+(?:\.\d+)?)/g));
+    for (const match of matches) {
+      if (!match[1]) continue;
+      const val = Number(match[1]);
+      if (Number.isFinite(val) && (!bounds || (val >= bounds.min && val <= bounds.max))) {
+        return val;
+      }
     }
   }
 
@@ -224,7 +264,7 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
   const biomarkers: Record<string, number> = {};
   for (const definition of BIOMARKER_DEFINITIONS) {
     const extracted =
-      extractValueFromLines(lines, definition.patterns, definition.units, definition.exclude) ??
+      extractValueFromLines(lines, definition.patterns, definition.units, definition.key, definition.exclude) ??
       extractValue(
         normalized,
         definition.patterns.map(
@@ -232,7 +272,10 @@ export async function extractLabPanelFromPdf(file: File): Promise<ExtractionResu
         ),
       );
     if (extracted != null) {
-      biomarkers[definition.key] = extracted;
+      const bounds = BIOMARKER_SANITY_BOUNDS[definition.key];
+      if (!bounds || (extracted >= bounds.min && extracted <= bounds.max)) {
+        biomarkers[definition.key] = extracted;
+      }
     }
   }
 
