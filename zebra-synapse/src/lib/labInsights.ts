@@ -696,10 +696,9 @@ export function getDiseasePredictions(panel: LabPanelRow): DiseasePrediction[] {
 export function getNutritionPlans(panel: LabPanelRow): NutritionPlan[] {
   const plans: NutritionPlan[] = [];
 
-  if (
-    (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 5.7) ||
-    (panel.fasting_glucose != null && panel.fasting_glucose >= 100)
-  ) {
+  const glucoseVal = panel.fasting_glucose ?? panel.biomarkers?.fasting_glucose;
+  const a1cVal = panel.hemoglobin_a1c ?? panel.biomarkers?.hemoglobin_a1c;
+  if ((a1cVal != null && a1cVal >= 5.7) || (glucoseVal != null && glucoseVal >= 100)) {
     plans.push({
       headline: "Glucose control",
       focus: "Lower glycemic load and steadier post-meal blood sugar.",
@@ -711,11 +710,10 @@ export function getNutritionPlans(panel: LabPanelRow): NutritionPlan[] {
     });
   }
 
-  if (
-    (panel.ldl != null && panel.ldl >= 100) ||
-    (panel.triglycerides != null && panel.triglycerides >= 150) ||
-    (panel.hdl != null && panel.hdl < 40)
-  ) {
+  const ldlVal = panel.ldl ?? panel.biomarkers?.ldl;
+  const tgVal = panel.triglycerides ?? panel.biomarkers?.triglycerides;
+  const hdlVal = panel.hdl ?? panel.biomarkers?.hdl;
+  if ((ldlVal != null && ldlVal >= 100) || (tgVal != null && tgVal >= 150) || (hdlVal != null && hdlVal < 40)) {
     plans.push({
       headline: "Lipid improvement",
       focus: "Improve LDL, HDL, and triglyceride balance.",
@@ -727,7 +725,36 @@ export function getNutritionPlans(panel: LabPanelRow): NutritionPlan[] {
     });
   }
 
-  if (panel.hemoglobin != null && panel.hemoglobin < 12) {
+  const biliVal = panel.biomarkers?.total_bilirubin;
+  const sgptVal = panel.biomarkers?.sgpt;
+  const albVal = panel.biomarkers?.albumin;
+  if ((biliVal != null && biliVal > 1.2) || (sgptVal != null && sgptVal > 35) || (albVal != null && albVal < 3.5)) {
+    plans.push({
+      headline: "Liver & hepatic support",
+      focus: "Lighten hepatic metabolic load and support liver cell recovery.",
+      actions: [
+        "Eliminate alcohol completely and avoid deep-fried, oily, or unhygienic foods.",
+        "Emphasize antioxidant-rich foods like leafy greens, beets, berries, and cruciferous vegetables.",
+        "Maintain clean hydration (2 to 2.5 liters water daily) and adequate light protein intake.",
+      ],
+    });
+  }
+
+  const calciumVal = panel.biomarkers?.calcium;
+  if (calciumVal != null && calciumVal < 8.4) {
+    plans.push({
+      headline: "Calcium & bone support",
+      focus: "Increase bioavailable dietary calcium and supportive co-factors.",
+      actions: [
+        "Include calcium-rich foods like low-fat dairy, ragi, sesame seeds, almonds, and green leafy vegetables.",
+        "Pair calcium sources with Vitamin D (sunlight exposure/supplements) for optimal intestinal absorption.",
+        "Limit excess caffeine, soft drinks, and alcohol, which inhibit calcium retention.",
+      ],
+    });
+  }
+
+  const hbVal = panel.hemoglobin ?? panel.biomarkers?.hemoglobin;
+  if (hbVal != null && hbVal < 12) {
     plans.push({
       headline: "Iron-supportive meals",
       focus: "Support low hemoglobin with nutrient-dense food choices.",
@@ -760,7 +787,7 @@ export function getWellnessTips(panel: LabPanelRow): WellnessTip[] {
   const worst = [...metrics]
     .filter((m) => m.status !== "missing")
     .sort((a, b) => statusRank(b.status) - statusRank(a.status))
-    .slice(0, 3);
+    .slice(0, 4);
 
   for (const metric of worst) {
     if (metric.key === "hemoglobin_a1c" || metric.key === "fasting_glucose") {
@@ -777,6 +804,21 @@ export function getWellnessTips(panel: LabPanelRow): WellnessTip[] {
         title: "Protect cardiovascular health",
         detail: "Combine regular aerobic exercise with higher-fiber meals and less ultra-processed food.",
       });
+    } else if (
+      metric.key === "total_bilirubin" ||
+      metric.key === "sgpt" ||
+      metric.key === "sgot" ||
+      metric.key === "albumin"
+    ) {
+      tips.push({
+        title: "Protect liver health",
+        detail: "Avoid alcohol, reduce heavy greasy foods, avoid OTC painkiller overuse, and rest.",
+      });
+    } else if (metric.key === "calcium") {
+      tips.push({
+        title: "Support bone density",
+        detail: "Engage in light weight-bearing exercise and get safe daily sunlight exposure for Vitamin D.",
+      });
     } else if (metric.key === "hemoglobin") {
       tips.push({
         title: "Watch fatigue and exertion",
@@ -786,6 +828,11 @@ export function getWellnessTips(panel: LabPanelRow): WellnessTip[] {
       tips.push({
         title: "Review hydration and medications",
         detail: "Kidney-related markers are easier to interpret with hydration, blood pressure, and medication context.",
+      });
+    } else if (metric.key === "tsh" || metric.key === "t4" || metric.key === "t3") {
+      tips.push({
+        title: "Track energy and thyroid signals",
+        detail: "Note any changes in energy, cold tolerance, skin/hair, and discuss thyroid follow-up with your doctor.",
       });
     }
   }
