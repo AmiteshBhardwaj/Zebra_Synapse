@@ -164,14 +164,14 @@ export default function DoctorTeleconsult() {
   return (
     <div className="min-h-full text-slate-100 p-6 sm:p-8 lg:p-10 max-w-[1600px] mx-auto font-sans space-y-6">
       {/* Page Header */}
-      <div className="rounded-[24px] bg-[#060813]/80 border border-cyan-500/25 p-6 backdrop-blur-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_12px_30px_-5px_rgba(0,0,0,0.6)]">
+      <div className="rounded-[24px] bg-[#0d131f] border border-cyan-500/25 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 via-sky-500 to-blue-600 border border-cyan-400/40 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)]">
             <Video className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white">Doctor Teleconsultation Portal</h1>
+              <h1 className="text-xl font-bold text-white font-['Manrope']">Doctor Teleconsultation Portal</h1>
               <span className="rounded-full border border-cyan-400/30 bg-cyan-500/15 px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase text-cyan-300">
                 {callActive ? "Live Call Active" : "Waiting Queue Ready"}
               </span>
@@ -186,7 +186,7 @@ export default function DoctorTeleconsult() {
 
         <Button
           variant="outline"
-          className="border-slate-800 bg-slate-900/60 text-slate-200 hover:border-cyan-500/40 hover:bg-slate-900/90 text-xs font-semibold rounded-xl h-10 px-4"
+          className="border-slate-800 bg-[#0e1422] text-slate-200 hover:border-cyan-500/40 hover:bg-[#141b2e] text-xs font-semibold rounded-xl h-10 px-4 transition-all"
           onClick={() => navigate("/doctor")}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -197,14 +197,14 @@ export default function DoctorTeleconsult() {
       {!callActive ? (
         <section className="space-y-6">
           {/* Patients Seeking Teleconsultation Queue Section */}
-          <div className="rounded-[24px] bg-[#060813]/80 border border-cyan-500/25 p-6 backdrop-blur-2xl space-y-5 shadow-[0_18px_45px_rgba(0,0,0,0.4)]">
+          <div className="rounded-[24px] bg-[#0d131f] border border-cyan-500/25 p-6 space-y-5 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
                   <Radio className="h-5 w-5 animate-pulse" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-white">Patients Seeking Teleconsultation</h2>
+                  <h2 className="text-lg font-bold text-white font-['Manrope']">Patients Seeking Teleconsultation</h2>
                   <p className="text-xs text-slate-400">
                     Live waiting list of patients requesting on-demand video consultations
                   </p>
@@ -221,7 +221,7 @@ export default function DoctorTeleconsult() {
                 {waitingPatients.map((patient) => (
                   <article
                     key={patient.consultationId}
-                    className="rounded-2xl border border-cyan-500/20 bg-gradient-to-b from-[#0e1724]/90 to-[#09101a]/95 p-5 text-white shadow-md hover:border-cyan-400/40 transition-all flex flex-col justify-between space-y-4"
+                    className="rounded-2xl border border-cyan-500/20 bg-[#090e18] p-5 text-white shadow-md hover:border-cyan-400/40 transition-all flex flex-col justify-between space-y-4"
                   >
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
@@ -236,14 +236,14 @@ export default function DoctorTeleconsult() {
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-xs text-slate-300">
+                      <div className="rounded-xl border border-slate-800 bg-[#070a12] p-3 text-xs text-slate-300">
                         <p className="text-[10px] uppercase tracking-wider text-slate-400">Condition / Note</p>
                         <p className="mt-1 font-medium text-slate-200">{patient.condition}</p>
                       </div>
                     </div>
 
                     <Button
-                      className="w-full border-transparent bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 text-slate-950 font-bold text-xs h-10 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.35)] hover:shadow-[0_0_30px_rgba(56,189,248,0.6)] active:scale-[0.98] transition-all cursor-pointer"
+                      className="w-full border-transparent bg-gradient-to-r from-cyan-400 via-sky-400 to-cyan-500 text-slate-950 font-bold text-xs h-10 rounded-xl shadow-[0_0_20px_rgba(56,189,248,0.3)] hover:shadow-[0_0_30px_rgba(56,189,248,0.5)] active:scale-[0.98] transition-all cursor-pointer"
                       onClick={() => void handleConnectPatient(patient)}
                     >
                       <Video className="mr-2 h-4 w-4" />
@@ -253,7 +253,7 @@ export default function DoctorTeleconsult() {
                 ))}
               </div>
             ) : (
-              <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-8 text-center text-xs text-slate-400 space-y-2">
+              <div className="rounded-2xl border border-slate-800 bg-[#090e18] p-8 text-center text-xs text-slate-400 space-y-2">
                 <UserCheck className="h-8 w-8 text-slate-500 mx-auto" />
                 <p className="font-medium text-slate-300">No patients currently in the waiting queue.</p>
                 <p>Stay on this page—new patient consultation requests will pop up automatically in real-time.</p>
@@ -275,7 +275,7 @@ export default function DoctorTeleconsult() {
 
           {/* Doctor Controls & Realtime Note Sync */}
           <div className="space-y-6">
-            <div className="rounded-[24px] bg-[#060813]/70 border border-cyan-500/20 p-6 backdrop-blur-xl space-y-4">
+            <div className="rounded-[24px] bg-[#0d131f] border border-cyan-500/20 p-6 space-y-4 shadow-md">
               <div className="flex items-center gap-2 text-cyan-400 font-semibold text-sm tracking-wide uppercase font-mono">
                 <FileEdit className="h-4 w-4" />
                 <span>Real-time Clinical Notes</span>
@@ -288,7 +288,7 @@ export default function DoctorTeleconsult() {
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 placeholder="Type notes here (e.g. Patient presents with mild arrhythmia. Recommend daily BP monitoring and 100mg Aspirin...)"
-                className="w-full h-44 rounded-2xl border border-slate-800 bg-slate-950/70 p-4 text-xs text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none resize-none backdrop-blur-md"
+                className="w-full h-44 rounded-2xl border border-slate-800 bg-[#070a12] p-4 text-xs text-slate-100 placeholder:text-slate-500 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none resize-none"
               />
 
               <Button
@@ -301,7 +301,7 @@ export default function DoctorTeleconsult() {
               </Button>
             </div>
 
-            <div className="rounded-[24px] bg-[#060813]/70 border border-cyan-500/20 p-6 backdrop-blur-xl space-y-3">
+            <div className="rounded-[24px] bg-[#0d131f] border border-cyan-500/20 p-6 space-y-3 shadow-md">
               <div className="flex items-center gap-2 text-cyan-400 font-semibold text-sm tracking-wide uppercase font-mono">
                 <Users className="h-4 w-4" />
                 <span>Active Consultation Details</span>

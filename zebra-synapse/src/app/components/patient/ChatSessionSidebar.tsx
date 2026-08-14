@@ -214,15 +214,15 @@ export function ChatSessionSidebar({
 
   // Content of the sidebar
   const renderSidebarContent = () => (
-    <div className="flex flex-col h-full w-full bg-[#0c0d14]/95 backdrop-blur-2xl border-r border-white/[0.08] text-slate-200 select-none overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-[#0c101a] border-r border-slate-800/90 text-slate-200 select-none overflow-hidden shadow-2xl">
       {/* 1. Header Toolbar */}
-      <div className="h-16 shrink-0 px-4 border-b border-white/[0.08] flex items-center justify-between gap-2">
+      <div className="h-16 shrink-0 px-4 border-b border-slate-800/90 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 overflow-hidden">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]">
             <MessageSquare className="h-4 w-4 stroke-[2.2]" />
           </div>
           <div className="overflow-hidden">
-            <h3 className="text-xs font-semibold text-white tracking-wide truncate">
+            <h3 className="text-xs font-semibold text-white tracking-wide truncate font-['Manrope']">
               Chat Sessions
             </h3>
             <p className="text-[10px] text-zinc-400 font-mono truncate">
@@ -236,7 +236,7 @@ export function ChatSessionSidebar({
           type="button"
           onClick={onToggle}
           title="Collapse sidebar (Ctrl+B)"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-400 hover:text-white hover:bg-slate-800/70 transition-colors"
         >
           <PanelLeftClose className="h-4 w-4" />
         </button>

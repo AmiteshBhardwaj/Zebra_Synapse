@@ -577,7 +577,7 @@ export default function PatientLabChat() {
     sessionTitles[selectedReportId] || activeReport?.original_filename || "Select Lab Report";
 
   return (
-    <div className="flex h-full w-full bg-[#0a0b0e] text-slate-100 overflow-hidden font-sans selection:bg-cyan-500/25 selection:text-cyan-200 relative">
+    <div className="flex h-full w-full bg-[#07090e] text-slate-100 overflow-hidden font-sans selection:bg-cyan-500/25 selection:text-cyan-200 relative">
       {/* Retractable Chat Session Sidebar */}
       <ChatSessionSidebar
         isOpen={isSidebarOpen}
@@ -598,9 +598,9 @@ export default function PatientLabChat() {
       />
 
       {/* Main Conversation Workspace */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative bg-[#07090e]">
         {/* Top Header */}
-        <header className="h-16 shrink-0 border-b border-white/[0.06] bg-[#0c0d12]/80 backdrop-blur-xl px-4 sm:px-6 lg:px-8 flex items-center justify-between z-20">
+        <header className="h-16 shrink-0 border-b border-slate-800/90 bg-[#0c101a] px-4 sm:px-6 lg:px-8 flex items-center justify-between z-20">
           <div className="flex items-center gap-2.5 sm:gap-3 overflow-hidden">
             {/* Retract / Expand Sidebar Toggle Button & Brand Header */}
             <button

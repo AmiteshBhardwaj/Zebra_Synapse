@@ -155,17 +155,12 @@ export default function PatientHome() {
   return (
     <PatientPortalPage>
       {/* 1. STITCH PATIENT WELCOME HERO BANNER */}
-      <div className="relative overflow-hidden rounded-[28px] border border-cyan-500/25 bg-gradient-to-r from-[#061224]/85 via-[#091b35]/70 to-[#040914]/90 p-7 sm:p-9 shadow-[0_20px_50px_rgba(0,0,0,0.5),0_0_35px_rgba(56,189,248,0.12),inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-2xl">
-        {/* Ambient Glow Atmosphere */}
-        <div className="pointer-events-none absolute -right-12 -top-12 h-72 w-72 rounded-full bg-cyan-500/15 blur-3xl" />
-        <div className="pointer-events-none absolute left-1/3 -bottom-12 h-64 w-64 rounded-full bg-sky-500/10 blur-3xl" />
-        <div className="pointer-events-none absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
-
+      <div className="relative overflow-hidden rounded-[28px] border border-cyan-500/25 bg-[#0d131f] p-7 sm:p-9 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3.5 max-w-3xl">
             {/* Perfectly Aligned Eyebrow Badge Row */}
             <div className="flex items-center gap-3 flex-wrap">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/40 bg-cyan-950/70 px-3.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.25)] backdrop-blur-md">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/40 bg-cyan-950/80 px-3.5 py-1 text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-300 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
                 <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
                 Patient Workspace
               </span>
@@ -184,7 +179,7 @@ export default function PatientHome() {
             </h1>
 
             {/* Refined Descriptive Copy */}
-            <p className="max-w-2xl text-sm sm:text-base text-slate-300/90 leading-relaxed font-normal">
+            <p className="max-w-2xl text-sm sm:text-base text-slate-300 leading-relaxed font-normal">
               Welcome to your personal health intelligence vault. Upload a new lab report or review existing diagnostic panels below to analyze biomarker trends, body system stability, and clinical recommendations.
             </p>
           </div>
@@ -201,7 +196,7 @@ export default function PatientHome() {
         <div
           className={`mt-6 rounded-[28px] border border-dashed p-8 text-center transition-colors ${dragActive
             ? "border-[#ff9b61]/70 bg-[#ff9b61]/10"
-            : "border-white/10 bg-white/[0.02] hover:border-[#ff9b61]/40"
+            : "border-slate-800 bg-[#090d16] hover:border-[#ff9b61]/40"
             }`}
           onDragOver={(e) => {
             e.preventDefault();
@@ -244,12 +239,12 @@ export default function PatientHome() {
 
       {/* 3. REPORT SELECTION SECTION - EMPTIES AREA BELOW UNTIL REPORT IS CHOSEN */}
       {selectedReportId === "none" ? (
-        <div className="flex flex-col items-center justify-center text-center px-4 py-12 rounded-[32px] border border-white/10 bg-white/[0.02] backdrop-blur-xl mt-6 shadow-2xl">
-          <div className="mx-auto mb-5 flex h-18 w-18 items-center justify-center rounded-[24px] bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_20px_50px_rgba(255,122,51,0.22)]">
+        <div className="flex flex-col items-center justify-center text-center px-4 py-12 rounded-[32px] border border-cyan-500/20 bg-[#0d131f] mt-6 shadow-2xl">
+          <div className="mx-auto mb-5 flex h-18 w-18 items-center justify-center rounded-[24px] bg-[#1a1310] border border-[#ff8a3d]/35 shadow-[0_10px_30px_rgba(255,122,51,0.15)]">
             <FileText className="h-8 w-8 text-[#ff9b61]" />
           </div>
 
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-2">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white mb-2 font-['Manrope']">
             Please choose a medical report
           </h2>
 
@@ -259,10 +254,10 @@ export default function PatientHome() {
 
           <div className="w-full max-w-sm sm:max-w-md">
             <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-              <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-4 text-xs sm:text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+              <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#090d16] px-4 text-xs sm:text-sm font-medium text-white shadow-lg hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
                 <SelectValue placeholder="Select a medical report..." />
               </SelectTrigger>
-              <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-2xl p-1.5">
+              <SelectContent className="border-cyan-500/20 bg-[#0d131f] text-white shadow-2xl rounded-2xl p-1.5">
                 <SelectItem value="none" className="py-2.5 text-white/40 cursor-pointer">
                   -- Select a Medical Report --
                 </SelectItem>
@@ -283,7 +278,7 @@ export default function PatientHome() {
         /* UNLOCKED CLINICAL SIGNALS & BIOMARKERS DASHBOARD WHEN A REPORT IS SELECTED */
         <div className="mt-6 space-y-6">
           {/* Top Active Report Switcher Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-cyan-500/20 bg-[#0d131f] p-4 shadow-md">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff9c61]/15 border border-[#ff9c61]/30">
                 <FileText className="h-4.5 w-4.5 text-[#ff9c61]" />
@@ -298,10 +293,10 @@ export default function PatientHome() {
 
             <div className="w-full sm:w-auto min-w-[260px]">
               <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="h-10 w-full rounded-xl border-white/14 bg-[#0d1829]/90 text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
+                <SelectTrigger className="h-10 w-full rounded-xl border-slate-800 bg-[#090d16] text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
                   <SelectValue placeholder="Change medical report..." />
                 </SelectTrigger>
-                <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-xl p-1">
+                <SelectContent className="border-cyan-500/20 bg-[#0d131f] text-white shadow-2xl rounded-xl p-1">
                   <SelectItem value="none" className="py-2 text-white/40 cursor-pointer">
                     -- Clear Selection --
                   </SelectItem>
