@@ -266,7 +266,7 @@ export function MetricSparklineGrid({
   const effectiveMetricKeys =
     Array.isArray(metricKeys) && metricKeys.length > 0
       ? metricKeys
-      : latestMetrics.map((m) => m.key);
+      : latestMetrics.filter((m) => m.status !== "missing").map((m) => m.key).slice(0, limit);
 
   const cards = (effectiveMetricKeys || [])
     .map((key) => {

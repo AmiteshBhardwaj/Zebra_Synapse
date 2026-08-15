@@ -1,3 +1,4 @@
+import { getGeminiApiKey, getGeminiModels } from "./geminiKey";
 import type { LabPanelRow } from "./labPanels";
 import type { BiomarkerTrend, BiomarkerTrendMap } from "./labInsights";
 
@@ -721,7 +722,7 @@ export function generateDeterministicExercisePlan(
       totalActiveMinutes: totalActiveMin,
       estimatedCaloriesBurned: totalCals,
       workoutDaysCount: workoutCount,
-      restDaysCount: restCount,
+          restDaysCount: restCount,
     }
   };
 }
@@ -732,15 +733,7 @@ export async function generateAIExercisePlan(
   trends?: BiomarkerTrendMap | BiomarkerTrend[],
   profile: ExerciseProfileInput = {}
 ): Promise<WeeklyExercisePlan> {
-  const geminiApiKey = (
-    (typeof import.meta !== "undefined" && (
-      (import.meta as any)?.env?.VITE_GEMINI_API_KEY ||
-      (import.meta as any)?.env?.GEMINI_API_KEY
-    )) ||
-    ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
-    ((globalThis as any)?.process?.env?.GEMINI_API_KEY) ||
-    ""
-  ).trim();
+  const geminiApiKey = getGeminiApiKey();
 
   // If no Gemini API key, return deterministic clinical plan immediately
   if (!geminiApiKey) {
@@ -759,16 +752,9 @@ export async function generateAIExercisePlan(
 
     const bmi = (profile.heightCm && profile.weightKg && profile.heightCm > 0)
       ? Number((profile.weightKg / Math.pow(profile.heightCm / 100, 2)).toFixed(1))
-      : null;
+      : undefined;
 
     const prompt = `
-You are Zebra Synapse AI, an elite clinical exercise physiologist and sports medicine physician.
-Generate a structured, evidence-based 7-DAY WEEKLY EXERCISE & PHYSICAL ACTIVITY PLAN for a patient.
-
-PATIENT BIOMETRICS & PROFILE:
-- Fitness Level: ${profile.fitnessLevel || "beginner"}
-- Available Equipment: ${profile.equipment || "home_minimal"}
-- Primary Goal: ${profile.goal || "general_health"}
 - Target Daily Workout Duration: ${profile.targetDurationMin || 30} minutes
 - Height: ${profile.heightCm ? `${profile.heightCm} cm` : "Not provided"}
 - Weight: ${profile.weightKg ? `${profile.weightKg} kg` : "Not provided"}
@@ -860,29 +846,44 @@ Return ONLY a valid, parseable JSON object adhering EXACTLY to this schema (no m
 }
 `;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.2,
-            responseMimeType: "application/json",
-          },
-        }),
-      }
-    );
+    const models = getGeminiModels();
+    let rawText = "";
 
-    if (!response.ok) {
-      console.warn("Gemini AI plan generation failed, falling back to deterministic plan", response.status);
-      return generateDeterministicExercisePlan(panel, trends, profile);
+    for (const model of models) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: {
+                temperature: 0.2,
+                responseMimeType: "application/json",
+              },
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          console.warn(`[Gemini exercise plan ${model} failed]:`, response.status);
+          continue;
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (text && text.trim().length > 0) {
+          rawText = text;
+          break;
+        }
+      } catch (err) {
+        console.warn(`[Gemini exercise plan ${model} error]:`, err);
+      }
     }
 
-    const data = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!rawText) {
+      console.warn("All Gemini models failed for exercise plan generation, falling back to deterministic plan");
       return generateDeterministicExercisePlan(panel, trends, profile);
     }
 
