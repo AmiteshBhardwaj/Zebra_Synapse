@@ -1,3 +1,4 @@
+import { FormattedMarkdown } from "../../components/ui/FormattedMarkdown";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
@@ -837,15 +838,11 @@ export default function PatientLabChat() {
                                 </span>
                               )}
                             </div>
-                            <p className="whitespace-pre-wrap text-slate-800 font-sans">
-                              {item.doctor_response}
-                            </p>
+                            <FormattedMarkdown content={item.doctor_response || ""} />
                           </div>
                         ) : (
                           <div>
-                            <p className="whitespace-pre-wrap text-slate-800">
-                              {item.ai_response}
-                            </p>
+                            <FormattedMarkdown content={item.ai_response} />
                             {item.doctor_notes && (
                               <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
                                 <strong>Doctor's Note:</strong> {item.doctor_notes}
