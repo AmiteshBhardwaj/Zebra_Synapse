@@ -48,7 +48,8 @@ import {
   Bot,
   Send,
 } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
+import PatientDietChat from "./PatientDietChat";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
@@ -122,16 +123,38 @@ export default function Diet() {
     setSelectedReportId,
   } = useActiveReport(panels);
 
-  // Active Navigation Mode for Nutrigo Sidebar
-  type DietNavTab = "dashboard" | "weekly_plan" | "biomarker_rx" | "messages" | "healthy_menu" | "food_diary" | "progress" | "exercises";
-  const [activeTab, setActiveTab] = useState<DietNavTab>("dashboard");
+  const location = useLocation();
+
+  // Active Navigation Mode for Zebra Synapse Sidebar
+  type DietNavTab = "dashboard" | "weekly_plan" | "biomarker_rx" | "messages";
+  const [activeTab, setActiveTab] = useState<DietNavTab>(() => {
+    try {
+      const params = new URLSearchParams(location.search);
+      const tab = params.get("tab");
+      if (tab === "messages" || tab === "dietitian" || tab === "chat") return "messages";
+      if (tab === "weekly_plan" || tab === "meal_plan") return "weekly_plan";
+      if (tab === "biomarker_rx") return "biomarker_rx";
+    } catch {}
+    return "dashboard";
+  });
+
+  // Sync activeTab if location search changes
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(location.search);
+      const tab = params.get("tab");
+      if (tab === "messages" || tab === "dietitian" || tab === "chat") setActiveTab("messages");
+      else if (tab === "weekly_plan" || tab === "meal_plan") setActiveTab("weekly_plan");
+      else if (tab === "biomarker_rx") setActiveTab("biomarker_rx");
+    } catch {}
+  }, [location.search]);
 
   // AI Dietitian Chat Messages State
   const [aiChatInput, setAiChatInput] = useState("");
   const [aiChatLogs, setAiChatLogs] = useState<{ sender: "ai" | "user"; text: string; time: string }[]>([
     {
       sender: "ai",
-      text: "Hello! I am your Nutrigo AI Nutritionist. Based on your current biomarkers and calorie targets, I can suggest delicious antioxidant-rich meals, advise on low-sodium swaps, and optimize your macro intake. How can I help you today?",
+      text: "Hello! I am your Zebra Synapse AI Nutritionist. Based on your current biomarkers and calorie targets, I can suggest delicious antioxidant-rich meals, advise on low-sodium swaps, and optimize your macro intake. How can I help you today?",
       time: "10:30 AM",
     },
   ]);
@@ -232,7 +255,7 @@ export default function Diet() {
     } catch (e) {
       console.error(e);
     }
-    // Default demonstration logs matching Nutrigo mockup
+    // Default demonstration logs matching Zebra Synapse Clinical Nutrition design
     return [
       {
         id: "log_1",
@@ -645,13 +668,22 @@ export default function Diet() {
     );
   }
 
-  if (!hasLabReports) {
+  if (!hasLabReports && activeTab !== "messages") {
     return (
-      <div className="p-6 bg-[#f6f8f5] min-h-full">
+      <div className="p-6 bg-[#f6f8f5] min-h-full space-y-6">
         <LabReportsRequiredPlaceholder
-          title="Clinical Biomarker Lab Reports Required"
-          description="Upload your blood panel to unlock precision diet targets, metabolic BMR adjustments, and cardiovascular dietary prescriptions."
+          title="Clinical Biomarker Lab Reports Required for Dashboard"
+          description="Upload your blood panel to unlock precision biomarker targets, metabolic BMR adjustments, and cardiovascular dietary prescriptions. Or chat directly with your AI Dietitian right now without any lab reports!"
         />
+        <div className="flex justify-center">
+          <Button
+            onClick={() => setActiveTab("messages")}
+            className="h-12 px-6 rounded-2xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold shadow-md shadow-lime-500/20 flex items-center gap-2"
+          >
+            <Bot className="h-5 w-5" />
+            <span>Open AI Dietitian Chat (No Lab Reports Required)</span>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -660,13 +692,13 @@ export default function Diet() {
   const recommendedMenuBreakfast = weeklyPlan[0]?.meals?.breakfast;
   const recommendedMenuLunch = weeklyPlan[0]?.meals?.lunch;
 
-  // Render sub-views or main Nutrigo dashboard with dedicated Left Sidebar
+  // Render sub-views or main Zebra Synapse dashboard with dedicated Left Sidebar
   return (
-    <div className="min-h-screen bg-[#f4f7f1] text-slate-800 font-sans p-3 sm:p-4 lg:p-6 antialiased selection:bg-lime-500/20 selection:text-lime-900">
-      <div className="max-w-[1720px] mx-auto flex flex-col lg:flex-row gap-5 items-start">
+    <div className="min-h-screen bg-[#f8faf6] text-slate-800 font-sans selection:bg-lime-200 selection:text-slate-900 p-2 sm:p-4 lg:p-6">
+      <div className="max-w-[1680px] mx-auto flex flex-col lg:flex-row gap-5 lg:gap-6 items-start w-full">
         
         {/* ========================================================================= */}
-        {/* 1. NUTRIGO LEFT SIDEBAR (DEDICATED TO DIET SECTION) */}
+        {/* 1. ZEBRA SYNAPSE LEFT SIDEBAR (DEDICATED TO DIET SECTION) */}
         {/* ========================================================================= */}
         <aside className="w-full lg:w-[245px] xl:w-[255px] shrink-0 lg:sticky lg:top-4 bg-white rounded-[28px] p-4 sm:p-5 border border-slate-100/90 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between self-stretch lg:self-auto min-h-fit lg:min-h-[calc(100vh-3rem)] select-none">
           {/* Brand Header */}
@@ -674,18 +706,15 @@ export default function Diet() {
             onClick={() => setActiveTab("dashboard")}
             className="flex items-center gap-3 pb-4 pt-1 px-1 border-b border-slate-100/70 cursor-pointer group"
           >
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f4f8f1] border border-lime-100 shadow-sm transition-transform group-hover:scale-105">
-              <svg viewBox="0 0 32 32" fill="none" className="h-6 w-6">
-                <path d="M6 14C6 9.58172 9.58172 6 14 6H26C26 10.4183 22.4183 14 18 14H6Z" fill="#9de438" />
-                <path d="M6 18C6 18 8 26 16 26C24 26 26 18 26 18H6Z" fill="#f59e0b" />
-              </svg>
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-lime-400 border border-slate-700/40 shadow-sm transition-transform group-hover:scale-105">
+              <Activity className="h-5 w-5 stroke-[2.3]" />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
-                Nutrigo
+                Zebra Synapse
               </span>
               <span className="text-[10px] font-semibold text-slate-400 tracking-wider">
-                Health & Nutrition
+                Clinical Nutrition & Diet
               </span>
             </div>
           </div>
@@ -695,13 +724,8 @@ export default function Diet() {
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "weekly_plan", label: "Calendar", icon: CalendarIcon },
-              { id: "messages", label: "Messages", icon: MessageSquare, badge: 6 },
-              { id: "healthy_menu", label: "Healthy Menu", icon: UtensilsCrossed },
+              { id: "messages", label: "AI Dietitian", icon: Bot },
               { id: "weekly_plan", label: "Meal Plan", icon: ClipboardList, hasSubmenu: true },
-              { id: "food_diary", label: "Food Diary", icon: BookOpen },
-              { id: "progress", label: "Progress", icon: TrendingUp },
-              { id: "exercises", label: "Exercises", icon: Dumbbell },
-              { id: "biomarker_rx", label: "Health Insights", icon: HeartPulse },
             ].map((item, idx) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
@@ -748,49 +772,10 @@ export default function Diet() {
             })}
           </nav>
 
-          {/* Yellow Promotional Card */}
-          <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-b from-[#ffea75] via-[#ffd645] to-[#fec730] p-3.5 text-slate-900 shadow-[0_4px_16px_rgba(254,199,48,0.2)] border border-amber-200/50 mt-auto mb-2.5">
-            <div className="flex items-center justify-center pt-0.5 pb-1">
-              <div className="relative h-16 w-28 flex items-center justify-center">
-                <img
-                  src="/nutrigo_promo_vegetables.jpg"
-                  alt="Nutrigo fresh vegetables"
-                  className="h-16 w-auto object-contain drop-shadow-md transition-transform hover:scale-105"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    const fallback = e.currentTarget.parentElement?.querySelector(".promo-fallback");
-                    if (fallback) fallback.classList.remove("hidden");
-                  }}
-                />
-                <div className="promo-fallback hidden flex items-center justify-center text-3xl gap-1">
-                  <span>🥕</span>
-                  <span>🥬</span>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[11.5px] font-medium leading-[1.3] text-slate-900 text-left px-0.5">
-              Start your health journey with a{" "}
-              <span className="font-bold text-slate-950">FREE 1-month</span> access to Nutrigo!
-            </p>
-
-            <button
-              type="button"
-              onClick={() => {
-                toast.success("🎉 1-Month Free Access Claimed!", {
-                  description: "Enjoy full AI biomarker insights, custom meal plans, and telehealth access.",
-                });
-              }}
-              className="mt-2.5 w-full rounded-full bg-[#9de438] hover:bg-[#8ed024] py-2 px-3 text-[11.5px] font-bold text-slate-950 shadow-sm border border-black/5 active:scale-95 transition-all text-center cursor-pointer"
-            >
-              Claim Now!
-            </button>
-          </div>
-
           {/* Logout / Exit button */}
           <Link
             to="/patient"
-            className="flex w-full items-center gap-3 rounded-[14px] px-3.5 py-2 text-[13px] font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+            className="mt-auto flex w-full items-center gap-3 rounded-[14px] px-3.5 py-2 text-[13px] font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
           >
             <LogOut className="h-4 w-4 stroke-[2]" />
             <span>Exit to Portal</span>
@@ -814,7 +799,7 @@ export default function Diet() {
                     Hello, {profile?.full_name?.split(" ")[0] || "Adam"}!
                   </h1>
                   <span className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2.5 py-0.5 text-xs font-semibold text-lime-800">
-                    <Sparkles className="h-3 w-3" /> Nutrigo Active
+                    <Sparkles className="h-3 w-3" /> Zebra Synapse Active
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -857,7 +842,7 @@ export default function Diet() {
           </header>
 
         {/* ========================================================================= */}
-        {/* VIEW 1: NUTRIGO MAIN DAILY DASHBOARD */}
+        {/* VIEW 1: ZEBRA SYNAPSE MAIN DAILY DASHBOARD */}
         {/* ========================================================================= */}
         {activeTab === "dashboard" && (
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
@@ -1274,164 +1259,108 @@ export default function Diet() {
                 </div>
               </div>
 
-              {/* --- BOTTOM 2-COLUMN SECTION: RECOMMENDED MENU & RECOMMENDED EXERCISES --- */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* Left: Recommended Menu */}
-                <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-slate-900 text-base">Recommended Menu</h3>
-                    <button
-                      onClick={() => setActiveTab("weekly_plan")}
-                      className="text-xs font-semibold text-lime-600 hover:text-lime-700 flex items-center gap-1"
-                    >
-                      View Full Plan <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Breakfast Card */}
-                    {recommendedMenuBreakfast && (
-                      <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
-                        <div>
-                          {/* Image Thumbnail */}
-                          <div className="relative h-28 w-full rounded-xl overflow-hidden mb-3 bg-slate-200">
-                            <img
-                              src={recommendedMenuBreakfast.imageUrl || "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=400&q=80"}
-                              alt={recommendedMenuBreakfast.title}
-                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                              <span className="bg-lime-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                                Breakfast
-                              </span>
-                              <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                                {recommendedMenuBreakfast.calories} kcal
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Macro Pills */}
-                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-1.5">
-                            <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recommendedMenuBreakfast.carbs}g</span>
-                            <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recommendedMenuBreakfast.protein}g</span>
-                            <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recommendedMenuBreakfast.fat}g</span>
-                          </div>
-
-                          <h4 className="font-bold text-slate-900 text-xs line-clamp-1 mb-1">
-                            {recommendedMenuBreakfast.title}
-                          </h4>
-                          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
-                            {recommendedMenuBreakfast.clinicalBenefits[0] || "Rich in fiber and antioxidants, providing energy."}
-                          </p>
-                        </div>
-
-                        <Button
-                          onClick={() => handleLogMealFromPlanToToday(recommendedMenuBreakfast)}
-                          className="mt-3 h-8 w-full rounded-xl bg-white hover:bg-lime-50 text-lime-700 border border-lime-300 font-semibold text-xs transition-colors shadow-none"
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1" /> Log to Today
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Lunch Card */}
-                    {recommendedMenuLunch && (
-                      <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
-                        <div>
-                          {/* Image Thumbnail */}
-                          <div className="relative h-28 w-full rounded-xl overflow-hidden mb-3 bg-slate-200">
-                            <img
-                              src={recommendedMenuLunch.imageUrl || "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=400&q=80"}
-                              alt={recommendedMenuLunch.title}
-                              className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                              <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                                Lunch
-                              </span>
-                              <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                                {recommendedMenuLunch.calories} kcal
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Macro Pills */}
-                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-1.5">
-                            <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recommendedMenuLunch.carbs}g</span>
-                            <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recommendedMenuLunch.protein}g</span>
-                            <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recommendedMenuLunch.fat}g</span>
-                          </div>
-
-                          <h4 className="font-bold text-slate-900 text-xs line-clamp-1 mb-1">
-                            {recommendedMenuLunch.title}
-                          </h4>
-                          <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
-                            {recommendedMenuLunch.clinicalBenefits[0] || "Rich in protein and healthy fats for recovery."}
-                          </p>
-                        </div>
-
-                        <Button
-                          onClick={() => handleLogMealFromPlanToToday(recommendedMenuLunch)}
-                          className="mt-3 h-8 w-full rounded-xl bg-white hover:bg-orange-50 text-orange-700 border border-orange-300 font-semibold text-xs transition-colors shadow-none"
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1" /> Log to Today
-                        </Button>
-                      </div>
-                    )}
-                  </div>
+              {/* --- BOTTOM SECTION: RECOMMENDED MENU --- */}
+              <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-slate-900 text-base">Recommended Menu</h3>
+                  <button
+                    onClick={() => setActiveTab("weekly_plan")}
+                    className="text-xs font-semibold text-lime-600 hover:text-lime-700 flex items-center gap-1 cursor-pointer"
+                  >
+                    View Full Plan <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
                 </div>
 
-                {/* Right: Recommended Exercises */}
-                <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-slate-900 text-base">Recommended Exercises</h3>
-                    <Link
-                      to="/patient/exercise"
-                      className="text-xs font-semibold text-lime-600 hover:text-lime-700 flex items-center gap-1"
-                    >
-                      Full Workout <ChevronRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-
-                  <div className="space-y-3">
-                    {RECOMMENDED_EXERCISES.map((ex) => (
-                      <div
-                        key={ex.id}
-                        className="bg-slate-50/70 hover:bg-slate-100/80 rounded-2xl p-3 border border-slate-100 flex items-center justify-between transition-all"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-12 w-12 rounded-xl overflow-hidden bg-slate-200 shrink-0">
-                            <img src={ex.imageUrl} alt={ex.name} className="h-full w-full object-cover" />
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-bold text-slate-900">{ex.name}</h4>
-                            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mt-0.5">
-                              <span className="flex items-center gap-1 text-orange-500">
-                                <Flame className="h-3 w-3" /> {ex.calories} kcal
-                              </span>
-                              <span>•</span>
-                              <span className="flex items-center gap-1 text-slate-500">
-                                <Clock className="h-3 w-3" /> {ex.durationMin} min
-                              </span>
-                            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Breakfast Card */}
+                  {recommendedMenuBreakfast && (
+                    <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
+                      <div>
+                        {/* Image Thumbnail */}
+                        <div className="relative h-28 w-full rounded-xl overflow-hidden mb-3 bg-slate-200">
+                          <img
+                            src={recommendedMenuBreakfast.imageUrl || "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=400&q=80"}
+                            alt={recommendedMenuBreakfast.title}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                            <span className="bg-lime-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                              Breakfast
+                            </span>
+                            <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                              {recommendedMenuBreakfast.calories} kcal
+                            </span>
                           </div>
                         </div>
 
-                        <span
-                          className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
-                            ex.difficulty === "Beginner"
-                              ? "bg-lime-100 text-lime-800"
-                              : ex.difficulty === "Intermediate"
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-orange-100 text-orange-800"
-                          }`}
-                        >
-                          {ex.difficulty}
-                        </span>
+                        {/* Macro Pills */}
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-1.5">
+                          <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recommendedMenuBreakfast.carbs}g</span>
+                          <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recommendedMenuBreakfast.protein}g</span>
+                          <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recommendedMenuBreakfast.fat}g</span>
+                        </div>
+
+                        <h4 className="font-bold text-slate-900 text-xs line-clamp-1 mb-1">
+                          {recommendedMenuBreakfast.title}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                          {recommendedMenuBreakfast.clinicalBenefits[0] || "Rich in fiber and antioxidants, providing energy."}
+                        </p>
                       </div>
-                    ))}
-                  </div>
+
+                      <Button
+                        onClick={() => handleLogMealFromPlanToToday(recommendedMenuBreakfast)}
+                        className="mt-3 h-8 w-full rounded-xl bg-white hover:bg-lime-50 text-lime-700 border border-lime-300 font-semibold text-xs transition-colors shadow-none cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Log to Today
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Lunch Card */}
+                  {recommendedMenuLunch && (
+                    <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
+                      <div>
+                        {/* Image Thumbnail */}
+                        <div className="relative h-28 w-full rounded-xl overflow-hidden mb-3 bg-slate-200">
+                          <img
+                            src={recommendedMenuLunch.imageUrl || "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=400&q=80"}
+                            alt={recommendedMenuLunch.title}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                          <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                            <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                              Lunch
+                            </span>
+                            <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+                              {recommendedMenuLunch.calories} kcal
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Macro Pills */}
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-1.5">
+                          <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recommendedMenuLunch.carbs}g</span>
+                          <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recommendedMenuLunch.protein}g</span>
+                          <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recommendedMenuLunch.fat}g</span>
+                        </div>
+
+                        <h4 className="font-bold text-slate-900 text-xs line-clamp-1 mb-1">
+                          {recommendedMenuLunch.title}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
+                          {recommendedMenuLunch.clinicalBenefits[0] || "Rich in protein and healthy fats for recovery."}
+                        </p>
+                      </div>
+
+                      <Button
+                        onClick={() => handleLogMealFromPlanToToday(recommendedMenuLunch)}
+                        className="mt-3 h-8 w-full rounded-xl bg-white hover:bg-orange-50 text-orange-700 border border-orange-300 font-semibold text-xs transition-colors shadow-none cursor-pointer"
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Log to Today
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1699,43 +1628,6 @@ export default function Diet() {
                   </div>
                 </div>
               </div>
-
-              {/* 4. Recent Activity Stream */}
-              <div className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-slate-900 text-sm">Recent Activity</h4>
-                  <button className="text-slate-400 hover:text-slate-600 text-xs font-semibold">•••</button>
-                </div>
-
-                <div className="space-y-3.5">
-                  {activityFeed.map((act) => (
-                    <div key={act.id} className="flex items-start gap-3">
-                      <div
-                        className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-xs ${
-                          act.type === "bell"
-                            ? "bg-lime-100 text-lime-700"
-                            : act.type === "yoga"
-                            ? "bg-amber-100 text-amber-700"
-                            : act.type === "run"
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-lime-100 text-lime-700"
-                        }`}
-                      >
-                        {act.type === "bell" && <Bell className="h-4 w-4" />}
-                        {act.type === "yoga" && <Activity className="h-4 w-4" />}
-                        {act.type === "run" && <Footprints className="h-4 w-4" />}
-                        {act.type === "food" && <Utensils className="h-4 w-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[10px] font-bold text-slate-400">{act.time}</div>
-                        <p className="text-xs text-slate-700 leading-relaxed font-medium mt-0.5">
-                          {act.text}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -1988,280 +1880,8 @@ export default function Diet() {
         {/* VIEW 4: AI DIETITIAN MESSAGES CHAT */}
         {/* ========================================================================= */}
         {activeTab === "messages" && (
-          <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-11 w-11 rounded-2xl bg-lime-500/15 text-lime-700 flex items-center justify-center font-bold">
-                  <Bot className="h-6 w-6" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-slate-900">Nutrigo AI Clinical Dietitian</h2>
-                  <p className="text-xs text-slate-500">Real-time biomarker meal guidance, ingredient swaps, and clinical nutrition Q&A</p>
-                </div>
-              </div>
-              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-lime-50 text-lime-700 text-xs font-bold border border-lime-200/60">
-                <span className="h-2 w-2 rounded-full bg-lime-500 animate-pulse" />
-                AI Dietitian Active
-              </span>
-            </div>
-
-            {/* Messages Thread */}
-            <div className="space-y-4 max-h-[480px] overflow-y-auto pr-1">
-              {aiChatLogs.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex gap-3 ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  {msg.sender === "ai" && (
-                    <div className="h-9 w-9 rounded-xl bg-lime-100 text-lime-800 flex items-center justify-center shrink-0 text-xs font-bold">
-                      AI
-                    </div>
-                  )}
-                  <div
-                    className={`max-w-xl rounded-2xl p-4 text-xs leading-relaxed ${
-                      msg.sender === "user"
-                        ? "bg-slate-900 text-white rounded-br-none font-medium"
-                        : "bg-slate-50 border border-slate-100 text-slate-800 rounded-bl-none"
-                    }`}
-                  >
-                    <p>{msg.text}</p>
-                    <span className={`text-[10px] block mt-1.5 font-semibold ${msg.sender === "user" ? "text-slate-400" : "text-slate-400"}`}>
-                      {msg.time}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Input form */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!aiChatInput.trim()) return;
-                const q = aiChatInput.trim();
-                const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-                setAiChatLogs((prev) => [...prev, { sender: "user", text: q, time: timeNow }]);
-                setAiChatInput("");
-
-                setTimeout(() => {
-                  let reply = `Great question regarding "${q}". For your metabolic target (${calorieTarget} kcal/day), prioritizing high-potassium greens, lean proteins, and complex carbohydrates while keeping sodium under ${microTargets.sodiumMg}mg will optimize your cellular recovery.`;
-                  if (q.toLowerCase().includes("snack") || q.toLowerCase().includes("hungry")) {
-                    reply = "For a high-satiety low-glycemic snack, I recommend Greek yogurt with berries and crushed walnuts (approx. 180 kcal, 15g protein) or raw almond butter on crisp cucumber slices.";
-                  } else if (q.toLowerCase().includes("protein") || q.toLowerCase().includes("muscle")) {
-                    reply = `Your optimal daily protein target is ${macroTargets.proteinG}g (${macroTargets.proteinPct}% of total calories). Clean sources like wild salmon, eggs, tofu, lentils, and lean chicken will support your goal.`;
-                  }
-                  setAiChatLogs((prev) => [...prev, { sender: "ai", text: reply, time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
-                }, 600);
-              }}
-              className="flex gap-2 pt-2 border-t border-slate-100"
-            >
-              <Input
-                placeholder="Ask about healthy recipes, sodium swaps, or macro goals..."
-                value={aiChatInput}
-                onChange={(e) => setAiChatInput(e.target.value)}
-                className="h-11 rounded-2xl bg-slate-50 border-slate-200 text-xs flex-1"
-              />
-              <Button
-                type="submit"
-                className="h-11 px-5 rounded-2xl bg-[#84cc16] hover:bg-[#73b512] text-white font-semibold flex items-center gap-2"
-              >
-                <Send className="h-4 w-4" />
-                Send
-              </Button>
-            </form>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* VIEW 5: CURATED HEALTHY MENU */}
-        {/* ========================================================================= */}
-        {activeTab === "healthy_menu" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Curated Healthy Menus & Chef Recipes</h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  Biomarker-optimized dishes prepared for your metabolic pace of {calorieTarget} kcal/day
-                </p>
-              </div>
-              <Button
-                onClick={() => setActiveTab("weekly_plan")}
-                className="h-10 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold text-xs shadow-md shadow-lime-500/20"
-              >
-                <ClipboardList className="h-4 w-4 mr-1.5" /> Full 7-Day Plan
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {FOOD_DATABASE.slice(0, 9).map((f) => (
-                <div key={f.id} className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-lg transition-all">
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[11px] font-bold text-lime-700 bg-lime-50 px-2.5 py-1 rounded-full uppercase tracking-wider">
-                        {f.category}
-                      </span>
-                      <span className="text-xs font-black text-slate-900">{f.calories} kcal</span>
-                    </div>
-                    <h3 className="font-bold text-slate-900 text-sm mb-1">{f.name}</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-3">Standard serving: {f.servingSize}</p>
-                    <div className="flex items-center gap-2 text-[10px] font-semibold text-slate-600 mb-3">
-                      <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md">Carbs {f.carbs}g</span>
-                      <span className="bg-lime-100 text-lime-800 px-2 py-0.5 rounded-md">Protein {f.protein}g</span>
-                      <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-md">Fat {f.fat}g</span>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={() => handleLogFoodItem(f)}
-                    className="w-full h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs"
-                  >
-                    + Log to Daily Diary
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* VIEW 6: FOOD DIARY */}
-        {/* ========================================================================= */}
-        {activeTab === "food_diary" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Today's Food Diary & Meal Logs</h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  {totalEatenCalories} kcal logged of {calorieTarget} kcal target
-                </p>
-              </div>
-              <Button
-                onClick={() => {
-                  setSelectedMealForAdd("breakfast");
-                  setIsAddFoodOpen(true);
-                }}
-                className="h-10 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold text-xs"
-              >
-                <Plus className="h-4 w-4 mr-1" /> Log New Food
-              </Button>
-            </div>
-
-            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-4">
-              {loggedFoods.length === 0 ? (
-                <p className="text-center text-slate-400 py-8 text-xs font-medium">No foods logged yet today. Click "Log New Food" above!</p>
-              ) : (
-                <div className="space-y-2.5">
-                  {loggedFoods.map((lf) => (
-                    <div key={lf.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">{lf.name}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          <span className="capitalize text-lime-700 font-semibold">{lf.meal}</span> • {lf.servings} serving ({lf.servingSize}) • {lf.calories} kcal
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[11px] font-bold text-slate-700">C {lf.carbs}g • P {lf.protein}g • F {lf.fat}g</span>
-                        <button
-                          onClick={() => handleDeleteLoggedFood(lf.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* VIEW 7: METABOLIC PROGRESS */}
-        {/* ========================================================================= */}
-        {activeTab === "progress" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Metabolic Progress & Weight Targets</h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  Tracking current pace ({settings.weeklyPaceKg} kg/week) toward {settings.targetWeightKg} kg target
-                </p>
-              </div>
-              <Button
-                onClick={() => setIsCustomizeOpen(true)}
-                className="h-10 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold text-xs"
-              >
-                <SlidersHorizontal className="h-4 w-4 mr-1.5" /> Adjust Goals
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Current Weight</span>
-                <div className="text-3xl font-black text-slate-900 mt-1">{currentWeight} <span className="text-xs font-normal text-slate-400">kg</span></div>
-                <p className="text-[11px] text-lime-700 font-medium mt-1">Updated today</p>
-              </div>
-              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Target Goal</span>
-                <div className="text-3xl font-black text-slate-900 mt-1">{settings.targetWeightKg} <span className="text-xs font-normal text-slate-400">kg</span></div>
-                <p className="text-[11px] text-slate-500 font-medium mt-1">Goal weight</p>
-              </div>
-              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">BMR Baseline</span>
-                <div className="text-3xl font-black text-slate-900 mt-1">{bmr} <span className="text-xs font-normal text-slate-400">kcal</span></div>
-                <p className="text-[11px] text-slate-500 font-medium mt-1">Resting metabolic burn</p>
-              </div>
-              <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Daily Target</span>
-                <div className="text-3xl font-black text-slate-900 mt-1">{calorieTarget} <span className="text-xs font-normal text-slate-400">kcal</span></div>
-                <p className="text-[11px] text-lime-700 font-medium mt-1">Calibrated for progress</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* VIEW 8: EXERCISES */}
-        {/* ========================================================================= */}
-        {activeTab === "exercises" && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Recommended Metabolic Exercises</h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  Workouts designed to synergize with your current calorie target of {calorieTarget} kcal
-                </p>
-              </div>
-              <Link
-                to="/patient/exercise"
-                className="h-10 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-white font-semibold text-xs flex items-center gap-1.5 shadow-md shadow-lime-500/20"
-              >
-                <Dumbbell className="h-4 w-4" /> Go to Full Workout Plan
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {RECOMMENDED_EXERCISES.map((ex) => (
-                <div key={ex.id} className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between hover:shadow-lg transition-all">
-                  <div>
-                    <div className="relative h-40 w-full rounded-2xl overflow-hidden mb-3 bg-slate-200">
-                      <img src={ex.imageUrl} alt={ex.name} className="h-full w-full object-cover" />
-                      <span className="absolute top-2.5 right-2.5 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">
-                        {ex.difficulty}
-                      </span>
-                    </div>
-                    <h3 className="font-bold text-slate-900 text-sm mb-1">{ex.name}</h3>
-                    <p className="text-xs text-slate-500 leading-relaxed mb-3">Duration: {ex.durationMin} minutes of active training</p>
-                  </div>
-                  <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                    <span className="flex items-center gap-1.5 text-orange-600 font-bold text-xs">
-                      <Flame className="h-4 w-4" /> {ex.calories} kcal burned
-                    </span>
-                    <span className="text-xs font-semibold text-slate-500">{ex.durationMin} min</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="w-full">
+            <PatientDietChat embedded />
           </div>
         )}
 

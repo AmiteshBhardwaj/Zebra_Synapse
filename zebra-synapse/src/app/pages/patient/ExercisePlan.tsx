@@ -26,7 +26,7 @@ import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { useActiveReport } from "../../../hooks/useActiveReport";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import ReportScopeSelector from "../../components/patient/ReportScopeSelector";
-import { PatientPortalPage, portalPanelClass } from "../../components/patient/PortalTheme";
+import { PatientPortalPage, portalPanelClass, portalSecondaryButtonClass } from "../../components/patient/PortalTheme";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";

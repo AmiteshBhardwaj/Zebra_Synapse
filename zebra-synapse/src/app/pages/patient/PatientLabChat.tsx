@@ -54,10 +54,10 @@ function RobotMascot() {
   return (
     <div className="relative flex flex-col items-center justify-center group select-none">
       {/* Soft Ambient Cyan Glow Aura */}
-      <div className="absolute -inset-10 bg-cyan-500/25 rounded-full blur-3xl opacity-80 animate-pulse pointer-events-none" />
+      <div className="absolute -inset-6 bg-cyan-500/20 rounded-full blur-2xl opacity-75 animate-pulse pointer-events-none" />
 
       {/* 3D Robot Container with Hover & Floating animation */}
-      <div className="relative w-36 h-36 sm:w-44 sm:h-44 transition-transform duration-500 hover:scale-105 hover:-translate-y-1">
+      <div className="relative w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 transition-transform duration-500 hover:scale-105 hover:-translate-y-0.5">
         <svg
           viewBox="0 0 200 200"
           className="w-full h-full drop-shadow-[0_15px_35px_rgba(6,182,212,0.4)]"
@@ -723,38 +723,38 @@ export default function PatientLabChat() {
         </header>
 
         {/* Workspace Body */}
-        <div className="flex-1 overflow-y-auto flex flex-col justify-between relative px-4 sm:px-8 py-6 [scrollbar-width:thin]">
+        <div className="flex-1 overflow-y-auto flex flex-col justify-between relative px-3 sm:px-6 py-2 sm:py-3 [scrollbar-width:thin]">
           {/* STATE A: Initial Empty Screen with Robot Mascot */}
           {!hasMessages && !loadingMessages && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center max-w-3xl mx-auto w-full py-4 animate-in fade-in zoom-in-95 duration-300">
+            <div className="flex-1 flex flex-col items-center justify-center text-center max-w-3xl mx-auto w-full py-1 sm:py-2 animate-in fade-in zoom-in-95 duration-300 my-auto">
               {/* Mascot */}
-              <div className="mb-5">
+              <div className="mb-2 sm:mb-2.5">
                 <RobotMascot />
               </div>
 
               {/* Bold Title */}
-              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight text-slate-900 mb-2 font-['Manrope']">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900 mb-1 font-['Manrope']">
                 Your smart AI buddy
-                <span className="block text-lime-700 font-semibold mt-1">
+                <span className="block text-lime-700 font-semibold mt-0.5">
                   for all things digital & health
                 </span>
               </h1>
 
               {/* Subtitle */}
-              <p className="text-xs sm:text-sm text-slate-500 mb-7 max-w-md">
+              <p className="text-xs sm:text-[13px] text-slate-500 mb-3 sm:mb-4 max-w-md">
                 Ask, analyze, explore — with Synapse
               </p>
 
               {/* Suggestion Interactive Pills */}
-              <div className="flex flex-wrap items-center justify-center gap-2 max-w-2xl">
+              <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 max-w-2xl">
                 {QUICK_PROMPT_PILLS.map((pill, idx) => (
                   <button
                     key={idx}
                     onClick={() => void handleSendMessage(pill.query)}
                     disabled={sending}
-                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-lime-50/60 border border-slate-100 hover:border-lime-300 text-xs font-semibold text-slate-800 transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-lime-50/60 border border-slate-200/80 hover:border-lime-300 text-[11px] sm:text-xs font-semibold text-slate-800 transition-all shadow-xs hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                   >
-                    <span className="text-base">{pill.emoji}</span>
+                    <span className="text-sm sm:text-base">{pill.emoji}</span>
                     <span>{pill.text}</span>
                   </button>
                 ))}
@@ -908,15 +908,15 @@ export default function PatientLabChat() {
           )}
 
           {/* Bottom Floating Input Bar */}
-          <div className="w-full max-w-3xl mx-auto pt-2 shrink-0">
-            <div className="rounded-[24px] bg-white border border-slate-200 hover:border-slate-300 focus-within:border-lime-500 focus-within:ring-2 focus-within:ring-lime-500/20 shadow-lg p-2 sm:p-2.5 flex items-center gap-2 transition-all">
+          <div className="w-full max-w-3xl mx-auto pt-1 sm:pt-1.5 pb-0.5 shrink-0">
+            <div className="rounded-[20px] sm:rounded-[24px] bg-white border border-slate-200 hover:border-slate-300 focus-within:border-lime-500 focus-within:ring-2 focus-within:ring-lime-500/20 shadow-md p-1.5 sm:p-2 flex items-center gap-1.5 sm:gap-2 transition-all">
               {/* Left 1: Document / Attachment Button */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     title="Attach or select lab report"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors outline-none"
+                    className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors outline-none cursor-pointer"
                   >
                     <Paperclip className="h-4 w-4" />
                   </button>
@@ -944,7 +944,7 @@ export default function PatientLabChat() {
                 type="button"
                 onClick={toggleVoiceInput}
                 title={isListening ? "Stop listening" : "Voice input"}
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl transition-colors cursor-pointer ${
                   isListening
                     ? "bg-rose-500 text-white animate-pulse"
                     : "bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800"
@@ -967,7 +967,7 @@ export default function PatientLabChat() {
                 }}
                 placeholder="Type a thought or symptom... Synapse responds with clinical precision."
                 disabled={sending || uploads.length === 0}
-                className="bg-transparent border-0 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 text-xs sm:text-sm flex-1 px-2 py-1.5 resize-none max-h-36 min-h-[26px] leading-relaxed font-sans"
+                className="bg-transparent border-0 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 text-xs sm:text-sm flex-1 px-2 py-1.5 resize-none max-h-32 min-h-[24px] leading-relaxed font-sans"
               />
 
               {/* Right Send Button */}
@@ -975,7 +975,7 @@ export default function PatientLabChat() {
                 type="button"
                 onClick={() => void handleSendMessage()}
                 disabled={sending || !inputQuery.trim() || uploads.length === 0}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 shadow-sm disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95 hover:scale-105"
+                className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 shadow-sm disabled:opacity-40 disabled:pointer-events-none transition-all active:scale-95 hover:scale-105 cursor-pointer"
               >
                 <Send className="h-4 w-4 stroke-[2.5]" />
               </button>

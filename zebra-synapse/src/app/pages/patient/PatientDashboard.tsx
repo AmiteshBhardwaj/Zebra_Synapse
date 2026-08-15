@@ -42,7 +42,7 @@ export default function PatientDashboard() {
     { path: "/patient/teleconsult", icon: Video, label: "Teleconsultation" },
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },
     { path: "/patient/disease-prediction", icon: TrendingUp, label: "Disease Prediction" },
-    { path: "/patient/diet", icon: Utensils, label: "Diet", altPaths: ["/patient/nutrition"] },
+    { path: "/patient/diet", icon: Utensils, label: "Diet", altPaths: ["/patient/nutrition", "/patient/diet-chat", "/patient/dietitian"] },
     { path: "/patient/exercise", icon: Dumbbell, label: "Exercise Plan" },
     { path: "/patient/clinical-trials", icon: FlaskConical, label: "Clinical Trials" },
     { path: "/patient/wellness-tips", icon: Sparkles, label: "Wellness Tips" },

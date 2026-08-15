@@ -4,12 +4,11 @@ import {
   LayoutDashboard,
   Calendar,
   MessageSquare,
+  Bot,
   UtensilsCrossed,
   ClipboardList,
   BookOpen,
   TrendingUp,
-  Dumbbell,
-  HeartPulse,
   Video,
   FlaskConical,
   Settings,
@@ -18,6 +17,7 @@ import {
   Menu,
   X,
   Users,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
@@ -47,42 +47,16 @@ export const PATIENT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   },
   {
     path: "/patient/ai-chat",
-    label: "Messages",
-    icon: MessageSquare,
-    badge: 6,
+    label: "AI Lab Assistant",
+    icon: Bot,
     altPaths: ["/patient/lab-chat"],
-  },
-  {
-    path: "/patient/diet",
-    label: "Healthy Menu",
-    icon: UtensilsCrossed,
-    altPaths: ["/patient/nutrition"],
   },
   {
     path: "/patient/diet",
     label: "Meal Plan",
     icon: ClipboardList,
     hasSubmenu: true,
-  },
-  {
-    path: "/patient/medical-records",
-    label: "Food Diary",
-    icon: BookOpen,
-  },
-  {
-    path: "/patient/disease-prediction",
-    label: "Progress",
-    icon: TrendingUp,
-  },
-  {
-    path: "/patient/exercise",
-    label: "Exercises",
-    icon: Dumbbell,
-  },
-  {
-    path: "/patient/wellness-tips",
-    label: "Health Insights",
-    icon: HeartPulse,
+    altPaths: ["/patient/nutrition", "/patient/diet-chat", "/patient/dietitian"],
   },
   {
     path: "/patient/teleconsult",
@@ -155,12 +129,6 @@ export default function LeftSidebar({
     }
   };
 
-  const handleClaimPromo = () => {
-    toast.success("🎉 1-Month Free Access Claimed!", {
-      description: "Enjoy full AI biomarker insights, custom meal plans, and telehealth access.",
-    });
-  };
-
   const isItemActive = (item: SidebarNavItem) => {
     if (item.exact) {
       return location.pathname === item.path;
@@ -188,35 +156,19 @@ export default function LeftSidebar({
           }}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          {/* Nutrigo Double Leaf / Organic Bowl Logo */}
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#f4f8f1] border border-lime-100 shadow-sm transition-transform group-hover:scale-105">
-            <svg
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-            >
-              {/* Upper Lime Leaf/Crescent */}
-              <path
-                d="M6 14C6 9.58172 9.58172 6 14 6H26C26 10.4183 22.4183 14 18 14H6Z"
-                fill="#9de438"
-              />
-              {/* Lower Amber Bowl/Crescent */}
-              <path
-                d="M6 18C6 18 8 26 16 26C24 26 26 18 26 18H6Z"
-                fill="#f59e0b"
-              />
-            </svg>
+          {/* Zebra Synapse Logo */}
+          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-lime-400 border border-slate-700/40 shadow-sm transition-transform group-hover:scale-105">
+            <Activity className="h-5 w-5 stroke-[2.3]" />
           </div>
 
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
               <span className="text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
-                Nutrigo
+                Zebra Synapse
               </span>
             </div>
             <span className="text-[10px] font-semibold text-slate-400 tracking-wider">
-              {portalType === "doctor" ? "Doctor Portal" : "Health & Nutrition"}
+              {portalType === "doctor" ? "Doctor Portal" : "Clinical Nutrition & Diet"}
             </span>
           </div>
         </div>
@@ -283,47 +235,8 @@ export default function LeftSidebar({
         })}
       </nav>
 
-      {/* Bottom Section: Promo Card + Logout */}
-      <div className="pt-2 space-y-2 shrink-0">
-        {/* Yellow Promotional / Upgrade Card */}
-        <div className="relative overflow-hidden rounded-[22px] bg-gradient-to-b from-[#ffea75] via-[#ffd645] to-[#fec730] p-3.5 text-slate-900 shadow-[0_4px_16px_rgba(254,199,48,0.2)] border border-amber-200/50">
-          {/* 3D Vegetables Graphic */}
-          <div className="flex items-center justify-center pt-0.5 pb-1.5">
-            <div className="relative h-16 w-28 flex items-center justify-center">
-              <img
-                src="/nutrigo_promo_vegetables.jpg"
-                alt="Nutrigo fresh vegetables"
-                className="h-16 w-auto object-contain drop-shadow-md transition-transform hover:scale-105"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                  const fallback = e.currentTarget.parentElement?.querySelector(".promo-fallback");
-                  if (fallback) fallback.classList.remove("hidden");
-                }}
-              />
-              <div className="promo-fallback hidden flex items-center justify-center text-3xl gap-1">
-                <span>🥕</span>
-                <span>🥬</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Card Description */}
-          <p className="text-[11.5px] font-medium leading-[1.3] text-slate-900 text-left px-0.5">
-            Start your health journey with a{" "}
-            <span className="font-bold text-slate-950">FREE 1-month</span> access to Nutrigo!
-          </p>
-
-          {/* Claim Now Button */}
-          <button
-            type="button"
-            onClick={handleClaimPromo}
-            className="mt-2.5 w-full rounded-full bg-[#9de438] hover:bg-[#8ed024] py-2 px-3 text-[11.5px] font-bold text-slate-950 shadow-sm border border-black/5 active:scale-95 transition-all text-center cursor-pointer"
-          >
-            Claim Now!
-          </button>
-        </div>
-
-        {/* Logout Button */}
+      {/* Bottom Section: Logout */}
+      <div className="pt-2 shrink-0">
         <button
           type="button"
           onClick={handleLogout}
@@ -344,25 +257,11 @@ export default function LeftSidebar({
           onClick={() => navigate(portalType === "doctor" ? "/doctor" : "/patient")}
           className="flex items-center gap-2.5 cursor-pointer"
         >
-          <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-[#f4f8f1] border border-lime-100 shadow-sm">
-            <svg
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-            >
-              <path
-                d="M6 14C6 9.58172 9.58172 6 14 6H26C26 10.4183 22.4183 14 18 14H6Z"
-                fill="#9de438"
-              />
-              <path
-                d="M6 18C6 18 8 26 16 26C24 26 26 18 26 18H6Z"
-                fill="#f59e0b"
-              />
-            </svg>
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-lime-400 border border-slate-700/40 shadow-sm">
+            <Activity className="h-4 w-4 stroke-[2.3]" />
           </div>
           <span className="text-lg font-bold tracking-tight text-slate-900 font-['Manrope']">
-            Nutrigo
+            Zebra Synapse
           </span>
         </div>
 

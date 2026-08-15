@@ -25,6 +25,7 @@ import PatientTeleconsult from "./pages/patient/PatientTeleconsult";
 import DoctorTeleconsult from "./pages/doctor/DoctorTeleconsult";
 
 import PatientLabChat from "./pages/patient/PatientLabChat";
+import PatientDietChat from "./pages/patient/PatientDietChat";
 
 export const router = createBrowserRouter([
   {
@@ -59,6 +60,8 @@ export const router = createBrowserRouter([
       { path: "medical-records", Component: MedicalRecords },
       { path: "ai-chat", Component: PatientLabChat },
       { path: "lab-chat", Component: PatientLabChat },
+      { path: "diet-chat", Component: PatientDietChat },
+      { path: "dietitian", Component: PatientDietChat },
       { path: "appointments", Component: Appointments },
       { path: "teleconsult", Component: PatientTeleconsult },
       { path: "prescription", Component: Prescription },
