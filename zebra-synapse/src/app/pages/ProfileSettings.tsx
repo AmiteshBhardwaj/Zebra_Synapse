@@ -107,9 +107,9 @@ export default function ProfileSettings() {
   const [weightLbs, setWeightLbs] = useState<string>("");
 
   // Demographics state (Age, Gender, Blood Type)
-  const [age, setAge] = useState<string>("28");
-  const [gender, setGender] = useState<string>("Male");
-  const [bloodType, setBloodType] = useState<string>("A+");
+  const [age, setAge] = useState<string>("");
+  const [gender, setGender] = useState<string>("");
+  const [bloodType, setBloodType] = useState<string>("");
 
   // Dietary preferences states
   const [dietaryPreference, setDietaryPreference] = useState<string>("omnivore");
@@ -231,9 +231,9 @@ export default function ProfileSettings() {
         } catch (e) {}
       }
 
-      setAge(profile.age ? String(profile.age) : savedLocal.age ? String(savedLocal.age) : "28");
-      setGender(profile.gender || savedLocal.gender || "Male");
-      setBloodType(profile.blood_type || savedLocal.blood_type || savedLocal.bloodType || "A+");
+      setAge(profile.age ? String(profile.age) : savedLocal.age ? String(savedLocal.age) : "");
+      setGender(profile.gender || savedLocal.gender || "");
+      setBloodType(profile.blood_type || savedLocal.blood_type || savedLocal.bloodType || "");
     }
   }, [profile, user]);
 
@@ -586,6 +586,7 @@ export default function ProfileSettings() {
                       onChange={(e) => setGender(e.target.value)}
                       className={`${portalInputClass} bg-white cursor-pointer`}
                     >
+                      <option value="">-- Select Gender --</option>
                       <option value="Male">Male</option>
                       <option value="Female">Female</option>
                       <option value="Non-binary">Non-binary</option>
@@ -604,6 +605,7 @@ export default function ProfileSettings() {
                       onChange={(e) => setBloodType(e.target.value)}
                       className={`${portalInputClass} bg-white cursor-pointer`}
                     >
+                      <option value="">-- Select Blood Group --</option>
                       <option value="A+">A+</option>
                       <option value="A-">A-</option>
                       <option value="B+">B+</option>
