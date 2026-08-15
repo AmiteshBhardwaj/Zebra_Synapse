@@ -2,7 +2,8 @@ import { useRef, useLayoutEffect, useState, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
 import {
-  LayoutGrid,
+  Home,
+  Users,
   Calendar,
   Video,
   Settings,
@@ -52,11 +53,20 @@ export default function DoctorDashboard() {
 
   const navItems = [
     {
-      id: "overview",
-      label: "Dashboard",
-      icon: LayoutGrid,
+      id: "home",
+      label: "Home",
+      icon: Home,
       path: "/doctor",
-      active: location.pathname === "/doctor" || location.pathname.startsWith("/doctor/patient"),
+      active: location.pathname === "/doctor",
+    },
+    {
+      id: "patients",
+      label: "Patients",
+      icon: Users,
+      path: "/doctor/patients",
+      active:
+        location.pathname === "/doctor/patients" ||
+        location.pathname.startsWith("/doctor/patient/"),
     },
     {
       id: "appointments",
@@ -74,7 +84,7 @@ export default function DoctorDashboard() {
     },
     {
       id: "settings",
-      label: "Settings",
+      label: "Account Settings",
       icon: Settings,
       path: "/doctor/settings",
       active: location.pathname === "/doctor/settings",

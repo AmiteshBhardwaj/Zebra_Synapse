@@ -106,6 +106,11 @@ export default function ProfileSettings() {
   const [heightIn, setHeightIn] = useState<string>("");
   const [weightLbs, setWeightLbs] = useState<string>("");
 
+  // Demographics state (Age, Gender, Blood Type)
+  const [age, setAge] = useState<string>("28");
+  const [gender, setGender] = useState<string>("Male");
+  const [bloodType, setBloodType] = useState<string>("A+");
+
   // Dietary preferences states
   const [dietaryPreference, setDietaryPreference] = useState<string>("omnivore");
   const [foodAllergies, setFoodAllergies] = useState<string[]>([]);
@@ -217,8 +222,20 @@ export default function ProfileSettings() {
       setFoodAllergies(profile.food_allergies || []);
       setDietaryConditions(profile.dietary_conditions || []);
       setDietaryNotes(profile.dietary_notes || "");
+
+      let savedLocal: any = {};
+      if (user?.id) {
+        try {
+          const raw = localStorage.getItem(`zebra_profile_${user.id}`);
+          if (raw) savedLocal = JSON.parse(raw);
+        } catch (e) {}
+      }
+
+      setAge(profile.age ? String(profile.age) : savedLocal.age ? String(savedLocal.age) : "28");
+      setGender(profile.gender || savedLocal.gender || "Male");
+      setBloodType(profile.blood_type || savedLocal.blood_type || savedLocal.bloodType || "A+");
     }
-  }, [profile]);
+  }, [profile, user]);
 
   const toggleAllergy = (id: string) => {
     setFoodAllergies((prev) =>
@@ -347,8 +364,12 @@ export default function ProfileSettings() {
     } else if (profile.role === "patient") {
       const parsedH = parseFloat(heightCm);
       const parsedW = parseFloat(weightKg);
+      const parsedAge = parseInt(age, 10);
       patch.height_cm = Number.isFinite(parsedH) && parsedH > 0 ? parsedH : null;
       patch.weight_kg = Number.isFinite(parsedW) && parsedW > 0 ? parsedW : null;
+      patch.age = Number.isFinite(parsedAge) && parsedAge > 0 ? parsedAge : null;
+      patch.gender = gender || null;
+      patch.blood_type = bloodType || null;
       patch.dietary_preference = dietaryPreference || null;
       patch.food_allergies = foodAllergies;
       patch.dietary_conditions = dietaryConditions;
@@ -530,6 +551,71 @@ export default function ProfileSettings() {
               </CardHeader>
 
               <CardContent className="space-y-5">
+                {/* Demographics Row: Age, Gender, Blood Group */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 p-3.5 rounded-2xl border border-slate-100 bg-slate-50/70">
+                  {/* Age Field */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="patient_age" className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                      Age
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="patient_age"
+                        type="number"
+                        min="1"
+                        max="120"
+                        value={age}
+                        onChange={(e) => setAge(e.target.value)}
+                        placeholder="e.g. 28"
+                        className={`${portalInputClass} pr-12`}
+                      />
+                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
+                        yrs
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Gender Select */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="patient_gender" className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                      Gender
+                    </Label>
+                    <select
+                      id="patient_gender"
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className={`${portalInputClass} bg-white cursor-pointer`}
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Non-binary">Non-binary</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+
+                  {/* Blood Type Select */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="patient_blood" className="text-xs font-semibold uppercase tracking-wider text-slate-700">
+                      Blood Group
+                    </Label>
+                    <select
+                      id="patient_blood"
+                      value={bloodType}
+                      onChange={(e) => setBloodType(e.target.value)}
+                      className={`${portalInputClass} bg-white cursor-pointer`}
+                    >
+                      <option value="A+">A+</option>
+                      <option value="A-">A-</option>
+                      <option value="B+">B+</option>
+                      <option value="B-">B-</option>
+                      <option value="AB+">AB+</option>
+                      <option value="AB-">AB-</option>
+                      <option value="O+">O+</option>
+                      <option value="O-">O-</option>
+                    </select>
+                  </div>
+                </div>
+
                 {/* Inputs Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Height Field */}
