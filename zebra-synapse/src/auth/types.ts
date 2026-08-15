@@ -23,5 +23,8 @@ export type Profile = {
   food_allergies?: string[] | null;
   dietary_conditions?: string[] | null;
   dietary_notes?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  blood_type?: string | null;
 };
 
