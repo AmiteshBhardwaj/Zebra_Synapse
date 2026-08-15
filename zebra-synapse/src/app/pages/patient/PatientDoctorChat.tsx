@@ -119,9 +119,8 @@ export default function PatientDoctorChat() {
 
           const { data: doctorProfiles } = await sb
             .from("profiles")
-            .select("id, full_name, specialty")
-            .eq("role", "doctor")
-            .order("full_name", { ascending: true });
+            .select("id, full_name, role, license_number")
+            .eq("role", "doctor");
 
           if (doctorProfiles && doctorProfiles.length > 0) {
             doctorProfiles.forEach((p) => {
@@ -135,7 +134,7 @@ export default function PatientDoctorChat() {
               docsMap.set(p.id, {
                 id: p.id,
                 name: p.full_name || "Dr. Clinical Specialist",
-                specialty: p.specialty || "Clinical Specialist",
+                specialty: p.license_number ? `Specialist (${p.license_number})` : "Clinical Specialist",
                 relationshipType: relType,
               });
             });
@@ -155,7 +154,30 @@ export default function PatientDoctorChat() {
     }
 
     void loadDoctors();
-  }, [user?.id]);
+
+    // Listen to live cross-tab/multi-device sync events
+    const handleSync = () => {
+      setRequestTick((t) => t + 1);
+    };
+    window.addEventListener("zebra_doctor_patient_sync", handleSync);
+    window.addEventListener("storage", handleSync);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("zebra_doctor_patient_chat");
+        bc.onmessage = () => handleSync();
+      }
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      window.removeEventListener("zebra_doctor_patient_sync", handleSync);
+      window.removeEventListener("storage", handleSync);
+      if (bc) bc.close();
+    };
+  }, [user?.id, selectedDoctorId]);
 
   const filteredDoctors = useMemo(() => {
     let result = doctorsList;

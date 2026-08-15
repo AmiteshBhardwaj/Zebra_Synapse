@@ -12,8 +12,8 @@ import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
 export function useDoctorPatientChat(
   doctorId?: string | null,
   patientId?: string | null,
-  doctorName?: string,
-  patientName?: string
+  doctorName?: string | null,
+  patientName?: string | null
 ) {
   const { user, profile } = useAuth();
   const [messages, setMessages] = useState<DoctorPatientMessage[]>([]);
@@ -55,7 +55,11 @@ export function useDoctorPatientChat(
     void loadMessages();
   }, [loadMessages]);
 
-  // Set up Supabase Realtime Subscription + High-frequency Interval Polling (1.5s) for instant 2-way sync
+  // Set up Multi-Layer Real-Time Synchronization:
+  // 1. Supabase Realtime Subscription (cross-device)
+  // 2. BroadcastChannel (cross-tab zero latency)
+  // 3. Local Storage + CustomEvent listener
+  // 4. Safety polling interval (1s)
   useEffect(() => {
     if (!activeDoctorId || !activePatientId) return;
 
@@ -64,7 +68,7 @@ export function useDoctorPatientChat(
       const sb = getSupabase();
       if (sb) {
         channel = sb
-          .channel(`chat_${activeDoctorId}_${activePatientId}_${Date.now()}`)
+          .channel(`chat_realtime_${activeDoctorId}_${activePatientId}_${Date.now()}`)
           .on(
             "postgres_changes",
             {
@@ -80,7 +84,27 @@ export function useDoctorPatientChat(
       }
     }
 
-    // High frequency polling (1.5s) to guarantee instant 2-way messaging across windows/tabs
+    // 2. BroadcastChannel listener for immediate local cross-tab sync
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("zebra_doctor_patient_chat");
+        bc.onmessage = () => {
+          void loadMessages();
+        };
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3. Custom window sync listener
+    const handleSyncEvent = () => {
+      void loadMessages();
+    };
+    window.addEventListener("zebra_doctor_patient_sync", handleSyncEvent);
+    window.addEventListener("storage", handleSyncEvent);
+
+    // 4. Rapid interval polling (1000ms) for rock-solid sync
     const interval = setInterval(() => {
       void fetchDoctorPatientMessages(
         activeDoctorId,
@@ -98,10 +122,15 @@ export function useDoctorPatientChat(
           return prev;
         });
       });
-    }, 1500);
+    }, 1000);
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener("zebra_doctor_patient_sync", handleSyncEvent);
+      window.removeEventListener("storage", handleSyncEvent);
+      if (bc) {
+        bc.close();
+      }
       if (channel && isSupabaseConfigured()) {
         const sb = getSupabase();
         sb?.removeChannel(channel);

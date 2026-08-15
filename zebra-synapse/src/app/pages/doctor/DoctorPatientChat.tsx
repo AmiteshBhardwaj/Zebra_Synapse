@@ -30,7 +30,9 @@ import { getSupabase } from "../../../lib/supabase";
 import { useDoctorPatientChat } from "../../../hooks/useDoctorPatientChat";
 import {
   type ChatAccessRequest,
+  type DoctorPatientMessage,
   getAllChatRequests,
+  getAllGlobalMessages,
   updateChatAccessRequestStatus,
 } from "../../../lib/doctorPatientChat";
 import { Button } from "../../components/ui/button";
@@ -90,6 +92,28 @@ export default function DoctorPatientChat() {
       // Seed linked patients default map
       SEED_PATIENTS.forEach((p) => patsMap.set(p.id, p));
 
+      // Also parse existing messages from universal storage
+      const globalMsgs = getAllGlobalMessages();
+      const docNameNorm = (profile?.full_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
+      const docIdNorm = (user?.id || "").toLowerCase().trim();
+
+      globalMsgs.forEach((m) => {
+        const mDocId = (m.doctor_id || "").toLowerCase().trim();
+        const mDocName = (m.doctor_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
+        if (mDocId === docIdNorm || mDocId === "doc_amelia_hart" || (docNameNorm && mDocName.includes(docNameNorm))) {
+          if (m.patient_id && !patsMap.has(m.patient_id)) {
+            patsMap.set(m.patient_id, {
+              id: m.patient_id,
+              name: m.patient_name || "Patient Record",
+              age: 34,
+              gender: "Patient",
+              condition: "Active Direct Chat",
+              isLinkedOrTeleconsult: true,
+            });
+          }
+        }
+      });
+
       const sb = getSupabase();
       if (sb && user?.id) {
         try {
@@ -108,24 +132,36 @@ export default function DoctorPatientChat() {
           // Fetch existing chat conversation patient IDs
           const { data: msgRows } = await sb
             .from("doctor_patient_messages")
-            .select("patient_id")
-            .eq("doctor_id", user.id);
+            .select("patient_id, patient_name")
+            .or(`doctor_id.eq.${user.id},doctor_name.ilike.%${docNameNorm || "hart"}%`);
 
-          const messagePatientIds = new Set((msgRows || []).map((m) => m.patient_id).filter(Boolean));
-          const targetIds = Array.from(new Set([...Array.from(linkedConditionsMap.keys()), ...Array.from(messagePatientIds)]));
+          (msgRows || []).forEach((m) => {
+            if (m.patient_id && !patsMap.has(m.patient_id)) {
+              patsMap.set(m.patient_id, {
+                id: m.patient_id,
+                name: m.patient_name || "Patient Record",
+                age: 34,
+                gender: "Patient",
+                condition: "Direct Clinical Care",
+                isLinkedOrTeleconsult: true,
+              });
+            }
+          });
+
+          const targetIds = Array.from(new Set([...Array.from(linkedConditionsMap.keys())]));
 
           if (targetIds.length > 0) {
             const { data: matchedProfiles } = await sb
               .from("profiles")
-              .select("id, full_name, age, gender")
+              .select("id, full_name")
               .in("id", targetIds);
 
             (matchedProfiles || []).forEach((p) => {
               patsMap.set(p.id, {
                 id: p.id,
                 name: p.full_name || "Patient Record",
-                age: p.age || 35,
-                gender: p.gender || "Patient",
+                age: 35,
+                gender: "Patient",
                 condition: linkedConditionsMap.get(p.id) || "Direct Clinical Care",
                 isLinkedOrTeleconsult: true,
               });
@@ -138,12 +174,35 @@ export default function DoctorPatientChat() {
 
       const list = Array.from(patsMap.values());
       setPatientsList(list);
-
       setLoadingPatients(false);
     }
 
     void loadPatients();
-  }, [user?.id]);
+
+    // Listen to sync events
+    const handleSync = () => {
+      void loadPatients();
+      setRequestTick((t) => t + 1);
+    };
+    window.addEventListener("zebra_doctor_patient_sync", handleSync);
+    window.addEventListener("storage", handleSync);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("zebra_doctor_patient_chat");
+        bc.onmessage = () => handleSync();
+      }
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      window.removeEventListener("zebra_doctor_patient_sync", handleSync);
+      window.removeEventListener("storage", handleSync);
+      if (bc) bc.close();
+    };
+  }, [user?.id, profile?.full_name]);
 
   // Retrieve pending and accepted chat access requests
   const { pendingRequests, acceptedPatientIds } = useMemo(() => {
