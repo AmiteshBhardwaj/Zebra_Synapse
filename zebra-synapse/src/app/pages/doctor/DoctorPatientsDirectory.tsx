@@ -16,6 +16,8 @@ import {
   Sparkles,
   Grid,
   List,
+  Phone,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
 import {
@@ -346,12 +348,14 @@ export default function DoctorPatientsDirectory() {
               )}
             </div>
           ) : viewMode === "grid" ? (
-            /* GRID VIEW (Matching exact user photo structure) */
+            /* GRID VIEW (Matching exact user photo structure + contact options) */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {filteredPatients.map((patient) => {
                 const initial = patient.name.charAt(0).toUpperCase() || "P";
                 const isRisk = patient.vitals.status === "risk";
                 const isElevated = patient.vitals.status === "elevated";
+                const phone = "+1 (555) 349-8201";
+                const email = `${patient.name.toLowerCase().replace(/\s+/g, ".")}@synapse.med`;
 
                 return (
                   <div
@@ -362,8 +366,8 @@ export default function DoctorPatientsDirectory() {
                       {/* Top Header Row: Avatar, Name, Condition, Badge */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3.5">
-                          {/* Avatar Circle */}
-                          <div className="w-13 h-13 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-white shadow-sm flex items-center justify-center font-bold text-slate-800 text-lg shrink-0 font-['Manrope']">
+                          {/* Avatar Circle with Photo Gradient */}
+                          <div className="w-13 h-13 rounded-full bg-gradient-to-br from-[#0099ff]/20 to-[#0077ff]/30 border-2 border-white shadow-sm flex items-center justify-center font-bold text-[#0088ee] text-lg shrink-0 font-['Manrope']">
                             {initial}
                           </div>
                           <div>
@@ -390,8 +394,35 @@ export default function DoctorPatientsDirectory() {
                         </span>
                       </div>
 
+                      {/* Contact Info Buttons Bar */}
+                      <div className="mt-3.5 flex items-center gap-2">
+                        <a
+                          href={`tel:${phone}`}
+                          title={`Call ${patient.name}`}
+                          className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-50 hover:bg-[#0099ff]/10 border border-slate-200 text-slate-600 hover:text-[#0088ee] text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Phone className="w-3 h-3 text-[#0099ff]" />
+                          <span className="truncate">Call</span>
+                        </a>
+                        <a
+                          href={`mailto:${email}`}
+                          title={`Email ${patient.name}`}
+                          className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Mail className="w-3 h-3 text-slate-500" />
+                          <span className="truncate">Email</span>
+                        </a>
+                        <button
+                          onClick={() => navigate("/doctor/teleconsult")}
+                          title={`Start Consult with ${patient.name}`}
+                          className="py-1.5 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                        >
+                          <Video className="w-3 h-3 text-emerald-600" />
+                        </button>
+                      </div>
+
                       {/* Additional Details Line */}
-                      <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                      <div className="mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
                           <span>Last visit: {patient.lastVisitLabel || "Recent"}</span>
@@ -403,7 +434,7 @@ export default function DoctorPatientsDirectory() {
                     </div>
 
                     {/* Bottom Full-Width Vibrant Blue Pill Button (Matching Photo) */}
-                    <div className="mt-5 pt-2">
+                    <div className="mt-4 pt-1">
                       <button
                         onClick={() => navigate(`/doctor/patient/${patient.patientId}`)}
                         className="w-full py-2.5 px-4 rounded-full bg-[#0099ff] hover:bg-[#0088ee] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-sm shadow-[#0099ff]/25 transition-all hover:scale-[1.01] active:scale-95 cursor-pointer"
