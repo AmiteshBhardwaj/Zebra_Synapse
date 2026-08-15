@@ -433,7 +433,7 @@ export default function DualLogin({ defaultPortal = "patient" }: DualLoginProps)
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder={isPatient ? "name@example.com" : "doctor@hospital.org"}
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 text-xs sm:text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 text-xs sm:text-sm text-white font-semibold caret-cyan-400 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
                     />
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4 pointer-events-none" />
                   </div>
@@ -452,7 +452,7 @@ export default function DualLogin({ defaultPortal = "patient" }: DualLoginProps)
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
-                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-2.5 pl-10 pr-10 text-xs sm:text-sm text-white font-semibold caret-cyan-400 placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all"
                     />
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 h-4 w-4 pointer-events-none" />
                     <button

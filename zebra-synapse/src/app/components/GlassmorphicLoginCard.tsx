@@ -278,7 +278,7 @@ export function GlassmorphicLoginCard({ initialTab = "patient" }: GlassmorphicLo
                 placeholder={
                   isPatient ? "patient@zebrasynapse.io" : "dr.smith@zebrasynapse.io"
                 }
-                className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-900/60 border border-slate-700/60 backdrop-blur-md text-sm text-slate-100 placeholder-slate-500 focus:bg-slate-900/80 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/25 transition-all font-sans"
+                className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-900/80 border border-slate-700/60 backdrop-blur-md text-sm text-white placeholder-slate-400 focus:bg-slate-900 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/25 transition-all font-sans font-semibold caret-cyan-400"
               />
             </div>
           </div>
@@ -307,7 +307,7 @@ export function GlassmorphicLoginCard({ initialTab = "patient" }: GlassmorphicLo
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full h-11 pl-10 pr-10 rounded-xl bg-slate-900/60 border border-slate-700/60 backdrop-blur-md text-sm text-slate-100 placeholder-slate-500 focus:bg-slate-900/80 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/25 transition-all font-sans"
+                className="w-full h-11 pl-10 pr-10 rounded-xl bg-slate-900/80 border border-slate-700/60 backdrop-blur-md text-sm text-white placeholder-slate-400 focus:bg-slate-900 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/25 transition-all font-sans font-semibold caret-cyan-400"
               />
               <button
                 type="button"

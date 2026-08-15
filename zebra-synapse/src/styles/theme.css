@@ -192,7 +192,14 @@
     line-height: 1.5;
   }
 
-  /* Prevent browser autofill from turning input fields into bright white boxes */
+  input,
+  textarea,
+  select {
+    color: #ffffff;
+    caret-color: #38bdf8;
+  }
+
+  /* Prevent browser autofill from turning input text dark or input boxes white */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
@@ -205,11 +212,13 @@
   select:-webkit-autofill:hover,
   select:-webkit-autofill:focus,
   select:-webkit-autofill:active {
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: #0f172a !important;
+    -webkit-text-fill-color: #ffffff !important;
+    color: #ffffff !important;
+    caret-color: #38bdf8 !important;
+    -webkit-box-shadow: 0 0 0px 1000px #0b1322 inset !important;
+    box-shadow: 0 0 0px 1000px #0b1322 inset !important;
     transition: background-color 50000s ease-in-out 0s !important;
-    box-shadow: inset 0 0 0px 1000px #ffffff inset, inset 0 0 20px 20px #ffffff !important;
-    border-color: rgba(132, 204, 22, 0.4) !important;
+    border-color: rgba(56, 189, 248, 0.5) !important;
   }
 
   ::selection {
