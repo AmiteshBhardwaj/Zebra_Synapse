@@ -68,6 +68,13 @@ export default function DoctorDashboard() {
         location.pathname.startsWith("/doctor/patient/"),
     },
     {
+      id: "appointments",
+      label: "Appointments",
+      icon: CalendarIcon,
+      path: "/doctor/appointments",
+      active: location.pathname === "/doctor/appointments",
+    },
+    {
       id: "teleconsult",
       label: "Teleconsultations",
       icon: Video,

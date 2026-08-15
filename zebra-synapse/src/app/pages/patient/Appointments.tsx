@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router";
+import { useSearchParams, useNavigate } from "react-router";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -11,6 +11,7 @@ import {
   Plus,
   Stethoscope,
   XCircle,
+  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
@@ -332,6 +333,7 @@ function DoctorCardBlock({
 }
 
 export default function Appointments() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
@@ -1323,6 +1325,20 @@ export default function Appointments() {
                       </div>
                     </div>
                     <div className="mt-5 flex flex-wrap items-center gap-3">
+                      <Button
+                        type="button"
+                        className="h-10 px-4 rounded-2xl bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_4px_14px_rgba(0,153,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,153,255,0.35)] transition-all cursor-pointer active:scale-[0.98]"
+                        onClick={() =>
+                          navigate(
+                            `/patient/teleconsult?id=apt-${appointment.id}&doctor=${encodeURIComponent(
+                              appointment.doctor
+                            )}&specialty=${encodeURIComponent(appointment.specialty)}`
+                          )
+                        }
+                      >
+                        <Video className="h-4 w-4" />
+                        <span>Join Live Video Call</span>
+                      </Button>
                       <Button
                         variant="outline"
                         className={`active:scale-[0.98] rounded-2xl text-xs ${portalSecondaryButtonClass}`}

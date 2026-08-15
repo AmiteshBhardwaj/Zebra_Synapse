@@ -84,6 +84,11 @@ export const DOCTOR_SIDEBAR_ITEMS: SidebarNavItem[] = [
     exact: true,
   },
   {
+    path: "/doctor/appointments",
+    label: "Appointments",
+    icon: Calendar,
+  },
+  {
     path: "/doctor/patients",
     label: "Patients",
     icon: Users,

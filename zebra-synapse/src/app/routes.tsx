@@ -24,6 +24,7 @@ import RequireDoctorPortal from "./layouts/RequireDoctorPortal";
 
 import PatientTeleconsult from "./pages/patient/PatientTeleconsult";
 import DoctorTeleconsult from "./pages/doctor/DoctorTeleconsult";
+import DoctorAppointments from "./pages/doctor/DoctorAppointments";
 
 import PatientLabChat from "./pages/patient/PatientLabChat";
 import PatientDietChat from "./pages/patient/PatientDietChat";
@@ -86,6 +87,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: PatientsList },
       { path: "patients", Component: DoctorPatientsDirectory },
+      { path: "appointments", Component: DoctorAppointments },
       { path: "teleconsult", Component: DoctorTeleconsult },
       { path: "settings", Component: ProfileSettings },
       { path: "patient/:patientId", Component: PatientDetail },

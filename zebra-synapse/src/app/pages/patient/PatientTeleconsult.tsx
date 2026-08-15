@@ -1,6 +1,19 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router";
-import { Video, ArrowLeft, ShieldCheck, Clock, UserCheck, Search, Radio, Loader2, Sparkles } from "lucide-react";
+import {
+  Video,
+  ArrowLeft,
+  ShieldCheck,
+  Clock,
+  UserCheck,
+  Search,
+  Radio,
+  Loader2,
+  Sparkles,
+  Calendar,
+  PhoneCall,
+  Stethoscope,
+} from "lucide-react";
 import { Button } from "../../components/ui/button";
 import VideoCall from "../../components/teleconsult/VideoCall";
 import RealtimeNote from "../../components/teleconsult/RealtimeNote";
@@ -16,11 +29,18 @@ import { useAuth } from "../../../auth/AuthContext";
 import { getSupabase } from "../../../lib/supabase";
 import { toast } from "sonner";
 
+interface DoctorWaitingInfo {
+  consultationId: string;
+  doctorName: string;
+  specialty: string;
+  timestamp: number;
+}
+
 export default function PatientTeleconsult() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
-  
+
   const queryId = searchParams.get("id");
   const queryDoctor = searchParams.get("doctor");
   const querySpecialty = searchParams.get("specialty");
@@ -36,29 +56,129 @@ export default function PatientTeleconsult() {
     queryId || `teleconsult-${Date.now().toString().slice(-6)}`
   );
 
-  // Broadcast search request to online doctors via Supabase Realtime
+  // Detected doctor waiting in an active room
+  const [waitingDoctor, setWaitingDoctor] = useState<DoctorWaitingInfo | null>(null);
+
+  // Check for active waiting doctors periodically
+  useEffect(() => {
+    if (mode === "connected") return;
+
+    const checkDoctorPresence = () => {
+      try {
+        // Scan localStorage for any zebra_doctor_waiting_*
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith("zebra_doctor_waiting_")) {
+            const raw = localStorage.getItem(key);
+            if (raw) {
+              const data = JSON.parse(raw);
+              if (Date.now() - (data.timestamp || 0) < 30000) {
+                setWaitingDoctor(data);
+                return;
+              }
+            }
+          }
+        }
+        setWaitingDoctor(null);
+      } catch {
+        // ignore
+      }
+    };
+
+    checkDoctorPresence();
+    const interval = setInterval(checkDoctorPresence, 2000);
+
+    // Listen on BroadcastChannel for doctor presence
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("teleconsult-queue");
+        bc.onmessage = (e) => {
+          if (e.data?.type === "doctor-waiting-in-room" && e.data?.payload) {
+            setWaitingDoctor(e.data.payload);
+          }
+        };
+      }
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (bc) bc.close();
+    };
+  }, [mode]);
+
+  // Broadcast search request to online doctors via Supabase Realtime, BroadcastChannel, and localStorage
   useEffect(() => {
     if (mode !== "searching") return;
 
+    const payload = {
+      consultationId: activeConsultationId,
+      patientId: user?.id || "demo-patient-1",
+      patientName: profile?.full_name || "Maya Thompson",
+      condition: "General Teleconsultation Request",
+      requestedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: Date.now(),
+    };
+
+    // 1. Write to localStorage queue for instant cross-tab discovery
+    const saveToLocalStorage = () => {
+      try {
+        const raw = localStorage.getItem("zebra_teleconsult_waiting_queue");
+        const list = raw ? JSON.parse(raw) : [];
+        const filtered = list.filter(
+          (p: any) => p.consultationId !== activeConsultationId && Date.now() - (p.timestamp || 0) < 180000
+        );
+        filtered.unshift({ ...payload, timestamp: Date.now() });
+        localStorage.setItem("zebra_teleconsult_waiting_queue", JSON.stringify(filtered));
+      } catch (err) {
+        console.error("Failed to update teleconsult queue in storage:", err);
+      }
+    };
+    saveToLocalStorage();
+
+    // 2. Setup BroadcastChannel (instant zero-latency cross-tab communication)
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("teleconsult-queue");
+        bc.postMessage({ type: "patient-seeking-consult", payload });
+
+        bc.onmessage = (event) => {
+          const { type, payload: msgData } = event.data || {};
+          if (
+            type === "doctor-accepted-consult" &&
+            msgData &&
+            (msgData.consultationId === activeConsultationId || msgData.patientId === user?.id)
+          ) {
+            setActiveDoctorName(msgData.doctorName || "Dr. Amelia Hart");
+            setActiveSpecialty(msgData.specialty || "Physician Specialist");
+            setActiveConsultationId(msgData.consultationId || activeConsultationId);
+            setMode("connected");
+            toast.success(`Connected! ${msgData.doctorName || "Your doctor"} has accepted your teleconsultation.`);
+          } else if (type === "doctor-query-queue") {
+            bc?.postMessage({ type: "patient-seeking-consult", payload });
+          }
+        };
+      }
+    } catch {
+      // ignore BroadcastChannel errors in restrictive environments
+    }
+
+    // 3. Setup Supabase Realtime channel with Presence & Broadcast
     const sb = getSupabase();
-    if (!sb) return;
+    let sbChannel: any = null;
 
-    const channel = sb.channel("teleconsult-queue", {
-      config: { broadcast: { self: true } },
-    });
+    if (sb) {
+      sbChannel = sb.channel("teleconsult-queue", {
+        config: { presence: { key: activeConsultationId }, broadcast: { self: true } },
+      });
 
-    channel
-      .subscribe(async (status) => {
+      sbChannel.subscribe(async (status: string) => {
         if (status === "SUBSCRIBED") {
-          const payload = {
-            consultationId: activeConsultationId,
-            patientId: user?.id || "demo-patient-1",
-            patientName: profile?.full_name || "Maya Thompson",
-            condition: "General Teleconsultation Request",
-            requestedAt: new Date().toISOString(),
-          };
-
-          await channel.send({
+          await sbChannel.track(payload);
+          await sbChannel.send({
             type: "broadcast",
             event: "patient-seeking-consult",
             payload,
@@ -66,20 +186,85 @@ export default function PatientTeleconsult() {
         }
       });
 
-    // Listen for doctor accepting the request
-    channel.on("broadcast", { event: "doctor-accepted-consult" }, (event) => {
-      const data = event.payload;
-      if (data && (data.consultationId === activeConsultationId || data.patientId === user?.id)) {
-        setActiveDoctorName(data.doctorName || "Dr. Amelia Hart");
-        setActiveSpecialty(data.specialty || "Physician Specialist");
-        setMode("connected");
-        toast.success(`Connected! ${data.doctorName || "Your doctor"} has accepted your teleconsultation.`);
+      sbChannel.on("broadcast", { event: "doctor-accepted-consult" }, (event: any) => {
+        const data = event.payload;
+        if (data && (data.consultationId === activeConsultationId || data.patientId === user?.id)) {
+          setActiveDoctorName(data.doctorName || "Dr. Amelia Hart");
+          setActiveSpecialty(data.specialty || "Physician Specialist");
+          setActiveConsultationId(data.consultationId || activeConsultationId);
+          setMode("connected");
+          toast.success(`Connected! ${data.doctorName || "Your doctor"} has accepted your teleconsultation.`);
+        }
+      });
+
+      sbChannel.on("broadcast", { event: "doctor-query-queue" }, async () => {
+        if (sbChannel) {
+          await sbChannel.send({
+            type: "broadcast",
+            event: "patient-seeking-consult",
+            payload,
+          });
+        }
+      });
+    }
+
+    // 4. Heartbeat interval: keep presence and storage fresh every 2.5 seconds
+    const heartbeat = setInterval(() => {
+      saveToLocalStorage();
+      if (bc) {
+        bc.postMessage({ type: "patient-seeking-consult", payload });
       }
-    });
+      if (sbChannel) {
+        void sbChannel.send({
+          type: "broadcast",
+          event: "patient-seeking-consult",
+          payload,
+        });
+      }
+
+      // Check if accepted in localStorage
+      try {
+        const acceptedRaw = localStorage.getItem(`zebra_accepted_${activeConsultationId}`);
+        if (acceptedRaw) {
+          const acceptedData = JSON.parse(acceptedRaw);
+          setActiveDoctorName(acceptedData.doctorName || "Dr. Amelia Hart");
+          setActiveSpecialty(acceptedData.specialty || "Physician Specialist");
+          setActiveConsultationId(acceptedData.consultationId || activeConsultationId);
+          setMode("connected");
+          localStorage.removeItem(`zebra_accepted_${activeConsultationId}`);
+          toast.success(`Connected! ${acceptedData.doctorName || "Your doctor"} has accepted your teleconsultation.`);
+        }
+      } catch {
+        // ignore
+      }
+    }, 2500);
 
     return () => {
-      if (mode === "searching") {
-        void channel.send({
+      clearInterval(heartbeat);
+
+      // Clean up localStorage queue
+      try {
+        const raw = localStorage.getItem("zebra_teleconsult_waiting_queue");
+        if (raw) {
+          const list = JSON.parse(raw);
+          const filtered = list.filter((p: any) => p.consultationId !== activeConsultationId);
+          localStorage.setItem("zebra_teleconsult_waiting_queue", JSON.stringify(filtered));
+        }
+      } catch {
+        // ignore
+      }
+
+      if (bc) {
+        bc.postMessage({
+          type: "patient-cancelled-consult",
+          payload: { consultationId: activeConsultationId, patientId: user?.id },
+        });
+        bc.close();
+      }
+
+      if (sbChannel && sb) {
+        void sbChannel.untrack();
+        void sbChannel.send({
           type: "broadcast",
           event: "patient-cancelled-consult",
           payload: {
@@ -87,8 +272,8 @@ export default function PatientTeleconsult() {
             patientId: user?.id,
           },
         });
+        void sb.removeChannel(sbChannel);
       }
-      void sb.removeChannel(channel);
     };
   }, [mode, activeConsultationId, user?.id, profile?.full_name]);
 
@@ -99,7 +284,39 @@ export default function PatientTeleconsult() {
     toast.info("Broadcasting teleconsultation request to online doctors...");
   };
 
+  const handleJoinDoctorRoom = (doctorInfo: DoctorWaitingInfo) => {
+    setActiveConsultationId(doctorInfo.consultationId);
+    setActiveDoctorName(doctorInfo.doctorName || "Dr. Amelia Hart");
+    setActiveSpecialty(doctorInfo.specialty || "Internal Medicine & Primary Care");
+    setMode("connected");
+    toast.success(`Joining ${doctorInfo.doctorName}'s teleconsultation room!`);
+  };
+
   const handleCancelSearch = async () => {
+    try {
+      const raw = localStorage.getItem("zebra_teleconsult_waiting_queue");
+      if (raw) {
+        const list = JSON.parse(raw);
+        const filtered = list.filter((p: any) => p.consultationId !== activeConsultationId);
+        localStorage.setItem("zebra_teleconsult_waiting_queue", JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("teleconsult-queue");
+        bc.postMessage({
+          type: "patient-cancelled-consult",
+          payload: { consultationId: activeConsultationId, patientId: user?.id },
+        });
+        bc.close();
+      }
+    } catch {
+      // ignore
+    }
+
     const sb = getSupabase();
     if (sb) {
       const channel = sb.channel("teleconsult-queue");
@@ -166,6 +383,40 @@ export default function PatientTeleconsult() {
           },
         ]}
       />
+
+      {/* Active Doctor Room Notification Banner */}
+      {mode === "idle" && waitingDoctor && (
+        <div className="max-w-4xl mx-auto my-3 p-4 sm:p-5 rounded-[24px] bg-gradient-to-r from-cyan-950/80 via-slate-900/90 to-blue-950/80 border border-cyan-500/40 shadow-[0_10px_30px_rgba(6,182,212,0.15)] flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3.5 text-left">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm relative">
+              <PhoneCall className="h-6 w-6 animate-pulse" />
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+              </span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-white">{waitingDoctor.doctorName}</span>
+                <span className="rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 border border-emerald-500/30">
+                  Ready in Room
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Your doctor is currently waiting in Consultation Room #{waitingDoctor.consultationId}.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            className="w-full sm:w-auto h-11 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-[0_4px_16px_rgba(6,182,212,0.35)] cursor-pointer active:scale-[0.98]"
+            onClick={() => handleJoinDoctorRoom(waitingDoctor)}
+          >
+            <Video className="mr-2 h-4 w-4" />
+            Join Consultation Now
+          </Button>
+        </div>
+      )}
 
       {mode === "idle" && (
         <section className="space-y-6 max-w-4xl mx-auto my-4">
@@ -241,7 +492,9 @@ export default function PatientTeleconsult() {
                 <Radio className="h-4 w-4 animate-pulse" />
                 <span>Live Searching Queue Active</span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">Searching for Available Doctors...</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">
+                Searching for Available Doctors...
+              </h2>
               <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
                 Your request has been broadcasted to doctors currently in the Teleconsultation portal. Please stay on this screen.
               </p>
@@ -298,23 +551,32 @@ export default function PatientTeleconsult() {
       )}
 
       {mode === "completed" && (
-        <div className={`${portalPanelClass} p-10 text-center space-y-4 max-w-xl mx-auto my-8`}>
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 mx-auto">
-            <UserCheck className="h-7 w-7" />
+        <section className="max-w-xl mx-auto my-12 text-center space-y-6 bg-white p-8 rounded-[28px] border border-slate-100 shadow-sm">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+            <ShieldCheck className="w-8 h-8" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">Consultation Completed</h2>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Thank you for attending your video consultation with {activeDoctorName}. Your appointment and care records have been saved.
-          </p>
-          <div className="pt-2 flex justify-center gap-4">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-slate-900 font-['Manrope']">Teleconsultation Completed</h2>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
+              Your consultation session has ended. Clinical notes and prescriptions will be saved to your health record.
+            </p>
+          </div>
+          <div className="pt-2 flex justify-center gap-3">
             <Button
-              className="bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs h-10 px-5 rounded-xl shadow-sm"
+              className="h-11 px-6 rounded-2xl bg-[#0099ff] hover:bg-[#0088e6] text-white font-bold text-xs"
               onClick={() => navigate("/patient/appointments")}
             >
-              Return to Appointments
+              View Appointments
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11 px-6 rounded-2xl text-xs font-semibold"
+              onClick={() => setMode("idle")}
+            >
+              Start New Consult
             </Button>
           </div>
-        </div>
+        </section>
       )}
     </PatientPortalPage>
   );
