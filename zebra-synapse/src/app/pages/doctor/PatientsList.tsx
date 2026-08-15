@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   Bot,
+  Calendar,
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
@@ -23,7 +24,6 @@ import {
   UserCheck,
   UserPlus,
   Users,
-  Video,
   Wind,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
@@ -369,28 +369,28 @@ export default function PatientsList() {
           {/* Upcoming Card Section */}
           <div className="mt-5 pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between mb-2.5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Upcoming</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Upcoming Visits</h3>
               <button
-                onClick={() => navigate("/doctor/teleconsult")}
-                className="text-xs font-semibold text-[#3E36B0] hover:underline"
+                onClick={() => navigate("/doctor/appointments")}
+                className="text-xs font-semibold text-[#3E36B0] hover:underline cursor-pointer"
               >
                 View All
               </button>
             </div>
 
             <div
-              onClick={() => navigate("/doctor/teleconsult")}
+              onClick={() => navigate("/doctor/appointments")}
               className="flex items-center gap-3 p-3 rounded-2xl bg-[#F4F6FC] hover:bg-[#EBF1FC] border border-slate-200/50 cursor-pointer transition-all group"
             >
               <div className="w-9 h-9 rounded-xl bg-[#3E36B0] text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-sm">
-                M
+                <Calendar className="w-4 h-4 text-[#A8DEF7]" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-[#111111] truncate group-hover:text-[#3E36B0] transition-colors">
-                  Monthly doctor's meet & teleconsult triage
+                  Marcus Sterling · Fabry Disease Review
                 </p>
                 <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                  15 Aug, 2026 · 04:00 PM
+                  15 Aug, 2026 · 10:30 AM (Teleconsult)
                 </p>
               </div>
               <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#3E36B0] group-hover:translate-x-0.5 transition-all" />
@@ -631,24 +631,14 @@ export default function PatientsList() {
 
           {/* Action Buttons */}
           {selectedPatient && (
-            <div className="pt-4 border-t border-slate-100 flex items-center gap-3">
+            <div className="pt-4 border-t border-slate-100 flex items-center">
               <button
                 type="button"
                 onClick={() => navigate(`/doctor/patient/${selectedPatient.patientId}`)}
-                className="flex-1 h-11 rounded-2xl bg-[#3E36B0] hover:bg-[#312B91] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-[#3E36B0]/25 transition-all transform active:scale-98 cursor-pointer"
+                className="w-full h-11 rounded-2xl bg-[#3E36B0] hover:bg-[#312B91] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-[#3E36B0]/25 transition-all transform active:scale-98 cursor-pointer"
               >
                 <span>Open Full Dossier</span>
                 <ArrowUpRight className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate(`/doctor/teleconsult?patient=${selectedPatient.patientId}`)}
-                className="h-11 px-4 rounded-2xl bg-[#A8DEF7] hover:bg-[#92D4F5] text-[#111111] text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
-                title="Launch Teleconsultation"
-              >
-                <Video className="w-4 h-4 text-[#3E36B0]" />
-                <span className="hidden sm:inline">Teleconsult</span>
               </button>
             </div>
           )}

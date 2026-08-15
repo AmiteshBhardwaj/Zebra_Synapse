@@ -36,50 +36,163 @@ export default function PatientTeleconsult() {
     queryId || `teleconsult-${Date.now().toString().slice(-6)}`
   );
 
-  // Broadcast search request to online doctors via Supabase Realtime
+  // Broadcast search request to online doctors via Supabase Realtime, BroadcastChannel, and localStorage
   useEffect(() => {
     if (mode !== "searching") return;
 
+    const payload = {
+      consultationId: activeConsultationId,
+      patientId: user?.id || "demo-patient-1",
+      patientName: profile?.full_name || "Maya Thompson",
+      condition: "General Teleconsultation Request",
+      requestedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      timestamp: Date.now(),
+    };
+
+    // 1. Write to localStorage queue for instant cross-tab discovery
+    const saveToLocalStorage = () => {
+      try {
+        const raw = localStorage.getItem("zebra_teleconsult_waiting_queue");
+        const list = raw ? JSON.parse(raw) : [];
+        const filtered = list.filter(
+          (p: any) => p.consultationId !== activeConsultationId && Date.now() - (p.timestamp || 0) < 180000
+        );
+        filtered.unshift({ ...payload, timestamp: Date.now() });
+        localStorage.setItem("zebra_teleconsult_waiting_queue", JSON.stringify(filtered));
+      } catch (err) {
+        console.error("Failed to update teleconsult queue in storage:", err);
+      }
+    };
+    saveToLocalStorage();
+
+    // 2. Setup BroadcastChannel (instant zero-latency cross-tab communication)
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("teleconsult-queue");
+        bc.postMessage({ type: "patient-seeking-consult", payload });
+
+        bc.onmessage = (event) => {
+          const { type, payload: msgData } = event.data || {};
+          if (
+            type === "doctor-accepted-consult" &&
+            msgData &&
+            (msgData.consultationId === activeConsultationId || msgData.patientId === user?.id)
+          ) {
+            setActiveDoctorName(msgData.doctorName || "Dr. Amelia Hart");
+            setActiveSpecialty(msgData.specialty || "Physician Specialist");
+            setMode("connected");
+            toast.success(`Connected! ${msgData.doctorName || "Your doctor"} has accepted your teleconsultation.`);
+          } else if (type === "doctor-query-queue") {
+            // Doctor just entered the portal; reply with our active request
+            bc?.postMessage({ type: "patient-seeking-consult", payload });
+          }
+        };
+      }
+    } catch {
+      // ignore BroadcastChannel errors in restrictive environments
+    }
+
+    // 3. Setup Supabase Realtime channel with Presence & Broadcast
     const sb = getSupabase();
-    if (!sb) return;
+    let sbChannel: any = null;
 
-    const channel = sb.channel("teleconsult-queue", {
-      config: { broadcast: { self: true } },
-    });
+    if (sb) {
+      sbChannel = sb.channel("teleconsult-queue", {
+        config: { presence: { key: activeConsultationId }, broadcast: { self: true } },
+      });
 
-    channel
-      .subscribe(async (status) => {
-        if (status === "SUBSCRIBED") {
-          const payload = {
-            consultationId: activeConsultationId,
-            patientId: user?.id || "demo-patient-1",
-            patientName: profile?.full_name || "Maya Thompson",
-            condition: "General Teleconsultation Request",
-            requestedAt: new Date().toISOString(),
-          };
+      sbChannel
+        .subscribe(async (status: string) => {
+          if (status === "SUBSCRIBED") {
+            await sbChannel.track(payload);
+            await sbChannel.send({
+              type: "broadcast",
+              event: "patient-seeking-consult",
+              payload,
+            });
+          }
+        });
 
-          await channel.send({
+      // Listen for doctor accepting
+      sbChannel.on("broadcast", { event: "doctor-accepted-consult" }, (event: any) => {
+        const data = event.payload;
+        if (data && (data.consultationId === activeConsultationId || data.patientId === user?.id)) {
+          setActiveDoctorName(data.doctorName || "Dr. Amelia Hart");
+          setActiveSpecialty(data.specialty || "Physician Specialist");
+          setMode("connected");
+          toast.success(`Connected! ${data.doctorName || "Your doctor"} has accepted your teleconsultation.`);
+        }
+      });
+
+      // Listen for doctor query
+      sbChannel.on("broadcast", { event: "doctor-query-queue" }, async () => {
+        if (sbChannel) {
+          await sbChannel.send({
             type: "broadcast",
             event: "patient-seeking-consult",
             payload,
           });
         }
       });
+    }
 
-    // Listen for doctor accepting the request
-    channel.on("broadcast", { event: "doctor-accepted-consult" }, (event) => {
-      const data = event.payload;
-      if (data && (data.consultationId === activeConsultationId || data.patientId === user?.id)) {
-        setActiveDoctorName(data.doctorName || "Dr. Amelia Hart");
-        setActiveSpecialty(data.specialty || "Physician Specialist");
-        setMode("connected");
-        toast.success(`Connected! ${data.doctorName || "Your doctor"} has accepted your teleconsultation.`);
+    // 4. Heartbeat interval: keep presence and storage fresh every 2.5 seconds
+    const heartbeat = setInterval(() => {
+      saveToLocalStorage();
+      if (bc) {
+        bc.postMessage({ type: "patient-seeking-consult", payload });
       }
-    });
+      if (sbChannel) {
+        void sbChannel.send({
+          type: "broadcast",
+          event: "patient-seeking-consult",
+          payload,
+        });
+      }
+
+      // Check if accepted in localStorage
+      try {
+        const acceptedRaw = localStorage.getItem(`zebra_accepted_${activeConsultationId}`);
+        if (acceptedRaw) {
+          const acceptedData = JSON.parse(acceptedRaw);
+          setActiveDoctorName(acceptedData.doctorName || "Dr. Amelia Hart");
+          setActiveSpecialty(acceptedData.specialty || "Physician Specialist");
+          setMode("connected");
+          localStorage.removeItem(`zebra_accepted_${activeConsultationId}`);
+          toast.success(`Connected! ${acceptedData.doctorName || "Your doctor"} has accepted your teleconsultation.`);
+        }
+      } catch {
+        // ignore
+      }
+    }, 2500);
 
     return () => {
-      if (mode === "searching") {
-        void channel.send({
+      clearInterval(heartbeat);
+
+      // Clean up localStorage queue
+      try {
+        const raw = localStorage.getItem("zebra_teleconsult_waiting_queue");
+        if (raw) {
+          const list = JSON.parse(raw);
+          const filtered = list.filter((p: any) => p.consultationId !== activeConsultationId);
+          localStorage.setItem("zebra_teleconsult_waiting_queue", JSON.stringify(filtered));
+        }
+      } catch {
+        // ignore
+      }
+
+      if (bc) {
+        bc.postMessage({
+          type: "patient-cancelled-consult",
+          payload: { consultationId: activeConsultationId, patientId: user?.id },
+        });
+        bc.close();
+      }
+
+      if (sbChannel && sb) {
+        void sbChannel.untrack();
+        void sbChannel.send({
           type: "broadcast",
           event: "patient-cancelled-consult",
           payload: {
@@ -87,8 +200,8 @@ export default function PatientTeleconsult() {
             patientId: user?.id,
           },
         });
+        void sb.removeChannel(sbChannel);
       }
-      void sb.removeChannel(channel);
     };
   }, [mode, activeConsultationId, user?.id, profile?.full_name]);
 
@@ -100,6 +213,31 @@ export default function PatientTeleconsult() {
   };
 
   const handleCancelSearch = async () => {
+    // Clean up storage
+    try {
+      const raw = localStorage.getItem("zebra_teleconsult_waiting_queue");
+      if (raw) {
+        const list = JSON.parse(raw);
+        const filtered = list.filter((p: any) => p.consultationId !== activeConsultationId);
+        localStorage.setItem("zebra_teleconsult_waiting_queue", JSON.stringify(filtered));
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        const bc = new BroadcastChannel("teleconsult-queue");
+        bc.postMessage({
+          type: "patient-cancelled-consult",
+          payload: { consultationId: activeConsultationId, patientId: user?.id },
+        });
+        bc.close();
+      }
+    } catch {
+      // ignore
+    }
+
     const sb = getSupabase();
     if (sb) {
       const channel = sb.channel("teleconsult-queue");
