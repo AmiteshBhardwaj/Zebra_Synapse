@@ -83,6 +83,15 @@ export default function DoctorDashboard() {
       active: location.pathname === "/doctor/teleconsult",
     },
     {
+      id: "messages",
+      label: "Patient Messages",
+      icon: MessageSquare,
+      path: "/doctor/messages",
+      active:
+        location.pathname === "/doctor/messages" ||
+        location.pathname === "/doctor/chat",
+    },
+    {
       id: "settings",
       label: "Account Settings",
       icon: Settings,

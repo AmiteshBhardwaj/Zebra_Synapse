@@ -101,6 +101,12 @@ export const DOCTOR_SIDEBAR_ITEMS: SidebarNavItem[] = [
     badge: "Live",
   },
   {
+    path: "/doctor/messages",
+    label: "Messages",
+    icon: MessageSquare,
+    altPaths: ["/doctor/chat"],
+  },
+  {
     path: "/doctor/settings",
     label: "Account Settings",
     icon: Settings,

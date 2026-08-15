@@ -243,30 +243,32 @@ export function MetricPriorityBars({
 }
 
 export function MetricSparklineGrid({
-  panels,
+  panels = [],
   metricKeys,
   title,
   description,
   limit = 6,
 }: {
-  panels: LabPanelRow[];
+  panels?: LabPanelRow[];
   metricKeys?: string[];
   title: string;
   description: string;
   limit?: number;
 }) {
-  const orderedPanels = [...panels]
+  const safePanels = Array.isArray(panels) ? panels : [];
+  const orderedPanels = [...safePanels]
     .sort((a, b) => new Date(`${a.recorded_at}T00:00:00`).getTime() - new Date(`${b.recorded_at}T00:00:00`).getTime())
     .slice(-8);
 
   const latestMetrics = orderedPanels.length > 0 ? getMetricAssessments(orderedPanels[orderedPanels.length - 1]) : [];
   const latestMetricMap = new Map(latestMetrics.map((metric) => [metric.key, metric]));
 
-  const keysToDisplay = (metricKeys && metricKeys.length > 0)
-    ? metricKeys
-    : latestMetrics.filter((m) => m.status !== "missing").map((m) => m.key).slice(0, limit);
+  const effectiveMetricKeys =
+    Array.isArray(metricKeys) && metricKeys.length > 0
+      ? metricKeys
+      : latestMetrics.filter((m) => m.status !== "missing").map((m) => m.key).slice(0, limit);
 
-  const cards = keysToDisplay
+  const cards = (effectiveMetricKeys || [])
     .map((key) => {
       const latestMetric = latestMetricMap.get(key);
       if (!latestMetric || latestMetric.status === "missing") return null;
@@ -292,7 +294,8 @@ export function MetricSparklineGrid({
         series,
       };
     })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
+    .slice(0, limit);
 
   return (
     <Card className={getPanelCardClassName()}>
@@ -301,48 +304,54 @@ export function MetricSparklineGrid({
         <CardDescription className="text-slate-500 text-xs">{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card) => {
-            const config: ChartConfig = {
-              value: { label: card.latestMetric.label, color: card.fill },
-            };
+        {cards.length === 0 ? (
+          <div className="p-6 text-center text-xs text-slate-400">
+            No historical trend sparklines available yet for this panel.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {cards.map((card) => {
+              const config: ChartConfig = {
+                value: { label: card.latestMetric.label, color: card.fill },
+              };
 
-            return (
-              <div key={card.key} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 shadow-sm">
-                <div className="mb-3 flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500">{card.latestMetric.label}</p>
-                    <p className="mt-1 text-xl font-bold text-slate-900">{getMetricValueLabel(card.latestMetric)}</p>
+              return (
+                <div key={card.key} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 shadow-sm">
+                  <div className="mb-3 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500">{card.latestMetric.label}</p>
+                      <p className="mt-1 text-xl font-bold text-slate-900">{getMetricValueLabel(card.latestMetric)}</p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={cn("text-xs font-semibold", STATUS_META[card.latestMetric.status].surface)}
+                    >
+                      {STATUS_META[card.latestMetric.status].label}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant="outline"
-                    className={cn("text-xs font-semibold", STATUS_META[card.latestMetric.status].surface)}
-                  >
-                    {STATUS_META[card.latestMetric.status].label}
-                  </Badge>
+                  <ChartContainer config={config} className="h-[110px] w-full">
+                    <AreaChart data={card.series} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id={`fill-${card.key}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={card.fill} stopOpacity={0.35} />
+                          <stop offset="95%" stopColor={card.fill} stopOpacity={0.05} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="date" hide />
+                      <YAxis hide domain={["dataMin - 1", "dataMax + 1"]} />
+                      <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                      <Area type="monotone" dataKey="value" stroke={card.fill} fill={`url(#fill-${card.key})`} strokeWidth={2.2} />
+                    </AreaChart>
+                  </ChartContainer>
+                  <p className="mt-2.5 text-[11px] text-slate-400">
+                    Tracked across {card.series.length} record{card.series.length === 1 ? "" : "s"}.
+                  </p>
                 </div>
-                <ChartContainer config={config} className="h-[110px] w-full">
-                  <AreaChart data={card.series} margin={{ left: 0, right: 0, top: 10, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id={`fill-${card.key}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor={card.fill} stopOpacity={0.35} />
-                        <stop offset="95%" stopColor={card.fill} stopOpacity={0.05} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="date" hide />
-                    <YAxis hide domain={["dataMin - 1", "dataMax + 1"]} />
-                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                    <Area type="monotone" dataKey="value" stroke={card.fill} fill={`url(#fill-${card.key})`} strokeWidth={2.2} />
-                  </AreaChart>
-                </ChartContainer>
-                <p className="mt-2.5 text-[11px] text-slate-400">
-                  Tracked across {card.series.length} record{card.series.length === 1 ? "" : "s"}.
-                </p>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
