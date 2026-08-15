@@ -27,7 +27,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { type UserProfile } from "../../../types/supabase";
+import { useAuth } from "../../../auth/AuthContext";
+import { type Profile } from "../../../auth/types";
+import { getSupabase } from "../../../lib/supabase";
 import {
   type LabPanelRow,
   formatLabDate,
@@ -36,6 +38,14 @@ import {
   type MetricAssessment,
   getMetricAssessments,
 } from "../../../lib/labInsights";
+import {
+  PRESCRIPTIONS_SELECT,
+  formatPrescriptionDate,
+  prescriptionHeading,
+  type PrescriptionRow,
+} from "../../../lib/prescriptions";
+import { calculateBmi } from "../../../lib/careRelationships";
+import { doctorOptions } from "../../pages/patient/Appointments";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import {
@@ -179,67 +189,83 @@ const ORGAN_SYSTEMS: Record<OrganSystemId, OrganMeta> = {
   },
 };
 
-// Featured Consulting Doctors
-const CONSULTING_DOCTORS = [
-  {
-    id: "doc-1",
-    name: "Dr. Edward Pitter",
-    specialty: "Cardiac Surgeon",
-    hospital: "Synapse Heart Institute",
-    experience: "14 yrs exp",
-    rating: "4.9",
-    avatar: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "doc-2",
-    name: "Dr. Liza Paul",
-    specialty: "Consultant Cardiologist",
-    hospital: "Metropolitan Care Center",
-    experience: "11 yrs exp",
-    rating: "4.8",
-    avatar: "https://images.unsplash.com/photo-1594824813589-3d02f2320b60?w=150&auto=format&fit=crop&q=80",
-  },
-  {
-    id: "doc-3",
-    name: "Dr. Mike Harrison",
-    specialty: "Sr. Consultant Cardiologist",
-    hospital: "Zebra Specialized Clinic",
-    experience: "18 yrs exp",
-    rating: "5.0",
-    avatar: "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=150&auto=format&fit=crop&q=80",
-  },
-];
+// Resilient Doctor Avatar with Fallback Initials
+function DoctorAvatar({
+  src,
+  name,
+  initials,
+}: {
+  src?: string;
+  name: string;
+  initials?: string;
+}) {
+  const [imageError, setImageError] = useState(false);
+  const derivedInitials =
+    initials ||
+    name
+      .replace(/^(Dr\.|Prof\.|Mr\.|Mrs\.|Ms\.)\s*/i, "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() ||
+    "DR";
 
-// Prescribed Medications
-const ACTIVE_MEDICATIONS = [
-  {
-    id: "med-1",
-    name: "v-C 123 Foretin",
-    dosage: "125mg",
-    schedule: "Daily • After breakfast",
-    bottleColor: "#d97706",
-    badge: "Active",
-  },
-  {
-    id: "med-2",
-    name: "Bisolvon Elixir",
-    dosage: "150ml",
-    schedule: "2x Daily • Morning & Night",
-    bottleColor: "#dc2626",
-    badge: "Refill in 4d",
-  },
-  {
-    id: "med-3",
-    name: "CardioProtect Lipostan",
-    dosage: "20mg",
-    schedule: "Night • Before sleep",
-    bottleColor: "#2563eb",
-    badge: "Active",
-  },
-];
+  return (
+    <div className="h-10 w-10 rounded-xl overflow-hidden ring-1 ring-slate-200 shrink-0 bg-gradient-to-br from-sky-100 to-blue-200 flex items-center justify-center text-sky-800 font-bold text-xs shadow-inner">
+      {!imageError && src ? (
+        <img
+          src={src}
+          alt={name}
+          onError={() => setImageError(true)}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span>{derivedInitials}</span>
+      )}
+    </div>
+  );
+}
+
+// Helper to parse realistic prescription details
+function parsePrescriptionItem(rx: PrescriptionRow) {
+  const lines = rx.details.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const firstLine = lines[0] || "Medication";
+
+  // Match dosage pattern e.g. 500mg, 20 mg, 20mcg, 150ml, 2000 IU, 1 tablet
+  const dosageMatch =
+    firstLine.match(/\b\d+(?:\.\d+)?\s*(?:mg|mcg|ml|g|IU|tablets?|capsules?|pills?)\b/i) ||
+    (lines[1] && lines[1].match(/\b\d+(?:\.\d+)?\s*(?:mg|mcg|ml|g|IU|tablets?|capsules?|pills?)\b/i));
+  const dosage = dosageMatch ? dosageMatch[0] : "Prescribed Dose";
+
+  let name = firstLine;
+  if (dosageMatch && name.includes(dosageMatch[0])) {
+    name = name.replace(dosageMatch[0], "").replace(/[-–—:,]+/g, " ").trim();
+  }
+  if (!name) name = prescriptionHeading(rx.details);
+
+  const schedule =
+    lines.length > 1
+      ? lines[1]
+      : firstLine.includes(" - ")
+      ? firstLine.split(" - ")[1]
+      : "Daily as directed";
+
+  return {
+    id: rx.id,
+    name: name.length > 28 ? `${name.slice(0, 26)}…` : name,
+    dosage,
+    schedule,
+    prescriber: rx.prescriber?.full_name || "Attending Physician",
+    date: formatPrescriptionDate(rx.created_at),
+  };
+}
+
+const BOTTLE_COLORS = ["#0284c7", "#059669", "#d97706", "#7c3aed", "#e11d48", "#2563eb"];
 
 interface Patient3DHealthDashboardProps {
-  profile: UserProfile | null;
+  profile: Profile | null;
   uploads: Array<{ id: string; original_filename: string; created_at: string }>;
   panels: LabPanelRow[];
   activePanel: LabPanelRow | null;
@@ -259,6 +285,7 @@ export function Patient3DHealthDashboard({
   onUploadReport,
   onRefreshPanels,
 }: Patient3DHealthDashboardProps) {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [selectedOrgan, setSelectedOrgan] = useState<OrganSystemId>("heart");
   const [searchQuery, setSearchQuery] = useState("");
@@ -267,6 +294,122 @@ export function Patient3DHealthDashboard({
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState("");
+
+  // Real connected doctor and active prescriptions
+  const [assignedDoctor, setAssignedDoctor] = useState<{
+    id: string;
+    name: string;
+    specialty?: string;
+    licenseNumber?: string;
+    lastVisit?: string;
+  } | null>(null);
+  const [activePrescriptions, setActivePrescriptions] = useState<PrescriptionRow[]>([]);
+  const [prescriptionsLoading, setPrescriptionsLoading] = useState(true);
+
+  // Fetch real patient clinical records from Supabase
+  useEffect(() => {
+    let isMounted = true;
+    const loadClinicalData = async () => {
+      const sb = getSupabase();
+      const uid = user?.id || profile?.id;
+      if (!sb || !uid) {
+        if (isMounted) setPrescriptionsLoading(false);
+        return;
+      }
+
+      try {
+        // 1. Fetch linked doctor from care_relationships
+        const { data: careData } = await sb
+          .from("care_relationships")
+          .select(`
+            doctor_id,
+            primary_condition,
+            last_visit,
+            doctor:profiles!care_relationships_doctor_id_fkey ( id, full_name, license_number )
+          `)
+          .eq("patient_id", uid)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (isMounted && careData) {
+          const doc = careData.doctor as any;
+          if (doc?.full_name) {
+            setAssignedDoctor({
+              id: careData.doctor_id,
+              name: doc.full_name,
+              specialty: careData.primary_condition || "Attending Physician",
+              licenseNumber: doc.license_number,
+              lastVisit: careData.last_visit,
+            });
+          }
+        }
+
+        // 2. Fetch real active prescriptions
+        const { data: rxData } = await sb
+          .from("prescriptions")
+          .select(PRESCRIPTIONS_SELECT)
+          .eq("patient_id", uid)
+          .eq("status", "active")
+          .order("created_at", { ascending: false });
+
+        if (isMounted && rxData) {
+          setActivePrescriptions(rxData as unknown as PrescriptionRow[]);
+        }
+      } catch (err) {
+        console.error("[Dashboard] Error fetching patient clinical records:", err);
+      } finally {
+        if (isMounted) setPrescriptionsLoading(false);
+      }
+    };
+
+    void loadClinicalData();
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, profile?.id]);
+
+  // Real consulting doctors list
+  const consultingDoctorsList = useMemo(() => {
+    const list: Array<{
+      id: string;
+      name: string;
+      specialty: string;
+      hospital: string;
+      avatar?: string;
+      initials: string;
+      isAssigned?: boolean;
+    }> = [];
+
+    if (assignedDoctor) {
+      list.push({
+        id: assignedDoctor.id,
+        name: assignedDoctor.name,
+        specialty: assignedDoctor.specialty || "Attending Physician",
+        hospital: "Assigned Care Team",
+        avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&auto=format&fit=crop&q=80",
+        initials: assignedDoctor.name.replace(/^(Dr\.|Prof\.)\s*/i, "").slice(0, 2).toUpperCase() || "MD",
+        isAssigned: true,
+      });
+    }
+
+    // Add specialists from system directory
+    doctorOptions.forEach((opt) => {
+      if (!assignedDoctor || !opt.doctor.toLowerCase().includes(assignedDoctor.name.toLowerCase())) {
+        list.push({
+          id: opt.value,
+          name: opt.doctor,
+          specialty: opt.specialty,
+          hospital: opt.hospital || "Synapse Medical Network",
+          avatar: opt.avatar,
+          initials: opt.initials || "DR",
+          isAssigned: false,
+        });
+      }
+    });
+
+    return list.slice(0, 3);
+  }, [assignedDoctor]);
 
   // Live time ticker
   useEffect(() => {
@@ -336,15 +479,16 @@ export function Patient3DHealthDashboard({
     return matched;
   }, [allMetrics, selectedOrgan, currentOrganMeta]);
 
-  // Patient Demographic stats
+  // Real Patient Demographic stats
   const patientStats = useMemo(() => {
-    const fullName = profile?.full_name || "Peter James";
-    const bloodType = (profile as any)?.blood_group || "O+";
-    const gender = (profile as any)?.gender || "Male";
-    const age = (profile as any)?.age || "28 years";
-    const height = (profile as any)?.height || "163cm";
-    const weight = (profile as any)?.weight || "68kg";
-    const bmi = (profile as any)?.bmi || "25.6";
+    const fullName = profile?.full_name || "Patient User";
+    const bloodType = (profile as any)?.blood_group || "—";
+    const gender = (profile as any)?.gender || "—";
+    const age = (profile as any)?.age ? `${(profile as any).age} yrs` : "—";
+    const height = profile?.height_cm ? `${profile.height_cm} cm` : "—";
+    const weight = profile?.weight_kg ? `${profile.weight_kg} kg` : "—";
+    const bmiVal = calculateBmi(profile?.height_cm, profile?.weight_kg);
+    const bmi = bmiVal !== null ? `${bmiVal}` : "—";
 
     return { fullName, bloodType, gender, age, height, weight, bmi };
   }, [profile]);
@@ -873,11 +1017,18 @@ export function Patient3DHealthDashboard({
             {/* B. CONSULTING DOCTOR LIST */}
             <div className="rounded-[28px] bg-white/80 backdrop-blur-md border border-white/90 p-5 sm:p-6 shadow-[0_10px_35px_rgba(40,110,190,0.06)] space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">
-                  Consulting Doctor
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">
+                    Consulting Doctor
+                  </h3>
+                  {assignedDoctor && (
+                    <Badge className="border-sky-200 bg-sky-50 text-sky-700 text-[10px] font-semibold py-0 px-2">
+                      Linked Team
+                    </Badge>
+                  )}
+                </div>
                 <button
-                  onClick={() => navigate("/patient/teleconsult")}
+                  onClick={() => navigate("/patient/appointments")}
                   className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline transition-colors"
                 >
                   See all
@@ -885,21 +1036,28 @@ export function Patient3DHealthDashboard({
               </div>
 
               <div className="space-y-3">
-                {CONSULTING_DOCTORS.map((doc) => (
+                {consultingDoctorsList.map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex flex-col gap-2 p-3 rounded-2xl bg-slate-50/80 hover:bg-sky-50/40 border border-slate-100 hover:border-sky-200 transition-all"
+                    className="flex flex-col gap-2.5 p-3 rounded-2xl bg-slate-50/80 hover:bg-sky-50/40 border border-slate-100 hover:border-sky-200 transition-all"
                   >
                     <div className="flex items-center gap-3">
-                      <img
+                      <DoctorAvatar
                         src={doc.avatar}
-                        alt={doc.name}
-                        className="h-10 w-10 rounded-xl object-cover ring-1 ring-slate-200 shrink-0"
+                        name={doc.name}
+                        initials={doc.initials}
                       />
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-xs font-bold text-slate-900 truncate">
-                          {doc.name}
-                        </h4>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-xs font-bold text-slate-900 truncate">
+                            {doc.name}
+                          </h4>
+                          {doc.isAssigned && (
+                            <span className="rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2 shrink-0">
+                              Primary
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[10px] font-medium text-slate-400 truncate">
                           {doc.specialty}
                         </p>
@@ -907,7 +1065,7 @@ export function Patient3DHealthDashboard({
                     </div>
 
                     <Button
-                      onClick={() => navigate("/patient/appointments")}
+                      onClick={() => navigate(`/patient/appointments?doctor=${encodeURIComponent(doc.name)}`)}
                       className="w-full h-8 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-semibold shadow-sm flex items-center justify-center gap-1"
                     >
                       <span>Book Consultation</span>
@@ -921,9 +1079,17 @@ export function Patient3DHealthDashboard({
             {/* C. ACTIVE MEDICATION SHELF */}
             <div className="rounded-[28px] bg-white/80 backdrop-blur-md border border-white/90 p-5 sm:p-6 shadow-[0_10px_35px_rgba(40,110,190,0.06)] space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">
-                  Medication
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">
+                    Medication
+                  </h3>
+                  {activePrescriptions.length > 0 && (
+                    <span className="flex items-center gap-1 rounded-full border border-lime-200 bg-lime-50 px-2 py-0.5 text-[10px] font-bold text-lime-800">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      {activePrescriptions.length} Active
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => navigate("/patient/prescription")}
                   className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline transition-colors"
@@ -932,33 +1098,66 @@ export function Patient3DHealthDashboard({
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                {ACTIVE_MEDICATIONS.slice(0, 2).map((med) => (
-                  <div
-                    key={med.id}
-                    onClick={() => navigate("/patient/prescription")}
-                    className="group p-3 rounded-2xl bg-slate-50/80 hover:bg-sky-50/50 border border-slate-100 hover:border-sky-200 transition-all cursor-pointer flex flex-col items-center text-center"
-                  >
-                    {/* Medicine bottle graphic */}
-                    <div className="h-14 w-12 flex items-center justify-center my-1 group-hover:scale-105 transition-transform">
-                      <svg viewBox="0 0 60 80" className="h-full w-full drop-shadow-sm">
-                        <rect x="22" y="5" width="16" height="8" rx="2" fill="#94a3b8" />
-                        <rect x="15" y="13" width="30" height="55" rx="8" fill={med.bottleColor} opacity="0.85" />
-                        <rect x="18" y="25" width="24" height="30" rx="3" fill="#ffffff" />
-                        <line x1="22" y1="33" x2="38" y2="33" stroke="#cbd5e1" strokeWidth="2" />
-                        <line x1="22" y1="40" x2="34" y2="40" stroke="#cbd5e1" strokeWidth="2" />
-                      </svg>
-                    </div>
-
-                    <h4 className="text-[11px] font-bold text-slate-900 truncate w-full mt-1">
-                      {med.name}
-                    </h4>
-                    <p className="text-[10px] font-mono text-slate-400">
-                      {med.dosage}
+              {prescriptionsLoading ? (
+                <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center justify-center text-xs text-slate-400">
+                  Loading active medications…
+                </div>
+              ) : activePrescriptions.length === 0 ? (
+                <div className="p-4 rounded-2xl bg-slate-50/80 border border-dashed border-slate-200 text-center space-y-2">
+                  <div className="mx-auto w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <Pill className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800">No Active Prescriptions</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Medications prescribed by your doctor will sync here automatically.
                     </p>
                   </div>
-                ))}
-              </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/patient/prescription")}
+                    className="text-[11px] h-7 rounded-xl border-slate-200 hover:bg-sky-50 text-slate-700 font-medium"
+                  >
+                    View Prescriptions Vault
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2.5">
+                  {activePrescriptions.slice(0, 2).map((rx, idx) => {
+                    const parsed = parsePrescriptionItem(rx);
+                    const bottleColor = BOTTLE_COLORS[idx % BOTTLE_COLORS.length];
+                    return (
+                      <div
+                        key={rx.id}
+                        onClick={() => navigate("/patient/prescription")}
+                        className="group p-3 rounded-2xl bg-slate-50/80 hover:bg-sky-50/50 border border-slate-100 hover:border-sky-200 transition-all cursor-pointer flex flex-col items-center text-center relative"
+                      >
+                        {/* Medicine bottle graphic */}
+                        <div className="h-14 w-12 flex items-center justify-center my-1 group-hover:scale-105 transition-transform">
+                          <svg viewBox="0 0 60 80" className="h-full w-full drop-shadow-sm">
+                            <rect x="22" y="5" width="16" height="8" rx="2" fill="#94a3b8" />
+                            <rect x="15" y="13" width="30" height="55" rx="8" fill={bottleColor} opacity="0.85" />
+                            <rect x="18" y="25" width="24" height="30" rx="3" fill="#ffffff" />
+                            <line x1="22" y1="33" x2="38" y2="33" stroke="#cbd5e1" strokeWidth="2" />
+                            <line x1="22" y1="40" x2="34" y2="40" stroke="#cbd5e1" strokeWidth="2" />
+                          </svg>
+                        </div>
+
+                        <h4 className="text-[11px] font-bold text-slate-900 truncate w-full mt-1" title={parsed.name}>
+                          {parsed.name}
+                        </h4>
+                        <p className="text-[10px] font-mono text-slate-500 font-semibold">
+                          {parsed.dosage}
+                        </p>
+                        <p className="text-[9px] text-slate-400 truncate w-full mt-0.5">
+                          {parsed.schedule}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
           </div>

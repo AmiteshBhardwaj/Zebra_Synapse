@@ -721,12 +721,20 @@ export default function Diet() {
 
           {/* Navigation Links */}
           <nav className="my-3 space-y-1 flex-1 overflow-y-auto [scrollbar-width:none]">
-            {[
-              { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-              { id: "weekly_plan", label: "Calendar", icon: CalendarIcon },
-              { id: "messages", label: "AI Dietitian", icon: Bot },
-              { id: "weekly_plan", label: "Meal Plan", icon: ClipboardList, hasSubmenu: true },
-            ].map((item, idx) => {
+            {(
+              [
+                { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+                { id: "weekly_plan", label: "Calendar", icon: CalendarIcon },
+                { id: "messages", label: "AI Dietitian", icon: Bot },
+                { id: "weekly_plan", label: "Meal Plan", icon: ClipboardList, hasSubmenu: true },
+              ] as Array<{
+                id: string;
+                label: string;
+                icon: any;
+                hasSubmenu?: boolean;
+                badge?: string | number;
+              }>
+            ).map((item, idx) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
 
