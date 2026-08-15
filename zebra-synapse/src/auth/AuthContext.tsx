@@ -50,11 +50,54 @@ async function fetchProfile(
 
   if (error) {
     console.error("[auth] profiles fetch:", error.message);
-    return null;
   }
-  if (!data) return null;
 
-  const baseProfile = data as Profile;
+  let baseProfile: Profile | null = data ? (data as Profile) : null;
+
+  if (!baseProfile) {
+    // Attempt auto-healing: insert/upsert missing profile row for this authenticated user
+    try {
+      const { data: userData } = await sb.auth.getUser();
+      const user = userData?.user;
+      const meta = user?.user_metadata || {};
+      const defaultRole = meta.role === "doctor" ? "doctor" : "patient";
+      const defaultName =
+        meta.full_name || meta.name || user?.email?.split("@")[0] || "User";
+
+      const { data: newProfile, error: insertError } = await sb
+        .from("profiles")
+        .upsert(
+          {
+            id: userId,
+            role: defaultRole,
+            full_name: defaultName,
+          },
+          { onConflict: "id" }
+        )
+        .select("id, role, full_name, license_number, height_cm, weight_kg, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
+        .maybeSingle();
+
+      if (insertError) {
+        console.warn("[auth] auto-creating profile row in DB:", insertError.message);
+      }
+
+      baseProfile = (newProfile as Profile | null) ?? {
+        id: userId,
+        role: defaultRole,
+        full_name: defaultName,
+        license_number: null,
+      };
+    } catch (e) {
+      console.warn("[auth] profile recovery exception:", e);
+      baseProfile = {
+        id: userId,
+        role: "patient",
+        full_name: "User",
+        license_number: null,
+      };
+    }
+  }
+
   try {
     const localOverride = localStorage.getItem(`zebra_profile_${userId}`);
     if (localOverride) {
