@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Calendar,
+  CheckCircle2,
   Clock,
   FileText,
   MapPin,
@@ -43,6 +44,35 @@ import {
   portalSelectItemClass,
   portalSelectTriggerClass,
 } from "../../components/patient/PortalTheme";
+
+export function getQuickDateISO(offsetDays = 0): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().split("T")[0];
+}
+
+export function getNextMondayISO(): string {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = day === 0 ? 1 : 8 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split("T")[0];
+}
+
+export const CLINIC_TIME_SLOTS: Array<{ label: string; value: string }> = [
+  { label: "09:00 AM", value: "09:00 AM" },
+  { label: "09:30 AM", value: "09:30 AM" },
+  { label: "10:00 AM", value: "10:00 AM" },
+  { label: "10:30 AM", value: "10:30 AM" },
+  { label: "11:00 AM", value: "11:00 AM" },
+  { label: "11:30 AM", value: "11:30 AM" },
+  { label: "02:00 PM", value: "02:00 PM" },
+  { label: "02:30 PM", value: "02:30 PM" },
+  { label: "03:00 PM", value: "03:00 PM" },
+  { label: "03:30 PM", value: "03:30 PM" },
+  { label: "04:00 PM", value: "04:00 PM" },
+  { label: "04:30 PM", value: "04:30 PM" },
+];
 
 export type Appointment = {
   id: number;
