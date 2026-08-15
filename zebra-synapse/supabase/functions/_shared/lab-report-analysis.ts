@@ -193,6 +193,8 @@ async function extractPdfText(bytes: Uint8Array): Promise<string | null> {
           return typeof candidate.str === "string" ? candidate.str : "";
         })
         .join(" ")
+        .replace(/(\d+)\s*([.,·])\s*(\d+)/g, "$1.$3")
+        .replace(/(\d+)\s*,\s*(\d{1,2})(?!\d)/g, "$1.$2")
         .replace(/\s+/g, " ")
         .trim();
       if (strings) chunks.push(strings);
@@ -212,6 +214,7 @@ function buildPrompt(rawTextAvailable: boolean): string {
     "Rules:",
     "- Return document_type='unsupported' if document is not a lab/diagnostic report.",
     "- Only include biomarkers explicitly supported by schema.",
+    "- CRITICAL DECIMAL ACCURACY: Pay extreme attention to decimal points (e.g. '8.03' must NEVER be read as '803', '1.1' must NEVER be read as '11', '0.85' must NEVER be read as '85'). In lab tables and scanned text, decimal points can be small or faint—always verify against standard biological ranges and table column alignment. If a value has a decimal separator (dot or comma), preserve it accurately as a decimal float.",
     "- Normalize numeric values into the expected units when the source clearly indicates a conversion.",
     "- If unit is ambiguous or conversion is uncertain, lower confidence and add a warning.",
     "- Use ISO date YYYY-MM-DD for recorded_at when present.",

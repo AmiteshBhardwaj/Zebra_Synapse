@@ -68,7 +68,7 @@ export function useDoctorPatientChat(
           .on(
             "postgres_changes",
             {
-              event: "INSERT",
+              event: "*",
               schema: "public",
               table: "doctor_patient_messages",
             },

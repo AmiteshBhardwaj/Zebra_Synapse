@@ -54,6 +54,8 @@ function normalizeText(text: string): string {
     .replace(/clari\s+fi\s+cations/gi, "clarifications")
     .replace(/recti\s+fi\s+cations/gi, "rectifications")
     .replace(/fl\s+uctuations/gi, "fluctuations")
+    .replace(/(\d+)\s*([.,·])\s*(\d+)/g, "$1.$3")
+    .replace(/(\d+)\s*,\s*(\d{1,2})(?!\d)/g, "$1.$2")
     .replace(/[ \t]+/g, " ")
     .replace(/\r/g, "\n");
 }
@@ -70,6 +72,8 @@ function normalizeLine(text: string): string {
     .replace(/clari\s+fi\s+cations/gi, "clarifications")
     .replace(/recti\s+fi\s+cations/gi, "rectifications")
     .replace(/fl\s+uctuations/gi, "fluctuations")
+    .replace(/(\d+)\s*([.,·])\s*(\d+)/g, "$1.$3")
+    .replace(/(\d+)\s*,\s*(\d{1,2})(?!\d)/g, "$1.$2")
     .replace(/[ \t]+/g, " ")
     .trim();
 }
@@ -106,7 +110,23 @@ function buildPageLines(items: readonly unknown[]): string[] {
   lines.sort((a, b) => b.y - a.y);
   return lines.map((line) => {
     line.items.sort((a, b) => a.x - b.x);
-    return normalizeLine(line.items.map((item) => item.str).join(" "));
+    let joined = "";
+    for (let i = 0; i < line.items.length; i++) {
+      const cur = line.items[i].str;
+      if (i === 0) {
+        joined = cur;
+      } else {
+        const prev = line.items[i - 1].str;
+        if (cur === "." || cur === "," || cur === "·" || prev === "." || prev === "," || prev === "·") {
+          joined += cur;
+        } else if (/^\d+$/.test(prev) && /^\d+$/.test(cur) && line.items[i].x - line.items[i - 1].x < 15) {
+          joined += cur;
+        } else {
+          joined += " " + cur;
+        }
+      }
+    }
+    return normalizeLine(joined);
   });
 }
 
@@ -250,7 +270,11 @@ function isExemptNoteOrGuidelineLine(line: string): boolean {
 }
 
 function sanitizeLineText(text: string): string {
-  return text
+  const unified = text
+    .replace(/(\d+)\s*([.,·])\s*(\d+)/g, "$1.$3")
+    .replace(/(\d+)\s*,\s*(\d{1,2})(?!\d)/g, "$1.$2");
+
+  return unified
     .replace(/\(\s*<?\s*>?\s*=?\s*\d+(?:\.\d+)?\s*(?:[\-\–\—~|to]\s*\d+(?:\.\d+)?)?\s*%?\s*\)/gi, " ")
     .replace(/\([^)]*\)/g, " ")
     .replace(/\[[^\]]*\]/g, " ")
@@ -259,20 +283,66 @@ function sanitizeLineText(text: string): string {
     .replace(/(?:ref|reference|normal|range|interval|desirable|optimal|borderline)\s*[:\-]?\s*[\d\.\s\-\<\>\=]+/gi, " ");
 }
 
-function scaleBiomarkerValue(biomarkerKey: string, val: number, lineText: string): number {
-  if (biomarkerKey === "platelets") {
-    const isLakhs = /lakh/i.test(lineText) || val < 20;
-    const isThousands = /10\^?3|thousand|k\/ul/i.test(lineText) || (val >= 50 && val <= 1000);
-    if (isLakhs) return Math.round(val * 100000);
-    if (isThousands) return Math.round(val * 1000);
+/**
+ * Context-Aware Clinical Decimal Recovery:
+ * If an OCR engine swallowed a decimal point on a metric with known reference ranges
+ * (e.g. Creatinine extracted as 120 instead of 1.20, or HbA1c as 68 instead of 6.8, or AST/SGOT as 803 instead of 8.03),
+ * check candidate split positions to see if inserting a decimal places the value within expected physiological boundaries.
+ */
+function recoverBiomarkerDecimal(biomarkerKey: string, val: number, lineText: string): number {
+  if (val % 1 !== 0) return val;
+
+  if (biomarkerKey === "creatinine" && val > 25) {
+    if (val >= 40 && val <= 250) return Number((val / 100).toFixed(2)); // e.g. 85 -> 0.85, 120 -> 1.20
+    if (val >= 26 && val <= 250) return Number((val / 10).toFixed(1)); // e.g. 26 -> 2.6
   }
 
-  if (biomarkerKey === "wbc") {
-    const isThousands = /10\^?3|thousand|k\/ul/i.test(lineText) || (val >= 1.0 && val <= 30.0);
-    if (isThousands) return Math.round(val * 1000);
+  if (biomarkerKey === "total_bilirubin" && val > 20) {
+    if (val >= 20 && val <= 400) return Number((val / 100).toFixed(2)); // e.g. 85 -> 0.85, 120 -> 1.20
+  }
+
+  if ((biomarkerKey === "conjugated_bilirubin" || biomarkerKey === "unconjugated_bilirubin") && val > 10) {
+    if (val >= 10 && val <= 300) return Number((val / 100).toFixed(2)); // e.g. 30 -> 0.30
+  }
+
+  if (biomarkerKey === "hemoglobin_a1c" && val >= 30 && val <= 200) {
+    return Number((val / 10).toFixed(1)); // e.g. 57 -> 5.7, 68 -> 6.8, 112 -> 11.2
+  }
+
+  if (biomarkerKey === "tsh" && val >= 15 && val <= 1000) {
+    if (val >= 100 && val <= 999) return Number((val / 100).toFixed(2)); // e.g. 245 -> 2.45
+    if (val >= 15 && val <= 99) return Number((val / 10).toFixed(1)); // e.g. 35 -> 3.5
+  }
+
+  if (biomarkerKey === "uric_acid" && val >= 20 && val <= 150) {
+    return Number((val / 10).toFixed(1)); // e.g. 58 -> 5.8
+  }
+
+  if ((biomarkerKey === "sgot" || biomarkerKey === "sgpt") && val > 500) {
+    if (/\b\d{1,2}\s+[0-9]{2}\b|\b\d{1,2}\.\d{2}\b/i.test(lineText)) {
+      return Number((val / 100).toFixed(2));
+    }
   }
 
   return val;
+}
+
+function scaleBiomarkerValue(biomarkerKey: string, val: number, lineText: string): number {
+  const adjusted = recoverBiomarkerDecimal(biomarkerKey, val, lineText);
+
+  if (biomarkerKey === "platelets") {
+    const isLakhs = /lakh/i.test(lineText) || adjusted < 20;
+    const isThousands = /10\^?3|thousand|k\/ul/i.test(lineText) || (adjusted >= 50 && adjusted <= 1000);
+    if (isLakhs) return Math.round(adjusted * 100000);
+    if (isThousands) return Math.round(adjusted * 1000);
+  }
+
+  if (biomarkerKey === "wbc") {
+    const isThousands = /10\^?3|thousand|k\/ul/i.test(lineText) || (adjusted >= 1.0 && adjusted <= 30.0);
+    if (isThousands) return Math.round(adjusted * 1000);
+  }
+
+  return adjusted;
 }
 
 function extractValueFromLines(
@@ -294,7 +364,9 @@ function extractValueFromLines(
 
     // Multi-line card check (e.g. Dr Lal PathLabs with "Value : X" on subsequent line)
     const windowLines = lines.slice(i, i + 3);
-    const combinedWindow = windowLines.join(" ");
+    const combinedWindow = windowLines
+      .join(" ")
+      .replace(/(\d+)\s*([.,·])\s*(\d+)/g, "$1.$3");
     const cardMatch = combinedWindow.match(/Value\s*:\s*(?:>|<|=)?\s*(\d+(?:\.\d+)?)/i);
     if (cardMatch?.[1]) {
       let val = Number(cardMatch[1]);
@@ -412,7 +484,7 @@ export async function renderPdfPagesToImages(
   file: Blob,
   options: { scale?: number; maxPages?: number } = {}
 ): Promise<Array<{ base64Data: string; mimeType: string }>> {
-  const scale = options.scale || 1.5;
+  const scale = options.scale || 2.0;
   const maxPages = options.maxPages || 20;
 
   const buffer = await file.arrayBuffer();
@@ -441,7 +513,7 @@ export async function renderPdfPagesToImages(
       canvas: canvas,
     }).promise;
 
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
     const base64Data = dataUrl.split(",")[1];
     images.push({ base64Data, mimeType: "image/jpeg" });
   }
@@ -495,15 +567,18 @@ ${supportedBiomarkersList}
 1. **Patient Result vs Reference Range**:
    - Only extract the patient's **actual observed result value**.
    - NEVER extract the biological reference interval / normal range limits.
-2. **Handwriting & Scans**:
+2. **DECIMAL POINT ACCURACY & NUMBER EXTRACTION (STRICT)**:
+   - Pay extreme attention to decimal points in all numbers (e.g., '8.03' must NEVER be read as '803', '1.12' must NEVER be read as '112', '0.9' must NEVER be read as '90' or '9').
+   - In printed tables, dot-matrix reports, and scans, decimal points may be small, faint, or slightly separated. ALWAYS preserve decimal precision.
+   - Cross-check standard clinical reference intervals on the same row to confirm the order of magnitude if a decimal point is faint or questionable (e.g. AST / SGOT normal reference is 17-59 U/L; a value of '8.03' is 8.03, NOT 803).
+3. **Handwriting & Scans**:
    - Read cursive doctor handwriting, handwritten numbers, tick marks, rubber stamp values, and low-contrast scanned text carefully.
-   - If a number has a decimal point (e.g., "1.1" vs "11" for Serum Creatinine), ensure correct decimal interpretation based on standard clinical ranges.
-3. **Unit Normalization**:
+4. **Unit Normalization**:
    - If glucose is in mmol/L, convert to mg/dL (multiply by 18).
    - If creatinine is in µmol/L, convert to mg/dL (divide by 88.4).
    - If cholesterol is in mmol/L, convert to mg/dL (multiply by 38.67).
-   - Output all values in standard numerical units.
-4. **Collection Date**:
+   - Output all values in standard numerical units as floating-point numbers.
+5. **Collection Date**:
    - Extract the specimen collection date or report date in "YYYY-MM-DD" format. If multiple dates appear, prioritize the collection/specimen date. If not found, return null.
 
 Return your response in this EXACT JSON structure:

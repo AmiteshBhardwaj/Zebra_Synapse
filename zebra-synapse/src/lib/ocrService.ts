@@ -15,6 +15,8 @@ export interface OcrExtractionResult {
 function cleanOcrText(rawText: string): string {
   return rawText
     .replace(/\r/g, "\n")
+    .replace(/(\d+)\s*([.,·])\s*(\d+)/g, "$1.$3")
+    .replace(/(\d+)\s*,\s*(\d{1,2})(?!\d)/g, "$1.$2")
     .replace(/[ \t]+/g, " ")
     .replace(/\b(mg\s*\/\s*dL|mg\s*\/\s*dl|mg\s*\/dl|mg\/dL)\b/gi, "mg/dL")
     .replace(/\b(g\s*\/\s*dL|g\s*\/\s*dl|g\s*\/dl|g\/dL)\b/gi, "g/dL")
@@ -43,6 +45,9 @@ export async function extractTextFromImagesWithOcr(
   try {
     onProgress?.(5, "Initializing local OCR engine...");
     worker = await createWorker("eng");
+    await worker.setParameters({
+      preserve_interword_spaces: "1",
+    });
 
     const totalPages = images.length;
 
