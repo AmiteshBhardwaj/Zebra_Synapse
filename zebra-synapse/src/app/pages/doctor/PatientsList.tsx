@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
 import {
+  CARE_RELATIONSHIPS_FALLBACK_SELECT,
   CARE_RELATIONSHIPS_LIST_SELECT,
   mapRowToListItem,
   type CareRelationshipListRow,
@@ -51,11 +52,25 @@ export default function PatientsList() {
     }
     setLoading(true);
     setError(null);
-    const { data, error: qErr } = await sb
+    let { data, error: qErr } = await sb
       .from("care_relationships")
       .select(CARE_RELATIONSHIPS_LIST_SELECT)
       .eq("doctor_id", user.id)
       .order("created_at", { ascending: false });
+
+    // Automatic fallback if remote database lacks height_cm / weight_kg columns
+    if (qErr && (qErr.message.includes("height_cm") || qErr.message.includes("does not exist"))) {
+      const fallback = await sb
+        .from("care_relationships")
+        .select(CARE_RELATIONSHIPS_FALLBACK_SELECT)
+        .eq("doctor_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (!fallback.error) {
+        data = fallback.data;
+        qErr = null;
+      }
+    }
 
     if (qErr) {
       setError(qErr.message);
@@ -184,7 +199,7 @@ export default function PatientsList() {
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <Input
             placeholder="Search patients by name, condition, or status..."
-            className={`pl-11 ${portalInputClass}`}
+            className={`!pl-11 ${portalInputClass}`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             disabled={loading}

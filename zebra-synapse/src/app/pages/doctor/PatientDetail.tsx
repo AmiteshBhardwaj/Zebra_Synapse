@@ -45,6 +45,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
 import { generateDeterministicExercisePlan } from "../../../lib/exercisePlan";
 import {
+  CARE_RELATIONSHIPS_FALLBACK_SELECT,
   CARE_RELATIONSHIPS_LIST_SELECT,
   formatBloodPressure,
   formatDisplayDate,
@@ -342,12 +343,26 @@ export default function PatientDetail() {
     }
     setLoading(true);
     setLoadError(null);
-    const { data, error: qErr } = await sb
+    let { data, error: qErr } = await sb
       .from("care_relationships")
       .select(CARE_RELATIONSHIPS_LIST_SELECT)
       .eq("doctor_id", user.id)
       .eq("patient_id", patientId)
       .maybeSingle();
+
+    if (qErr && (qErr.message.includes("height_cm") || qErr.message.includes("does not exist"))) {
+      const fallback = await sb
+        .from("care_relationships")
+        .select(CARE_RELATIONSHIPS_FALLBACK_SELECT)
+        .eq("doctor_id", user.id)
+        .eq("patient_id", patientId)
+        .maybeSingle();
+
+      if (!fallback.error) {
+        data = fallback.data;
+        qErr = null;
+      }
+    }
 
     if (qErr) {
       setLoadError(qErr.message);
