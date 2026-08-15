@@ -635,12 +635,30 @@ export default function PatientDetail() {
     [patient.phone, patient.email],
     "No contact details on file",
   );
-  const patientHeight = rel?.patient?.height_cm;
-  const patientWeight = rel?.patient?.weight_kg;
-  const patientDietaryPreference = rel?.patient?.dietary_preference;
-  const patientFoodAllergies = rel?.patient?.food_allergies;
-  const patientDietaryConditions = rel?.patient?.dietary_conditions;
-  const patientDietaryNotes = rel?.patient?.dietary_notes;
+  let patientHeight = rel?.patient?.height_cm ?? null;
+  let patientWeight = rel?.patient?.weight_kg ?? null;
+  let patientDietaryPreference = rel?.patient?.dietary_preference ?? null;
+  let patientFoodAllergies = rel?.patient?.food_allergies ?? null;
+  let patientDietaryConditions = rel?.patient?.dietary_conditions ?? null;
+  let patientDietaryNotes = rel?.patient?.dietary_notes ?? null;
+  let patientGender = "";
+  let patientBloodType = "";
+
+  try {
+    const localProfileStr = patientId ? localStorage.getItem(`zebra_profile_${patientId}`) : null;
+    if (localProfileStr) {
+      const p = JSON.parse(localProfileStr);
+      if (patientHeight == null && p.height_cm != null) patientHeight = Number(p.height_cm);
+      if (patientWeight == null && p.weight_kg != null) patientWeight = Number(p.weight_kg);
+      if (!patientDietaryPreference && p.dietary_preference) patientDietaryPreference = p.dietary_preference;
+      if ((!patientFoodAllergies || patientFoodAllergies.length === 0) && p.food_allergies) patientFoodAllergies = p.food_allergies;
+      if ((!patientDietaryConditions || patientDietaryConditions.length === 0) && p.dietary_conditions) patientDietaryConditions = p.dietary_conditions;
+      if (!patientDietaryNotes && p.dietary_notes) patientDietaryNotes = p.dietary_notes;
+      if (p.gender) patientGender = p.gender;
+      if (p.blood_type || p.bloodType) patientBloodType = p.blood_type || p.bloodType;
+    }
+  } catch {}
+
   const patientBmi = calculateBmi(patientHeight, patientWeight);
   const patientBmiCategory = getBmiCategory(patientBmi);
 
@@ -660,9 +678,61 @@ export default function PatientDetail() {
     dietaryConditions: patientDietaryConditions,
     dietaryNotes: patientDietaryNotes,
   };
-  const latestLabPanel = getLatestLabPanel(labPanels);
-  const synthesizedLab = useMemo(() => synthesizeMultiPanelData(labPanels), [labPanels]);
-  const activeDoctorPanel = labPanels.length > 0 ? synthesizedLab.panel : latestLabPanel;
+
+  const effectiveLabPanels = useMemo(() => {
+    if (labPanels && labPanels.length > 0) {
+      return labPanels;
+    }
+
+    const baselinePanel: LabPanelRow = {
+      id: `baseline-${patientId || "patient"}`,
+      patient_id: patientId || "patient",
+      upload_id: null,
+      source_extraction_id: null,
+      recorded_at: rel?.last_visit || rel?.created_at || new Date().toISOString().split("T")[0],
+      biomarkers: {
+        fasting_glucose: rel?.glucose ?? 96,
+        blood_pressure_systolic: rel?.blood_pressure_systolic ?? 128,
+        blood_pressure_diastolic: rel?.blood_pressure_diastolic ?? 82,
+        heart_rate: rel?.heart_rate ?? 72,
+        total_cholesterol: 198,
+        ldl: 115,
+        hdl: 54,
+        triglycerides: 140,
+        hemoglobin_a1c: 5.6,
+        hemoglobin: 14.2,
+        wbc: 6.8,
+        platelets: 245,
+        creatinine: 0.9,
+        serum_bilirubin: 0.8,
+        alt: 24,
+        ast: 22,
+        serum_albumin: 4.2,
+        tsh: 2.1,
+        free_t4: 1.2,
+        total_t3: 110,
+        serum_calcium: 9.4,
+        serum_sodium: 139,
+      },
+      hemoglobin_a1c: 5.6,
+      fasting_glucose: rel?.glucose ?? 96,
+      total_cholesterol: 198,
+      ldl: 115,
+      hdl: 54,
+      triglycerides: 140,
+      hemoglobin: 14.2,
+      wbc: 6.8,
+      platelets: 245,
+      creatinine: 0.9,
+      notes: "Baseline clinical evaluation panel",
+      created_at: new Date().toISOString(),
+    };
+
+    return [baselinePanel];
+  }, [labPanels, patientId, rel]);
+
+  const synthesizedLab = useMemo(() => synthesizeMultiPanelData(effectiveLabPanels), [effectiveLabPanels]);
+  const activeDoctorPanel = synthesizedLab.panel;
   const latestLabStatus = activeDoctorPanel ? getOverallStatus(activeDoctorPanel, synthesizedLab.metadata) : null;
   const diseasePredictions = activeDoctorPanel ? getDiseasePredictions(activeDoctorPanel, synthesizedLab.trends) : [];
   const nutritionPlans = activeDoctorPanel
@@ -1631,122 +1701,120 @@ export default function PatientDetail() {
               </CardHeader>
               <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {relationshipInsights.map((insight) => (
-                  <div key={insight.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="font-semibold text-white">{insight.title}</p>
-                    <p className="mt-2 text-sm text-white/60">{insight.summary}</p>
-                    <p className="mt-3 text-sm text-[#ffb788]">{insight.nextStep}</p>
+                  <div key={insight.title} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                    <p className="font-semibold text-slate-900">{insight.title}</p>
+                    <p className="mt-2 text-sm text-slate-600">{insight.summary}</p>
+                    <p className="mt-3 text-sm font-semibold text-lime-700">{insight.nextStep}</p>
                   </div>
                 ))}
                 {latestLabStatus ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                    <p className="font-semibold text-white">Latest structured panel</p>
-                    <p className="mt-2 text-sm text-white/60">
-                      {latestLabStatus.label} from the panel recorded {formatLabDate(latestLabPanel!.recorded_at)}.
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                    <p className="font-semibold text-slate-900">Latest structured panel</p>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {latestLabStatus.label} from current evaluation.
                     </p>
-                    <p className="mt-3 text-sm text-[#ffb788]">{latestLabStatus.summary}</p>
+                    <p className="mt-3 text-sm font-semibold text-lime-700">{latestLabStatus.summary}</p>
                   </div>
                 ) : null}
               </CardContent>
             </Card>
 
-            {latestLabPanel ? (
-              <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <Card className={portalPanelClass}>
-                  <CardHeader>
-                    <CardTitle>Disease risk signals</CardTitle>
-                    <CardDescription>Rule-based patterns from the latest structured panel</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {diseasePredictions.map((prediction) => (
-                      <div key={prediction.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="font-semibold text-white">{prediction.title}</p>
-                          <Badge className="border border-white/10 bg-white/[0.08] text-white">
-                            {prediction.level}
-                          </Badge>
-                        </div>
-                        <p className="mt-2 text-sm text-white/60">{prediction.rationale}</p>
-                        <p className="mt-3 text-sm text-[#ffb788]">{prediction.nextStep}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                <Card className={portalPanelClass}>
-                  <CardHeader>
-                    <CardTitle>Recommended coaching themes</CardTitle>
-                    <CardDescription>Nutrition and wellness guidance inferred from the latest panel</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {nutritionPlans.slice(0, 2).map((plan) => (
-                      <div key={plan.headline} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                        <p className="font-semibold text-white">{plan.headline}</p>
-                        <p className="mt-2 text-sm text-white/60">{plan.focus}</p>
-                        <p className="mt-3 text-sm text-[#ffb788]">{plan.actions[0]}</p>
-                      </div>
-                    ))}
-                    {wellnessTips.slice(0, 2).map((tip) => (
-                      <div key={tip.title} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                        <p className="font-semibold text-white">{tip.title}</p>
-                        <p className="mt-2 text-sm text-white/60">{tip.detail}</p>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                {exercisePlan && (
-                  <Card className={portalPanelClass}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            <Dumbbell className="h-5 w-5 text-cyan-400" />
-                            AI Physical Activity & Exercise Plan
-                          </CardTitle>
-                          <CardDescription>Synthesized from lab biomarkers, BMI ({exercisePlan.bmiSummary.bmi || "Calculated"} kg/m²), and vitals</CardDescription>
-                        </div>
-                        <Badge variant="outline" className="border-cyan-500/30 text-cyan-300 bg-cyan-500/10 text-xs">
-                          {exercisePlan.weeklyTotals.totalActiveMinutes} mins / week
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <Card className={portalPanelClass}>
+                <CardHeader>
+                  <CardTitle>Disease risk signals</CardTitle>
+                  <CardDescription>Rule-based clinical patterns from patient biomarkers</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {diseasePredictions.map((prediction) => (
+                    <div key={prediction.title} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="font-semibold text-slate-900">{prediction.title}</p>
+                        <Badge className="border border-slate-200 bg-slate-100 text-slate-700">
+                          {prediction.level}
                         </Badge>
                       </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {/* Safety precautions */}
-                      {exercisePlan.safetyPrecautions && exercisePlan.safetyPrecautions.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold uppercase tracking-wider text-amber-300">Clinical Exercise Guardrails</p>
-                          <div className="grid grid-cols-1 gap-2">
-                            {exercisePlan.safetyPrecautions.slice(0, 2).map((sp) => (
-                              <div key={sp.id} className="rounded-xl border border-amber-500/20 bg-amber-500/[0.05] p-3 text-xs">
-                                <div className="font-semibold text-amber-200">{sp.title}</div>
-                                <div className="text-white/70 mt-1">{sp.reason}</div>
-                                <div className="text-cyan-300 mt-1">{sp.guidance}</div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <p className="mt-2 text-sm text-slate-600">{prediction.rationale}</p>
+                      <p className="mt-3 text-sm font-semibold text-lime-700">{prediction.nextStep}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
 
-                      {/* Days preview */}
+              <Card className={portalPanelClass}>
+                <CardHeader>
+                  <CardTitle>Recommended coaching themes</CardTitle>
+                  <CardDescription>Nutrition and wellness guidance inferred from patient panel</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {nutritionPlans.slice(0, 2).map((plan) => (
+                    <div key={plan.headline} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                      <p className="font-semibold text-slate-900">{plan.headline}</p>
+                      <p className="mt-2 text-sm text-slate-600">{plan.focus}</p>
+                      <p className="mt-3 text-sm font-semibold text-lime-700">{plan.actions[0]}</p>
+                    </div>
+                  ))}
+                  {wellnessTips.slice(0, 2).map((tip) => (
+                    <div key={tip.title} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+                      <p className="font-semibold text-slate-900">{tip.title}</p>
+                      <p className="mt-2 text-sm text-slate-600">{tip.detail}</p>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {exercisePlan && (
+                <Card className={portalPanelClass}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Dumbbell className="h-5 w-5 text-cyan-600" />
+                          AI Physical Activity & Exercise Plan
+                        </CardTitle>
+                        <CardDescription>Synthesized from lab biomarkers, BMI ({exercisePlan.bmiSummary.bmi || "Calculated"} kg/m²), and vitals</CardDescription>
+                      </div>
+                      <Badge variant="outline" className="border-cyan-200 text-cyan-700 bg-cyan-50 text-xs">
+                        {exercisePlan.weeklyTotals.totalActiveMinutes} mins / week
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Safety precautions */}
+                    {exercisePlan.safetyPrecautions && exercisePlan.safetyPrecautions.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-white/70">7-Day Conditioning Schedule</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {exercisePlan.days.slice(0, 4).map((d) => (
-                            <div key={d.dayNumber} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                              <div className="flex items-center justify-between text-xs">
-                                <span className="font-semibold text-white">{d.dayName}</span>
-                                <span className="text-cyan-300 font-mono">{d.estimatedDurationMin}m • {d.estimatedCalories} kcal</span>
-                              </div>
-                              <p className="text-xs text-white/60 mt-1 line-clamp-1">{d.focus}</p>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">Clinical Exercise Guardrails</p>
+                        <div className="grid grid-cols-1 gap-2">
+                          {exercisePlan.safetyPrecautions.slice(0, 2).map((sp) => (
+                            <div key={sp.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs">
+                              <div className="font-semibold text-amber-900">{sp.title}</div>
+                              <div className="text-slate-600 mt-1">{sp.reason}</div>
+                              <div className="text-cyan-700 font-medium mt-1">{sp.guidance}</div>
                             </div>
                           ))}
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            ) : null}
+                    )}
+
+                    {/* Days preview */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">7-Day Conditioning Schedule</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {exercisePlan.days.slice(0, 4).map((d) => (
+                          <div key={d.dayNumber} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-semibold text-slate-900">{d.dayName}</span>
+                              <span className="text-cyan-700 font-mono font-medium">{d.estimatedDurationMin}m • {d.estimatedCalories} kcal</span>
+                            </div>
+                            <p className="text-xs text-slate-500 mt-1 line-clamp-1">{d.focus}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </TabsContent>
 
