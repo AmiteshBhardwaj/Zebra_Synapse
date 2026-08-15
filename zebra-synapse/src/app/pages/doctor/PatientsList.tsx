@@ -3,12 +3,8 @@ import { useNavigate } from "react-router";
 import {
   Activity,
   AlertTriangle,
-  ArrowRight,
   ArrowUpRight,
   Bot,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
   ExternalLink,
   Flame,
   Heart,
@@ -46,8 +42,6 @@ export default function PatientsList() {
   const [search, setSearch] = useState("");
   const [filterMode, setFilterMode] = useState<"today" | "all" | "risk">("today");
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date(2026, 7, 15)); // August 2026
-  const [selectedDay, setSelectedDay] = useState<number>(15);
   const [dailyReadModalOpen, setDailyReadModalOpen] = useState(false);
 
   // Sync with global header search if triggered
@@ -172,32 +166,6 @@ export default function PatientsList() {
     return name.startsWith("Dr.") ? name : `Dr. ${name}`;
   }, [profile]);
 
-  // Generate calendar grid for current view
-  const calendarDays = useMemo(() => {
-    const year = currentMonthDate.getFullYear();
-    const month = currentMonthDate.getMonth();
-    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 is Sunday
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    const days = [];
-    for (let i = 0; i < firstDayIndex; i++) {
-      days.push({ day: null, isCurrentMonth: false });
-    }
-    for (let d = 1; d <= daysInMonth; d++) {
-      days.push({
-        day: d,
-        isCurrentMonth: true,
-        hasDot: d === 14 || d === 15 || d === 20 || d === 22,
-      });
-    }
-    return days;
-  }, [currentMonthDate]);
-
-  const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-
   // Dummy appointment slot generator for visual fidelity
   const getAppointmentSlot = (index: number) => {
     const slots = ["8:00 AM", "9:15 AM", "9:30 AM", "10:15 AM", "11:00 AM", "1:30 PM", "2:45 PM", "4:00 PM"];
@@ -206,193 +174,82 @@ export default function PatientsList() {
 
   return (
     <div className="space-y-5 pb-8 font-poppins">
-      {/* Top Grid: Hero Stats Banner + Calendar Widget */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Hero Card ("Visits for Today") */}
-        <div className="lg:col-span-7 xl:col-span-8 relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#A8DEF7] via-[#D8D9FF] to-[#C7D2FE] p-6 md:p-8 flex flex-col justify-between shadow-lg shadow-[#3E36B0]/5 border border-white/80">
-          {/* Subtle Ambient Shapes */}
-          <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/30 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute bottom-0 right-32 w-48 h-48 bg-[#A8DEF7]/50 rounded-full blur-xl pointer-events-none" />
+      {/* Top Hero Stats Banner */}
+      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#A8DEF7] via-[#D8D9FF] to-[#C7D2FE] p-6 md:p-8 flex flex-col justify-between shadow-lg shadow-[#3E36B0]/5 border border-white/80">
+        {/* Subtle Ambient Shapes */}
+        <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/30 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute bottom-0 right-32 w-48 h-48 bg-[#A8DEF7]/50 rounded-full blur-xl pointer-events-none" />
 
-          {/* Top Greeting & Total Visits */}
-          <div className="relative z-10">
-            <h1 className="text-2xl md:text-3xl font-extrabold text-[#111111] tracking-tight">
-              {greeting} <span className="text-[#3E36B0]">{doctorDisplayName}!</span>
-            </h1>
-            <p className="mt-1 text-xs md:text-sm text-slate-700/80 font-medium">
-              You have {patients.length} linked patient{patients.length === 1 ? "" : "s"} under active clinical surveillance.
+        {/* Top Greeting & Total Visits */}
+        <div className="relative z-10">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-[#111111] tracking-tight">
+            {greeting} <span className="text-[#3E36B0]">{doctorDisplayName}!</span>
+          </h1>
+          <p className="mt-1 text-xs md:text-sm text-slate-700/80 font-medium">
+            You have {patients.length} linked patient{patients.length === 1 ? "" : "s"} under active clinical surveillance.
+          </p>
+
+          <div className="mt-6">
+            <p className="text-xs md:text-sm font-semibold uppercase tracking-wider text-[#3E36B0]">
+              Visits for Today
             </p>
-
-            <div className="mt-6">
-              <p className="text-xs md:text-sm font-semibold uppercase tracking-wider text-[#3E36B0]">
-                Visits for Today
-              </p>
-              <div className="flex items-baseline gap-3 mt-1">
-                <span className="text-4xl md:text-5xl font-black text-[#111111] tracking-tight">
-                  {patients.length > 0 ? patients.length * 4 + 8 : 104}
-                </span>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/70 text-[#3E36B0] border border-white/80">
-                  Active Shift
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Sub-Metrics Pill Cards & Doctor Cutout Graphic */}
-          <div className="relative z-10 mt-6 md:mt-8 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
-            {/* New Patients vs Returning Patients Cards */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* New Patients */}
-              <div className="bg-white/85 backdrop-blur-md rounded-2xl p-3.5 shadow-sm border border-white min-w-[130px]">
-                <p className="text-[11px] font-semibold text-slate-500">New Patients</p>
-                <div className="flex items-center justify-between gap-2 mt-1">
-                  <span className="text-xl font-bold text-[#111111]">
-                    {Math.max(1, Math.floor(patients.length * 0.4))}
-                  </span>
-                  <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                    <TrendingUp className="w-3 h-3 mr-0.5" />
-                    51%
-                  </span>
-                </div>
-              </div>
-
-              {/* Old Patients */}
-              <div className="bg-white/85 backdrop-blur-md rounded-2xl p-3.5 shadow-sm border border-white min-w-[130px]">
-                <p className="text-[11px] font-semibold text-slate-500">Old Patients</p>
-                <div className="flex items-center justify-between gap-2 mt-1">
-                  <span className="text-xl font-bold text-[#111111]">
-                    {Math.max(2, Math.ceil(patients.length * 0.6))}
-                  </span>
-                  <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                    <TrendingDown className="w-3 h-3 mr-0.5" />
-                    26%
-                  </span>
-                </div>
-              </div>
-
-              {/* Link Patient Dialog Trigger */}
-              <div className="self-center">
-                <LinkPatientDialog onLinked={() => void load()} />
-              </div>
-            </div>
-
-            {/* Doctor Graphic Badge on right */}
-            <div className="hidden md:flex items-center gap-3 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/60">
-              <div className="w-10 h-10 rounded-full bg-[#3E36B0] text-white flex items-center justify-center shadow-md">
-                <Stethoscope className="w-5 h-5 text-[#A8DEF7]" />
-              </div>
-              <div className="text-left">
-                <p className="text-xs font-bold text-[#111111]">Zebra Synapse AI</p>
-                <p className="text-[10px] text-slate-600">Decision Support Online</p>
-              </div>
+            <div className="flex items-baseline gap-3 mt-1">
+              <span className="text-4xl md:text-5xl font-black text-[#111111] tracking-tight">
+                {patients.length > 0 ? patients.length * 4 + 8 : 104}
+              </span>
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-white/70 text-[#3E36B0] border border-white/80">
+                Active Shift
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Right Calendar & Upcoming Events Card */}
-        <div className="lg:col-span-5 xl:col-span-4 bg-white rounded-[26px] p-5 md:p-6 shadow-sm border border-slate-200/70 flex flex-col justify-between">
-          {/* Calendar Header */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-[#111111] flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#3E36B0]" />
-                Calendar
-              </h2>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-600 bg-[#F4F6FC] px-2.5 py-1 rounded-lg">
-                  {monthNames[currentMonthDate.getMonth()]} {currentMonthDate.getFullYear()}
+        {/* Sub-Metrics Pill Cards & Doctor Cutout Graphic */}
+        <div className="relative z-10 mt-6 md:mt-8 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+          {/* New Patients vs Returning Patients Cards */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* New Patients */}
+            <div className="bg-white/85 backdrop-blur-md rounded-2xl p-3.5 shadow-sm border border-white min-w-[130px]">
+              <p className="text-[11px] font-semibold text-slate-500">New Patients</p>
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <span className="text-xl font-bold text-[#111111]">
+                  {Math.max(1, Math.floor(patients.length * 0.4))}
                 </span>
-                <div className="flex items-center gap-1 text-slate-400">
-                  <button
-                    onClick={() =>
-                      setCurrentMonthDate(
-                        new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1)
-                      )
-                    }
-                    className="p-1 hover:text-[#3E36B0] hover:bg-slate-100 rounded-md transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      setCurrentMonthDate(
-                        new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1)
-                      )
-                    }
-                    className="p-1 hover:text-[#3E36B0] hover:bg-slate-100 rounded-md transition-colors"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
+                <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
+                  <TrendingUp className="w-3 h-3 mr-0.5" />
+                  51%
+                </span>
               </div>
             </div>
 
-            {/* Days of Week Header */}
-            <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400 mb-2">
-              <span>SUN</span>
-              <span>MON</span>
-              <span>TUE</span>
-              <span>WED</span>
-              <span>THU</span>
-              <span>FRI</span>
-              <span>SAT</span>
+            {/* Old Patients */}
+            <div className="bg-white/85 backdrop-blur-md rounded-2xl p-3.5 shadow-sm border border-white min-w-[130px]">
+              <p className="text-[11px] font-semibold text-slate-500">Old Patients</p>
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <span className="text-xl font-bold text-[#111111]">
+                  {Math.max(2, Math.ceil(patients.length * 0.6))}
+                </span>
+                <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                  <TrendingDown className="w-3 h-3 mr-0.5" />
+                  26%
+                </span>
+              </div>
             </div>
 
-            {/* Mini Calendar Grid */}
-            <div className="grid grid-cols-7 gap-1 text-center text-xs">
-              {calendarDays.map((item, idx) => {
-                if (!item.isCurrentMonth || item.day === null) {
-                  return <div key={`empty-${idx}`} className="h-7 w-7" />;
-                }
-                const isSelected = item.day === selectedDay;
-                return (
-                  <button
-                    key={`day-${item.day}`}
-                    onClick={() => setSelectedDay(item.day!)}
-                    className={`h-7 w-7 mx-auto rounded-full flex flex-col items-center justify-center font-medium transition-all relative ${
-                      isSelected
-                        ? "bg-[#3E36B0] text-white font-bold shadow-md shadow-[#3E36B0]/30"
-                        : "text-slate-700 hover:bg-[#F4F6FC]"
-                    }`}
-                  >
-                    <span>{item.day}</span>
-                    {item.hasDot && !isSelected && (
-                      <span className="w-1 h-1 rounded-full bg-[#F62088] absolute bottom-1" />
-                    )}
-                  </button>
-                );
-              })}
+            {/* Link Patient Dialog Trigger */}
+            <div className="self-center">
+              <LinkPatientDialog onLinked={() => void load()} />
             </div>
           </div>
 
-          {/* Upcoming Card Section */}
-          <div className="mt-5 pt-4 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-2.5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Upcoming Visits</h3>
-              <button
-                onClick={() => navigate("/doctor/appointments")}
-                className="text-xs font-semibold text-[#3E36B0] hover:underline cursor-pointer"
-              >
-                View All
-              </button>
+          {/* Doctor Graphic Badge on right */}
+          <div className="hidden md:flex items-center gap-3 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/60">
+            <div className="w-10 h-10 rounded-full bg-[#3E36B0] text-white flex items-center justify-center shadow-md">
+              <Stethoscope className="w-5 h-5 text-[#A8DEF7]" />
             </div>
-
-            <div
-              onClick={() => navigate("/doctor/appointments")}
-              className="flex items-center gap-3 p-3 rounded-2xl bg-[#F4F6FC] hover:bg-[#EBF1FC] border border-slate-200/50 cursor-pointer transition-all group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-[#3E36B0] text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-sm">
-                <Calendar className="w-4 h-4 text-[#A8DEF7]" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-[#111111] truncate group-hover:text-[#3E36B0] transition-colors">
-                  Marcus Sterling · Fabry Disease Review
-                </p>
-                <p className="text-[10px] text-slate-500 font-medium mt-0.5">
-                  15 Aug, 2026 · 10:30 AM (Teleconsult)
-                </p>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#3E36B0] group-hover:translate-x-0.5 transition-all" />
+            <div className="text-left">
+              <p className="text-xs font-bold text-[#111111]">Zebra Synapse AI</p>
+              <p className="text-[10px] text-slate-600">Decision Support Online</p>
             </div>
           </div>
         </div>

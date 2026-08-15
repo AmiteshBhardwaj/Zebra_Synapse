@@ -11,6 +11,7 @@ import {
   XCircle,
   AlertTriangle,
   FileText,
+  ArrowRight,
   ArrowUpRight,
   ChevronLeft,
   ChevronRight,
@@ -230,7 +231,9 @@ export default function DoctorAppointments() {
   const [tabFilter, setTabFilter] = useState<"all" | "today" | "upcoming" | "completed" | "teleconsult">("today");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string>("2026-08-15");
+  const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date(2026, 7, 15)); // August 2026
+  const [selectedDay, setSelectedDay] = useState<number | null>(15);
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   // Modals
@@ -261,6 +264,72 @@ export default function DoctorAppointments() {
 
   // Complete Form
   const [clinicalNotes, setClinicalNotes] = useState<string>("");
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  // Dynamic calendar days with appointment indicator dots
+  const calendarDays = useMemo(() => {
+    const year = currentMonthDate.getFullYear();
+    const month = currentMonthDate.getMonth();
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push({ day: null, isCurrentMonth: false, dateStr: "" });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const hasAppointments = appointments.some(
+        (a) => a.date === dateStr && a.status !== "Cancelled"
+      );
+      days.push({
+        day: d,
+        isCurrentMonth: true,
+        dateStr,
+        hasDot: hasAppointments,
+      });
+    }
+    return days;
+  }, [currentMonthDate, appointments]);
+
+  // Upcoming confirmed visits for the calendar sidebar
+  const upcomingVisitsList = useMemo(() => {
+    return appointments
+      .filter((a) => a.status === "Confirmed" && a.date >= "2026-08-15")
+      .sort((a, b) => {
+        const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+        if (dateDiff !== 0) return dateDiff;
+        return a.time.localeCompare(b.time);
+      });
+  }, [appointments]);
+
+  const handleSelectCalendarDay = (day: number) => {
+    const year = currentMonthDate.getFullYear();
+    const month = currentMonthDate.getMonth();
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+    if (selectedDay === day && selectedCalendarDate === dateStr) {
+      setSelectedDay(null);
+      setSelectedCalendarDate(null);
+    } else {
+      setSelectedDay(day);
+      setSelectedCalendarDate(dateStr);
+    }
+  };
+
+  const handleTabClick = (tabId: "all" | "today" | "upcoming" | "completed" | "teleconsult") => {
+    setTabFilter(tabId);
+    setSelectedCalendarDate(null);
+    if (tabId === "today") {
+      setSelectedDay(15);
+    } else {
+      setSelectedDay(null);
+    }
+  };
 
   // Persist appointments in localStorage
   useEffect(() => {
@@ -326,15 +395,20 @@ export default function DoctorAppointments() {
     let list = [...appointments];
     const todayStr = "2026-08-15";
 
-    // Tab filtering
-    if (tabFilter === "today") {
-      list = list.filter((a) => a.date === todayStr);
-    } else if (tabFilter === "upcoming") {
-      list = list.filter((a) => a.date >= todayStr && a.status === "Confirmed");
-    } else if (tabFilter === "completed") {
-      list = list.filter((a) => a.status === "Completed");
-    } else if (tabFilter === "teleconsult") {
-      list = list.filter((a) => a.type === "teleconsult");
+    // Calendar day filter if selected
+    if (selectedCalendarDate) {
+      list = list.filter((a) => a.date === selectedCalendarDate);
+    } else {
+      // Tab filtering
+      if (tabFilter === "today") {
+        list = list.filter((a) => a.date === todayStr);
+      } else if (tabFilter === "upcoming") {
+        list = list.filter((a) => a.date >= todayStr && a.status === "Confirmed");
+      } else if (tabFilter === "completed") {
+        list = list.filter((a) => a.status === "Completed");
+      } else if (tabFilter === "teleconsult") {
+        list = list.filter((a) => a.type === "teleconsult");
+      }
     }
 
     // Type filter
@@ -360,7 +434,7 @@ export default function DoctorAppointments() {
       if (dateDiff !== 0) return dateDiff;
       return a.time.localeCompare(b.time);
     });
-  }, [appointments, tabFilter, typeFilter, searchQuery]);
+  }, [appointments, selectedCalendarDate, tabFilter, typeFilter, searchQuery]);
 
   // Schedule Appointment Handler
   const handleCreateAppointment = (e: React.FormEvent) => {
@@ -621,275 +695,459 @@ export default function DoctorAppointments() {
         </div>
       </div>
 
-      {/* Main Content Area: Controls Bar + Appointments List */}
-      <div className="bg-white rounded-[26px] p-5 md:p-6 shadow-sm border border-slate-200/70 space-y-5">
-        {/* Top Filter and Search Bar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          {/* Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-            {[
-              { id: "today", label: "Today's Schedule" },
-              { id: "upcoming", label: "Upcoming" },
-              { id: "teleconsult", label: "Teleconsults" },
-              { id: "completed", label: "Completed" },
-              { id: "all", label: "All Records" },
-            ].map((tab) => (
+      {/* 2-Column Section: Appointments List + Calendar Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Left Column: Filter and Search Bar + Appointments List */}
+        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+          {/* Active date filter chip banner (if selectedCalendarDate is active) */}
+          {selectedCalendarDate && (
+            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#D8D9FF]/40 border border-[#3E36B0]/20 text-xs shadow-sm">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#3E36B0]" />
+                <span className="font-bold text-[#111111]">
+                  Filtered by Date:{" "}
+                  {new Date(selectedCalendarDate + "T00:00:00").toLocaleDateString("en-US", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </span>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  ({filteredAppointments.length} appointment{filteredAppointments.length === 1 ? "" : "s"})
+                </span>
+              </div>
               <button
-                key={tab.id}
                 type="button"
-                onClick={() => setTabFilter(tab.id as any)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  tabFilter === tab.id
-                    ? "bg-[#3E36B0] text-white shadow-sm"
-                    : "bg-[#F4F6FC] text-slate-600 hover:bg-slate-200/70"
-                }`}
+                onClick={() => {
+                  setSelectedCalendarDate(null);
+                  setSelectedDay(null);
+                }}
+                className="text-xs font-bold text-[#3E36B0] hover:underline cursor-pointer"
               >
-                {tab.label}
+                Clear Date Filter
               </button>
-            ))}
-          </div>
+            </div>
+          )}
 
-          {/* Search & Type Filter */}
-          <div className="flex items-center gap-3">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search patient, disease..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-9 pl-9 pr-3 rounded-xl bg-[#F4F6FC] border border-transparent focus:border-[#3E36B0]/30 text-xs text-[#111111] placeholder:text-slate-400 outline-none transition-all"
-              />
+          <div className="bg-white rounded-[26px] p-5 md:p-6 shadow-sm border border-slate-200/70 space-y-5">
+            {/* Top Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              {/* Tabs */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+                {[
+                  { id: "today", label: "Today's Schedule" },
+                  { id: "upcoming", label: "Upcoming" },
+                  { id: "teleconsult", label: "Teleconsults" },
+                  { id: "completed", label: "Completed" },
+                  { id: "all", label: "All Records" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleTabClick(tab.id as any)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      tabFilter === tab.id && !selectedCalendarDate
+                        ? "bg-[#3E36B0] text-white shadow-sm"
+                        : "bg-[#F4F6FC] text-slate-600 hover:bg-slate-200/70"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search & Type Filter */}
+              <div className="flex items-center gap-2.5">
+                <div className="relative w-full sm:w-48 md:w-56">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search patient, disease..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-9 pl-9 pr-3 rounded-xl bg-[#F4F6FC] border border-transparent focus:border-[#3E36B0]/30 text-xs text-[#111111] placeholder:text-slate-400 outline-none transition-all"
+                  />
+                </div>
+
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="h-9 px-3 rounded-xl bg-[#F4F6FC] border border-slate-200 text-xs font-semibold text-slate-700 outline-none cursor-pointer hover:bg-slate-100 shrink-0"
+                >
+                  <option value="all">All Types</option>
+                  <option value="in-person">In-Person</option>
+                  <option value="teleconsult">Teleconsult</option>
+                  <option value="lab-review">Lab Review</option>
+                  <option value="follow-up">Follow-Up</option>
+                </select>
+              </div>
             </div>
 
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="h-9 px-3 rounded-xl bg-[#F4F6FC] border border-slate-200 text-xs font-semibold text-slate-700 outline-none cursor-pointer hover:bg-slate-100"
-            >
-              <option value="all">All Types</option>
-              <option value="in-person">In-Person</option>
-              <option value="teleconsult">Teleconsult</option>
-              <option value="lab-review">Lab Review</option>
-              <option value="follow-up">Follow-Up</option>
-            </select>
+            {/* Appointments List Render */}
+            {filteredAppointments.length === 0 ? (
+              <div className="py-16 text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-[#F4F6FC] text-slate-400 flex items-center justify-center mx-auto">
+                  <CalendarX className="w-7 h-7" />
+                </div>
+                <p className="text-sm font-bold text-slate-700">No appointments found</p>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  No appointments matching current filters. Click "New Appointment" to schedule an encounter.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCalendarDate(null);
+                    setSelectedDay(null);
+                    setTabFilter("all");
+                    setSearchQuery("");
+                    setTypeFilter("all");
+                  }}
+                  className="mt-2 text-xs font-bold text-[#3E36B0] hover:underline cursor-pointer"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-3.5">
+                {filteredAppointments.map((apt) => {
+                  const isToday = apt.date === "2026-08-15";
+
+                  return (
+                    <div
+                      key={apt.id}
+                      className={`p-4 md:p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                        apt.status === "Completed"
+                          ? "bg-slate-50/70 border-slate-100 opacity-85"
+                          : apt.status === "Cancelled"
+                          ? "bg-rose-50/30 border-rose-100 opacity-75"
+                          : isToday
+                          ? "bg-white border-[#3E36B0]/30 shadow-sm ring-1 ring-[#3E36B0]/10 hover:border-[#3E36B0]"
+                          : "bg-white border-slate-200/70 hover:border-slate-300 shadow-sm"
+                      }`}
+                    >
+                      {/* Left: Patient Info & Details */}
+                      <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                        <div
+                          className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0 shadow-sm ${
+                            apt.type === "teleconsult"
+                              ? "bg-purple-100 text-[#3E36B0]"
+                              : "bg-[#E5ECF9] text-[#3E36B0]"
+                          }`}
+                        >
+                          {getInitials(apt.patientName)}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm md:text-base font-extrabold text-[#111111] leading-tight">
+                              {apt.patientName}
+                            </h3>
+                            {apt.patientAge && (
+                              <span className="text-xs text-slate-400 font-medium">
+                                ({apt.patientAge}y {apt.patientGender ? `· ${apt.patientGender[0]}` : ""})
+                              </span>
+                            )}
+
+                            {/* Status badge */}
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                apt.status === "Confirmed"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : apt.status === "Completed"
+                                ? "bg-slate-100 text-slate-600 border border-slate-200"
+                                : apt.status === "Cancelled"
+                                ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                : "bg-amber-50 text-amber-700 border border-amber-200"
+                              }`}
+                            >
+                              {apt.status}
+                            </span>
+
+                            {/* Type badge */}
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                                apt.type === "teleconsult"
+                                  ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                  : "bg-sky-50 text-[#0284c7] border border-sky-200"
+                              }`}
+                            >
+                              {apt.type === "teleconsult" ? (
+                                <Video className="w-3 h-3" />
+                              ) : (
+                                <MapPin className="w-3 h-3" />
+                              )}
+                              {apt.type === "teleconsult"
+                                ? "Teleconsult"
+                                : apt.type === "lab-review"
+                                ? "Lab Review"
+                                : apt.type === "follow-up"
+                                ? "Follow-Up"
+                                : "In-Person"}
+                            </span>
+                          </div>
+
+                          <p className="text-xs font-semibold text-slate-600 mt-0.5 truncate">
+                            {apt.condition}
+                          </p>
+
+                          {apt.notes && (
+                            <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
+                              Note: {apt.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Center: Date & Time Schedule Box */}
+                      <div className="flex items-center gap-4 bg-[#F4F6FC] px-3.5 py-2 rounded-xl border border-slate-200/60 shrink-0">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-[#3E36B0]" />
+                          <div className="text-left">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Date</p>
+                            <p className="text-xs font-bold text-[#111111]">{apt.date}</p>
+                          </div>
+                        </div>
+
+                        <div className="h-6 w-px bg-slate-200" />
+
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-[#3E36B0]" />
+                          <div className="text-left">
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Slot</p>
+                            <p className="text-xs font-bold text-[#111111]">{apt.time}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Action Buttons */}
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+                        {apt.type === "teleconsult" && apt.status === "Confirmed" && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/doctor/teleconsult?id=${apt.id}&patient=${encodeURIComponent(
+                                  apt.patientName
+                                )}&patientId=${apt.patientId || ""}`
+                              )
+                            }
+                            className="h-9 px-3.5 rounded-xl bg-[#3E36B0] hover:bg-[#312B91] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                            title="Start Teleconsult Video Call"
+                          >
+                            <Video className="w-3.5 h-3.5 text-[#A8DEF7]" />
+                            <span>Start Call</span>
+                          </button>
+                        )}
+
+                        {apt.status === "Confirmed" && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAppointment(apt);
+                                setCompleteModalOpen(true);
+                              }}
+                              className="h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                              title="Complete Encounter"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span className="hidden md:inline">Complete</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAppointment(apt);
+                                setRescheduleDate(apt.date);
+                                setRescheduleTime(apt.time);
+                                setRescheduleModalOpen(true);
+                              }}
+                              className="h-9 px-3 rounded-xl bg-[#F4F6FC] hover:bg-[#E5ECF9] text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
+                              title="Reschedule"
+                            >
+                              Reschedule
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedAppointment(apt);
+                                setCancelModalOpen(true);
+                              }}
+                              className="h-9 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer"
+                              title="Cancel"
+                            >
+                              ✕
+                            </button>
+                          </>
+                        )}
+
+                        {apt.patientId && (
+                          <button
+                            type="button"
+                            onClick={() => navigate(`/doctor/patient/${apt.patientId}`)}
+                            className="h-9 px-3 rounded-xl bg-[#F4F6FC] hover:bg-[#E5ECF9] text-[#3E36B0] border border-slate-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                            title="View Patient Dossier"
+                          >
+                            <User className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Dossier</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Appointments List Render */}
-        {filteredAppointments.length === 0 ? (
-          <div className="py-16 text-center space-y-3">
-            <div className="w-14 h-14 rounded-2xl bg-[#F4F6FC] text-slate-400 flex items-center justify-center mx-auto">
-              <CalendarX className="w-7 h-7" />
-            </div>
-            <p className="text-sm font-bold text-slate-700">No appointments found</p>
-            <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              No appointments matching current filters. Click "New Appointment" to schedule an encounter.
-            </p>
-            <button
-              onClick={() => {
-                setTabFilter("all");
-                setSearchQuery("");
-                setTypeFilter("all");
-              }}
-              className="mt-2 text-xs font-bold text-[#3E36B0] hover:underline cursor-pointer"
-            >
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-3.5">
-            {filteredAppointments.map((apt) => {
-              const isToday = apt.date === "2026-08-15";
-              const isPast = apt.status === "Completed" || apt.status === "Cancelled";
+        {/* Right Column: Calendar Widget & Upcoming Visits */}
+        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
+          <div className="bg-white rounded-[26px] p-5 md:p-6 shadow-sm border border-slate-200/70 flex flex-col justify-between">
+            {/* Calendar Header */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base font-bold text-[#111111] flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#3E36B0]" />
+                  Calendar
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-600 bg-[#F4F6FC] px-2.5 py-1 rounded-lg">
+                    {monthNames[currentMonthDate.getMonth()]} {currentMonthDate.getFullYear()}
+                  </span>
+                  <div className="flex items-center gap-1 text-slate-400">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentMonthDate(
+                          new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1)
+                        )
+                      }
+                      className="p-1 hover:text-[#3E36B0] hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentMonthDate(
+                          new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1)
+                        )
+                      }
+                      className="p-1 hover:text-[#3E36B0] hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-              return (
-                <div
-                  key={apt.id}
-                  className={`p-4 md:p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                    apt.status === "Completed"
-                      ? "bg-slate-50/70 border-slate-100 opacity-85"
-                      : apt.status === "Cancelled"
-                      ? "bg-rose-50/30 border-rose-100 opacity-75"
-                      : isToday
-                      ? "bg-white border-[#3E36B0]/30 shadow-sm ring-1 ring-[#3E36B0]/10 hover:border-[#3E36B0]"
-                      : "bg-white border-slate-200/70 hover:border-slate-300 shadow-sm"
-                  }`}
-                >
-                  {/* Left: Patient Info & Details */}
-                  <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-                    <div
-                      className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0 shadow-sm ${
-                        apt.type === "teleconsult"
-                          ? "bg-purple-100 text-[#3E36B0]"
-                          : "bg-[#E5ECF9] text-[#3E36B0]"
+              {/* Days of Week Header */}
+              <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400 mb-2">
+                <span>SUN</span>
+                <span>MON</span>
+                <span>TUE</span>
+                <span>WED</span>
+                <span>THU</span>
+                <span>FRI</span>
+                <span>SAT</span>
+              </div>
+
+              {/* Mini Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1 text-center text-xs">
+                {calendarDays.map((item, idx) => {
+                  if (!item.isCurrentMonth || item.day === null) {
+                    return <div key={`empty-${idx}`} className="h-7 w-7" />;
+                  }
+                  const isSelected = item.day === selectedDay;
+                  return (
+                    <button
+                      key={`day-${item.day}`}
+                      type="button"
+                      onClick={() => handleSelectCalendarDay(item.day!)}
+                      className={`h-7 w-7 mx-auto rounded-full flex flex-col items-center justify-center font-medium transition-all relative cursor-pointer ${
+                        isSelected
+                          ? "bg-[#3E36B0] text-white font-bold shadow-md shadow-[#3E36B0]/30"
+                          : "text-slate-700 hover:bg-[#F4F6FC]"
                       }`}
                     >
-                      {getInitials(apt.patientName)}
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="text-sm md:text-base font-extrabold text-[#111111] leading-tight">
-                          {apt.patientName}
-                        </h3>
-                        {apt.patientAge && (
-                          <span className="text-xs text-slate-400 font-medium">
-                            ({apt.patientAge}y {apt.patientGender ? `· ${apt.patientGender[0]}` : ""})
-                          </span>
-                        )}
-
-                        {/* Status badge */}
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            apt.status === "Confirmed"
-                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                              : apt.status === "Completed"
-                              ? "bg-slate-100 text-slate-600 border border-slate-200"
-                              : apt.status === "Cancelled"
-                              ? "bg-rose-50 text-rose-700 border border-rose-200"
-                              : "bg-amber-50 text-amber-700 border border-amber-200"
-                          }`}
-                        >
-                          {apt.status}
-                        </span>
-
-                        {/* Type badge */}
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                            apt.type === "teleconsult"
-                              ? "bg-purple-50 text-purple-700 border border-purple-200"
-                              : "bg-sky-50 text-[#0284c7] border border-sky-200"
-                          }`}
-                        >
-                          {apt.type === "teleconsult" ? (
-                            <Video className="w-3 h-3" />
-                          ) : (
-                            <MapPin className="w-3 h-3" />
-                          )}
-                          {apt.type === "teleconsult"
-                            ? "Teleconsult"
-                            : apt.type === "lab-review"
-                            ? "Lab Review"
-                            : apt.type === "follow-up"
-                            ? "Follow-Up"
-                            : "In-Person"}
-                        </span>
-                      </div>
-
-                      <p className="text-xs font-semibold text-slate-600 mt-0.5 truncate">
-                        {apt.condition}
-                      </p>
-
-                      {apt.notes && (
-                        <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
-                          Note: {apt.notes}
-                        </p>
+                      <span>{item.day}</span>
+                      {item.hasDot && !isSelected && (
+                        <span className="w-1 h-1 rounded-full bg-[#F62088] absolute bottom-1" />
                       )}
-                    </div>
-                  </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-                  {/* Center: Date & Time Schedule Box */}
-                  <div className="flex items-center gap-4 bg-[#F4F6FC] px-3.5 py-2 rounded-xl border border-slate-200/60 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-[#3E36B0]" />
-                      <div className="text-left">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Date</p>
-                        <p className="text-xs font-bold text-[#111111]">{apt.date}</p>
-                      </div>
-                    </div>
+            {/* Upcoming Visits Section */}
+            <div className="mt-5 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-2.5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Upcoming Visits</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCalendarDate(null);
+                    setSelectedDay(null);
+                    setTabFilter("upcoming");
+                  }}
+                  className="text-xs font-semibold text-[#3E36B0] hover:underline cursor-pointer"
+                >
+                  View All
+                </button>
+              </div>
 
-                    <div className="h-6 w-px bg-slate-200" />
-
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-[#3E36B0]" />
-                      <div className="text-left">
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Slot</p>
-                        <p className="text-xs font-bold text-[#111111]">{apt.time}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Action Buttons */}
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-                    {apt.type === "teleconsult" && apt.status === "Confirmed" && (
-                      <button
-                        type="button"
-                        onClick={() =>
+              <div className="space-y-2">
+                {upcomingVisitsList.length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-4">No upcoming visits scheduled.</p>
+                ) : (
+                  upcomingVisitsList.slice(0, 3).map((apt) => (
+                    <div
+                      key={apt.id}
+                      onClick={() => {
+                        if (apt.type === "teleconsult") {
                           navigate(
                             `/doctor/teleconsult?id=${apt.id}&patient=${encodeURIComponent(
                               apt.patientName
                             )}&patientId=${apt.patientId || ""}`
-                          )
+                          );
+                        } else {
+                          setSelectedAppointment(apt);
+                          setDetailsModalOpen(true);
                         }
-                        className="h-9 px-3.5 rounded-xl bg-[#3E36B0] hover:bg-[#312B91] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                        title="Start Teleconsult Video Call"
-                      >
-                        <Video className="w-3.5 h-3.5 text-[#A8DEF7]" />
-                        <span>Start Call</span>
-                      </button>
-                    )}
-
-                    {apt.status === "Confirmed" && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedAppointment(apt);
-                            setCompleteModalOpen(true);
-                          }}
-                          className="h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                          title="Complete Encounter"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span className="hidden md:inline">Complete</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedAppointment(apt);
-                            setRescheduleDate(apt.date);
-                            setRescheduleTime(apt.time);
-                            setRescheduleModalOpen(true);
-                          }}
-                          className="h-9 px-3 rounded-xl bg-[#F4F6FC] hover:bg-[#E5ECF9] text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
-                          title="Reschedule"
-                        >
-                          Reschedule
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedAppointment(apt);
-                            setCancelModalOpen(true);
-                          }}
-                          className="h-9 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer"
-                          title="Cancel"
-                        >
-                          ✕
-                        </button>
-                      </>
-                    )}
-
-                    {apt.patientId && (
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/doctor/patient/${apt.patientId}`)}
-                        className="h-9 px-3 rounded-xl bg-[#F4F6FC] hover:bg-[#E5ECF9] text-[#3E36B0] border border-slate-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                        title="View Patient Dossier"
-                      >
-                        <User className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Dossier</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                      }}
+                      className="flex items-center gap-3 p-3 rounded-2xl bg-[#F4F6FC] hover:bg-[#EBF1FC] border border-slate-200/50 cursor-pointer transition-all group"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-[#3E36B0] text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-sm">
+                        {apt.type === "teleconsult" ? (
+                          <Video className="w-4 h-4 text-[#A8DEF7]" />
+                        ) : (
+                          <Calendar className="w-4 h-4 text-[#A8DEF7]" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-[#111111] truncate group-hover:text-[#3E36B0] transition-colors">
+                          {apt.patientName} · {apt.condition}
+                        </p>
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                          {new Date(apt.date + "T00:00:00").toLocaleDateString("en-GB", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}{" "}
+                          · {apt.time} ({apt.type === "teleconsult" ? "Teleconsult" : "In-Person"})
+                        </p>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#3E36B0] group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* SCHEDULE NEW APPOINTMENT MODAL */}
