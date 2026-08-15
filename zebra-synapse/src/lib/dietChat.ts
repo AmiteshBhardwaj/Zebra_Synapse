@@ -367,7 +367,23 @@ function generateDeterministicDietResponse(
     goal: string;
   }
 ): string {
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().trim();
+
+  // Greetings & Small Talk
+  if (/^(hi|hello|hey|good morning|good afternoon|good evening|who are you|help|thanks|thank you)\b/i.test(q) || q.length < 4) {
+    return `### Hello ${ctx.patientName}! 👋 Welcome to your AI Nutrition Desk 🥗
+
+I am your personal AI Dietitian. Based on your profile goal (**${ctx.goal.replace(/_/g, " ")}**) and **${ctx.preference.toUpperCase()}** preference:
+
+* **Daily Calorie Target**: **${ctx.targetCalories} kcal/day**
+* **Target Macros**: Protein **${ctx.macroTargets.grams.protein}g** | Carbs **${ctx.macroTargets.grams.carbs}g** | Fats **${ctx.macroTargets.grams.fat}g**
+${ctx.allergies.length > 0 ? `* **Allergies Filtered**: ${ctx.allergies.join(", ")}\n` : ""}
+What can I help you with today? You can ask me for:
+1. **High-Protein Meal Ideas** tailored to your diet preference
+2. **Anti-Inflammatory Protocols** & antioxidant rich recipes
+3. **Blood Sugar & Low-GI Guidance** for steady energy
+4. **Quick Healthy Snacks** under 200 kcal`;
+  }
 
   // High-protein suggestions
   if (q.includes("protein") || q.includes("muscle") || q.includes("post-workout")) {

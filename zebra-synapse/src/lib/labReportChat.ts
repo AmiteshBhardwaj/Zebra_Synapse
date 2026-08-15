@@ -43,46 +43,91 @@ export const LAB_REPORT_QUERY_SELECT = `
   patient_profile:profiles!lab_report_queries_patient_id_fkey ( full_name )
 `.trim();
 
+const STORAGE_LAB_QUERIES_KEY = "zebra_local_lab_report_queries";
+
+function getLocalQueries(): LabReportQueryRow[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_LAB_QUERIES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalQueries(queries: LabReportQueryRow[]): void {
+  try {
+    localStorage.setItem(STORAGE_LAB_QUERIES_KEY, JSON.stringify(queries));
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Fetch all queries for a specific uploaded lab report.
  */
 export async function fetchQueriesForReport(uploadId: string): Promise<LabReportQueryRow[]> {
+  const localList = getLocalQueries().filter((q) => q.upload_id === uploadId);
   const supabase = getSupabase();
-  if (!supabase) return [];
+  if (!supabase) return localList;
 
-  const { data, error } = await supabase
-    .from("lab_report_queries")
-    .select(LAB_REPORT_QUERY_SELECT)
-    .eq("upload_id", uploadId)
-    .order("created_at", { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from("lab_report_queries")
+      .select(LAB_REPORT_QUERY_SELECT)
+      .eq("upload_id", uploadId)
+      .order("created_at", { ascending: true });
 
-  if (error) {
-    console.error("[labReportChat] fetchQueriesForReport error:", error);
-    return [];
+    if (error) {
+      console.warn("[labReportChat] fetchQueriesForReport Supabase warning, using local fallback:", error.message);
+      return localList;
+    }
+
+    const remoteRows = (data as unknown as LabReportQueryRow[]) || [];
+    const merged = [...remoteRows];
+    localList.forEach((loc) => {
+      if (!merged.some((r) => r.id === loc.id)) {
+        merged.push(loc);
+      }
+    });
+    return merged;
+  } catch {
+    return localList;
   }
-
-  return (data as unknown as LabReportQueryRow[]) || [];
 }
 
 /**
  * Fetch all queries for a patient across all reports.
  */
 export async function fetchPatientAllQueries(patientId: string): Promise<LabReportQueryRow[]> {
+  const localList = getLocalQueries().filter(
+    (q) => !patientId || q.patient_id === patientId || q.patient_id === "guest" || patientId.startsWith("demo-")
+  );
   const supabase = getSupabase();
-  if (!supabase) return [];
+  if (!supabase) return localList;
 
-  const { data, error } = await supabase
-    .from("lab_report_queries")
-    .select(LAB_REPORT_QUERY_SELECT)
-    .eq("patient_id", patientId)
-    .order("created_at", { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from("lab_report_queries")
+      .select(LAB_REPORT_QUERY_SELECT)
+      .eq("patient_id", patientId)
+      .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("[labReportChat] fetchPatientAllQueries error:", error);
-    return [];
+    if (error) {
+      console.warn("[labReportChat] fetchPatientAllQueries Supabase warning, using local fallback:", error.message);
+      return localList;
+    }
+
+    const remoteRows = (data as unknown as LabReportQueryRow[]) || [];
+    const merged = [...remoteRows];
+    localList.forEach((loc) => {
+      if (!merged.some((r) => r.id === loc.id)) {
+        merged.push(loc);
+      }
+    });
+    return merged;
+  } catch {
+    return localList;
   }
-
-  return (data as unknown as LabReportQueryRow[]) || [];
 }
 
 /**
@@ -93,48 +138,68 @@ export async function fetchDoctorPatientQueries(options: {
   patientId?: string;
   statusOnly?: LabReportQueryStatus;
 }): Promise<LabReportQueryRow[]> {
-  const supabase = getSupabase();
-  if (!supabase) return [];
-
-  let query = supabase
-    .from("lab_report_queries")
-    .select(LAB_REPORT_QUERY_SELECT);
-
+  let localList = getLocalQueries();
   if (options.patientId) {
-    query = query.eq("patient_id", options.patientId);
+    localList = localList.filter((q) => q.patient_id === options.patientId);
   }
   if (options.statusOnly) {
-    query = query.eq("status", options.statusOnly);
+    localList = localList.filter((q) => q.status === options.statusOnly);
   }
 
-  const { data, error } = await query.order("created_at", { ascending: false });
+  const supabase = getSupabase();
+  if (!supabase) return localList;
 
-  if (error) {
-    console.error("[labReportChat] fetchDoctorPatientQueries error:", error);
-    return [];
+  try {
+    let query = supabase.from("lab_report_queries").select(LAB_REPORT_QUERY_SELECT);
+    if (options.patientId) {
+      query = query.eq("patient_id", options.patientId);
+    }
+    if (options.statusOnly) {
+      query = query.eq("status", options.statusOnly);
+    }
+
+    const { data, error } = await query.order("created_at", { ascending: false });
+    if (error) {
+      console.warn("[labReportChat] fetchDoctorPatientQueries Supabase warning, using local fallback:", error.message);
+      return localList;
+    }
+
+    const remoteRows = (data as unknown as LabReportQueryRow[]) || [];
+    const merged = [...remoteRows];
+    localList.forEach((loc) => {
+      if (!merged.some((r) => r.id === loc.id)) {
+        merged.push(loc);
+      }
+    });
+    return merged;
+  } catch {
+    return localList;
   }
-
-  return (data as unknown as LabReportQueryRow[]) || [];
 }
 
 /**
  * Fetch count of pending reviews across all assigned patients for a doctor.
  */
 export async function fetchDoctorPendingReviewCount(doctorId: string): Promise<number> {
+  const localPending = getLocalQueries().filter((q) => q.status === "pending_review").length;
   const supabase = getSupabase();
-  if (!supabase) return 0;
+  if (!supabase) return localPending;
 
-  const { count, error } = await supabase
-    .from("lab_report_queries")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "pending_review");
+  try {
+    const { count, error } = await supabase
+      .from("lab_report_queries")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending_review");
 
-  if (error) {
-    console.error("[labReportChat] fetchDoctorPendingReviewCount error:", error);
-    return 0;
+    if (error) {
+      console.warn("[labReportChat] fetchDoctorPendingReviewCount Supabase warning:", error.message);
+      return localPending;
+    }
+
+    return count != null ? count : localPending;
+  } catch {
+    return localPending;
   }
-
-  return count || 0;
 }
 
 /**
@@ -147,8 +212,28 @@ export async function submitLabReportQuery(params: {
   userQuery: string;
   aiResponse: string;
 }): Promise<LabReportQueryRow | null> {
+  const now = new Date().toISOString();
+  const localItem: LabReportQueryRow = {
+    id: `local_q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    upload_id: params.uploadId,
+    patient_id: params.patientId,
+    doctor_id: params.doctorId || null,
+    user_query: params.userQuery.trim(),
+    ai_response: params.aiResponse.trim(),
+    status: "pending_review",
+    doctor_response: null,
+    doctor_notes: null,
+    reviewed_by: null,
+    reviewed_at: null,
+    created_at: now,
+    updated_at: now,
+  };
+
+  const existingLocal = getLocalQueries();
+  saveLocalQueries([localItem, ...existingLocal]);
+
   const supabase = getSupabase();
-  if (!supabase) return null;
+  if (!supabase) return localItem;
 
   const payload = {
     upload_id: params.uploadId,
@@ -159,18 +244,22 @@ export async function submitLabReportQuery(params: {
     status: "pending_review" as const,
   };
 
-  const { data, error } = await supabase
-    .from("lab_report_queries")
-    .insert(payload)
-    .select(LAB_REPORT_QUERY_SELECT)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from("lab_report_queries")
+      .insert(payload)
+      .select(LAB_REPORT_QUERY_SELECT)
+      .single();
 
-  if (error) {
-    console.error("[labReportChat] submitLabReportQuery error:", error);
-    throw error;
+    if (error) {
+      console.warn("[labReportChat] submitLabReportQuery Supabase insert fallback to local storage:", error.message);
+      return localItem;
+    }
+
+    return (data as unknown as LabReportQueryRow) || localItem;
+  } catch {
+    return localItem;
   }
-
-  return data as unknown as LabReportQueryRow;
 }
 
 /**
@@ -181,29 +270,49 @@ export async function verifyLabReportQuery(params: {
   doctorId: string;
   doctorNotes?: string;
 }): Promise<LabReportQueryRow | null> {
-  const supabase = getSupabase();
-  if (!supabase) return null;
+  const localList = getLocalQueries();
+  const index = localList.findIndex((q) => q.id === params.queryId);
+  let updatedLocal: LabReportQueryRow | null = null;
 
-  const payload = {
-    status: "verified" as const,
-    reviewed_by: params.doctorId,
-    reviewed_at: new Date().toISOString(),
-    doctor_notes: params.doctorNotes?.trim() || null,
-  };
-
-  const { data, error } = await supabase
-    .from("lab_report_queries")
-    .update(payload)
-    .eq("id", params.queryId)
-    .select(LAB_REPORT_QUERY_SELECT)
-    .single();
-
-  if (error) {
-    console.error("[labReportChat] verifyLabReportQuery error:", error);
-    throw error;
+  if (index >= 0) {
+    localList[index] = {
+      ...localList[index],
+      status: "verified",
+      reviewed_by: params.doctorId,
+      reviewed_at: new Date().toISOString(),
+      doctor_notes: params.doctorNotes?.trim() || null,
+    };
+    saveLocalQueries(localList);
+    updatedLocal = localList[index];
   }
 
-  return data as unknown as LabReportQueryRow;
+  const supabase = getSupabase();
+  if (!supabase) return updatedLocal;
+
+  try {
+    const payload = {
+      status: "verified" as const,
+      reviewed_by: params.doctorId,
+      reviewed_at: new Date().toISOString(),
+      doctor_notes: params.doctorNotes?.trim() || null,
+    };
+
+    const { data, error } = await supabase
+      .from("lab_report_queries")
+      .update(payload)
+      .eq("id", params.queryId)
+      .select(LAB_REPORT_QUERY_SELECT)
+      .single();
+
+    if (error) {
+      console.warn("[labReportChat] verifyLabReportQuery Supabase warning:", error.message);
+      return updatedLocal;
+    }
+
+    return (data as unknown as LabReportQueryRow) || updatedLocal;
+  } catch {
+    return updatedLocal;
+  }
 }
 
 /**
@@ -215,47 +324,74 @@ export async function rejectAndReplaceLabReportQuery(params: {
   doctorResponse: string;
   doctorNotes?: string;
 }): Promise<LabReportQueryRow | null> {
-  const supabase = getSupabase();
-  if (!supabase) return null;
+  const localList = getLocalQueries();
+  const index = localList.findIndex((q) => q.id === params.queryId);
+  let updatedLocal: LabReportQueryRow | null = null;
 
-  const payload = {
-    status: "rejected_and_replaced" as const,
-    doctor_response: params.doctorResponse.trim(),
-    reviewed_by: params.doctorId,
-    reviewed_at: new Date().toISOString(),
-    doctor_notes: params.doctorNotes?.trim() || null,
-  };
-
-  const { data, error } = await supabase
-    .from("lab_report_queries")
-    .update(payload)
-    .eq("id", params.queryId)
-    .select(LAB_REPORT_QUERY_SELECT)
-    .single();
-
-  if (error) {
-    console.error("[labReportChat] rejectAndReplaceLabReportQuery error:", error);
-    throw error;
+  if (index >= 0) {
+    localList[index] = {
+      ...localList[index],
+      status: "rejected_and_replaced",
+      doctor_response: params.doctorResponse.trim(),
+      reviewed_by: params.doctorId,
+      reviewed_at: new Date().toISOString(),
+      doctor_notes: params.doctorNotes?.trim() || null,
+    };
+    saveLocalQueries(localList);
+    updatedLocal = localList[index];
   }
 
-  return data as unknown as LabReportQueryRow;
+  const supabase = getSupabase();
+  if (!supabase) return updatedLocal;
+
+  try {
+    const payload = {
+      status: "rejected_and_replaced" as const,
+      doctor_response: params.doctorResponse.trim(),
+      reviewed_by: params.doctorId,
+      reviewed_at: new Date().toISOString(),
+      doctor_notes: params.doctorNotes?.trim() || null,
+    };
+
+    const { data, error } = await supabase
+      .from("lab_report_queries")
+      .update(payload)
+      .eq("id", params.queryId)
+      .select(LAB_REPORT_QUERY_SELECT)
+      .single();
+
+    if (error) {
+      console.warn("[labReportChat] rejectAndReplaceLabReportQuery Supabase warning:", error.message);
+      return updatedLocal;
+    }
+
+    return (data as unknown as LabReportQueryRow) || updatedLocal;
+  } catch {
+    return updatedLocal;
+  }
 }
 
 /**
  * Clear all queries for a specific uploaded lab report.
  */
 export async function clearQueriesForReport(uploadId: string): Promise<boolean> {
+  const remaining = getLocalQueries().filter((q) => q.upload_id !== uploadId);
+  saveLocalQueries(remaining);
+
   const supabase = getSupabase();
-  if (!supabase) return false;
+  if (!supabase) return true;
 
-  const { error } = await supabase
-    .from("lab_report_queries")
-    .delete()
-    .eq("upload_id", uploadId);
+  try {
+    const { error } = await supabase
+      .from("lab_report_queries")
+      .delete()
+      .eq("upload_id", uploadId);
 
-  if (error) {
-    console.error("[labReportChat] clearQueriesForReport error:", error);
-    throw error;
+    if (error) {
+      console.warn("[labReportChat] clearQueriesForReport Supabase warning:", error.message);
+    }
+  } catch {
+    // ignore
   }
 
   return true;
@@ -359,8 +495,12 @@ PATIENT'S QUESTION:
 "${userQuery}"
 
 CRITICAL INSTRUCTIONS & GUARDRAILS:
-1. DO NOT INDIVIDUALLY ASK the patient for their dietary preferences, food allergies, height/weight, or health conditions! All necessary data is already configured in the profile settings above.
-2. STRICTLY HONOR THE PATIENT'S DIETARY PREFERENCE:
+1. INTENT DETECTION:
+   - IF THE PATIENT IS GREETING OR ASKING BASIC CONVERSATIONAL QUESTIONS ("hello", "hi", "hey", "who are you", "what can you do"): Respond warmly, introduce yourself as Zebra Synapse AI, welcome them, and offer clear examples of how you can assist them with their report ("${context.reportName}"). DO NOT invent or attribute symptoms to basic greetings!
+   - IF THE PATIENT ASKS FOR AN OVERVIEW OR SUMMARY ("explain my report", "summarize"): Provide a clear, balanced overview of optimal vs. out-of-range biomarkers.
+   - IF THE PATIENT ASKS ABOUT SPECIFIC SYMPTOMS OR BIOMARKERS: Answer directly using relevant lab values, explain clinical mechanisms, and provide supportive dietary/lifestyle next steps.
+2. DO NOT INDIVIDUALLY ASK the patient for their dietary preferences, food allergies, height/weight, or health conditions! All necessary data is already configured in the profile settings above.
+3. STRICTLY HONOR THE PATIENT'S DIETARY PREFERENCE:
    - If VEGAN: Recommend ONLY 100% plant-based foods, proteins (tofu, tempeh, lentils, beans, edamame, chia seeds, nuts), and plant milks. NEVER recommend meat, poultry, fish, seafood, eggs, milk, cheese, or dairy.
    - If VEGETARIAN: No meat, poultry, fish, or seafood.
    - If JAIN: No root vegetables, no animal meats.
@@ -368,11 +508,8 @@ CRITICAL INSTRUCTIONS & GUARDRAILS:
    - If GLUTEN-FREE: Recommend gluten-free grains (quinoa, brown rice, certified GF oats); avoid wheat, barley, rye.
    - If GERD / ACID REFLUX: Avoid citrus, tomatoes, deep-fried foods, heavy spices, late-night meals.
    - If HYPERTENSION: Enforce low-sodium DASH diet guidelines (< 1,500-2,000 mg/day).
-3. START DIRECTLY by answering the patient's specific question/symptom in the very first sentence using their relevant lab values.
-   - Example style: "You might feel dizzy because your Potassium (2 mmol/L), Calcium (5 mg/dL), and Vitamin B12 (12 pg/mL) levels are significantly lower than standard reference ranges."
-   - DO NOT start with generic robotic greetings or an unhelpful raw data dump.
-4. EXPLAIN THE CLINICAL MECHANISM: Explain in clear, patient-friendly terms why these specific abnormal values cause the symptom they asked about (e.g., how low potassium and low calcium disrupt nerve signaling, vascular tone, and cause lightheadedness; how low B12 causes neurological symptoms and orthostatic dizziness; how low MCHC/hemoglobin reduces oxygen delivery).
-5. STRICTLY RELEVANT BIOMARKERS ONLY: ONLY mention and discuss biomarkers that are directly relevant to the patient's question. DO NOT include or dump unrelated out-of-range biomarkers.
+4. EXPLAIN THE CLINICAL MECHANISM: Explain in clear, patient-friendly terms why specific abnormal values cause symptoms they asked about (e.g., how low potassium and low calcium disrupt nerve signaling; how low B12 causes neurological lightheadedness; how low MCHC/hemoglobin reduces oxygen delivery).
+5. STRICTLY RELEVANT BIOMARKERS ONLY: ONLY mention and discuss biomarkers directly relevant to the patient's query. DO NOT dump unrelated out-of-range biomarkers.
 6. NEXT STEPS: Provide supportive, actionable next steps aligned with their configured diet and remind the patient that their connected doctor has automatically received this query for review and verification.
 `.trim();
 
@@ -425,6 +562,118 @@ function findFinding(findings: GroundedFinding[], pattern: RegExp): GroundedFind
 }
 
 /**
+ * Detect simple conversational greetings or basic small talk.
+ */
+export function isGreetingOrSmallTalk(query: string): boolean {
+  const q = query.trim().toLowerCase().replace(/[.,!?]/g, "");
+  const greetings = [
+    "hello", "hi", "hey", "hola", "namaste", "good morning", "good afternoon",
+    "good evening", "howdy", "greetings", "hey there", "hi there", "hello there",
+    "who are you", "what are you", "what can you do", "what can you help me with",
+    "help", "how do you work", "thanks", "thank you", "thx", "cool", "great",
+    "bye", "goodbye", "ok", "okay", "yo", "sup"
+  ];
+
+  if (greetings.includes(q)) return true;
+  if (/^(hi|hello|hey|good morning|good afternoon|good evening)\b/i.test(q) && q.length < 25) {
+    return true;
+  }
+  if (/^(who are you|what can you do|how can you help|what is this)\b/i.test(q)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Detect queries requesting a general report summary or overview.
+ */
+export function isReportOverviewQuery(query: string): boolean {
+  const q = query.trim().toLowerCase();
+  return /overview|summarize|summary|explain my report|show my report|what are my results|tell me about my report|analyze my report|report summary/i.test(q);
+}
+
+/**
+ * Friendly conversational greeting response.
+ */
+function generateGreetingAnswer(reportName: string, abnormalCount: number): string {
+  const reportContextNotice = reportName && reportName !== "Lab Report"
+    ? `I have your active lab report (**${reportName}**) loaded and ready.`
+    : `I am connected to your Zebra Synapse health profile and uploaded lab records.`;
+
+  const abnormalNotice = abnormalCount > 0
+    ? ` I noticed **${abnormalCount} biomarker(s)** outside standard reference ranges in this report.`
+    : ` All tested biomarkers in this report are currently in the normal reference range.`;
+
+  return (
+    `Hello! 👋 I am **Zebra Synapse AI**, your clinical health and lab report assistant.\n\n` +
+    `${reportContextNotice}${abnormalNotice}\n\n` +
+    `Here are some helpful things you can ask me:\n` +
+    `• **"Why do I feel weak and tired?"** *(Analyzes Vitamin B12, Hemoglobin, Vitamin D, Potassium)*\n` +
+    `• **"Why am I feeling dizzy?"** *(Analyzes electrolytes, MCHC, B12, blood pressure)*\n` +
+    `• **"Give me a summary of my report"** *(Full breakdown of normal vs. out-of-range values)*\n` +
+    `• **"What should I eat to improve my results?"** *(Tailored to your configured dietary preferences)*\n\n` +
+    `How can I assist you with your health today?`
+  );
+}
+
+/**
+ * Comprehensive structured report overview response.
+ */
+function generateReportOverviewAnswer(
+  reportName: string,
+  findings: GroundedFinding[],
+  context?: LabReportContext
+): string {
+  const abnormal = findings.filter(
+    (f) => f.status === "high" || f.status === "low" || f.status === "borderline"
+  );
+  const normal = findings.filter((f) => f.status === "normal");
+
+  let text = `### 📋 Clinical Overview: ${reportName}\n\n`;
+
+  if (findings.length === 0) {
+    return (
+      `### 📋 Clinical Overview: ${reportName}\n\n` +
+      `Your report file is attached to your account. Structured biomarker values are currently on file or queued for doctor review.\n\n` +
+      `You can ask me any health or symptom questions anytime!`
+    );
+  }
+
+  text += `**Total Biomarkers Analyzed:** ${findings.length}\n`;
+  text += `• **Optimal / Normal:** ${normal.length}\n`;
+  text += `• **Attention Required (Out of Range):** ${abnormal.length}\n\n`;
+
+  if (abnormal.length > 0) {
+    text += `#### 🚨 Out-of-Range Biomarkers:\n`;
+    abnormal.forEach((f) => {
+      const statusLabel = f.status === "high" ? "HIGH ⬆️" : f.status === "low" ? "LOW ⬇️" : "BORDERLINE ⚠️";
+      text += `• **${f.label}**: **${f.value} ${f.unit}** (${statusLabel}) — *Ref: ${f.reference}*\n`;
+    });
+    text += `\n`;
+  }
+
+  if (normal.length > 0) {
+    text += `#### ✅ Normal Biomarkers:\n`;
+    normal.slice(0, 8).forEach((f) => {
+      text += `• **${f.label}**: ${f.value} ${f.unit} (Normal) — *Ref: ${f.reference}*\n`;
+    });
+    if (normal.length > 8) {
+      text += `• *...and ${normal.length - 8} more normal biomarkers.*\n`;
+    }
+    text += `\n`;
+  }
+
+  const dietPref = context?.dietaryPreference ? context.dietaryPreference.toUpperCase() : null;
+  text += `**Recommended Next Steps:**\n`;
+  text += `Review these results with your doctor. Your query and report summary have been recorded for physician verification.`;
+  if (dietPref) {
+    text += ` Recommendations will strictly respect your configured **${dietPref}** dietary preferences.`;
+  }
+
+  return text;
+}
+
+/**
  * High-quality grounded clinical inference generator for offline or keyless mode.
  */
 function generateGroundedRuleBasedAnswer(
@@ -433,6 +682,19 @@ function generateGroundedRuleBasedAnswer(
   reportName: string,
   context?: LabReportContext,
 ): string {
+  // 1. Check for Greetings & Small Talk FIRST
+  if (isGreetingOrSmallTalk(query)) {
+    const abnormalCount = findings.filter(
+      (f) => f.status === "high" || f.status === "low" || f.status === "borderline"
+    ).length;
+    return generateGreetingAnswer(reportName, abnormalCount);
+  }
+
+  // 2. Check for Report Overview / Summary Requests
+  if (isReportOverviewQuery(query)) {
+    return generateReportOverviewAnswer(reportName, findings, context);
+  }
+
   const isDizzy = /dizz|lightheaded|vertigo|spinning|faint|fainting|unsteady|balance|loss of balance|woozy|giddy|passed out/i.test(query);
   const isWeakness = /weak|tired|fatigue|exhaust|energy|low energy|drowsy|sleepy|lazy|brain fog|sluggish|letharg|malaise|worn out/i.test(query);
   const isCrampsOrNumbness = /cramp|spasm|twitch|numb|tingl|pins and needles|paresthesia|soreness|stiff|tightness/i.test(query);
@@ -986,23 +1248,23 @@ function generateGroundedRuleBasedAnswer(
     const bullets: string[] = [];
 
     if (electrolyteDeficits.length > 0) {
-      const names = electrolyteDeficits.map((f) => `**${f.label} (${f.value} ${f.unit}, Low)**`).join(", ");
+      const names = electrolyteDeficits.map((f) => `**${f.label}** (${f.value} ${f.unit}, Low)`).join(", ");
       bullets.push(
-        `• **Electrolyte Deficits (${names})**: Low levels in these minerals directly cause **dizziness, lightheadedness, muscle cramps, and physical weakness** by disrupting nerve conduction and vascular tone.`
+        `• **Electrolyte Deficits**: ${names}. Low levels in these minerals directly cause **dizziness, lightheadedness, muscle cramps, and physical weakness** by disrupting nerve conduction and vascular tone.`
       );
     }
 
     if (vitaminDeficits.length > 0) {
-      const names = vitaminDeficits.map((f) => `**${f.label} (${f.value} ${f.unit}, Low)**`).join(", ");
+      const names = vitaminDeficits.map((f) => `**${f.label}** (${f.value} ${f.unit}, Low)`).join(", ");
       bullets.push(
-        `• **Vitamin & Blood Count Deficits (${names})**: Depleted levels lead to **fatigue, brain fog, and low physical stamina** due to reduced cellular energy and impaired oxygen transport.`
+        `• **Vitamin & Blood Count Deficits**: ${names}. Depleted levels lead to **fatigue, brain fog, and low physical stamina** due to reduced cellular energy and impaired oxygen transport.`
       );
     }
 
     if (organOrMetabolicHigh.length > 0) {
-      const names = organOrMetabolicHigh.map((f) => `**${f.label} (${f.value} ${f.unit}, ${f.status.toUpperCase()})`).join(", ");
+      const names = organOrMetabolicHigh.map((f) => `**${f.label}** (${f.value} ${f.unit}, ${f.status.toUpperCase()})`).join(", ");
       bullets.push(
-        `• **Elevated Metabolic & Organ Markers (${names})**: Point to metabolic variability, dehydration, or hepatic/renal filtration stress.`
+        `• **Elevated Metabolic & Organ Markers**: ${names}. Point to metabolic variability, dehydration, or hepatic/renal filtration stress.`
       );
     }
 
@@ -1013,11 +1275,10 @@ function generateGroundedRuleBasedAnswer(
       });
     }
 
-    // Check if query had a symptom word or general query
     const cleanedQuery = query.replace(/[?.,!]/g, "").trim();
-    const queryHeader = cleanedQuery.length > 3
-      ? `Regarding your question (*"${cleanedQuery}"*), your symptoms may be directly caused by the following abnormal biomarkers in your report (${reportName}):`
-      : `Based on your lab report (${reportName}), here are the key out-of-range biomarkers detected and how they affect how you feel:`;
+    const queryHeader = cleanedQuery.length > 0
+      ? `Based on your lab report (**${reportName}**), here are the key out-of-range biomarkers relevant to your query (*"${cleanedQuery}"*):`
+      : `Based on your lab report (**${reportName}**), here are the key out-of-range biomarkers detected:`;
 
     return (
       `${queryHeader}\n\n` +

@@ -1,3 +1,4 @@
+import { FormattedMarkdown } from "../../components/ui/FormattedMarkdown";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Apple,
@@ -646,9 +647,7 @@ export default function PatientDietChat({ embedded = false }: PatientDietChatPro
 
                         {/* Content Card */}
                         <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 text-slate-800 text-sm leading-relaxed space-y-3 shadow-sm">
-                          <div className="prose prose-slate prose-sm max-w-none text-slate-800">
-                            <p className="whitespace-pre-wrap leading-relaxed font-sans">{item.text}</p>
-                          </div>
+                            <FormattedMarkdown content={item.text} />
 
                           {/* Actions (Copy) */}
                           <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 text-xs text-slate-400">
