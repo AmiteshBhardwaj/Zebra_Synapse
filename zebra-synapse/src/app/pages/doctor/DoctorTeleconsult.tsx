@@ -202,15 +202,18 @@ export default function DoctorTeleconsult() {
     if (!sb || !doctorId || !pId) return;
 
     try {
-      const { error } = await sb.from("care_relationships").insert({
-        doctor_id: doctorId,
-        patient_id: pId,
-        primary_condition: conditionStr || "Teleconsultation Patient",
-        health_status: "normal",
-      });
+      const { error } = await sb.from("care_relationships").upsert(
+        {
+          doctor_id: doctorId,
+          patient_id: pId,
+          primary_condition: conditionStr || "Teleconsultation Patient",
+          health_status: "normal",
+        },
+        { onConflict: "doctor_id,patient_id", ignoreDuplicates: true }
+      );
 
       if (!error) {
-        toast.success(`${pName} has been automatically added to your patient roster!`);
+        toast.success(`${pName} has been linked to your patient roster!`);
       }
     } catch {
       // ignore duplicates
