@@ -464,8 +464,7 @@ export function Patient3DHealthDashboard({
   const currentOrganMeta = ORGAN_SYSTEMS[selectedOrgan];
   const organBiomarkers = useMemo(() => {
     if (allMetrics.length === 0) {
-      // Default fallback standard mock values if no report uploaded yet
-      return getDefaultMockBiomarkers(selectedOrgan);
+      return [];
     }
     const matched = allMetrics.filter((m) => {
       return currentOrganMeta.biomarkerKeys.some(
@@ -473,9 +472,6 @@ export function Patient3DHealthDashboard({
       );
     });
 
-    if (matched.length === 0) {
-      return getDefaultMockBiomarkers(selectedOrgan);
-    }
     return matched;
   }, [allMetrics, selectedOrgan, currentOrganMeta]);
 
@@ -497,24 +493,24 @@ export function Patient3DHealthDashboard({
       (profile as any)?.bloodType ||
       savedProfile.blood_type ||
       savedProfile.bloodType ||
-      "A+";
+      "--";
 
     const gender =
       profile?.gender ||
       savedProfile.gender ||
-      "Male";
+      "--";
 
-    const rawAge = profile?.age || savedProfile.age || 28;
-    const age = `${rawAge} yrs`;
+    const rawAge = profile?.age || savedProfile.age;
+    const age = rawAge ? `${rawAge} yrs` : "--";
 
-    const rawHeight = profile?.height_cm || savedProfile.height_cm || 172;
-    const height = `${rawHeight} cm`;
+    const rawHeight = profile?.height_cm || savedProfile.height_cm;
+    const height = rawHeight ? `${rawHeight} cm` : "--";
 
-    const rawWeight = profile?.weight_kg || savedProfile.weight_kg || 68;
-    const weight = `${rawWeight} kg`;
+    const rawWeight = profile?.weight_kg || savedProfile.weight_kg;
+    const weight = rawWeight ? `${rawWeight} kg` : "--";
 
-    const bmiVal = calculateBmi(rawHeight, rawWeight) ?? 23.0;
-    const bmi = `${bmiVal}`;
+    const bmiVal = (rawHeight && rawWeight) ? calculateBmi(rawHeight, rawWeight) : null;
+    const bmi = bmiVal ? `${bmiVal}` : "--";
 
     return { fullName, bloodType, gender, age, height, weight, bmi };
   }, [profile, user]);
@@ -809,58 +805,89 @@ export function Patient3DHealthDashboard({
                   </div>
 
                   {/* 2x2 Biomarker Stat Chips */}
-                  <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                    {organBiomarkers.slice(0, 4).map((m: any, idx: number) => {
-                      const isHigh = m.status === "high";
-                      const isLow = m.status === "low";
-                      const isBorderline = m.status === "borderline";
-
-                      return (
-                        <div
-                          key={m.key || idx}
-                          className="flex flex-col justify-between p-3 rounded-2xl bg-slate-50/90 hover:bg-sky-50/60 border border-slate-100 hover:border-sky-200/80 transition-all shadow-sm"
-                        >
-                          <div className="flex items-center justify-between gap-1 mb-1">
-                            <span className="text-[11px] font-semibold text-slate-500 truncate">
-                              {m.label || m.key}
-                            </span>
-                            <span
-                              className={`h-2 w-2 rounded-full shrink-0 ${
-                                isHigh || isLow
-                                  ? "bg-rose-500 animate-pulse"
-                                  : isBorderline
-                                  ? "bg-amber-500"
-                                  : "bg-emerald-500"
-                              }`}
-                            />
-                          </div>
-
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-base sm:text-lg font-bold text-slate-900 font-mono">
-                              {m.value !== null && m.value !== undefined ? m.value : "--"}
-                              <span className="text-[10px] font-sans font-normal text-slate-400 ml-1">
-                                {m.unit || ""}
-                              </span>
-                            </span>
-
-                            <span
-                              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-                                isHigh
-                                  ? "bg-rose-100 text-rose-700"
-                                  : isLow
-                                  ? "bg-sky-100 text-sky-700"
-                                  : isBorderline
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-emerald-100 text-emerald-700"
-                              }`}
-                            >
-                              {m.status || "Normal"}
-                            </span>
-                          </div>
+                  {organBiomarkers.length === 0 ? (
+                    uploads.length === 0 && panels.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-slate-50/90 border border-dashed border-slate-200 text-center space-y-2.5">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
+                          <Upload className="h-5 w-5" />
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div className="space-y-0.5">
+                          <h4 className="text-xs font-bold text-slate-800">No Lab Report Uploaded</h4>
+                          <p className="text-[11px] text-slate-400 max-w-xs">
+                            Upload a lab report to view extracted biomarkers and diagnostics for your {currentOrganMeta.name.toLowerCase()}.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => setIsUploadModalOpen(true)}
+                          className="h-8 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-semibold text-[11px] shadow-sm flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span>Upload Medical Report</span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-slate-50/90 border border-slate-200 text-center space-y-1.5">
+                        <ShieldCheck className="h-6 w-6 text-sky-600" />
+                        <h4 className="text-xs font-bold text-slate-800">No {currentOrganMeta.name} Biomarkers</h4>
+                        <p className="text-[11px] text-slate-400 max-w-xs">
+                          The selected report does not contain biomarkers associated with the {currentOrganMeta.name.toLowerCase()}.
+                        </p>
+                      </div>
+                    )
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+                      {organBiomarkers.slice(0, 4).map((m: any, idx: number) => {
+                        const isHigh = m.status === "high";
+                        const isLow = m.status === "low";
+                        const isBorderline = m.status === "borderline";
+
+                        return (
+                          <div
+                            key={m.key || idx}
+                            className="flex flex-col justify-between p-3 rounded-2xl bg-slate-50/90 hover:bg-sky-50/60 border border-slate-100 hover:border-sky-200/80 transition-all shadow-sm"
+                          >
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <span className="text-[11px] font-semibold text-slate-500 truncate">
+                                {m.label || m.key}
+                              </span>
+                              <span
+                                className={`h-2 w-2 rounded-full shrink-0 ${
+                                  isHigh || isLow
+                                    ? "bg-rose-500 animate-pulse"
+                                    : isBorderline
+                                    ? "bg-amber-500"
+                                    : "bg-emerald-500"
+                                }`}
+                              />
+                            </div>
+
+                            <div className="flex items-baseline justify-between gap-2">
+                              <span className="text-base sm:text-lg font-bold text-slate-900 font-mono">
+                                {m.value !== null && m.value !== undefined ? m.value : "--"}
+                                <span className="text-[10px] font-sans font-normal text-slate-400 ml-1">
+                                  {m.unit || ""}
+                                </span>
+                              </span>
+
+                              <span
+                                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+                                  isHigh
+                                    ? "bg-rose-100 text-rose-700"
+                                    : isLow
+                                    ? "bg-sky-100 text-sky-700"
+                                    : isBorderline
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-emerald-100 text-emerald-700"
+                                }`}
+                              >
+                                {m.status || "Normal"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -876,9 +903,11 @@ export function Patient3DHealthDashboard({
                     Tracking historical stability across recorded lab panels
                   </p>
                 </div>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200/60">
+                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
+                  activePanel ? "text-emerald-600 bg-emerald-50 border-emerald-200/60" : "text-slate-500 bg-slate-50 border-slate-200"
+                }`}>
                   <TrendingUp className="h-3 w-3" />
-                  Stable Trajectory
+                  {activePanel ? "Stable Trajectory" : "Awaiting Lab Reports"}
                 </span>
               </div>
 
@@ -891,50 +920,58 @@ export function Patient3DHealthDashboard({
                   <div className="border-b border-dashed border-slate-300 w-full" />
                 </div>
 
-                {/* SVG Curve Line */}
-                <svg
-                  viewBox="0 0 500 90"
-                  className="w-full h-20 overflow-visible relative z-10"
-                  preserveAspectRatio="none"
-                >
-                  <defs>
-                    <linearGradient id="trendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#0284c7" stopOpacity="0.25" />
-                      <stop offset="100%" stopColor="#0284c7" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
+                {activePanel && panels.length > 0 ? (
+                  <>
+                    {/* SVG Curve Line */}
+                    <svg
+                      viewBox="0 0 500 90"
+                      className="w-full h-20 overflow-visible relative z-10"
+                      preserveAspectRatio="none"
+                    >
+                      <defs>
+                        <linearGradient id="trendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#0284c7" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="#0284c7" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
 
-                  {/* Filled area below curve */}
-                  <path
-                    d="M 0 65 Q 60 50, 120 58 T 240 45 T 360 38 T 500 30 L 500 90 L 0 90 Z"
-                    fill="url(#trendGradient)"
-                  />
+                      {/* Filled area below curve */}
+                      <path
+                        d="M 0 65 Q 60 50, 120 58 T 240 45 T 360 38 T 500 30 L 500 90 L 0 90 Z"
+                        fill="url(#trendGradient)"
+                      />
 
-                  {/* Main Wavy Line */}
-                  <path
-                    d="M 0 65 Q 60 50, 120 58 T 240 45 T 360 38 T 500 30"
-                    fill="none"
-                    stroke="#0284c7"
-                    strokeWidth="3.5"
-                    strokeLinecap="round"
-                  />
+                      {/* Main Wavy Line */}
+                      <path
+                        d="M 0 65 Q 60 50, 120 58 T 240 45 T 360 38 T 500 30"
+                        fill="none"
+                        stroke="#0284c7"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                      />
 
-                  {/* Data Points */}
-                  <circle cx="120" cy="58" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
-                  <circle cx="240" cy="45" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
-                  <circle cx="360" cy="38" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
-                  <circle cx="500" cy="30" r="5.5" fill="#0284c7" stroke="#ffffff" strokeWidth="2.5" />
-                </svg>
+                      {/* Data Points */}
+                      <circle cx="120" cy="58" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
+                      <circle cx="240" cy="45" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
+                      <circle cx="360" cy="38" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
+                      <circle cx="500" cy="30" r="5.5" fill="#0284c7" stroke="#ffffff" strokeWidth="2.5" />
+                    </svg>
 
-                {/* Time Axis Labels */}
-                <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 px-2 pt-1 border-t border-slate-100 z-10">
-                  <span>09:00</span>
-                  <span>10:00</span>
-                  <span>11:00</span>
-                  <span>12:00</span>
-                  <span>01:00</span>
-                  <span>02:00</span>
-                </div>
+                    {/* Time Axis Labels */}
+                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 px-2 pt-1 border-t border-slate-100 z-10">
+                      <span>Panel 1</span>
+                      <span>Panel 2</span>
+                      <span>Panel 3</span>
+                      <span>Panel 4</span>
+                      <span>Latest</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center space-y-1 relative z-10">
+                    <p className="text-xs font-semibold text-slate-500">No Historical Trend Data</p>
+                    <p className="text-[10px] text-slate-400">Upload lab reports to plot biomarker trends over time.</p>
+                  </div>
+                )}
               </div>
             </div>
 
