@@ -198,6 +198,14 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
     `${role}-${Math.random().toString(36).substring(2, 9)}-${Date.now().toString().slice(-4)}`
   );
 
+  const isPolite = role === "PATIENT"; // Patient is polite peer; Doctor is impolite peer (caller)
+  const makingOfferRef = useRef(false);
+  const ignoreOfferRef = useRef(false);
+  const isSettingRemoteAnswerPendingRef = useRef(false);
+  const seqRef = useRef(0);
+  const seenMessagesRef = useRef<Set<string>>(new Set());
+  const remoteMediaStreamRef = useRef<MediaStream>(new MediaStream());
+
   // Timer for active call duration
   useEffect(() => {
     if (connectionStatus !== "connected") {
@@ -218,27 +226,48 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
 
   // Bind remote stream to video element
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-      remoteVideoRef.current.play().catch((e) => {
-        console.warn("Remote autoplay waiting for user interaction:", e);
-      });
+    const videoEl = remoteVideoRef.current;
+    if (videoEl && remoteStream) {
+      if (videoEl.srcObject !== remoteStream) {
+        videoEl.srcObject = remoteStream;
+      }
+      const p = videoEl.play();
+      if (p !== undefined) {
+        p.catch((err) => {
+          if (err.name !== "AbortError") {
+            console.warn("Remote autoplay waiting for user interaction:", err);
+          }
+        });
+      }
     }
   }, [remoteStream]);
 
   // Bind local stream to PIP video element
   useEffect(() => {
-    if (localVideoRef.current && localStreamRef.current) {
-      localVideoRef.current.srcObject = localStreamRef.current;
-      localVideoRef.current.play().catch(() => {});
+    const videoEl = localVideoRef.current;
+    if (videoEl && localStreamRef.current) {
+      if (videoEl.srcObject !== localStreamRef.current) {
+        videoEl.srcObject = localStreamRef.current;
+      }
+      const p = videoEl.play();
+      if (p !== undefined) {
+        p.catch((err) => {
+          if (err.name !== "AbortError") {
+            console.warn("Local play error:", err);
+          }
+        });
+      }
     }
   }, [localStreamRef.current, usingSimulatedCamera]);
 
-  // Multi-transport signal dispatcher
+  // Multi-transport signal dispatcher with message deduplication ID
   const sendSignal = useCallback(
     (signal: { type: string; [key: string]: any }) => {
+      seqRef.current += 1;
+      const msgId = `${peerIdRef.current}_${Date.now()}_${seqRef.current}_${Math.random().toString(36).substring(2, 7)}`;
       const payload = {
         ...signal,
+        msgId,
         senderPeerId: peerIdRef.current,
         senderRole: role,
         consultationId,
@@ -322,17 +351,23 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         pc.addTrack(track, stream);
       });
 
-      // Handle incoming remote media tracks
+      // Handle incoming remote media tracks (accumulate stably in remoteMediaStream)
       pc.ontrack = (event) => {
-        console.log("Received remote track:", event.track.kind, event.streams);
+        console.log("Received remote track:", event.track.kind);
+        const remoteMS = remoteMediaStreamRef.current;
         if (event.streams && event.streams[0]) {
-          setRemoteStream(event.streams[0]);
-          setConnectionStatus("connected");
-        } else {
-          const newStream = new MediaStream([event.track]);
-          setRemoteStream(newStream);
-          setConnectionStatus("connected");
+          event.streams[0].getTracks().forEach((track) => {
+            if (!remoteMS.getTracks().some((t) => t.id === track.id)) {
+              remoteMS.addTrack(track);
+            }
+          });
+        } else if (event.track) {
+          if (!remoteMS.getTracks().some((t) => t.id === event.track.id)) {
+            remoteMS.addTrack(event.track);
+          }
         }
+        setRemoteStream(remoteMS);
+        setConnectionStatus("connected");
       };
 
       // Handle ICE Candidate generation
@@ -357,13 +392,30 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
           // Attempt ICE restart
           void (async () => {
             try {
+              makingOfferRef.current = true;
               const offer = await pc.createOffer({ iceRestart: true });
               await pc.setLocalDescription(offer);
-              sendSignal({ type: "offer", sdp: offer });
+              sendSignal({ type: "offer", sdp: pc.localDescription });
             } catch (e) {
               console.warn("ICE restart failed:", e);
+            } finally {
+              makingOfferRef.current = false;
             }
           })();
+        }
+      };
+
+      // Perfect Negotiation: onnegotiationneeded triggers local offer creation cleanly
+      pc.onnegotiationneeded = async () => {
+        try {
+          makingOfferRef.current = true;
+          console.log("Negotiation needed: creating WebRTC offer...");
+          await pc.setLocalDescription();
+          sendSignal({ type: "offer", sdp: pc.localDescription });
+        } catch (err) {
+          console.error("Negotiation needed error:", err);
+        } finally {
+          makingOfferRef.current = false;
         }
       };
 
@@ -382,75 +434,103 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         }
       };
 
-      // Helper to create & send an SDP offer
-      const makeOffer = async () => {
-        try {
-          if (pc.signalingState !== "stable") return;
-          console.log("Creating WebRTC Offer...");
-          const offer = await pc.createOffer({
-            offerToReceiveAudio: true,
-            offerToReceiveVideo: true,
-          });
-          await pc.setLocalDescription(offer);
-          sendSignal({ type: "offer", sdp: offer });
-        } catch (err) {
-          console.error("Failed to create WebRTC offer:", err);
-        }
-      };
-
-      // Signal Handler for incoming offers, answers, candidates, and presence
+      // Signal Handler for incoming offers, answers, candidates, and presence with Perfect Negotiation
       const handleSignalMessage = async (msg: any) => {
         if (!msg || msg.senderPeerId === peerIdRef.current) return;
         if (msg.consultationId && msg.consultationId !== consultationId) return;
+
+        // Deduplicate messages received across multiple transports (BroadcastChannel, Supabase, localStorage)
+        if (msg.msgId) {
+          if (seenMessagesRef.current.has(msg.msgId)) return;
+          seenMessagesRef.current.add(msg.msgId);
+          if (seenMessagesRef.current.size > 300) {
+            const first = seenMessagesRef.current.values().next().value;
+            if (first) seenMessagesRef.current.delete(first);
+          }
+        }
 
         try {
           if (msg.type === "peer-ready") {
             console.log("Peer ready received from:", msg.senderRole);
             // Reply with ack
             sendSignal({ type: "peer-ready-ack" });
-            // Doctor or Patient can make offer; if role is DOCTOR (or patient after ack), initiate offer
-            if (role === "DOCTOR" || role === "PATIENT") {
-              await makeOffer();
+
+            // Impolite peer (Doctor) initiates offer when peer is ready if currently stable
+            if (!isPolite && pc.signalingState === "stable") {
+              try {
+                makingOfferRef.current = true;
+                console.log("Doctor creating offer after receiving peer-ready...");
+                await pc.setLocalDescription();
+                sendSignal({ type: "offer", sdp: pc.localDescription });
+              } catch (err) {
+                console.warn("Failed to create offer on peer-ready:", err);
+              } finally {
+                makingOfferRef.current = false;
+              }
             }
           } else if (msg.type === "peer-ready-ack") {
             console.log("Peer ready ack received from:", msg.senderRole);
-            if (role === "PATIENT") {
-              await makeOffer();
+            // Impolite peer (Doctor) initiates offer if in stable
+            if (!isPolite && pc.signalingState === "stable") {
+              try {
+                makingOfferRef.current = true;
+                console.log("Doctor creating offer after receiving peer-ready-ack...");
+                await pc.setLocalDescription();
+                sendSignal({ type: "offer", sdp: pc.localDescription });
+              } catch (err) {
+                console.warn("Failed to create offer on peer-ready-ack:", err);
+              } finally {
+                makingOfferRef.current = false;
+              }
             }
           } else if (msg.type === "offer" && msg.sdp) {
             console.log("Received WebRTC Offer from:", msg.senderRole);
-            if (pc.signalingState !== "stable" && pc.signalingState !== "have-local-offer") {
-              // Rollback if collision
-              await Promise.all([
-                pc.setLocalDescription({ type: "rollback" }),
-                pc.setRemoteDescription(new RTCSessionDescription(msg.sdp)),
-              ]);
-            } else {
-              await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            const readyForOffer =
+              !makingOfferRef.current &&
+              (pc.signalingState === "stable" || isSettingRemoteAnswerPendingRef.current);
+            const offerCollision = !readyForOffer;
+
+            ignoreOfferRef.current = !isPolite && offerCollision;
+            if (ignoreOfferRef.current) {
+              console.log("Glare collision: impolite peer ignoring incoming offer");
+              return;
             }
+
+            if (offerCollision) {
+              console.log("Glare collision: polite peer rolling back local description");
+              await pc.setLocalDescription({ type: "rollback" });
+            }
+
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
             await flushIceCandidates();
 
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            sendSignal({ type: "answer", sdp: answer });
+            await pc.setLocalDescription();
+            sendSignal({ type: "answer", sdp: pc.localDescription });
           } else if (msg.type === "answer" && msg.sdp) {
             console.log("Received WebRTC Answer from:", msg.senderRole);
             if (pc.signalingState === "have-local-offer") {
+              isSettingRemoteAnswerPendingRef.current = true;
               await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+              isSettingRemoteAnswerPendingRef.current = false;
               await flushIceCandidates();
+            } else {
+              console.warn("Ignoring answer received in unexpected state:", pc.signalingState);
             }
           } else if (msg.type === "ice-candidate" && msg.candidate) {
-            if (pc.remoteDescription && pc.remoteDescription.type) {
-              try {
+            try {
+              if (pc.remoteDescription && pc.remoteDescription.type) {
                 await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-              } catch (err) {
+              } else {
+                iceCandidatesQueueRef.current.push(msg.candidate);
+              }
+            } catch (err) {
+              if (!ignoreOfferRef.current) {
                 console.warn("Failed to add ICE candidate:", err);
               }
-            } else {
-              iceCandidatesQueueRef.current.push(msg.candidate);
             }
           } else if (msg.type === "peer-leave") {
             console.log("Remote peer left the call.");
+            remoteMediaStreamRef.current = new MediaStream();
             setRemoteStream(null);
             setConnectionStatus("disconnected");
           }
@@ -508,12 +588,16 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
       // 6. Broadcast initial readiness signal immediately
       sendSignal({ type: "peer-ready" });
 
-      // 7. Periodic ping to ensure connection if peer joins shortly after
+      // 7. Periodic ping to ensure connection if peer joins shortly after (stops once connected)
       const pingInterval = setInterval(() => {
-        if (pc.iceConnectionState !== "connected" && pc.iceConnectionState !== "completed") {
+        if (
+          pc.iceConnectionState !== "connected" &&
+          pc.iceConnectionState !== "completed" &&
+          pc.connectionState !== "connected"
+        ) {
           sendSignal({ type: "peer-ready" });
         }
-      }, 2500);
+      }, 3000);
 
       // Cleanup
       return () => {
@@ -547,11 +631,13 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         pcRef.current.close();
       }
 
+      remoteMediaStreamRef.current = new MediaStream();
+
       cleanupPromise?.then((cleanup) => {
         if (cleanup) cleanup();
       });
     };
-  }, [consultationId, role, sendSignal]);
+  }, [consultationId, role, sendSignal, isPolite]);
 
   // Controls
   const toggleMute = () => {
