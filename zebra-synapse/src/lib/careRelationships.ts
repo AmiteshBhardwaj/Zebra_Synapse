@@ -49,6 +49,20 @@ export const CARE_RELATIONSHIPS_LIST_SELECT = `
   patient:profiles!care_relationships_patient_id_fkey ( full_name, height_cm, weight_kg, dietary_preference, food_allergies, dietary_conditions, dietary_notes )
 `.trim();
 
+export const CARE_RELATIONSHIPS_FALLBACK_SELECT = `
+  patient_id,
+  last_visit,
+  primary_condition,
+  heart_rate,
+  blood_pressure_systolic,
+  blood_pressure_diastolic,
+  glucose,
+  health_status,
+  risk_flags,
+  created_at,
+  patient:profiles!care_relationships_patient_id_fkey ( full_name )
+`.trim();
+
 export function formatDisplayDate(value: string | null | undefined): string {
   if (!value) return "—";
   const d = new Date(value);
