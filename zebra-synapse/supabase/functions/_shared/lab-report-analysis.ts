@@ -54,8 +54,8 @@ const PDF_TEXT_MIN_LENGTH = 160;
 const ANALYSIS_VERSION = "lab-pipeline-v1";
 const EXTRACTION_SCHEMA_VERSION = "lab-extraction-v1";
 const AI_PROVIDER = "gemini";
-const DEFAULT_MODEL = Deno.env.get("GEMINI_MODEL")?.trim() || "gemini-3.7-flash";
-const FALLBACK_MODEL = Deno.env.get("GEMINI_MODEL_FALLBACK")?.trim() || "gemini-3.5-flash-lite";
+const DEFAULT_MODEL = Deno.env.get("GEMINI_MODEL")?.trim() || "gemini-2.0-flash";
+const FALLBACK_MODEL = Deno.env.get("GEMINI_MODEL_FALLBACK")?.trim() || "gemini-1.5-flash";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")?.trim() || "";
 
 const EXTRACTION_SCHEMA = {
@@ -266,6 +266,7 @@ async function callGeminiExtractionWithModel(args: {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY,
       },
       body: JSON.stringify({
         contents: [

@@ -60,16 +60,14 @@ export function setGeminiApiKey(key: string): void {
   }
 }
 
-/**
- * Modern active Gemini 3.x series models.
- * (Gemini 2.5 models are deprecated and excluded).
- */
 export const DEFAULT_GEMINI_MODELS = [
+  "gemini-2.0-flash",
+  "gemini-1.5-flash",
+  "gemini-2.0-flash-lite",
+  "gemini-1.5-flash-8b",
+  "gemini-1.5-pro",
+  "gemini-2.5-flash",
   "gemini-3.7-flash",
-  "gemini-3.6-flash",
-  "gemini-3.5-flash",
-  "gemini-3.5-flash-lite",
-  "gemini-3.1-flash-lite",
   "gemini-flash-latest",
   "gemini-flash-lite-latest",
   "gemini-pro-latest",
@@ -141,7 +139,12 @@ export async function testGeminiApiKey(customKey?: string): Promise<GeminiKeyTes
   try {
     // 1. Check models list endpoint
     const listRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
+      {
+        headers: {
+          "x-goog-api-key": key,
+        },
+      }
     );
 
     if (!listRes.ok) {
@@ -190,7 +193,10 @@ export async function testGeminiApiKey(customKey?: string): Promise<GeminiKeyTes
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": key,
+            },
             body: JSON.stringify({
               contents: [{ role: "user", parts: [{ text: "Ping test" }] }],
               generationConfig: { maxOutputTokens: 5 },

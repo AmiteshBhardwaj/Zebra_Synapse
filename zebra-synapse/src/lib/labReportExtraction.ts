@@ -236,8 +236,8 @@ export const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number 
   transferrin_saturation: { min: 1.0, max: 100.0 },
   vitamin_d: { min: 2.0, max: 250.0 },
   vitamin_b12: { min: 20.0, max: 5000.0 },
-  sgpt: { min: 1.0, max: 2000.0 },
-  sgot: { min: 1.0, max: 2000.0 },
+  sgpt: { min: 1.0, max: 500.0 },
+  sgot: { min: 1.0, max: 500.0 },
   total_bilirubin: { min: 0.05, max: 40.0 },
   conjugated_bilirubin: { min: 0.0, max: 30.0 },
   unconjugated_bilirubin: { min: 0.0, max: 30.0 },
@@ -318,10 +318,15 @@ function recoverBiomarkerDecimal(biomarkerKey: string, val: number, lineText: st
     return Number((val / 10).toFixed(1)); // e.g. 58 -> 5.8
   }
 
-  if ((biomarkerKey === "sgot" || biomarkerKey === "sgpt") && val > 500) {
-    if (/\b\d{1,2}\s+[0-9]{2}\b|\b\d{1,2}\.\d{2}\b/i.test(lineText)) {
-      return Number((val / 100).toFixed(2));
-    }
+  // SGOT / SGPT: Normal reference is 17-59 U/L.
+  // If val > 100 and integer, it very likely lost a decimal point in OCR/scan.
+  if ((biomarkerKey === "sgot" || biomarkerKey === "sgpt") && val > 100) {
+    // Try /100 first (e.g. 803 → 8.03, 4500 → 45.00)
+    const div100 = Number((val / 100).toFixed(2));
+    if (div100 >= 1.0 && div100 <= 200) return div100;
+    // Try /10 (e.g. 450 → 45.0)
+    const div10 = Number((val / 10).toFixed(1));
+    if (div10 >= 1.0 && div10 <= 200) return div10;
   }
 
   return val;
@@ -567,10 +572,19 @@ ${supportedBiomarkersList}
 1. **Patient Result vs Reference Range**:
    - Only extract the patient's **actual observed result value**.
    - NEVER extract the biological reference interval / normal range limits.
-2. **DECIMAL POINT ACCURACY & NUMBER EXTRACTION (STRICT)**:
-   - Pay extreme attention to decimal points in all numbers (e.g., '8.03' must NEVER be read as '803', '1.12' must NEVER be read as '112', '0.9' must NEVER be read as '90' or '9').
-   - In printed tables, dot-matrix reports, and scans, decimal points may be small, faint, or slightly separated. ALWAYS preserve decimal precision.
-   - Cross-check standard clinical reference intervals on the same row to confirm the order of magnitude if a decimal point is faint or questionable (e.g. AST / SGOT normal reference is 17-59 U/L; a value of '8.03' is 8.03, NOT 803).
+2. **DECIMAL POINT ACCURACY & NUMBER EXTRACTION (HIGHEST PRIORITY — STRICT)**:
+   - Pay EXTREME attention to decimal points in ALL numbers.
+   - In scanned documents, dot-matrix reports, and camera photos, decimal points are often small, faint, smudged, or slightly separated from digits. You MUST look very carefully for them.
+   - ALWAYS preserve decimal precision. A missing decimal point completely changes the clinical meaning of a result.
+   - **MANDATORY MAGNITUDE SANITY CHECK**: After extracting each value, compare it against the reference range printed on the SAME ROW of the report. If your extracted value is 10x–1000x larger than the reference range upper limit, you have almost certainly missed a decimal point. Re-examine the image and correct it.
+   - **COMMON DECIMAL MISREAD EXAMPLES (DO NOT MAKE THESE ERRORS)**:
+     • SGOT/AST: Reference 17-59 U/L → a value of '8.03' must be 8.03, NOT 803
+     • SGPT/ALT: Reference 0-50 U/L → a value of '25.3' must be 25.3, NOT 253
+     • Creatinine: Reference 0.6-1.3 mg/dL → a value of '0.85' must be 0.85, NOT 85
+     • HbA1c: Reference <5.7% → a value of '5.7' must be 5.7, NOT 57
+     • TSH: Reference 0.35-4.94 → a value of '2.45' must be 2.45, NOT 245
+     • Bilirubin: Reference 0.2-1.3 mg/dL → a value of '0.80' must be 0.80, NOT 80
+   - If a value looks implausibly large compared to clinical norms, INSERT the decimal point at the most clinically plausible position.
 3. **Handwriting & Scans**:
    - Read cursive doctor handwriting, handwritten numbers, tick marks, rubber stamp values, and low-contrast scanned text carefully.
 4. **Unit Normalization**:
@@ -627,7 +641,10 @@ Return your response in this EXACT JSON structure:
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                "x-goog-api-key": geminiApiKey,
+              },
               body: JSON.stringify({
                 contents: [{ role: "user", parts }],
                 generationConfig: {
@@ -694,10 +711,13 @@ Return your response in this EXACT JSON structure:
         for (const [key, rawVal] of Object.entries(parsed.biomarkers)) {
           const num = typeof rawVal === "number" ? rawVal : Number(rawVal);
           if (Number.isFinite(num) && num > 0) {
+            // Apply decimal recovery to Gemini Vision output — catches cases where
+            // the AI misreads faint decimal points in scanned documents (e.g. 803 → 8.03)
+            const recovered = recoverBiomarkerDecimal(key, num, "");
             const bounds = BIOMARKER_SANITY_BOUNDS[key];
-            if (!bounds || (num >= bounds.min && num <= bounds.max)) {
+            if (!bounds || (recovered >= bounds.min && recovered <= bounds.max)) {
               if (aggregatedBiomarkers[key] == null) {
-                aggregatedBiomarkers[key] = num;
+                aggregatedBiomarkers[key] = recovered;
               }
             }
           }
@@ -766,41 +786,9 @@ export async function extractLabPanelFromPdf(
   let detectedDate: string | null = null;
 
   // =========================================================================
-  // TIER 1: Digital PDF Vector Text Extraction
+  // PREPARE PAGE IMAGES FOR MULTIMODAL VISION & OCR
   // =========================================================================
-  if (isPdf) {
-    try {
-      const extracted = await extractTextFromPdfBlob(file);
-      if (extracted.lines.length > 0) {
-        const textExtract = extractBiomarkersFromLineList(extracted.lines, extracted.text);
-        Object.assign(biomarkers, textExtract.biomarkers);
-        if (textExtract.detectedDate) detectedDate = textExtract.detectedDate;
-      }
-    } catch (err) {
-      console.warn("[pdf digital text extract warning]", err);
-    }
-  }
-
-  // If digital text found sufficient biomarkers, return success immediately
-  if (Object.keys(biomarkers).length >= 2) {
-    onProgress?.(100, "Extraction complete!");
-    return {
-      status: "success",
-      panel: {
-        recordedAt: detectedDate || new Date().toISOString().slice(0, 10),
-        values: buildLegacyValues(biomarkers),
-        biomarkers,
-        matchedCount: Object.keys(biomarkers).length,
-        notes: "Auto-extracted from digital lab report text.",
-        extractionSource: "digital",
-      },
-    };
-  }
-
-  // =========================================================================
-  // PREPARE PAGE IMAGES FOR SCANNED / IMAGE REPORT PIPELINE
-  // =========================================================================
-  onProgress?.(30, "Rendering document for high-accuracy analysis...");
+  onProgress?.(15, "Rendering document for high-accuracy analysis...");
   let pageImages: Array<{ base64Data: string; mimeType: string }> = [];
 
   try {
@@ -814,34 +802,11 @@ export async function extractLabPanelFromPdf(
     console.warn("[page image render error]", renderErr);
   }
 
-  if (pageImages.length === 0) {
-    if (Object.keys(biomarkers).length > 0) {
-      return {
-        status: "success",
-        panel: {
-          recordedAt: detectedDate || new Date().toISOString().slice(0, 10),
-          values: buildLegacyValues(biomarkers),
-          biomarkers,
-          matchedCount: Object.keys(biomarkers).length,
-          notes: "Extracted partial biomarkers from digital text layer.",
-          extractionSource: "digital",
-        },
-      };
-    }
-    return {
-      status: "no_data",
-      reason: "Could not render document pages for image analysis.",
-    };
-  }
-
   // =========================================================================
-  // TIER 2: Gemini Multimodal Vision (if API key available)
+  // TIER 1: Gemini Multimodal Vision (Primary & Highest Accuracy)
   // =========================================================================
-  let aiVisionSucceeded = false;
-  let aiVisionNotes = "";
-
-  if (geminiApiKey) {
-    onProgress?.(50, "Analyzing with Gemini Multimodal AI...");
+  if (geminiApiKey && pageImages.length > 0) {
+    onProgress?.(35, "Analyzing with Gemini Multimodal AI...");
     try {
       const visionResult = await extractBiomarkersFromImagesWithGemini(pageImages, geminiApiKey);
       for (const [k, v] of Object.entries(visionResult.biomarkers)) {
@@ -852,52 +817,81 @@ export async function extractLabPanelFromPdf(
       if (!detectedDate && visionResult.recordedAt) {
         detectedDate = visionResult.recordedAt;
       }
-      if (Object.keys(visionResult.biomarkers).length > 0) {
-        aiVisionSucceeded = true;
-        aiVisionNotes = visionResult.confidenceNotes || "Extracted via Gemini Multimodal Vision";
+      if (Object.keys(biomarkers).length > 0) {
+        onProgress?.(100, "Extraction complete!");
+        return {
+          status: "success",
+          panel: {
+            recordedAt: detectedDate || new Date().toISOString().slice(0, 10),
+            values: buildLegacyValues(biomarkers),
+            biomarkers,
+            matchedCount: Object.keys(biomarkers).length,
+            notes: visionResult.confidenceNotes || "Extracted via Gemini Multimodal Vision",
+            extractionSource: "gemini_vision",
+          },
+        };
       }
     } catch (aiErr) {
-      console.warn("[Gemini Vision error, will proceed to local OCR fallback]:", aiErr);
+      console.warn("[Gemini Vision error, will proceed to digital/local fallbacks]:", aiErr);
     }
   }
 
-  if (aiVisionSucceeded && Object.keys(biomarkers).length > 0) {
-    onProgress?.(100, "Extraction complete!");
-    return {
-      status: "success",
-      panel: {
-        recordedAt: detectedDate || new Date().toISOString().slice(0, 10),
-        values: buildLegacyValues(biomarkers),
-        biomarkers,
-        matchedCount: Object.keys(biomarkers).length,
-        notes: aiVisionNotes,
-        extractionSource: "gemini_vision",
-      },
-    };
+  // =========================================================================
+  // TIER 2: Digital PDF Vector Text Extraction Fallback
+  // =========================================================================
+  if (isPdf) {
+    onProgress?.(60, "Checking digital PDF text layer...");
+    try {
+      const extracted = await extractTextFromPdfBlob(file);
+      if (extracted.lines.length > 0) {
+        const textExtract = extractBiomarkersFromLineList(extracted.lines, extracted.text);
+        Object.assign(biomarkers, textExtract.biomarkers);
+        if (textExtract.detectedDate) detectedDate = textExtract.detectedDate;
+      }
+    } catch (err) {
+      console.warn("[pdf digital text extract warning]", err);
+    }
+
+    if (Object.keys(biomarkers).length >= 2) {
+      onProgress?.(100, "Extraction complete!");
+      return {
+        status: "success",
+        panel: {
+          recordedAt: detectedDate || new Date().toISOString().slice(0, 10),
+          values: buildLegacyValues(biomarkers),
+          biomarkers,
+          matchedCount: Object.keys(biomarkers).length,
+          notes: "Auto-extracted from digital lab report text.",
+          extractionSource: "digital",
+        },
+      };
+    }
   }
 
   // =========================================================================
-  // TIER 3: Local In-Browser OCR Fallback (Foolproof Engine)
+  // TIER 3: Local In-Browser OCR Fallback (Tesseract.js)
   // =========================================================================
-  onProgress?.(65, "Running local OCR scan fallback...");
-  try {
-    const ocrResult = await extractTextFromImagesWithOcr(pageImages, (p, s) => {
-      onProgress?.(65 + Math.floor((p / 100) * 30), s);
-    });
+  if (pageImages.length > 0) {
+    onProgress?.(75, "Running local OCR scan fallback...");
+    try {
+      const ocrResult = await extractTextFromImagesWithOcr(pageImages, (p, s) => {
+        onProgress?.(75 + Math.floor((p / 100) * 20), s);
+      });
 
-    if (ocrResult.lines.length > 0) {
-      const ocrExtracted = extractBiomarkersFromLineList(ocrResult.lines, ocrResult.text);
-      for (const [k, v] of Object.entries(ocrExtracted.biomarkers)) {
-        if (biomarkers[k] == null) {
-          biomarkers[k] = v;
+      if (ocrResult.lines.length > 0) {
+        const ocrExtracted = extractBiomarkersFromLineList(ocrResult.lines, ocrResult.text);
+        for (const [k, v] of Object.entries(ocrExtracted.biomarkers)) {
+          if (biomarkers[k] == null) {
+            biomarkers[k] = v;
+          }
+        }
+        if (!detectedDate && ocrExtracted.detectedDate) {
+          detectedDate = ocrExtracted.detectedDate;
         }
       }
-      if (!detectedDate && ocrExtracted.detectedDate) {
-        detectedDate = ocrExtracted.detectedDate;
-      }
+    } catch (ocrFallbackErr) {
+      console.warn("[Local OCR fallback error]:", ocrFallbackErr);
     }
-  } catch (ocrFallbackErr) {
-    console.warn("[Local OCR fallback error]:", ocrFallbackErr);
   }
 
   const finalMatchedCount = Object.keys(biomarkers).length;
