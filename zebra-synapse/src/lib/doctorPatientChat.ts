@@ -97,6 +97,26 @@ export function sendChatAccessRequest(
 
   const updated = [...current, newReq];
   saveChatRequests(updated);
+
+  // Sync to Supabase as system message if configured
+  if (isSupabaseConfigured()) {
+    const sb = getSupabase();
+    if (sb) {
+      void sb.from("doctor_patient_messages").insert({
+        id: `reqmsg_${newReq.id}`,
+        doctor_id: doctorId,
+        patient_id: patientId,
+        doctor_name: doctorName,
+        patient_name: patientName,
+        sender_id: patientId,
+        sender_role: "patient",
+        content: `[Chat Access Request] ${patientName || "Patient"} requested direct 2-way clinical chat access.`,
+        is_read: false,
+        created_at: newReq.created_at,
+      });
+    }
+  }
+
   return newReq;
 }
 
@@ -178,7 +198,7 @@ export function filterConversationMessages(
 }
 
 /**
- * Fetch all messages between a doctor and patient.
+ * Fetch all messages between a doctor and patient across remote devices.
  */
 export async function fetchDoctorPatientMessages(
   doctorId: string,
@@ -196,14 +216,14 @@ export async function fetchDoctorPatientMessages(
   if (!sb) return filteredLocal;
 
   try {
+    // Fetch remote messages from Supabase
     const { data, error } = await sb
       .from("doctor_patient_messages")
       .select("*")
-      .or(`doctor_id.eq.${doctorId},patient_id.eq.${patientId}`)
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.warn("[doctorPatientChat] Supabase fetch error, using local fallback:", error.message);
+      console.warn("[doctorPatientChat] Remote Supabase fetch error, using local storage:", error.message);
       return filteredLocal;
     }
 
@@ -218,7 +238,7 @@ export async function fetchDoctorPatientMessages(
 
     return filterConversationMessages(updatedGlobal, doctorId, patientId, doctorName, patientName);
   } catch (err) {
-    console.warn("[doctorPatientChat] Exception fetching messages:", err);
+    console.warn("[doctorPatientChat] Remote fetch exception:", err);
     return filteredLocal;
   }
 }
@@ -280,7 +300,7 @@ export async function sendDoctorPatientMessage(
       .maybeSingle();
 
     if (error) {
-      console.warn("[doctorPatientChat] Supabase insert warning:", error.message);
+      console.warn("[doctorPatientChat] Remote Supabase insert warning:", error.message, error.details);
       return newMessage;
     }
 
@@ -292,7 +312,7 @@ export async function sendDoctorPatientMessage(
       return serverMsg;
     }
   } catch (err) {
-    console.warn("[doctorPatientChat] Supabase insert exception:", err);
+    console.warn("[doctorPatientChat] Remote Supabase insert exception:", err);
   }
 
   return newMessage;
@@ -334,7 +354,6 @@ export async function markDoctorPatientMessagesAsRead(
     await sb
       .from("doctor_patient_messages")
       .update({ is_read: true })
-      .or(`doctor_id.eq.${doctorId},patient_id.eq.${patientId}`)
       .neq("sender_id", currentUserId)
       .eq("is_read", false);
   } catch (err) {
