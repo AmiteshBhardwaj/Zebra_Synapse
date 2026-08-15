@@ -28,6 +28,8 @@ import DoctorAppointments from "./pages/doctor/DoctorAppointments";
 
 import PatientLabChat from "./pages/patient/PatientLabChat";
 import PatientDietChat from "./pages/patient/PatientDietChat";
+import PatientDoctorChat from "./pages/patient/PatientDoctorChat";
+import DoctorPatientChat from "./pages/doctor/DoctorPatientChat";
 
 export const router = createBrowserRouter([
   {
@@ -70,6 +72,8 @@ export const router = createBrowserRouter([
       { path: "ai-chat", Component: PatientLabChat },
       { path: "appointments", Component: Appointments },
       { path: "teleconsult", Component: PatientTeleconsult },
+      { path: "messages", Component: PatientDoctorChat },
+      { path: "chat", Component: PatientDoctorChat },
       { path: "prescription", Component: Prescription },
       { path: "predictions", Component: DiseasePrediction },
       { path: "disease-prediction", Component: DiseasePrediction },
@@ -89,6 +93,8 @@ export const router = createBrowserRouter([
       { path: "patients", Component: DoctorPatientsDirectory },
       { path: "appointments", Component: DoctorAppointments },
       { path: "teleconsult", Component: DoctorTeleconsult },
+      { path: "messages", Component: DoctorPatientChat },
+      { path: "chat", Component: DoctorPatientChat },
       { path: "settings", Component: ProfileSettings },
       { path: "patient/:patientId", Component: PatientDetail },
     ],

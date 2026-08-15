@@ -40,6 +40,7 @@ export default function PatientDashboard() {
     { path: "/patient/ai-chat", icon: Bot, label: "AI Lab Assistant" },
     { path: "/patient/appointments", icon: Calendar, label: "Appointments" },
     { path: "/patient/teleconsult", icon: Video, label: "Teleconsultation" },
+    { path: "/patient/messages", icon: MessageSquare, label: "Doctor Messages", altPaths: ["/patient/chat"] },
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },
     { path: "/patient/disease-prediction", icon: TrendingUp, label: "Disease Prediction" },
     { path: "/patient/diet", icon: Utensils, label: "Diet", altPaths: ["/patient/nutrition", "/patient/diet-chat", "/patient/dietitian"] },
