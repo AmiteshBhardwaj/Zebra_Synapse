@@ -42,11 +42,25 @@ async function fetchProfile(
   sb: SupabaseClient,
   userId: string,
 ): Promise<Profile | null> {
-  const { data, error } = await sb
+  let { data, error } = await sb
     .from("profiles")
     .select("id, role, full_name, license_number, height_cm, weight_kg, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
     .eq("id", userId)
     .maybeSingle();
+
+  if (error && (error.message.includes("schema cache") || error.message.includes("column") || error.message.includes("does not exist"))) {
+    console.warn("[auth] Supabase profiles select fallback:", error.message);
+    const fallback = await sb
+      .from("profiles")
+      .select("id, role, full_name, license_number")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!fallback.error) {
+      data = (fallback.data as unknown) as any;
+      error = null;
+    }
+  }
 
   if (error) {
     console.error("[auth] profiles fetch:", error.message);
@@ -258,10 +272,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sb = getSupabase();
       if (sb && session?.user?.id) {
         try {
-          const { error } = await sb
+          let { error } = await sb
             .from("profiles")
             .update(patch)
             .eq("id", session.user.id);
+
+          // Graceful fallback if database schema lacks optional extended columns
+          if (error && (
+            error.message.includes("schema cache") ||
+            error.message.includes("column") ||
+            error.message.includes("does not exist")
+          )) {
+            console.warn("[auth] Supabase profiles schema fallback:", error.message);
+            const corePatch: Record<string, any> = {};
+            if (patch.full_name !== undefined) corePatch.full_name = patch.full_name;
+            if (patch.license_number !== undefined) corePatch.license_number = patch.license_number;
+
+            const fallbackRes = await sb
+              .from("profiles")
+              .update(corePatch)
+              .eq("id", session.user.id);
+
+            if (!fallbackRes.error) {
+              error = null;
+            }
+          }
+
           if (error) {
             console.error("[auth] supabase updateProfile error:", error.message);
             return { error: new Error(error.message) };
