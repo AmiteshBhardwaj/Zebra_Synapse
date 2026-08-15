@@ -173,10 +173,13 @@ export default function PatientsList() {
   };
 
   return (
-    <div className="space-y-5 pb-8 font-poppins">
-      {/* Top Hero Stats Banner */}
-      <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-[#A8DEF7] via-[#D8D9FF] to-[#C7D2FE] p-6 md:p-8 flex flex-col justify-between shadow-lg shadow-[#3E36B0]/5 border border-white/80">
-        {/* Subtle Ambient Shapes */}
+    <>
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-full min-h-0 font-poppins pb-2">
+      {/* Left Column: Hero & Consultation */}
+      <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-5 h-full min-h-0">
+        {/* Hero Card ("Visits for Today") */}
+        <div className="relative overflow-hidden shrink-0 rounded-[26px] bg-gradient-to-br from-[#A8DEF7] via-[#D8D9FF] to-[#C7D2FE] p-6 md:p-8 flex flex-col justify-between shadow-lg shadow-[#3E36B0]/5 border border-white/80">
+          {/* Subtle Ambient Shapes */}
         <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/30 rounded-full blur-2xl pointer-events-none" />
         <div className="absolute bottom-0 right-32 w-48 h-48 bg-[#A8DEF7]/50 rounded-full blur-xl pointer-events-none" />
 
@@ -255,108 +258,9 @@ export default function PatientsList() {
         </div>
       </div>
 
-      {/* Bottom 3-Column Section: Patient List | Consultation Center | Daily Read */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Left: Patient List Queue */}
-        <div className="lg:col-span-4 xl:col-span-4 bg-white rounded-[26px] p-5 shadow-sm border border-slate-200/70 flex flex-col h-[560px]">
-          {/* Header & Filter Controls */}
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-[#111111]">Patient List</h2>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#D8D9FF] text-[#3E36B0]">
-                {filtered.length}
-              </span>
-            </div>
-
-            <select
-              value={filterMode}
-              onChange={(e) => setFilterMode(e.target.value as any)}
-              className="text-xs font-semibold text-slate-600 bg-[#F4F6FC] rounded-lg px-2 py-1 border border-slate-200 outline-none cursor-pointer hover:bg-slate-100"
-            >
-              <option value="today">Today</option>
-              <option value="all">All Patients</option>
-              <option value="risk">High Risk</option>
-            </select>
-          </div>
-
-          {/* Quick Search */}
-          <div className="relative my-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search roster..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 rounded-xl bg-[#F4F6FC] border border-transparent focus:border-[#3E36B0]/30 text-xs text-[#111111] placeholder:text-slate-400 outline-none transition-all"
-            />
-          </div>
-
-          {/* Patient Scroll List */}
-          <div className="flex-1 overflow-y-auto space-y-2 pr-1 [scrollbar-width:thin]">
-            {loading && <p className="text-xs text-slate-400 text-center py-8">Loading patients...</p>}
-
-            {!loading && filtered.length === 0 && (
-              <div className="text-center py-12 px-4">
-                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                <p className="text-xs font-bold text-slate-600">No patients found</p>
-                <p className="text-[10px] text-slate-400 mt-1">Try another filter or link a new patient.</p>
-              </div>
-            )}
-
-            {!loading &&
-              filtered.map((p, idx) => {
-                const isSelected = selectedPatient?.patientId === p.patientId;
-                const slotTime = getAppointmentSlot(idx);
-
-                return (
-                  <div
-                    key={p.patientId}
-                    onClick={() => setSelectedPatientId(p.patientId)}
-                    className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition-all border ${
-                      isSelected
-                        ? "bg-[#F4F6FC] border-[#3E36B0]/40 shadow-sm ring-1 ring-[#3E36B0]/20"
-                        : "bg-white border-slate-100 hover:bg-[#FAFBFD] hover:border-slate-200"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {/* Avatar */}
-                      <div
-                        className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                          isSelected
-                            ? "bg-[#3E36B0] text-white"
-                            : "bg-[#E5ECF9] text-[#3E36B0]"
-                        }`}
-                      >
-                        {initials(p.name)}
-                      </div>
-
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-[#111111] truncate">{p.name}</p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-slate-500 font-medium truncate">
-                            {p.condition || "Routine Surveillance"}
-                          </span>
-                          {p.vitals.status === "risk" && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Time Slot Pill */}
-                    <div className="text-right shrink-0">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600">
-                        {slotTime}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-          </div>
-        </div>
-
+      
         {/* Center: Consultation Inspection Panel */}
-        <div className="lg:col-span-5 xl:col-span-5 bg-white rounded-[26px] p-5 md:p-6 shadow-sm border border-slate-200/70 flex flex-col justify-between min-h-[560px]">
+        <div className="bg-white rounded-[26px] p-5 md:p-6 shadow-sm border border-slate-200/70 flex flex-col justify-between flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin]">
           {selectedPatient ? (
             <div className="space-y-5">
               {/* Consultation Header */}
@@ -500,8 +404,111 @@ export default function PatientsList() {
           )}
         </div>
 
+        
+      </div>
+
+      {/* Right Column: Patient List & Daily Read */}
+      <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-5 h-full min-h-0">
+        {/* Right: Patient List Queue */}
+      <div className="bg-white rounded-[26px] p-5 shadow-sm border border-slate-200/70 flex flex-col flex-1 min-h-0">
+          {/* Header & Filter Controls */}
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-[#111111]">Patient List</h2>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[#D8D9FF] text-[#3E36B0]">
+                {filtered.length}
+              </span>
+            </div>
+
+            <select
+              value={filterMode}
+              onChange={(e) => setFilterMode(e.target.value as any)}
+              className="text-xs font-semibold text-slate-600 bg-[#F4F6FC] rounded-lg px-2 py-1 border border-slate-200 outline-none cursor-pointer hover:bg-slate-100"
+            >
+              <option value="today">Today</option>
+              <option value="all">All Patients</option>
+              <option value="risk">High Risk</option>
+            </select>
+          </div>
+
+          {/* Quick Search */}
+          <div className="relative my-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search roster..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-8 pl-8 pr-3 rounded-xl bg-[#F4F6FC] border border-transparent focus:border-[#3E36B0]/30 text-xs text-[#111111] placeholder:text-slate-400 outline-none transition-all"
+            />
+          </div>
+
+          {/* Patient Scroll List */}
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1 [scrollbar-width:thin]">
+            {loading && <p className="text-xs text-slate-400 text-center py-8">Loading patients...</p>}
+
+            {!loading && filtered.length === 0 && (
+              <div className="text-center py-12 px-4">
+                <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                <p className="text-xs font-bold text-slate-600">No patients found</p>
+                <p className="text-[10px] text-slate-400 mt-1">Try another filter or link a new patient.</p>
+              </div>
+            )}
+
+            {!loading &&
+              filtered.map((p, idx) => {
+                const isSelected = selectedPatient?.patientId === p.patientId;
+                const slotTime = getAppointmentSlot(idx);
+
+                return (
+                  <div
+                    key={p.patientId}
+                    onClick={() => setSelectedPatientId(p.patientId)}
+                    className={`flex items-center justify-between p-2.5 rounded-2xl cursor-pointer transition-all border ${
+                      isSelected
+                        ? "bg-[#F4F6FC] border-[#3E36B0]/40 shadow-sm ring-1 ring-[#3E36B0]/20"
+                        : "bg-white border-slate-100 hover:bg-[#FAFBFD] hover:border-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {/* Avatar */}
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                          isSelected
+                            ? "bg-[#3E36B0] text-white"
+                            : "bg-[#E5ECF9] text-[#3E36B0]"
+                        }`}
+                      >
+                        {initials(p.name)}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#111111] truncate">{p.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-slate-500 font-medium truncate">
+                            {p.condition || "Routine Surveillance"}
+                          </span>
+                          {p.vitals.status === "risk" && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Time Slot Pill */}
+                    <div className="text-right shrink-0">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white border border-slate-200 text-slate-600">
+                        {slotTime}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+
         {/* Right: Daily Read / Medical Intelligence Card */}
-        <div className="lg:col-span-3 xl:col-span-3 bg-white rounded-[26px] p-5 shadow-sm border border-slate-200/70 flex flex-col justify-between h-[560px]">
+        <div className="bg-white rounded-[26px] p-5 shadow-sm border border-slate-200/70 flex flex-col justify-between shrink-0">
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#F62088]/10 text-[#F62088] border border-[#F62088]/20">
@@ -539,7 +546,7 @@ export default function PatientsList() {
           </button>
         </div>
       </div>
-
+    </div>
       {/* Modal for Daily Read Article */}
       {dailyReadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -577,7 +584,7 @@ export default function PatientsList() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 

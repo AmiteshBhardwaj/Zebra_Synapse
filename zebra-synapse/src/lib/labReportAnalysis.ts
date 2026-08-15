@@ -245,7 +245,7 @@ export function mapBiomarkersToLegacyFields(biomarkers: Record<string, number>) 
 export function buildPanelPayloadFromExtraction(args: {
   patientId: string;
   uploadId: string;
-  extractionId: string;
+  extractionId?: string | null;
   recordedAt: string;
   biomarkers: Record<string, number>;
   notes?: string | null;
@@ -254,7 +254,7 @@ export function buildPanelPayloadFromExtraction(args: {
   return {
     patient_id: args.patientId,
     upload_id: args.uploadId,
-    source_extraction_id: args.extractionId,
+    source_extraction_id: args.extractionId || null,
     recorded_at: args.recordedAt,
     biomarkers: args.biomarkers,
     hemoglobin_a1c: legacy.hemoglobin_a1c ?? null,

@@ -157,7 +157,7 @@ export function usePatientLabReports() {
           const panelPayload = buildPanelPayloadFromExtraction({
             patientId: user.id,
             uploadId,
-            extractionId: extractionId as string,
+            extractionId: extractionId || null,
             recordedAt: result.panel.recordedAt,
             biomarkers: result.panel.biomarkers,
             notes: result.panel.notes,
@@ -271,7 +271,12 @@ export function usePatientLabReports() {
         cacheControl: "3600",
         upsert: false,
       });
-      if (upErr) throw upErr;
+      if (upErr) {
+        if (isRlsPermissionError(upErr)) {
+          throw new Error("Storage upload blocked by Supabase permissions. Ensure migration 020_fix_rls_policies.sql is applied to Supabase.");
+        }
+        throw upErr;
+      }
 
       const { error: rowErr } = await sb.from("lab_report_uploads").insert({
         id: uploadId,
