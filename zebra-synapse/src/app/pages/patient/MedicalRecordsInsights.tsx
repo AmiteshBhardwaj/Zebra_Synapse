@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { AlertCircle, Bot, Edit3, FileText, Loader2, Plus, RefreshCw, Save, Sparkles, Trash2 } from "lucide-react";
+import { AlertCircle, Bot, CheckCircle2, Edit3, FileText, KeyRound, Loader2, Plus, RefreshCw, Save, Sparkles, Trash2 } from "lucide-react";
+import { getGeminiApiKey, hasGeminiApiKey, setGeminiApiKey, testGeminiApiKey, type GeminiKeyTestResult } from "../../../lib/geminiKey";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,6 +111,41 @@ export default function MedicalRecordsInsights() {
   const [editDate, setEditDate] = useState("");
   const [savingManual, setSavingManual] = useState(false);
   const [customKeyToAdd, setCustomKeyToAdd] = useState("");
+
+  // Gemini API Key modal state
+  const [isApiKeyModalOpen, setIsApiKeyModalOpen] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [testingKey, setTestingKey] = useState(false);
+  const [testResult, setTestResult] = useState<GeminiKeyTestResult | null>(null);
+
+  const handleTestKey = async () => {
+    setTestingKey(true);
+    setTestResult(null);
+    try {
+      const res = await testGeminiApiKey(apiKeyInput);
+      setTestResult(res);
+      if (res.ok) {
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setTestingKey(false);
+    }
+  };
+
+  const handleSaveApiKey = () => {
+    const cleaned = apiKeyInput.trim();
+    setGeminiApiKey(cleaned);
+    toast.success(cleaned ? "Gemini API Key saved!" : "Gemini API Key removed.");
+    setIsApiKeyModalOpen(false);
+    setTestResult(null);
+
+    // If an upload is currently selected and in failed status, automatically trigger AI analysis
+    if (cleaned && selectedUpload?.id && selectedUpload.analysis_status === "failed") {
+      void handleTriggerAnalysis(selectedUpload.id);
+    }
+  };
 
   const openEditModal = () => {
     const initial: Record<string, string> = {};
@@ -512,6 +548,17 @@ export default function MedicalRecordsInsights() {
                       )}
                     </Button>
                     <Button
+                      onClick={() => {
+                        setApiKeyInput(getGeminiApiKey());
+                        setIsApiKeyModalOpen(true);
+                      }}
+                      variant="outline"
+                      className="h-10 px-4 rounded-xl border-amber-300 bg-amber-50/80 text-amber-900 hover:bg-amber-100 text-xs font-semibold gap-1.5 shadow-sm cursor-pointer"
+                    >
+                      <KeyRound className="h-4 w-4 text-amber-700" />
+                      Configure Gemini API Key
+                    </Button>
+                    <Button
                       onClick={openEditModal}
                       variant="outline"
                       className="h-10 px-4 rounded-xl border-slate-200 bg-white text-slate-800 hover:bg-slate-50 text-xs font-semibold gap-1.5 shadow-sm cursor-pointer"
@@ -608,7 +655,7 @@ export default function MedicalRecordsInsights() {
                   <div className={portalTableWrapClass}>
                     <Table className={portalTableClass}>
                       <TableHeader className={portalTableHeadClass}>
-                        <TableRow className={portalTableRowClass}>
+                        <TableRow className="border-b border-slate-100">
                           <TableHead className="text-slate-700 font-bold text-xs py-3 px-4">Biomarker</TableHead>
                           <TableHead className="text-slate-700 font-bold text-xs py-3 px-4">Observed Value</TableHead>
                           <TableHead className="text-slate-700 font-bold text-xs py-3 px-4">Standard Reference</TableHead>
@@ -616,8 +663,8 @@ export default function MedicalRecordsInsights() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {metrics.map((metric) => (
-                          <TableRow key={metric.key} className={portalTableRowClass}>
+                        {metrics.map((metric, index) => (
+                          <TableRow key={metric.key} className={portalTableRowClass(index)}>
                             <TableCell className={`${portalTableCellClass} font-semibold text-slate-900`}>
                               {metric.label}
                             </TableCell>
@@ -625,7 +672,7 @@ export default function MedicalRecordsInsights() {
                               {getMetricValueLabel(metric)}
                             </TableCell>
                             <TableCell className={`${portalTableCellClass} text-slate-400 text-xs`}>
-                              {metric.referenceRange || "Standard clinical range"}
+                              {metric.range || "Standard clinical range"}
                             </TableCell>
                             <TableCell className={`${portalTableCellClass} text-right`}>
                               <StatusPill status={metric.status} />
@@ -779,6 +826,115 @@ export default function MedicalRecordsInsights() {
                   Save Biomarkers
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Gemini API Key Configuration Dialog */}
+      <Dialog open={isApiKeyModalOpen} onOpenChange={setIsApiKeyModalOpen}>
+        <DialogContent className="max-w-md border-slate-100 bg-white text-slate-800 shadow-2xl rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 font-bold text-base flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-amber-600" />
+              Configure Gemini AI API Key
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 text-xs leading-relaxed">
+              Google Gemini Vision enables AI recognition for scanned PDFs, smartphone photos, and handwritten medical records.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold text-slate-700">Google AI Studio / Gemini API Key</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleTestKey}
+                  disabled={testingKey || !apiKeyInput.trim()}
+                  className="h-6 px-2 text-[11px] font-semibold text-lime-700 hover:bg-lime-50 rounded-lg cursor-pointer"
+                >
+                  {testingKey ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      Testing...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Test Key & Models
+                    </>
+                  )}
+                </Button>
+              </div>
+              <Input
+                type="password"
+                placeholder="AIzaSy... or API key"
+                value={apiKeyInput}
+                onChange={(e) => {
+                  setApiKeyInput(e.target.value);
+                  setTestResult(null);
+                }}
+                className="h-10 rounded-xl border-slate-200 bg-slate-50 text-xs text-slate-800 focus:bg-white"
+              />
+              <p className="text-[11px] text-slate-400">
+                Your key is stored in your browser session (<code className="text-slate-600">localStorage</code>) and tested against Google Generative Language APIs.
+              </p>
+            </div>
+
+            {testResult && (
+              <div
+                className={`p-3 rounded-xl text-xs flex items-start gap-2.5 border ${
+                  testResult.ok
+                    ? "bg-emerald-50/80 border-emerald-200 text-emerald-900"
+                    : "bg-amber-50/80 border-amber-200 text-amber-900"
+                }`}
+              >
+                {testResult.ok ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-1">
+                  <p className="font-semibold text-xs">{testResult.message}</p>
+                  {testResult.availableModels.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {testResult.availableModels.map((m) => (
+                        <span
+                          key={m}
+                          className="px-1.5 py-0.5 rounded-md bg-white/80 border border-emerald-200 text-[10px] font-mono text-emerald-800"
+                        >
+                          {m}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {!testResult.ok && (
+                    <p className="text-[11px] text-amber-700/90 pt-0.5">
+                      Don't worry: If Gemini AI is unavailable, our built-in local OCR engine will automatically extract all report biomarkers!
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 border-t border-slate-100 pt-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsApiKeyModalOpen(false)}
+              className="h-9 rounded-xl border-slate-200 text-slate-700 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveApiKey}
+              className="h-9 px-5 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-1.5 shadow-sm cursor-pointer"
+            >
+              <Save className="h-3.5 w-3.5" />
+              Save & Run OCR
             </Button>
           </DialogFooter>
         </DialogContent>

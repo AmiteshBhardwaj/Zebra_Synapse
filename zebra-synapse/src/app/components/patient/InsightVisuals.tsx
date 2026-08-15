@@ -247,11 +247,13 @@ export function MetricSparklineGrid({
   metricKeys,
   title,
   description,
+  limit = 6,
 }: {
   panels: LabPanelRow[];
-  metricKeys: string[];
+  metricKeys?: string[];
   title: string;
   description: string;
+  limit?: number;
 }) {
   const orderedPanels = [...panels]
     .sort((a, b) => new Date(`${a.recorded_at}T00:00:00`).getTime() - new Date(`${b.recorded_at}T00:00:00`).getTime())
@@ -260,7 +262,11 @@ export function MetricSparklineGrid({
   const latestMetrics = orderedPanels.length > 0 ? getMetricAssessments(orderedPanels[orderedPanels.length - 1]) : [];
   const latestMetricMap = new Map(latestMetrics.map((metric) => [metric.key, metric]));
 
-  const cards = metricKeys
+  const keysToDisplay = (metricKeys && metricKeys.length > 0)
+    ? metricKeys
+    : latestMetrics.filter((m) => m.status !== "missing").map((m) => m.key).slice(0, limit);
+
+  const cards = keysToDisplay
     .map((key) => {
       const latestMetric = latestMetricMap.get(key);
       if (!latestMetric || latestMetric.status === "missing") return null;

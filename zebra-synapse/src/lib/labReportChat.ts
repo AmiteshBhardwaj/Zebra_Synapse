@@ -1,5 +1,6 @@
 import { getSupabase } from "./supabase";
 import { BIOMARKER_DEFINITIONS, getBiomarkerDefinition } from "./biomarkerCatalog";
+import { getGeminiApiKey, getGeminiModels } from "./geminiKey";
 import type { MetricAssessment } from "./labInsights";
 
 export type LabReportQueryStatus = "pending_review" | "verified" | "rejected_and_replaced";
@@ -335,15 +336,7 @@ export async function generateLabReportAiAnswer(
   }
 
   // 2. Try Gemini API if API key is provided
-  const geminiApiKey = (
-    (typeof import.meta !== "undefined" && (
-      (import.meta as any)?.env?.VITE_GEMINI_API_KEY ||
-      (import.meta as any)?.env?.GEMINI_API_KEY
-    )) ||
-    ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
-    ((globalThis as any)?.process?.env?.GEMINI_API_KEY) ||
-    ""
-  ).trim();
+  const geminiApiKey = getGeminiApiKey();
   if (geminiApiKey) {
     try {
       const prompt = `
@@ -383,26 +376,33 @@ CRITICAL INSTRUCTIONS & GUARDRAILS:
 6. NEXT STEPS: Provide supportive, actionable next steps aligned with their configured diet and remind the patient that their connected doctor has automatically received this query for review and verification.
 `.trim();
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 1000,
-            },
-          }),
-        }
-      );
+      const chatModels = getGeminiModels();
+      for (const model of chatModels) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: {
+                  temperature: 0.3,
+                  maxOutputTokens: 1000,
+                },
+              }),
+            }
+          );
 
-      if (response.ok) {
-        const json = await response.json();
-        const generatedText = json.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (generatedText && generatedText.trim().length > 20) {
-          return generatedText.trim();
+          if (response.ok) {
+            const json = await response.json();
+            const generatedText = json.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (generatedText && generatedText.trim().length > 20) {
+              return generatedText.trim();
+            }
+          }
+        } catch {
+          // Fallback to next model
         }
       }
     } catch (e) {

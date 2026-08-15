@@ -1,4 +1,5 @@
 import { getSupabase } from "./supabase";
+import { getGeminiApiKey, getGeminiModels } from "./geminiKey";
 import {
   calculateBMR,
   calculateTDEE,
@@ -263,16 +264,8 @@ export async function generateDietitianAiAnswer(
   const targetCalories = calculateCalorieTarget(tdee, goal);
   const macroTargets = calculateMacroTargets(targetCalories, goal);
 
-  // 1. Check for Gemini API Key in Environment
-  const geminiApiKey = (
-    (typeof import.meta !== "undefined" && (
-      (import.meta as any)?.env?.VITE_GEMINI_API_KEY ||
-      (import.meta as any)?.env?.GEMINI_API_KEY
-    )) ||
-    ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
-    ((globalThis as any)?.process?.env?.GEMINI_API_KEY) ||
-    ""
-  ).trim();
+  // 1. Check for Gemini API Key in Environment / Storage
+  const geminiApiKey = getGeminiApiKey();
 
   if (geminiApiKey) {
     try {
@@ -301,36 +294,43 @@ Communication Guidelines:
 5. Format your responses beautifully using clear markdown, bullet points, bold text for key nutrients, and short paragraphs for readability.
 6. Keep recommendations practical and delicious.`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(
-          geminiApiKey
-        )}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: "user",
-                parts: [
-                  { text: systemPrompt },
-                  { text: `Patient Question / Request:\n"${query}"` },
+      const dietModels = getGeminiModels();
+      for (const model of dietModels) {
+        try {
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
+              geminiApiKey
+            )}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    role: "user",
+                    parts: [
+                      { text: systemPrompt },
+                      { text: `Patient Question / Request:\n"${query}"` },
+                    ],
+                  },
                 ],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 1000,
-            },
-          }),
-        }
-      );
+                generationConfig: {
+                  temperature: 0.7,
+                  maxOutputTokens: 1000,
+                },
+              }),
+            }
+          );
 
-      if (response.ok) {
-        const data = await response.json();
-        const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (generatedText && generatedText.trim().length > 0) {
-          return generatedText.trim();
+          if (response.ok) {
+            const data = await response.json();
+            const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (generatedText && generatedText.trim().length > 0) {
+              return generatedText.trim();
+            }
+          }
+        } catch {
+          // Fallback to next model
         }
       }
     } catch (err) {
