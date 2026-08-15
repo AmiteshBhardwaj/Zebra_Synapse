@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   LayoutDashboard,
+  Home,
   Calendar,
   MessageSquare,
   Bot,
@@ -78,15 +79,15 @@ export const PATIENT_SIDEBAR_ITEMS: SidebarNavItem[] = [
 export const DOCTOR_SIDEBAR_ITEMS: SidebarNavItem[] = [
   {
     path: "/doctor",
-    label: "Dashboard",
-    icon: LayoutDashboard,
+    label: "Home",
+    icon: Home,
     exact: true,
   },
   {
-    path: "/doctor",
-    label: "My Patients",
+    path: "/doctor/patients",
+    label: "Patients",
     icon: Users,
-    exact: true,
+    altPaths: ["/doctor/patient"],
   },
   {
     path: "/doctor/teleconsult",
@@ -96,7 +97,7 @@ export const DOCTOR_SIDEBAR_ITEMS: SidebarNavItem[] = [
   },
   {
     path: "/doctor/settings",
-    label: "Settings",
+    label: "Account Settings",
     icon: Settings,
   },
 ];

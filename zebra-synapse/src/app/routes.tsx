@@ -79,6 +79,7 @@ export const router = createBrowserRouter([
     Component: RequireDoctorPortal,
     children: [
       { index: true, Component: PatientsList },
+      { path: "patients", Component: PatientsList },
       { path: "teleconsult", Component: DoctorTeleconsult },
       { path: "settings", Component: ProfileSettings },
       { path: "patient/:patientId", Component: PatientDetail },
