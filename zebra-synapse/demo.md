@@ -14,13 +14,19 @@ This guide is designed for judges, evaluators, and reviewers exploring **Zebra S
 
 ## 2. Fast Demo Setup (Local Environment)
 
-To test locally with pre-seeded demo clinical data:
-
+### Option A: Standard Node.js
 1. Follow standard setup in [`README.md`](../README.md) (`npm install`, configure `.env`).
-
-2. Apply SQL migrations 001 through 017 in [`supabase/migrations/`](./supabase/migrations/).
+2. Apply SQL migrations 001 through 020 in [`supabase/migrations/`](./supabase/migrations/).
 3. Run [`supabase/migrations/seed_doctors_patients.sql`](./supabase/migrations/seed_doctors_patients.sql) to populate demo doctors, patients, care links, and historical lab panels.
-4. Launch local dev server: `npm run dev`.
+4. Launch local dev server: `npm run dev` (access at `http://localhost:5173`).
+
+### Option B: One-Command Docker Setup
+1. Configure `.env` in `zebra-synapse/`: `cp zebra-synapse/.env.example zebra-synapse/.env`
+2. Run production Nginx container:
+   ```bash
+   docker compose --profile prod up --build
+   ```
+3. Open `http://localhost:3000` in your browser.
 
 ---
 

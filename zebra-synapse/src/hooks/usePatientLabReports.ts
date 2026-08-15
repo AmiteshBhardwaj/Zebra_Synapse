@@ -118,15 +118,16 @@ export function usePatientLabReports() {
           .download(uploadRow.storage_path);
 
         if (downloadErr || !fileBlob) {
+          const detail = downloadErr?.message ? ` (${downloadErr.message})` : "";
           await sb
             .from("lab_report_uploads")
             .update({
               analysis_status: "failed",
-              last_error: "Could not retrieve file from storage bucket.",
+              last_error: `Could not retrieve file from storage bucket${detail}.`,
             })
             .eq("id", uploadId);
           await refetch();
-          throw new Error("Could not retrieve file from storage bucket.");
+          throw new Error(`Could not retrieve file from storage bucket${detail}.`);
         }
 
         // 3. Perform extraction

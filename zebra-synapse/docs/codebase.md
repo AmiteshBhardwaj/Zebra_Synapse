@@ -9,7 +9,9 @@ This guide provides an architectural map of the codebase for developers modifyin
 
 - **`src/`:** Production application code (React 18, TypeScript, TailwindCSS v4, Vite 6).
 - **`public/`:** Static web assets and demo files.
-- **`supabase/`:** Database migrations (001–017), seed data, and Deno Edge Functions.
+- **`supabase/`:** Database migrations (001–020), seed data, and Deno Edge Functions.
+- **`Dockerfile` & `Dockerfile.dev`:** Production multi-stage Nginx container and live development container.
+- **`docker-compose.yml` & `nginx.conf`:** Multi-profile orchestration and SPA web server configuration.
 - **`scripts/`:** Repeatable developer tooling (e.g. `write-local-env.mjs`).
 - **`docs/`:** Supplementary documentation, codebase maps, and third-party attributions.
 - **`research/`:** Archived multimodal machine learning experiments (MIMIC-IV); not part of runtime or web build.
@@ -83,6 +85,12 @@ This guide provides an architectural map of the codebase for developers modifyin
 - **`supabase/functions/process-lab-report/`:** Deno Edge Function extracting text via PDF.js and performing structured Gemini OCR.
 - **`supabase/functions/process-lab-report-queue/`:** Asynchronous queue worker processing backlog extraction jobs.
 - **`src/lib/labReportAnalysis.ts` & `labReportExtraction.ts`:** Client-side triggers, draft management, and manual overrides.
+
+### Containerization & Deployment
+- **`Dockerfile`:** Multi-stage production build (`node:20-alpine` builder -> `nginx:1.27-alpine` runner).
+- **`Dockerfile.dev`:** Containerized development environment with live hot-reloading (`--host 0.0.0.0`).
+- **`nginx.conf`:** Production web server configuration with SPA routing fallback, gzip compression, asset caching, and security headers.
+- **`docker-compose.yml`:** Multi-profile orchestration (`prod` and `dev` profiles) with build argument handling.
 
 ---
 

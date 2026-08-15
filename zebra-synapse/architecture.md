@@ -122,6 +122,12 @@ flowchart TD
 - **Video/Audio Stream:** PeerJS WebRTC peer-to-peer connection over Google STUN servers.
 - **Real-Time Clinical Note Streaming:** Clinicians author live consultation notes streamed instantaneously to the patient via Supabase Realtime WebSocket broadcast channels (`consultation-{id}`).
 
+### 7. Containerization & Deployment Infrastructure
+- **Production Container:** Multi-stage build (`node:20-alpine` -> `nginx:1.27-alpine`) packaging compiled SPA assets with client-side SPA routing (`try_files $uri $uri/ /index.html;`), Gzip compression, immutable asset caching, and security headers (`X-Frame-Options`, `X-Content-Type-Options`).
+- **Development Container:** Live-reloading Vite dev server (`Dockerfile.dev`) with volume-mounted source code on port 5173.
+- **Multi-Profile Orchestration:** Dual-level `docker-compose.yml` configs supporting `prod` (Port 3000) and `dev` (Port 5173) profiles with build-argument injection from `.env`.
+- **Serverless Edge & Hosting:** Vercel Global Edge CDN for production live web app; Deno Edge Functions for serverless document OCR and queue operations.
+
 ---
 
 ## 3. Relational Data Model (Supabase Postgres)

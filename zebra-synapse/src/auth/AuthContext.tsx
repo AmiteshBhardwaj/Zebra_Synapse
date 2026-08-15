@@ -112,14 +112,6 @@ async function fetchProfile(
     }
   }
 
-  try {
-    const localOverride = localStorage.getItem(`zebra_profile_${userId}`);
-    if (localOverride) {
-      const parsed = JSON.parse(localOverride);
-      return { ...baseProfile, ...parsed };
-    }
-  } catch {}
-
   return baseProfile;
 }
 
@@ -256,16 +248,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDemoProfile(updated);
       }
 
-      // 2. Persist to localStorage caches
-      try {
-        localStorage.setItem(`zebra_profile_${activeUid}`, JSON.stringify(updated));
-        const stored = localStorage.getItem(DEMO_STORAGE_KEY);
-        const parsed = stored ? JSON.parse(stored) : {};
-        parsed.profile = updated;
-        if (!parsed.user && demoUser) parsed.user = demoUser;
-        localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(parsed));
-      } catch (e) {
-        console.warn("[auth] localStorage update error:", e);
+      // 2. Persist to localStorage caches for demo users only
+      if (!session?.user) {
+        try {
+          const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+          const parsed = stored ? JSON.parse(stored) : {};
+          parsed.profile = updated;
+          if (!parsed.user && demoUser) parsed.user = demoUser;
+          localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(parsed));
+        } catch (e) {
+          console.warn("[auth] localStorage update error:", e);
+        }
       }
 
       // 3. Persist to Supabase if connected
@@ -323,6 +316,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const sync = async (s: Session | null) => {
       setSession(s);
       if (s?.user) {
+        setDemoUser(null);
+        setDemoProfile(null);
+        try {
+          localStorage.removeItem(DEMO_STORAGE_KEY);
+        } catch {}
         const p = await fetchProfile(sb, s.user.id);
         setProfile(p);
       } else {

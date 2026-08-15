@@ -32,6 +32,18 @@ For setup and deployment prerequisites, consult [`../README.md`](../README.md). 
    npm run dev
    ```
 
+### Alternative: Containerized Development with Docker
+If you prefer not to install Node/npm locally:
+```bash
+# 1. Start live-reloading dev container
+docker compose --profile dev up --build
+# Or from zebra-synapse/: npm run docker:dev
+
+# 2. Test production build inside Nginx
+docker compose --profile prod up --build
+# Or from zebra-synapse/: npm run docker:prod
+```
+
 ---
 
 ## 2. Code Standards & Boundaries

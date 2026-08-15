@@ -802,6 +802,9 @@ export async function extractLabPanelFromPdf(
     console.warn("[page image render error]", renderErr);
   }
 
+  let geminiVisionError: string | null = null;
+  let ocrError: string | null = null;
+
   // =========================================================================
   // TIER 1: Gemini Multimodal Vision (Primary & Highest Accuracy)
   // =========================================================================
@@ -809,6 +812,9 @@ export async function extractLabPanelFromPdf(
     onProgress?.(35, "Analyzing with Gemini Multimodal AI...");
     try {
       const visionResult = await extractBiomarkersFromImagesWithGemini(pageImages, geminiApiKey);
+      if (visionResult.lastError) {
+        geminiVisionError = visionResult.lastError;
+      }
       for (const [k, v] of Object.entries(visionResult.biomarkers)) {
         if (biomarkers[k] == null) {
           biomarkers[k] = v;
@@ -832,8 +838,11 @@ export async function extractLabPanelFromPdf(
         };
       }
     } catch (aiErr) {
+      geminiVisionError = aiErr instanceof Error ? aiErr.message : String(aiErr);
       console.warn("[Gemini Vision error, will proceed to digital/local fallbacks]:", aiErr);
     }
+  } else if (!geminiApiKey) {
+    geminiVisionError = "No Gemini API key configured.";
   }
 
   // =========================================================================
@@ -890,6 +899,7 @@ export async function extractLabPanelFromPdf(
         }
       }
     } catch (ocrFallbackErr) {
+      ocrError = ocrFallbackErr instanceof Error ? ocrFallbackErr.message : String(ocrFallbackErr);
       console.warn("[Local OCR fallback error]:", ocrFallbackErr);
     }
   }
@@ -910,9 +920,16 @@ export async function extractLabPanelFromPdf(
     };
   }
 
+  const diagnosticDetails: string[] = [];
+  if (geminiVisionError) diagnosticDetails.push(`AI Vision: ${geminiVisionError}`);
+  if (ocrError) diagnosticDetails.push(`OCR: ${ocrError}`);
+
+  const failureReason = diagnosticDetails.length > 0
+    ? `No supported biomarkers extracted (${diagnosticDetails.join("; ")}). Please ensure the document is clear or enter the values manually.`
+    : "No supported clinical biomarkers could be identified in this document. Please ensure the document is clear or enter the values manually.";
+
   return {
     status: "no_data",
-    reason:
-      "No supported clinical biomarkers could be identified in this document. Please ensure the document is clear or enter the values manually.",
+    reason: failureReason,
   };
 }

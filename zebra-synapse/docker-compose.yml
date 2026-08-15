@@ -1,0 +1,42 @@
+services:
+  # Production container (built with Nginx)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+        VITE_GEMINI_API_KEY: ${VITE_GEMINI_API_KEY:-}
+        VITE_SITE_URL: ${VITE_SITE_URL:-}
+        VITE_AUTH_INACTIVITY_TIMEOUT_MS: ${VITE_AUTH_INACTIVITY_TIMEOUT_MS:-}
+    container_name: zebra-synapse-prod
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    environment:
+      - NODE_ENV=production
+    profiles:
+      - prod
+      - default
+
+  # Development container with hot-reloading
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: zebra-synapse-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-}
+      - VITE_GEMINI_API_KEY=${VITE_GEMINI_API_KEY:-}
+      - VITE_SITE_URL=${VITE_SITE_URL:-}
+      - VITE_AUTH_INACTIVITY_TIMEOUT_MS=${VITE_AUTH_INACTIVITY_TIMEOUT_MS:-}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    profiles:
+      - dev
