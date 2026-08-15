@@ -1,5 +1,5 @@
 -- Migration 021: Doctor-Patient 2-Way Direct Messages
--- Enables cross-device real-time messaging between doctors and patients
+-- Enables real-time messaging between doctors and patients across all devices
 
 create table if not exists public.doctor_patient_messages (
   id text primary key default gen_random_uuid()::text,
@@ -32,23 +32,28 @@ create index if not exists doctor_patient_messages_sender_idx
 alter table public.doctor_patient_messages enable row level security;
 
 -- Permissive RLS Policies for real-time cross-device communication
+-- Select policy: Allow viewing conversation messages
 drop policy if exists "doctor_patient_messages_select" on public.doctor_patient_messages;
 create policy "doctor_patient_messages_select"
   on public.doctor_patient_messages for select
   using (true);
 
+-- Insert policy: Allow sending messages
 drop policy if exists "doctor_patient_messages_insert" on public.doctor_patient_messages;
 create policy "doctor_patient_messages_insert"
   on public.doctor_patient_messages for insert
   with check (true);
 
+-- Update policy: Allow updating message read state
 drop policy if exists "doctor_patient_messages_update" on public.doctor_patient_messages;
 create policy "doctor_patient_messages_update"
   on public.doctor_patient_messages for update
   using (true)
   with check (true);
 
--- Enable Supabase Realtime for instant cross-device updates
+-- Enable Supabase Realtime broadcast for cross-device synchronization
+alter table public.doctor_patient_messages replica identity full;
+
 do $$
 begin
   if exists (
@@ -59,7 +64,8 @@ begin
     exception when duplicate_object then
       -- table already in publication
       null;
+    when others then
+      null;
     end;
   end if;
 end $$;
-
