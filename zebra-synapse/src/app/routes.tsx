@@ -63,6 +63,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: PatientHome },
       { path: "records", Component: MedicalRecords },
+      { path: "medical-records", Component: MedicalRecords },
       { path: "lab-chat", Component: PatientLabChat },
       { path: "diet-chat", Component: PatientDietChat },
       { path: "ai-chat", Component: PatientLabChat },
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
       { path: "teleconsult", Component: PatientTeleconsult },
       { path: "prescription", Component: Prescription },
       { path: "predictions", Component: DiseasePrediction },
+      { path: "disease-prediction", Component: DiseasePrediction },
       { path: "diet", Component: Diet },
       { path: "nutrition", Component: Nutrition },
       { path: "exercise", Component: ExercisePlan },
