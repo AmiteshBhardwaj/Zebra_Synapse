@@ -17,6 +17,7 @@ import ClinicalTrials from "./pages/patient/ClinicalTrialsInsights";
 import WellnessTips from "./pages/patient/WellnessTipsInsights";
 import ProfileSettings from "./pages/ProfileSettings";
 import PatientsList from "./pages/doctor/PatientsList";
+import DoctorPatientsDirectory from "./pages/doctor/DoctorPatientsDirectory";
 import PatientDetail from "./pages/doctor/PatientDetail";
 import RequirePatientPortal from "./layouts/RequirePatientPortal";
 import RequireDoctorPortal from "./layouts/RequireDoctorPortal";
@@ -41,31 +42,34 @@ export const router = createBrowserRouter([
     Component: PatientLogin,
   },
   {
-    path: "/signup/patient",
-    Component: PatientSignup,
-  },
-  {
     path: "/login/doctor",
     Component: DoctorLogin,
+  },
+  {
+    path: "/signup/patient",
+    Component: PatientSignup,
   },
   {
     path: "/signup/doctor",
     Component: DoctorSignup,
   },
   {
+    path: "/auth/duallogin",
+    Component: DualLogin,
+  },
+  {
     path: "/patient",
     Component: RequirePatientPortal,
     children: [
       { index: true, Component: PatientHome },
-      { path: "medical-records", Component: MedicalRecords },
-      { path: "ai-chat", Component: PatientLabChat },
+      { path: "records", Component: MedicalRecords },
       { path: "lab-chat", Component: PatientLabChat },
       { path: "diet-chat", Component: PatientDietChat },
-      { path: "dietitian", Component: PatientDietChat },
+      { path: "ai-chat", Component: PatientLabChat },
       { path: "appointments", Component: Appointments },
       { path: "teleconsult", Component: PatientTeleconsult },
       { path: "prescription", Component: Prescription },
-      { path: "disease-prediction", Component: DiseasePrediction },
+      { path: "predictions", Component: DiseasePrediction },
       { path: "diet", Component: Diet },
       { path: "nutrition", Component: Nutrition },
       { path: "exercise", Component: ExercisePlan },
@@ -79,7 +83,7 @@ export const router = createBrowserRouter([
     Component: RequireDoctorPortal,
     children: [
       { index: true, Component: PatientsList },
-      { path: "patients", Component: PatientsList },
+      { path: "patients", Component: DoctorPatientsDirectory },
       { path: "teleconsult", Component: DoctorTeleconsult },
       { path: "settings", Component: ProfileSettings },
       { path: "patient/:patientId", Component: PatientDetail },
