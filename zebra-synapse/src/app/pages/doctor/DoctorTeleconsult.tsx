@@ -217,6 +217,59 @@ export default function DoctorTeleconsult() {
     }
   };
 
+  // Broadcast doctor presence in active room so patient can discover and join
+  useEffect(() => {
+    if (!callActive || !activeConsultationId) return;
+
+    const payload = {
+      consultationId: activeConsultationId,
+      doctorId: user?.id,
+      doctorName: profile?.full_name || "Dr. Amelia Hart",
+      specialty: profile?.license_number ? `Lic. ${profile.license_number}` : "Internal Medicine & Primary Care",
+      patientName: activePatientName,
+      patientId: activePatientId,
+      timestamp: Date.now(),
+    };
+
+    try {
+      localStorage.setItem(`zebra_doctor_waiting_${activeConsultationId}`, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel("teleconsult-queue");
+        bc.postMessage({ type: "doctor-waiting-in-room", payload });
+      }
+    } catch {
+      // ignore
+    }
+
+    const heartbeat = setInterval(() => {
+      try {
+        localStorage.setItem(
+          `zebra_doctor_waiting_${activeConsultationId}`,
+          JSON.stringify({ ...payload, timestamp: Date.now() })
+        );
+      } catch {
+        // ignore
+      }
+      bc?.postMessage({ type: "doctor-waiting-in-room", payload });
+    }, 2500);
+
+    return () => {
+      clearInterval(heartbeat);
+      try {
+        localStorage.removeItem(`zebra_doctor_waiting_${activeConsultationId}`);
+      } catch {
+        // ignore
+      }
+      bc?.close();
+    };
+  }, [callActive, activeConsultationId, user?.id, profile?.full_name, activePatientName, activePatientId]);
+
   // Doctor connects with a waiting patient from the queue
   const handleConnectPatient = async (patient: WaitingPatient) => {
     setActiveConsultationId(patient.consultationId);
@@ -296,6 +349,25 @@ export default function DoctorTeleconsult() {
 
     setIsPublishing(true);
     try {
+      // 1. Write to localStorage
+      try {
+        localStorage.setItem(`zebra_consultation_notes_${activeConsultationId}`, noteText);
+      } catch {
+        // ignore
+      }
+
+      // 2. Broadcast via BroadcastChannel
+      try {
+        if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+          const bc = new BroadcastChannel(`zebra-notes-${activeConsultationId}`);
+          bc.postMessage({ note: noteText });
+          bc.close();
+        }
+      } catch {
+        // ignore
+      }
+
+      // 3. Broadcast via Supabase Realtime
       const supabase = getSupabase();
       if (supabase) {
         const channel = supabase.channel(`consultation-${activeConsultationId}`);
