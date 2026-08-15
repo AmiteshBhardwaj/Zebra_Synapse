@@ -732,10 +732,15 @@ export async function generateAIExercisePlan(
   trends?: BiomarkerTrendMap | BiomarkerTrend[],
   profile: ExerciseProfileInput = {}
 ): Promise<WeeklyExercisePlan> {
-  const geminiApiKey =
-    (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_GEMINI_API_KEY) ||
+  const geminiApiKey = (
+    (typeof import.meta !== "undefined" && (
+      (import.meta as any)?.env?.VITE_GEMINI_API_KEY ||
+      (import.meta as any)?.env?.GEMINI_API_KEY
+    )) ||
     ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
-    "";
+    ((globalThis as any)?.process?.env?.GEMINI_API_KEY) ||
+    ""
+  ).trim();
 
   // If no Gemini API key, return deterministic clinical plan immediately
   if (!geminiApiKey) {

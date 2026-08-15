@@ -396,6 +396,47 @@ export function usePatientLabReports() {
     [user, refetch],
   );
 
+  const updateLabReportPanel = useCallback(
+    async (
+      uploadId: string,
+      biomarkers: Record<string, number>,
+      recordedAt?: string,
+    ): Promise<void> => {
+      if (!user) throw new Error("Not signed in");
+      const sb = getSupabase();
+      if (!sb) throw new Error("Supabase not configured");
+
+      const { buildPanelPayloadFromExtraction } = await import("../lib/labReportAnalysis");
+      const panelPayload = buildPanelPayloadFromExtraction({
+        patientId: user.id,
+        uploadId,
+        extractionId: null,
+        recordedAt: recordedAt || new Date().toISOString().slice(0, 10),
+        biomarkers,
+        notes: "Manually reviewed and verified by user.",
+      });
+
+      // Upsert lab panel
+      await sb.from("lab_panels").delete().eq("upload_id", uploadId).eq("patient_id", user.id);
+      const { error: pErr } = await sb.from("lab_panels").insert(panelPayload);
+      if (pErr) throw pErr;
+
+      // Update upload status to ready
+      await sb
+        .from("lab_report_uploads")
+        .update({
+          analysis_status: "ready",
+          document_type: "lab_report",
+          processed_at: new Date().toISOString(),
+          last_error: null,
+        })
+        .eq("id", uploadId);
+
+      await refetch();
+    },
+    [user, refetch],
+  );
+
   return {
     uploads,
     loading,
@@ -403,6 +444,8 @@ export function usePatientLabReports() {
     uploadLabReport,
     deleteLabReport,
     analyzeUploadedLabReport,
+    updateLabReportPanel,
     hasLabReports: uploads.length > 0,
   };
 }
+

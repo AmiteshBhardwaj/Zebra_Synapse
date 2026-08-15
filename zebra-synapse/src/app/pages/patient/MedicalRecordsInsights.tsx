@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { AlertCircle, Bot, FileText, Loader2, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { AlertCircle, Bot, Edit3, FileText, Loader2, Plus, RefreshCw, Save, Sparkles, Trash2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,7 +12,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../components/ui/dialog";
 import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import {
   Select,
@@ -33,6 +43,7 @@ import {
 } from "../../components/patient/InsightVisuals";
 import { formatLabDate } from "../../../lib/labPanels";
 import { getMetricAssessments, getMetricValueLabel } from "../../../lib/labInsights";
+import { BIOMARKER_DEFINITIONS, getBiomarkerDefinition } from "../../../lib/biomarkerCatalog";
 import {
   PatientPageHero,
   PatientPortalPage,
@@ -60,14 +71,97 @@ function formatUploadedAt(iso: string): string {
   }
 }
 
+const COMMON_EDIT_KEYS = [
+  "fasting_glucose",
+  "hemoglobin_a1c",
+  "total_cholesterol",
+  "ldl",
+  "hdl",
+  "triglycerides",
+  "hemoglobin",
+  "wbc",
+  "platelets",
+  "creatinine",
+  "tsh",
+  "sgpt",
+  "sgot",
+  "vitamin_d_25_oh",
+  "vitamin_b12",
+];
+
 export default function MedicalRecordsInsights() {
   const navigate = useNavigate();
-  const { uploads, refetch: refetchUploads, deleteLabReport, analyzeUploadedLabReport } = usePatientLabReports();
+  const {
+    uploads,
+    refetch: refetchUploads,
+    deleteLabReport,
+    analyzeUploadedLabReport,
+    updateLabReportPanel,
+  } = usePatientLabReports();
   const { panels, refetch: refetchPanels } = usePatientLabPanels();
   const { selectedReportId, setSelectedReportId, activePanel } = useActiveReport(panels);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [analyzingManual, setAnalyzingManual] = useState(false);
+
+  // Manual biomarker edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editBiomarkers, setEditBiomarkers] = useState<Record<string, string>>({});
+  const [editDate, setEditDate] = useState("");
+  const [savingManual, setSavingManual] = useState(false);
+  const [customKeyToAdd, setCustomKeyToAdd] = useState("");
+
+  const openEditModal = () => {
+    const initial: Record<string, string> = {};
+    COMMON_EDIT_KEYS.forEach((k) => {
+      initial[k] = activePanel?.biomarkers?.[k] != null ? String(activePanel.biomarkers[k]) : "";
+    });
+    if (activePanel?.biomarkers) {
+      Object.entries(activePanel.biomarkers).forEach(([k, v]) => {
+        if (v != null) initial[k] = String(v);
+      });
+    }
+    setEditBiomarkers(initial);
+    setEditDate(activePanel?.recorded_at ? activePanel.recorded_at.slice(0, 10) : new Date().toISOString().slice(0, 10));
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveManualBiomarkers = async () => {
+    if (!selectedUpload?.id && !activePanel?.upload_id) {
+      toast.error("No active report selected to save values.");
+      return;
+    }
+    const targetUploadId = selectedUpload?.id || activePanel?.upload_id;
+    if (!targetUploadId) return;
+
+    setSavingManual(true);
+    try {
+      const parsed: Record<string, number> = {};
+      Object.entries(editBiomarkers).forEach(([k, v]) => {
+        const trimmed = v.trim();
+        if (trimmed) {
+          const num = Number(trimmed);
+          if (Number.isFinite(num) && num > 0) {
+            parsed[k] = num;
+          }
+        }
+      });
+
+      if (Object.keys(parsed).length === 0) {
+        toast.error("Please enter at least one valid numerical biomarker value.");
+        return;
+      }
+
+      await updateLabReportPanel(targetUploadId, parsed, editDate || undefined);
+      await Promise.all([refetchPanels(), refetchUploads()]);
+      toast.success("Biomarker panel saved successfully!");
+      setIsEditModalOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save biomarker panel.");
+    } finally {
+      setSavingManual(false);
+    }
+  };
 
   // Poll both uploads and panels while any report is still being processed
   const hasPendingUploads = uploads.some((u) => isPendingUploadStatus(u.analysis_status));
@@ -237,13 +331,23 @@ export default function MedicalRecordsInsights() {
               </div>
 
               {selectedReportId !== "none" && (
-                <Button
-                  onClick={() => navigate(`/patient/ai-chat?reportId=${selectedReportId}`)}
-                  className="h-9 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-2 shadow-sm transition-all shrink-0"
-                >
-                  <Bot className="h-4 w-4" />
-                  Ask AI About Report
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={openEditModal}
+                    variant="outline"
+                    className="h-9 px-3.5 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs gap-1.5 shadow-sm transition-all shrink-0 cursor-pointer"
+                  >
+                    <Edit3 className="h-3.5 w-3.5 text-slate-500" />
+                    Edit Biomarkers
+                  </Button>
+                  <Button
+                    onClick={() => navigate(`/patient/ai-chat?reportId=${selectedReportId}`)}
+                    className="h-9 px-4 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-2 shadow-sm transition-all shrink-0 cursor-pointer"
+                  >
+                    <Bot className="h-4 w-4" />
+                    Ask AI About Report
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -354,7 +458,7 @@ export default function MedicalRecordsInsights() {
                     {/* Summary text */}
                     <p className="max-w-sm text-xs text-slate-500 mt-1">
                       {analyzingManual
-                        ? "Parsing lab document lines and matching against clinical biomarker catalog..."
+                        ? "Parsing document (PDF/scanned/handwritten) via Gemini Multimodal Vision & clinical catalog..."
                         : progress.summary}
                     </p>
 
@@ -384,12 +488,12 @@ export default function MedicalRecordsInsights() {
               : selectedUpload?.analysis_status === "failed" ? (
                 <>
                   <AlertCircle className="h-10 w-10 text-rose-500" />
-                  <p className="text-base font-bold text-slate-900">Extraction failed or incomplete</p>
-                  <p className="max-w-sm text-xs text-slate-500">
+                  <p className="text-base font-bold text-slate-900">Extraction incomplete</p>
+                  <p className="max-w-md text-xs text-slate-500 leading-relaxed">
                     {selectedUpload.last_error ||
-                      "We couldn't automatically extract biomarker data from this report. You can retry analysis or re-upload a cleaner PDF."}
+                      "Could not automatically extract biomarkers. You can retry AI Vision extraction or enter your lab values manually."}
                   </p>
-                  <div className="mt-2 flex items-center gap-3">
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
                     <Button
                       onClick={() => void handleTriggerAnalysis(selectedUpload.id)}
                       disabled={analyzingManual}
@@ -398,7 +502,7 @@ export default function MedicalRecordsInsights() {
                       {analyzingManual ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Retrying Extraction...
+                          Running AI Vision...
                         </>
                       ) : (
                         <>
@@ -408,9 +512,17 @@ export default function MedicalRecordsInsights() {
                       )}
                     </Button>
                     <Button
+                      onClick={openEditModal}
+                      variant="outline"
+                      className="h-10 px-4 rounded-xl border-slate-200 bg-white text-slate-800 hover:bg-slate-50 text-xs font-semibold gap-1.5 shadow-sm cursor-pointer"
+                    >
+                      <Edit3 className="h-4 w-4 text-slate-600" />
+                      Enter Values Manually
+                    </Button>
+                    <Button
                       variant="outline"
                       onClick={() => setDeleteTargetId(selectedUpload.id)}
-                      className="h-10 px-4 rounded-xl border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs gap-1.5"
+                      className="h-10 px-4 rounded-xl border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs gap-1.5 cursor-pointer"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                       Delete Report
@@ -424,16 +536,26 @@ export default function MedicalRecordsInsights() {
                   <p className="max-w-sm text-xs text-slate-500">
                     No structured lab panel was linked to this report yet.
                   </p>
-                  {selectedUpload && (
+                  <div className="flex items-center gap-3 mt-2">
+                    {selectedUpload && (
+                      <Button
+                        onClick={() => void handleTriggerAnalysis(selectedUpload.id)}
+                        disabled={analyzingManual}
+                        className="h-10 px-5 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-2 shadow-sm transition-all cursor-pointer"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Run AI Analysis Now
+                      </Button>
+                    )}
                     <Button
-                      onClick={() => void handleTriggerAnalysis(selectedUpload.id)}
-                      disabled={analyzingManual}
-                      className="mt-2 h-10 px-5 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-2 shadow-sm transition-all cursor-pointer"
+                      onClick={openEditModal}
+                      variant="outline"
+                      className="h-10 px-4 rounded-xl border-slate-200 bg-white text-slate-800 hover:bg-slate-50 text-xs font-semibold gap-1.5 shadow-sm cursor-pointer"
                     >
-                      <Sparkles className="h-4 w-4" />
-                      Run Analysis Now
+                      <Edit3 className="h-4 w-4 text-slate-600" />
+                      Enter Values Manually
                     </Button>
-                  )}
+                  </div>
                 </>
               )}
             </div>
@@ -451,48 +573,61 @@ export default function MedicalRecordsInsights() {
                 <MetricStatusDonut
                   metrics={metrics}
                   title="Panel status distribution"
-                  description="High-level breakdown of normal, borderline, and outside-range markers."
+                  description="High-level proportion of optimal, borderline, and out-of-range markers."
                 />
               </div>
 
               <MetricSparklineGrid
                 panels={panels}
-                metricKeys={metrics.slice(0, 6).map((m) => m.key)}
-                title="Historical marker movement"
-                description="Compare how values shifted across historical lab panels."
+                title="Historical trend sparklines"
+                description="Movement across all structured reports currently available in your record history."
+                limit={6}
               />
 
               <Card className={portalPanelClass}>
                 <CardHeader>
-                  <CardTitle className="text-slate-900 text-base font-bold">Structured biomarker values</CardTitle>
-                  <CardDescription className="text-slate-500 text-xs">
-                    Full breakdown of lab values extracted for {activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.
-                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-slate-900 text-base font-bold">Comprehensive Biomarker Table</CardTitle>
+                      <CardDescription className="text-slate-500 text-xs">
+                        All structured values extracted or recorded for this report.
+                      </CardDescription>
+                    </div>
+                    <Button
+                      onClick={openEditModal}
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-xl border-slate-200 text-slate-700 text-xs gap-1.5 hover:bg-slate-50 cursor-pointer"
+                    >
+                      <Edit3 className="h-3.5 w-3.5 text-slate-500" />
+                      Edit Values
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                   <div className={portalTableWrapClass}>
                     <Table className={portalTableClass}>
-                      <TableHeader>
-                        <TableRow className="border-slate-100 hover:bg-transparent">
-                          <TableHead className={portalTableHeadClass}>Biomarker</TableHead>
-                          <TableHead className={portalTableHeadClass}>Value</TableHead>
-                          <TableHead className={portalTableHeadClass}>Reference Range</TableHead>
-                          <TableHead className={portalTableHeadClass}>Status</TableHead>
+                      <TableHeader className={portalTableHeadClass}>
+                        <TableRow className={portalTableRowClass}>
+                          <TableHead className="text-slate-700 font-bold text-xs py-3 px-4">Biomarker</TableHead>
+                          <TableHead className="text-slate-700 font-bold text-xs py-3 px-4">Observed Value</TableHead>
+                          <TableHead className="text-slate-700 font-bold text-xs py-3 px-4">Standard Reference</TableHead>
+                          <TableHead className="text-slate-700 font-bold text-xs py-3 px-4 text-right">Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {metrics.map((metric, idx) => (
-                          <TableRow key={metric.key} className={portalTableRowClass(idx)}>
+                        {metrics.map((metric) => (
+                          <TableRow key={metric.key} className={portalTableRowClass}>
                             <TableCell className={`${portalTableCellClass} font-semibold text-slate-900`}>
                               {metric.label}
                             </TableCell>
-                            <TableCell className={portalTableCellClass}>
+                            <TableCell className={`${portalTableCellClass} tabular-nums text-slate-800 font-medium`}>
                               {getMetricValueLabel(metric)}
                             </TableCell>
-                            <TableCell className={portalTableCellClass}>
-                              {metric.range}
+                            <TableCell className={`${portalTableCellClass} text-slate-400 text-xs`}>
+                              {metric.referenceRange || "Standard clinical range"}
                             </TableCell>
-                            <TableCell className={portalTableCellClass}>
+                            <TableCell className={`${portalTableCellClass} text-right`}>
                               <StatusPill status={metric.status} />
                             </TableCell>
                           </TableRow>
@@ -506,6 +641,148 @@ export default function MedicalRecordsInsights() {
           ) : null}
         </>
       )}
+
+      {/* Manual Biomarker Editor Dialog */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto border-slate-100 bg-white text-slate-800 shadow-2xl rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 font-bold text-lg flex items-center gap-2">
+              <Edit3 className="h-5 w-5 text-lime-600" />
+              Review & Edit Biomarker Values
+            </DialogTitle>
+            <DialogDescription className="text-slate-500 text-xs">
+              Verify the extracted numbers against your original report or fill in missing readings manually.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-5 py-3">
+            <div>
+              <Label className="text-xs font-bold text-slate-700 mb-1.5 block">Report Date</Label>
+              <Input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="h-9 rounded-xl border-slate-200 bg-slate-50/70 text-xs text-slate-800"
+              />
+            </div>
+
+            <div className="border-t border-slate-100 pt-4">
+              <p className="text-xs font-bold text-slate-900 mb-3 uppercase tracking-wider text-[11px] text-slate-400">
+                Primary Biomarker Values
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {COMMON_EDIT_KEYS.map((key) => {
+                  const def = getBiomarkerDefinition(key);
+                  const label = def?.label || key.replace(/_/g, " ");
+                  const unit = def?.units?.[0] || "";
+                  return (
+                    <div key={key} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold text-slate-700">{label}</Label>
+                        {unit && <span className="text-[10px] text-slate-400 font-medium">({unit})</span>}
+                      </div>
+                      <Input
+                        type="number"
+                        step="any"
+                        placeholder={`e.g. ${def?.reference || "value"}`}
+                        value={editBiomarkers[key] ?? ""}
+                        onChange={(e) =>
+                          setEditBiomarkers((prev) => ({ ...prev, [key]: e.target.value }))
+                        }
+                        className="h-9 rounded-xl border-slate-200 bg-slate-50/70 text-xs text-slate-800 tabular-nums focus:bg-white"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom / additional biomarkers added */}
+            {Object.keys(editBiomarkers).filter((k) => !COMMON_EDIT_KEYS.includes(k)).length > 0 && (
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-xs font-bold text-slate-900 mb-3 uppercase tracking-wider text-[11px] text-slate-400">
+                  Additional Biomarkers
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {Object.keys(editBiomarkers)
+                    .filter((k) => !COMMON_EDIT_KEYS.includes(k))
+                    .map((key) => {
+                      const def = getBiomarkerDefinition(key);
+                      const label = def?.label || key.replace(/_/g, " ");
+                      const unit = def?.units?.[0] || "";
+                      return (
+                        <div key={key} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold text-slate-700">{label}</Label>
+                            {unit && <span className="text-[10px] text-slate-400 font-medium">({unit})</span>}
+                          </div>
+                          <Input
+                            type="number"
+                            step="any"
+                            value={editBiomarkers[key] ?? ""}
+                            onChange={(e) =>
+                              setEditBiomarkers((prev) => ({ ...prev, [key]: e.target.value }))
+                            }
+                            className="h-9 rounded-xl border-slate-200 bg-slate-50/70 text-xs text-slate-800 tabular-nums"
+                          />
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            )}
+
+            {/* Add extra biomarker from catalog */}
+            <div className="border-t border-slate-100 pt-3 flex items-center gap-2">
+              <Select value={customKeyToAdd} onValueChange={(val) => {
+                if (val && !editBiomarkers[val]) {
+                  setEditBiomarkers((prev) => ({ ...prev, [val]: "" }));
+                  setCustomKeyToAdd("");
+                }
+              }}>
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 bg-slate-50 text-xs text-slate-700 flex-1">
+                  <SelectValue placeholder="+ Add another biomarker test..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 border-slate-100 bg-white text-slate-800 shadow-xl rounded-xl">
+                  {BIOMARKER_DEFINITIONS.filter((d) => editBiomarkers[d.key] === undefined).map((d) => (
+                    <SelectItem key={d.key} value={d.key} className="text-xs py-2">
+                      {d.label} ({d.units[0] || "value"})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 border-t border-slate-100 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditModalOpen(false)}
+              className="h-9 rounded-xl border-slate-200 text-slate-700 text-xs"
+              disabled={savingManual}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => void handleSaveManualBiomarkers()}
+              disabled={savingManual}
+              className="h-9 px-5 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-1.5 shadow-sm cursor-pointer"
+            >
+              {savingManual ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Saving Panel...
+                </>
+              ) : (
+                <>
+                  <Save className="h-3.5 w-3.5" />
+                  Save Biomarkers
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}>

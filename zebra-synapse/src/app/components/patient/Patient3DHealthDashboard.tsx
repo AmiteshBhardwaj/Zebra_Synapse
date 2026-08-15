@@ -1277,7 +1277,7 @@ export function Patient3DHealthDashboard({
                 type="file"
                 id="modal-upload"
                 className="hidden"
-                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
                 onChange={(e) => {
                   if (e.target.files && e.target.files[0]) {
                     setSelectedFile(e.target.files[0]);
@@ -1291,7 +1291,7 @@ export function Patient3DHealthDashboard({
                 <p className="text-xs font-bold text-slate-900">
                   {selectedFile ? selectedFile.name : "Choose a lab report file or drag & drop"}
                 </p>
-                <p className="text-[11px] text-slate-400">Supports PDF, PNG, JPG up to 10MB</p>
+                <p className="text-[11px] text-slate-400">Supports Digital & Scanned PDF, PNG, JPG, WebP (up to 10MB)</p>
               </label>
             </div>
 

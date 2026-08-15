@@ -335,10 +335,15 @@ export async function generateLabReportAiAnswer(
   }
 
   // 2. Try Gemini API if API key is provided
-  const geminiApiKey =
-    (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_GEMINI_API_KEY) ||
+  const geminiApiKey = (
+    (typeof import.meta !== "undefined" && (
+      (import.meta as any)?.env?.VITE_GEMINI_API_KEY ||
+      (import.meta as any)?.env?.GEMINI_API_KEY
+    )) ||
     ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
-    "";
+    ((globalThis as any)?.process?.env?.GEMINI_API_KEY) ||
+    ""
+  ).trim();
   if (geminiApiKey) {
     try {
       const prompt = `

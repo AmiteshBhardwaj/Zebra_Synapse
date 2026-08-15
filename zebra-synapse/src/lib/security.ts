@@ -4,8 +4,9 @@ const ALLOWED_LAB_REPORT_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
   "image/png",
+  "image/webp",
 ]);
-const ALLOWED_LAB_REPORT_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png"];
+const ALLOWED_LAB_REPORT_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".webp"];
 
 export function getPasswordPolicyError(password: string): string | null {
   if (password.length < MIN_PASSWORD_LENGTH) {

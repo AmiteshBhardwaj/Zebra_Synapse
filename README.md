@@ -213,7 +213,10 @@ Apply migrations in numerical order from [`zebra-synapse/supabase/migrations/`](
 12. `015_fix_link_patient_rls.sql` — Doctor-patient linking policy fixes
 13. `016_lab_report_queries.sql` — Lab report AI chatbot queries & doctor verification
 14. `017_lab_report_queries_delete_policy.sql` — Session query history clearance policy
-15. *(Optional Seed)* `seed_doctors_patients.sql` — Populates demo doctors, patients, care links, and historical lab panels
+15. `018_patient_height_weight.sql` — Height and weight profile attributes
+16. `019_patient_dietary_preferences.sql` — Patient dietary preferences and meal logs
+17. `020_fix_rls_policies.sql` — Comprehensive RLS policy fixes for lab uploads, audit logging, background jobs, and extractions
+18. *(Optional Seed)* `seed_doctors_patients.sql` — Populates demo doctors, patients, care links, and historical lab panels
 
 ### Security & Privacy Baseline
 - **Row-Level Security (RLS):** Enabled and forced across all PHI tables.

@@ -350,73 +350,139 @@ export async function extractTextFromPdfBlob(file: Blob): Promise<ExtractedPdfTe
   };
 }
 
-export async function extractLabPanelFromPdf(
-  file: File | Blob,
-  filename?: string,
-): Promise<ExtractionResult> {
-  const name = filename || (file instanceof File ? file.name : "report.pdf");
-  if (!name.toLowerCase().endsWith(".pdf") && file.type && file.type !== "application/pdf") {
-    return { status: "unsupported", reason: "Only PDF lab reports can be auto-extracted." };
+/**
+ * Render all pages of a PDF to high-resolution JPEG images for multimodal OCR/Vision.
+ */
+export async function renderPdfPagesToImages(
+  file: Blob,
+  options?: { maxPages?: number; scale?: number },
+): Promise<Array<{ pageNumber: number; base64Data: string; mimeType: string }>> {
+  if (typeof document === "undefined") {
+    return [];
   }
 
-  let normalized = "";
-  let lines: string[] = [];
-  try {
-    const extracted = await extractTextFromPdfBlob(file);
-    normalized = extracted.text;
-    lines = extracted.lines;
-  } catch (err) {
-    console.warn("[pdf text extract warning]", err);
-  }
+  const maxPages = options?.maxPages ?? 25;
+  const scale = options?.scale ?? 1.5; // 1.5x scale yields ~150 DPI for crisp handwriting/table OCR
+  const buffer = await file.arrayBuffer();
+  const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise;
+  const pagesCount = Math.min(pdf.numPages, maxPages);
+  const images: Array<{ pageNumber: number; base64Data: string; mimeType: string }> = [];
 
-  const biomarkers: Record<string, number> = {};
+  for (let pageNum = 1; pageNum <= pagesCount; pageNum += 1) {
+    try {
+      const page = await pdf.getPage(pageNum);
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+      const canvasContext = canvas.getContext("2d", { willReadFrequently: false });
+      if (!canvasContext) continue;
 
-  // 1. Regex Extraction from PDF text
-  if (lines.length > 0) {
-    for (const definition of BIOMARKER_DEFINITIONS) {
-      const extracted = extractValueFromLines(
-        lines,
-        definition.patterns,
-        definition.units,
-        definition.key,
-        definition.exclude,
-      );
-
-      if (extracted != null) {
-        const bounds = BIOMARKER_SANITY_BOUNDS[definition.key];
-        if (!bounds || (extracted >= bounds.min && extracted <= bounds.max)) {
-          biomarkers[definition.key] = extracted;
-        }
-      }
+      await page.render({ canvasContext, viewport }).promise;
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+      const base64Data = dataUrl.replace(/^data:image\/jpeg;base64,/, "");
+      images.push({ pageNumber: pageNum, base64Data, mimeType: "image/jpeg" });
+    } catch (renderErr) {
+      console.warn(`[pdf page ${pageNum} render failed]`, renderErr);
     }
   }
 
-  // 2. Gemini Client-Side Fallback / Enhancement if API Key is available
-  const geminiApiKey =
-    (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_GEMINI_API_KEY) ||
-    ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
-    "";
+  return images;
+}
 
-  if (geminiApiKey && (Object.keys(biomarkers).length === 0 || normalized.length >= 40)) {
-    try {
-      const supportedKeys = BIOMARKER_DEFINITIONS.map((d) => d.key).join(", ");
-      const prompt = `
-Extract numerical biomarker lab values from the following medical report text.
-Supported biomarker keys: ${supportedKeys}.
+/**
+ * Convert a standard image file/blob (PNG, JPG, WebP) directly to base64 for Gemini Vision.
+ */
+export async function convertImageBlobToBase64(
+  file: Blob,
+): Promise<{ base64Data: string; mimeType: string }> {
+  const mimeType = file.type || "image/jpeg";
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  const base64Data = btoa(binary);
+  return { base64Data, mimeType };
+}
 
-Return a JSON object in this exact format:
+/**
+ * Perform Multimodal Vision Extraction with Gemini on batches of page images.
+ */
+async function extractBiomarkersFromImagesWithGemini(
+  images: Array<{ base64Data: string; mimeType: string }>,
+  geminiApiKey: string,
+): Promise<{
+  recordedAt: string | null;
+  biomarkers: Record<string, number>;
+  confidenceNotes: string;
+}> {
+  const supportedBiomarkersList = BIOMARKER_DEFINITIONS.map(
+    (d) => `• "${d.key}": ${d.label} (Standard units: ${d.units.join(", ")})`,
+  ).join("\n");
+
+  const prompt = `
+You are an expert clinical laboratory data extraction AI.
+Analyze the attached medical laboratory report image(s). The document may be:
+1. A computerized lab test report table.
+2. A scanned document (DocScanner/CamScanner).
+3. A smartphone camera photo of a physical report.
+4. A doctor handwritten prescription / handwritten lab test register.
+
+### Supported Biomarker Keys:
+${supportedBiomarkersList}
+
+### CRITICAL CLINICAL EXTRACTION RULES:
+1. **Patient Result vs Reference Range**:
+   - Only extract the patient's **actual observed result value**.
+   - NEVER extract the biological reference interval / normal range limits (e.g., if the line says "Fasting Glucose: 112 mg/dL | Normal: 70 - 100", extract 112, NOT 70 or 100).
+2. **Handwriting & Scans**:
+   - Read cursive doctor handwriting, handwritten numbers, tick marks, rubber stamp values, and low-contrast scanned text carefully.
+   - If a number has a decimal point (e.g., "1.1" vs "11" for Serum Creatinine), ensure correct decimal interpretation based on standard clinical ranges.
+3. **Unit Normalization**:
+   - If glucose is in mmol/L, convert to mg/dL (multiply by 18).
+   - If creatinine is in µmol/L, convert to mg/dL (divide by 88.4).
+   - If cholesterol is in mmol/L, convert to mg/dL (multiply by 38.67).
+   - Output all values in standard numerical units.
+4. **Collection Date**:
+   - Extract the specimen collection date or report date in "YYYY-MM-DD" format. If multiple dates appear, prioritize the collection/specimen date. If not found, return null.
+
+Return your response in this EXACT JSON structure:
 {
   "recorded_at": "YYYY-MM-DD or null",
   "biomarkers": {
     "key_name": 12.34
-  }
+  },
+  "confidence_notes": "Brief explanation of extraction source, e.g. 'Extracted 6 tests from printed table' or 'Deciphered 3 handwritten biomarker entries'"
 }
-
-Only return numerical values for matched supported keys.
-
-REPORT TEXT:
-${normalized.slice(0, 15000)}
 `.trim();
+
+  const aggregatedBiomarkers: Record<string, number> = {};
+  let detectedDate: string | null = null;
+  const notesAccumulator: string[] = [];
+
+  // Batch images in groups of 4 to avoid exceeding HTTP payload limits while keeping extraction parallelized
+  const BATCH_SIZE = 4;
+  const chunks: Array<Array<{ base64Data: string; mimeType: string }>> = [];
+  for (let i = 0; i < images.length; i += BATCH_SIZE) {
+    chunks.push(images.slice(i, i + BATCH_SIZE));
+  }
+
+  for (const chunk of chunks) {
+    try {
+      const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
+        { text: prompt },
+      ];
+
+      for (const img of chunk) {
+        parts.push({
+          inlineData: {
+            mimeType: img.mimeType,
+            data: img.base64Data,
+          },
+        });
+      }
 
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
@@ -424,36 +490,262 @@ ${normalized.slice(0, 15000)}
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: "application/json" },
+            contents: [{ role: "user", parts }],
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1,
+            },
           }),
         },
       );
 
-      if (res.ok) {
-        const data = await res.json();
+      if (!res.ok) {
+        // Fallback to gemini-1.5-flash if 2.5 is unavailable
+        const fallbackRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.1,
+              },
+            }),
+          },
+        );
+
+        if (!fallbackRes.ok) {
+          console.warn("[gemini vision call failed]", await fallbackRes.text());
+          continue;
+        }
+
+        const fallbackData = await fallbackRes.json();
         const textContent =
-          data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+          fallbackData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
         if (textContent) {
-          const parsed = JSON.parse(textContent);
-          if (parsed?.biomarkers && typeof parsed.biomarkers === "object") {
-            for (const [k, v] of Object.entries(parsed.biomarkers)) {
-              const num = typeof v === "number" ? v : Number(v);
-              if (Number.isFinite(num) && num > 0) {
-                const bounds = BIOMARKER_SANITY_BOUNDS[k];
-                if (!bounds || (num >= bounds.min && num <= bounds.max)) {
-                  if (biomarkers[k] == null) {
-                    biomarkers[k] = num;
-                  }
-                }
+          parseAndAccumulateVisionJson(textContent);
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      const textContent = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+      if (textContent) {
+        parseAndAccumulateVisionJson(textContent);
+      }
+    } catch (chunkErr) {
+      console.warn("[gemini vision chunk error]", chunkErr);
+    }
+  }
+
+  function parseAndAccumulateVisionJson(jsonStr: string) {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (parsed?.recorded_at && !detectedDate) {
+        const iso = toIsoDate(String(parsed.recorded_at));
+        if (iso) detectedDate = iso;
+      }
+      if (parsed?.confidence_notes && typeof parsed.confidence_notes === "string") {
+        notesAccumulator.push(parsed.confidence_notes);
+      }
+      if (parsed?.biomarkers && typeof parsed.biomarkers === "object") {
+        for (const [key, rawVal] of Object.entries(parsed.biomarkers)) {
+          const num = typeof rawVal === "number" ? rawVal : Number(rawVal);
+          if (Number.isFinite(num) && num > 0) {
+            const bounds = BIOMARKER_SANITY_BOUNDS[key];
+            if (!bounds || (num >= bounds.min && num <= bounds.max)) {
+              if (aggregatedBiomarkers[key] == null) {
+                aggregatedBiomarkers[key] = num;
               }
             }
           }
         }
       }
-    } catch (geminiErr) {
-      console.warn("[gemini client extract fallback]", geminiErr);
+    } catch (e) {
+      console.warn("[json parse error in vision output]", e);
     }
+  }
+
+  return {
+    recordedAt: detectedDate,
+    biomarkers: aggregatedBiomarkers,
+    confidenceNotes: notesAccumulator.join("; ") || "Extracted via Gemini Multimodal Vision",
+  };
+}
+
+/**
+ * Universal Extraction: Handles Digital PDFs, Scanned PDFs, Mobile Scans, Direct Photos, and Handwritten Reports.
+ */
+export async function extractLabPanelFromPdf(
+  file: File | Blob,
+  filename?: string,
+): Promise<ExtractionResult> {
+  const name = filename || (file instanceof File ? file.name : "report.pdf");
+  const lowerName = name.toLowerCase();
+  const isPdf = lowerName.endsWith(".pdf") || file.type === "application/pdf";
+  const isImage =
+    lowerName.endsWith(".jpg") ||
+    lowerName.endsWith(".jpeg") ||
+    lowerName.endsWith(".png") ||
+    lowerName.endsWith(".webp") ||
+    (file.type && file.type.startsWith("image/"));
+
+  if (!isPdf && !isImage) {
+    return {
+      status: "unsupported",
+      reason: "Only PDF, JPG, PNG, and WebP lab reports are supported.",
+    };
+  }
+
+  const geminiApiKey = (
+    (typeof import.meta !== "undefined" && (
+      (import.meta as any)?.env?.VITE_GEMINI_API_KEY ||
+      (import.meta as any)?.env?.GEMINI_API_KEY
+    )) ||
+    ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
+    ((globalThis as any)?.process?.env?.GEMINI_API_KEY) ||
+    ""
+  ).trim();
+
+  let normalizedText = "";
+  let lines: string[] = [];
+  const biomarkers: Record<string, number> = {};
+  let detectedDate: string | null = null;
+
+  // TIER 1: Digital PDF Vector Text Extraction
+  if (isPdf) {
+    try {
+      const extracted = await extractTextFromPdfBlob(file);
+      normalizedText = extracted.text;
+      lines = extracted.lines;
+
+      if (lines.length > 0) {
+        for (const definition of BIOMARKER_DEFINITIONS) {
+          const extractedVal = extractValueFromLines(
+            lines,
+            definition.patterns,
+            definition.units,
+            definition.key,
+            definition.exclude,
+          );
+
+          if (extractedVal != null) {
+            const bounds = BIOMARKER_SANITY_BOUNDS[definition.key];
+            if (!bounds || (extractedVal >= bounds.min && extractedVal <= bounds.max)) {
+              biomarkers[definition.key] = extractedVal;
+            }
+          }
+        }
+        detectedDate = extractRecordedAt(normalizedText);
+      }
+    } catch (err) {
+      console.warn("[pdf digital text extract warning]", err);
+    }
+  }
+
+  // TIER 2: If digital text found sufficient biomarkers, return success immediately
+  if (Object.keys(biomarkers).length >= 2) {
+    const values: Partial<Record<LegacyBiomarkerKey, number>> = {
+      hemoglobinA1c: biomarkers.hemoglobin_a1c,
+      fastingGlucose: biomarkers.fasting_glucose,
+      totalCholesterol: biomarkers.total_cholesterol,
+      ldl: biomarkers.ldl,
+      hdl: biomarkers.hdl,
+      triglycerides: biomarkers.triglycerides,
+      hemoglobin: biomarkers.hemoglobin,
+      wbc: biomarkers.wbc,
+      platelets: biomarkers.platelets,
+      creatinine: biomarkers.creatinine,
+    };
+
+    return {
+      status: "success",
+      panel: {
+        recordedAt: detectedDate || new Date().toISOString().slice(0, 10),
+        values,
+        biomarkers,
+        matchedCount: Object.keys(biomarkers).length,
+        notes: "Auto-extracted from digital lab report text.",
+      },
+    };
+  }
+
+  // TIER 3: Scanned PDF, DocScanner, Photo, or Handwritten Report -> Multimodal Vision
+  if (!geminiApiKey) {
+    // If we extracted at least 1 biomarker from text, return it
+    if (Object.keys(biomarkers).length > 0) {
+      const values: Partial<Record<LegacyBiomarkerKey, number>> = {
+        hemoglobinA1c: biomarkers.hemoglobin_a1c,
+        fastingGlucose: biomarkers.fasting_glucose,
+        totalCholesterol: biomarkers.total_cholesterol,
+        ldl: biomarkers.ldl,
+        hdl: biomarkers.hdl,
+        triglycerides: biomarkers.triglycerides,
+        hemoglobin: biomarkers.hemoglobin,
+        wbc: biomarkers.wbc,
+        platelets: biomarkers.platelets,
+        creatinine: biomarkers.creatinine,
+      };
+
+      return {
+        status: "success",
+        panel: {
+          recordedAt: detectedDate || new Date().toISOString().slice(0, 10),
+          values,
+          biomarkers,
+          matchedCount: Object.keys(biomarkers).length,
+          notes: "Extracted partial biomarkers from digital text. Add VITE_GEMINI_API_KEY for full scanned report recognition.",
+        },
+      };
+    }
+
+    return {
+      status: "no_data",
+      reason:
+        "No digital text layer found (scanned/photographed document). Configure VITE_GEMINI_API_KEY in your settings to enable AI Vision & Handwriting OCR, or use digital reports.",
+    };
+  }
+
+  // Collect images for Vision analysis
+  let pageImages: Array<{ base64Data: string; mimeType: string }> = [];
+
+  if (isPdf) {
+    pageImages = await renderPdfPagesToImages(file, { scale: 1.5, maxPages: 25 });
+  } else if (isImage) {
+    const directImage = await convertImageBlobToBase64(file);
+    pageImages = [directImage];
+  }
+
+  if (pageImages.length === 0) {
+    return {
+      status: "no_data",
+      reason: "Could not render document pages for image analysis.",
+    };
+  }
+
+  // Execute Gemini Multimodal Vision
+  const visionResult = await extractBiomarkersFromImagesWithGemini(pageImages, geminiApiKey);
+
+  // Merge any vision biomarkers with regex biomarkers
+  for (const [k, v] of Object.entries(visionResult.biomarkers)) {
+    if (biomarkers[k] == null) {
+      biomarkers[k] = v;
+    }
+  }
+
+  if (!detectedDate && visionResult.recordedAt) {
+    detectedDate = visionResult.recordedAt;
+  }
+
+  const matchedCount = Object.keys(biomarkers).length;
+  if (matchedCount === 0) {
+    return {
+      status: "no_data",
+      reason:
+        "No supported biomarkers could be identified in this document. Verify the image clarity or enter values manually.",
+    };
   }
 
   const values: Partial<Record<LegacyBiomarkerKey, number>> = {
@@ -469,22 +761,14 @@ ${normalized.slice(0, 15000)}
     creatinine: biomarkers.creatinine,
   };
 
-  const matchedCount = Object.keys(biomarkers).length;
-  if (matchedCount === 0) {
-    return {
-      status: "no_data",
-      reason: "No supported biomarkers were found in the PDF text.",
-    };
-  }
-
   return {
     status: "success",
     panel: {
-      recordedAt: extractRecordedAt(normalized),
+      recordedAt: detectedDate || new Date().toISOString().slice(0, 10),
       values,
       biomarkers,
       matchedCount,
-      notes: "Auto-extracted from uploaded PDF. Review values if the source format is unusual.",
+      notes: visionResult.confidenceNotes || "Auto-extracted via Multimodal Vision (Scanned / Handwritten).",
     },
   };
 }

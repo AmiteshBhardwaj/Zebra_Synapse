@@ -264,10 +264,15 @@ export async function generateDietitianAiAnswer(
   const macroTargets = calculateMacroTargets(targetCalories, goal);
 
   // 1. Check for Gemini API Key in Environment
-  const geminiApiKey =
-    (typeof import.meta !== "undefined" && (import.meta as any)?.env?.VITE_GEMINI_API_KEY) ||
+  const geminiApiKey = (
+    (typeof import.meta !== "undefined" && (
+      (import.meta as any)?.env?.VITE_GEMINI_API_KEY ||
+      (import.meta as any)?.env?.GEMINI_API_KEY
+    )) ||
     ((globalThis as any)?.process?.env?.VITE_GEMINI_API_KEY) ||
-    "";
+    ((globalThis as any)?.process?.env?.GEMINI_API_KEY) ||
+    ""
+  ).trim();
 
   if (geminiApiKey) {
     try {
