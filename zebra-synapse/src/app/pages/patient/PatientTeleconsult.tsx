@@ -13,6 +13,10 @@ import {
   Calendar,
   PhoneCall,
   Stethoscope,
+  Pill,
+  FileText,
+  CheckCircle2,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import VideoCall from "../../components/teleconsult/VideoCall";
@@ -56,8 +60,88 @@ export default function PatientTeleconsult() {
     queryId || `teleconsult-${Date.now().toString().slice(-6)}`
   );
 
+  // Completed consultation summary state
+  const [completedSummary, setCompletedSummary] = useState<any>(null);
+  const [completedNotes, setCompletedNotes] = useState<string>("");
+  const [completedPrescriptions, setCompletedPrescriptions] = useState<any[]>([]);
+
   // Detected doctor waiting in an active room
   const [waitingDoctor, setWaitingDoctor] = useState<DoctorWaitingInfo | null>(null);
+
+  // Sync completed consultation data in real-time
+  useEffect(() => {
+    if (mode !== "completed" || !activeConsultationId) return;
+
+    const loadSummaryFromStorage = () => {
+      try {
+        const rawSummary = localStorage.getItem(`zebra_consultation_summary_${activeConsultationId}`);
+        if (rawSummary) {
+          const parsed = JSON.parse(rawSummary);
+          setCompletedSummary(parsed);
+          if (parsed.notes) setCompletedNotes(parsed.notes);
+          if (parsed.prescriptions) setCompletedPrescriptions(parsed.prescriptions);
+        }
+        const rawNotes = localStorage.getItem(`zebra_consultation_notes_${activeConsultationId}`);
+        if (rawNotes) {
+          setCompletedNotes(rawNotes);
+        }
+        const rawRx = localStorage.getItem(`zebra_consultation_rx_${activeConsultationId}`);
+        if (rawRx) {
+          setCompletedPrescriptions(JSON.parse(rawRx));
+        }
+      } catch (err) {
+        console.warn("Error reading storage summary:", err);
+      }
+    };
+
+    loadSummaryFromStorage();
+    const interval = setInterval(loadSummaryFromStorage, 1500);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        bc = new BroadcastChannel(`zebra-notes-${activeConsultationId}`);
+        bc.onmessage = (e) => {
+          if (e.data?.summary) {
+            setCompletedSummary(e.data.summary);
+          }
+          if (e.data?.note) {
+            setCompletedNotes(e.data.note);
+          }
+          if (e.data?.prescriptions) {
+            setCompletedPrescriptions(e.data.prescriptions);
+          }
+        };
+      }
+    } catch {
+      // ignore
+    }
+
+    const sb = getSupabase();
+    let sbChannel: any = null;
+    if (sb) {
+      sbChannel = sb.channel(`consultation-${activeConsultationId}`);
+      sbChannel.on("broadcast", { event: "consultation-finalized" }, (event: any) => {
+        if (event.payload) {
+          setCompletedSummary(event.payload);
+          if (event.payload.notes) setCompletedNotes(event.payload.notes);
+          if (event.payload.prescriptions) setCompletedPrescriptions(event.payload.prescriptions);
+        }
+      });
+      sbChannel.on("broadcast", { event: "note-updated" }, (event: any) => {
+        if (event.payload?.note) {
+          setCompletedNotes(event.payload.note);
+        }
+      });
+      sbChannel.subscribe();
+    }
+
+    return () => {
+      clearInterval(interval);
+      if (bc) bc.close();
+      if (sbChannel && sb) void sb.removeChannel(sbChannel);
+    };
+  }, [mode, activeConsultationId]);
 
   // Check for active waiting doctors periodically
   useEffect(() => {
@@ -551,29 +635,142 @@ export default function PatientTeleconsult() {
       )}
 
       {mode === "completed" && (
-        <section className="max-w-xl mx-auto my-12 text-center space-y-6 bg-white p-8 rounded-[28px] border border-slate-100 shadow-sm">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
-            <ShieldCheck className="w-8 h-8" />
+        <section className="max-w-3xl mx-auto my-8 space-y-6 animate-in fade-in duration-300">
+          {/* Header Card */}
+          <div className="rounded-[28px] bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-700/60 p-6 sm:p-8 text-white shadow-xl relative overflow-hidden space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shadow-inner">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">
+                    Encounter Completed
+                  </span>
+                  <h2 className="text-xl sm:text-2xl font-bold text-white font-['Manrope']">
+                    Consultation with {activeDoctorName}
+                  </h2>
+                </div>
+              </div>
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-semibold text-slate-300 border border-white/10">
+                <Clock className="w-3.5 h-3.5 text-cyan-400" />
+                Session #{activeConsultationId.slice(-8)}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-300 pt-1">
+              <span className="bg-white/10 px-3 py-1 rounded-xl">{activeSpecialty}</span>
+              <span className="bg-white/10 px-3 py-1 rounded-xl flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> DTLS/SRTP Encrypted
+              </span>
+              {completedSummary?.followUp && (
+                <span className="bg-lime-500/20 text-lime-300 border border-lime-500/30 px-3 py-1 rounded-xl font-semibold">
+                  Follow-up: {completedSummary.followUp}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-slate-900 font-['Manrope']">Teleconsultation Completed</h2>
-            <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto">
-              Your consultation session has ended. Clinical notes and prescriptions will be saved to your health record.
-            </p>
+
+          {/* Doctor's Final Clinical Notes */}
+          <div className="rounded-[24px] border border-slate-200 bg-white p-6 sm:p-7 text-slate-800 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-sm font-['Manrope']">
+                <FileText className="h-4 w-4 text-[#0099ff]" />
+                <span>Doctor's Clinical Notes & Assessment</span>
+              </div>
+              {completedSummary?.diagnosis && (
+                <span className="rounded-full bg-blue-50 border border-blue-200 px-3 py-0.5 text-xs font-bold text-blue-700">
+                  {completedSummary.diagnosis}
+                </span>
+              )}
+            </div>
+
+            {completedNotes ? (
+              <div className="rounded-2xl border border-slate-200/80 bg-[#F4F6FC] p-4 text-xs sm:text-sm text-slate-800 whitespace-pre-wrap font-mono leading-relaxed">
+                {completedNotes}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500 space-y-2">
+                <Loader2 className="w-5 h-5 text-slate-400 animate-spin mx-auto" />
+                <p className="font-semibold text-slate-700">Your doctor is finalizing the encounter notes...</p>
+                <p className="text-[11px] text-slate-400">
+                  This card will automatically sync as soon as the doctor saves their clinical wrap-up.
+                </p>
+              </div>
+            )}
+
+            {completedSummary?.advice && (
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-xs text-emerald-900 space-y-1">
+                <p className="font-bold text-[10px] uppercase tracking-wider text-emerald-700">
+                  Direct Guidance & Instructions
+                </p>
+                <p className="font-medium">{completedSummary.advice}</p>
+              </div>
+            )}
           </div>
-          <div className="pt-2 flex justify-center gap-3">
+
+          {/* Prescriptions Dispensed Section */}
+          {completedPrescriptions.length > 0 && (
+            <div className="rounded-[24px] border border-slate-200 bg-white p-6 sm:p-7 text-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 text-slate-900 font-bold text-sm font-['Manrope']">
+                  <Pill className="h-4 w-4 text-emerald-600" />
+                  <span>Prescriptions Dispensed</span>
+                </div>
+                <span className="rounded-full bg-emerald-50 border border-emerald-200 px-3 py-0.5 text-xs font-bold text-emerald-700">
+                  {completedPrescriptions.length} Active Medication{completedPrescriptions.length > 1 ? "s" : ""}
+                </span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {completedPrescriptions.map((rx: any) => (
+                  <div
+                    key={rx.id || rx.name}
+                    className="rounded-2xl border border-slate-200 bg-[#FAFBFD] p-4 text-xs space-y-1.5 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-slate-900 text-sm">{rx.name}</h4>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        {rx.duration || "Active"}
+                      </span>
+                    </div>
+                    <p className="font-semibold text-[#0099ff]">{rx.dosage}</p>
+                    {rx.instructions && (
+                      <p className="text-[11px] text-slate-500 italic">{rx.instructions}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <Button
+                  variant="outline"
+                  className="rounded-xl text-xs font-bold text-slate-700 hover:text-[#0099ff] gap-1.5"
+                  onClick={() => navigate("/patient/prescription")}
+                >
+                  <Pill className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>View All Prescriptions & Refills</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Action Buttons */}
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button
-              className="h-11 px-6 rounded-2xl bg-[#0099ff] hover:bg-[#0088e6] text-white font-bold text-xs"
+              className="w-full sm:w-auto h-11 px-7 rounded-2xl bg-[#0099ff] hover:bg-[#0088e6] text-white font-bold text-xs shadow-md shadow-[#0099ff]/20 cursor-pointer"
               onClick={() => navigate("/patient/appointments")}
             >
-              View Appointments
+              <Calendar className="mr-2 h-4 w-4" />
+              View Appointments & Follow-ups
             </Button>
             <Button
               variant="outline"
-              className="h-11 px-6 rounded-2xl text-xs font-semibold"
+              className="w-full sm:w-auto h-11 px-6 rounded-2xl text-xs font-semibold border-slate-200 bg-white hover:bg-slate-50 cursor-pointer"
               onClick={() => setMode("idle")}
             >
-              Start New Consult
+              Start New Teleconsultation
             </Button>
           </div>
         </section>

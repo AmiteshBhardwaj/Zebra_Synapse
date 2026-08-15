@@ -23,7 +23,7 @@ import { getSupabase } from "../../../lib/supabase";
 interface VideoCallProps {
   consultationId: string;
   role: "DOCTOR" | "PATIENT";
-  onLeave: () => void;
+  onLeave: (durationSec?: number) => void;
 }
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -725,7 +725,7 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
     if (simulatedStreamCleanupRef.current) {
       simulatedStreamCleanupRef.current();
     }
-    onLeave();
+    onLeave(callDurationSec);
   };
 
   return (
