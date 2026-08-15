@@ -3,7 +3,7 @@ import { Outlet, useNavigate, useLocation } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
 import {
   LayoutGrid,
-  Calendar as CalendarIcon,
+  Calendar,
   Video,
   Settings,
   LogOut,
@@ -61,7 +61,7 @@ export default function DoctorDashboard() {
     {
       id: "appointments",
       label: "Appointments",
-      icon: CalendarIcon,
+      icon: Calendar,
       path: "/doctor/appointments",
       active: location.pathname === "/doctor/appointments",
     },

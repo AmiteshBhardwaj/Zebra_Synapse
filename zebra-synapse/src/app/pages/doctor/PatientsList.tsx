@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   Bot,
   Calendar,
-  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -296,7 +295,7 @@ export default function PatientsList() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-[#111111] flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4 text-[#3E36B0]" />
+                <Calendar className="w-4 h-4 text-[#3E36B0]" />
                 Calendar
               </h2>
               <div className="flex items-center gap-2">

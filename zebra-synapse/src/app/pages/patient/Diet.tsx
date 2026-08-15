@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   Sparkles,
   Scale,
-  Calendar as CalendarIcon,
+  Calendar,
   SlidersHorizontal,
   ChevronRight,
   ChevronLeft,
@@ -724,7 +724,7 @@ export default function Diet() {
             {(
               [
                 { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-                { id: "weekly_plan", label: "Calendar", icon: CalendarIcon },
+                { id: "weekly_plan", label: "Calendar", icon: Calendar },
                 { id: "messages", label: "AI Dietitian", icon: Bot },
                 { id: "weekly_plan", label: "Meal Plan", icon: ClipboardList, hasSubmenu: true },
               ] as Array<{
