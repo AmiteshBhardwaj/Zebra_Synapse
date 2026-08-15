@@ -250,30 +250,27 @@ export function ChatSessionSidebar({
             onNewChat();
             setIsMobileDrawerOpen(false);
           }}
-          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all group active:scale-[0.98] ${
-            !activeSessionId
+          className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl transition-all group active:scale-[0.98] ${!activeSessionId
               ? "bg-lime-50 border border-lime-200 text-lime-900 font-bold shadow-sm"
               : "bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900"
-          }`}
+            }`}
         >
           <div className="flex items-center gap-2.5 text-xs font-semibold">
             <div
-              className={`flex h-5 w-5 items-center justify-center rounded-lg transition-transform group-hover:scale-110 ${
-                !activeSessionId
+              className={`flex h-5 w-5 items-center justify-center rounded-lg transition-transform group-hover:scale-110 ${!activeSessionId
                   ? "bg-lime-500 text-slate-950"
                   : "bg-slate-200 text-slate-600 group-hover:text-lime-700"
-              }`}
+                }`}
             >
               <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
             </div>
             <span>New Chat</span>
           </div>
           <span
-            className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${
-              !activeSessionId
+            className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors ${!activeSessionId
                 ? "text-lime-800 bg-lime-100/70 border-lime-300"
                 : "text-slate-400 bg-white border-slate-200"
-            }`}
+              }`}
           >
             Alt+N
           </span>
@@ -395,11 +392,10 @@ export function ChatSessionSidebar({
                     setIsMobileDrawerOpen(false);
                   }
                 }}
-                className={`group relative flex flex-col gap-1 px-3 py-2.5 rounded-xl cursor-pointer transition-all ${
-                  isSelected
+                className={`group relative flex flex-col gap-1 px-3 py-2.5 rounded-xl cursor-pointer transition-all ${isSelected
                     ? "bg-lime-50 border border-lime-200 text-lime-950 font-semibold shadow-sm"
                     : "hover:bg-slate-50 border border-transparent text-slate-700"
-                }`}
+                  }`}
               >
                 {/* Active Indicator Left Glow Strip */}
                 {isSelected && (
@@ -410,9 +406,8 @@ export function ChatSessionSidebar({
                 <div className="flex items-center justify-between gap-1.5">
                   <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
                     <FileText
-                      className={`h-3.5 w-3.5 shrink-0 ${
-                        isSelected ? "text-lime-700" : "text-slate-400 group-hover:text-lime-600"
-                      }`}
+                      className={`h-3.5 w-3.5 shrink-0 ${isSelected ? "text-lime-700" : "text-slate-400 group-hover:text-lime-600"
+                        }`}
                     />
 
                     {isEditing ? (
@@ -513,9 +508,8 @@ export function ChatSessionSidebar({
     <>
       {/* Desktop Collapsible Container */}
       <aside
-        className={`hidden lg:flex flex-col h-full shrink-0 border-r border-slate-200/80 transition-[width,opacity] duration-300 ease-in-out overflow-hidden z-20 ${
-          isOpen ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none border-r-0"
-        }`}
+        className={`hidden lg:flex flex-col h-full shrink-0 border-r border-slate-200/80 transition-[width,opacity] duration-300 ease-in-out overflow-hidden z-20 ${isOpen ? "w-80 opacity-100" : "w-0 opacity-0 pointer-events-none border-r-0"
+          }`}
       >
         <div className="w-80 h-full flex flex-col">{renderSidebarContent()}</div>
       </aside>

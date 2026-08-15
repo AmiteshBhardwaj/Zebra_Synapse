@@ -33,29 +33,7 @@ export default function DoctorTeleconsult() {
   const [isPublishing, setIsPublishing] = useState(false);
 
   // Live waiting queue of patients seeking teleconsultation
-  const [waitingPatients, setWaitingPatients] = useState<WaitingPatient[]>([
-    {
-      consultationId: "demo-consult-101",
-      patientId: "d0000000-0000-0000-0000-000000000001",
-      patientName: "Maya Thompson",
-      condition: "Hypertension / Elevated BP Follow-up",
-      requestedAt: "2 mins ago",
-    },
-    {
-      consultationId: "demo-consult-102",
-      patientId: "d0000000-0000-0000-0000-000000000003",
-      patientName: "Sofia Bennett",
-      condition: "Type 2 Diabetes / Glucose Review",
-      requestedAt: "5 mins ago",
-    },
-    {
-      consultationId: "demo-consult-103",
-      patientId: "d0000000-0000-0000-0000-000000000010",
-      patientName: "Lucas Reed",
-      condition: "Acute Migraine & Symptoms",
-      requestedAt: "8 mins ago",
-    },
-  ]);
+  const [waitingPatients, setWaitingPatients] = useState<WaitingPatient[]>([]);
 
   // Subscribe to real-time teleconsultation requests from patients
   useEffect(() => {
@@ -76,6 +54,19 @@ export default function DoctorTeleconsult() {
           return [data, ...prev];
         });
         toast.info(`New patient request: ${data.patientName || "A patient"} is seeking teleconsultation!`);
+      }
+    });
+
+    channel.on("broadcast", { event: "patient-cancelled-consult" }, (event) => {
+      const data = event.payload as { consultationId?: string; patientId?: string };
+      if (data && (data.consultationId || data.patientId)) {
+        setWaitingPatients((prev) =>
+          prev.filter(
+            (p) =>
+              (data.consultationId ? p.consultationId !== data.consultationId : true) &&
+              (data.patientId ? p.patientId !== data.patientId : true)
+          )
+        );
       }
     });
 

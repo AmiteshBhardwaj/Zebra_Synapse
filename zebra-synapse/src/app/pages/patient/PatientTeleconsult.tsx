@@ -78,6 +78,16 @@ export default function PatientTeleconsult() {
     });
 
     return () => {
+      if (mode === "searching") {
+        void channel.send({
+          type: "broadcast",
+          event: "patient-cancelled-consult",
+          payload: {
+            consultationId: activeConsultationId,
+            patientId: user?.id,
+          },
+        });
+      }
       void sb.removeChannel(channel);
     };
   }, [mode, activeConsultationId, user?.id, profile?.full_name]);
@@ -89,7 +99,19 @@ export default function PatientTeleconsult() {
     toast.info("Broadcasting teleconsultation request to online doctors...");
   };
 
-  const handleCancelSearch = () => {
+  const handleCancelSearch = async () => {
+    const sb = getSupabase();
+    if (sb) {
+      const channel = sb.channel("teleconsult-queue");
+      await channel.send({
+        type: "broadcast",
+        event: "patient-cancelled-consult",
+        payload: {
+          consultationId: activeConsultationId,
+          patientId: user?.id,
+        },
+      });
+    }
     setMode("idle");
     toast.info("Cancelled search for doctors.");
   };
