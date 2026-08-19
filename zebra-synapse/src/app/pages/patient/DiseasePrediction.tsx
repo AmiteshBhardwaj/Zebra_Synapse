@@ -58,7 +58,7 @@ export default function DiseasePrediction() {
   return (
     <PatientPortalPage>
       {/* Executive Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
         <div className="flex items-center gap-3.5">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
             <TrendingUp className="h-6 w-6" />
@@ -87,17 +87,16 @@ export default function DiseasePrediction() {
       </div>
 
       {/* Scope Selector Control */}
-      {hasPanels && (
-        <div className="mb-6 max-w-4xl">
-          <ReportScopeSelector
-            panels={panels}
-            uploads={uploads}
-            selectedReportId={selectedReportId}
-            onSelectReportId={setSelectedReportId}
-            multiPanelMeta={multiPanelMeta}
-            biomarkerTrends={biomarkerTrends}
-          />
-        </div>
+      {hasPanels && panels.length > 1 && (
+        <ReportScopeSelector
+          panels={panels}
+          uploads={uploads}
+          selectedReportId={selectedReportId}
+          onSelectReportId={setSelectedReportId}
+          multiPanelMeta={multiPanelMeta}
+          biomarkerTrends={biomarkerTrends}
+          className="max-w-4xl"
+        />
       )}
 
       {!hasPanels || !activePanel ? (

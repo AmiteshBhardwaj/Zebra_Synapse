@@ -44,7 +44,7 @@ async function fetchProfile(
 ): Promise<Profile | null> {
   let { data, error } = await sb
     .from("profiles")
-    .select("id, role, full_name, license_number, height_cm, weight_kg, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
+    .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
     .eq("id", userId)
     .maybeSingle();
 
@@ -88,7 +88,7 @@ async function fetchProfile(
           },
           { onConflict: "id" }
         )
-        .select("id, role, full_name, license_number, height_cm, weight_kg, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
+        .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
         .maybeSingle();
 
       if (insertError) {
@@ -110,6 +110,29 @@ async function fetchProfile(
         license_number: null,
       };
     }
+  }
+
+  // Merge locally persisted profile cache if present (ensures instant persistence across refresh)
+  try {
+    const rawLocal = localStorage.getItem(`zebra_profile_${userId}`);
+    if (rawLocal) {
+      const localProfile = JSON.parse(rawLocal);
+      baseProfile = {
+        ...localProfile,
+        ...baseProfile,
+        height_cm: baseProfile.height_cm ?? localProfile.height_cm ?? null,
+        weight_kg: baseProfile.weight_kg ?? localProfile.weight_kg ?? null,
+        age: baseProfile.age ?? localProfile.age ?? null,
+        gender: baseProfile.gender ?? localProfile.gender ?? null,
+        blood_type: baseProfile.blood_type ?? localProfile.blood_type ?? null,
+        dietary_preference: baseProfile.dietary_preference ?? localProfile.dietary_preference ?? null,
+        food_allergies: baseProfile.food_allergies ?? localProfile.food_allergies ?? null,
+        dietary_conditions: baseProfile.dietary_conditions ?? localProfile.dietary_conditions ?? null,
+        dietary_notes: baseProfile.dietary_notes ?? localProfile.dietary_notes ?? null,
+      };
+    }
+  } catch (e) {
+    console.warn("[auth] local profile merge warning:", e);
   }
 
   return baseProfile;
@@ -248,17 +271,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDemoProfile(updated);
       }
 
-      // 2. Persist to localStorage caches for demo users only
-      if (!session?.user) {
-        try {
+      // 2. Persist to localStorage caches for all users
+      try {
+        localStorage.setItem(`zebra_profile_${activeUid}`, JSON.stringify(updated));
+        if (!session?.user) {
           const stored = localStorage.getItem(DEMO_STORAGE_KEY);
           const parsed = stored ? JSON.parse(stored) : {};
           parsed.profile = updated;
           if (!parsed.user && demoUser) parsed.user = demoUser;
           localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(parsed));
-        } catch (e) {
-          console.warn("[auth] localStorage update error:", e);
         }
+      } catch (e) {
+        console.warn("[auth] localStorage update error:", e);
       }
 
       // 3. Persist to Supabase if connected

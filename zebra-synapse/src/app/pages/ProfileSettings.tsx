@@ -196,9 +196,18 @@ export default function ProfileSettings() {
       setFullName(profile.full_name ?? "");
       setLicenseNumber(profile.license_number ?? "");
 
-      if (profile.height_cm != null && profile.height_cm > 0) {
-        setHeightCm(profile.height_cm.toString());
-        const totalInches = profile.height_cm / 2.54;
+      let savedLocal: any = {};
+      if (user?.id) {
+        try {
+          const raw = localStorage.getItem(`zebra_profile_${user.id}`);
+          if (raw) savedLocal = JSON.parse(raw);
+        } catch (e) {}
+      }
+
+      const effectiveH = profile.height_cm ?? savedLocal.height_cm;
+      if (effectiveH != null && effectiveH > 0) {
+        setHeightCm(effectiveH.toString());
+        const totalInches = effectiveH / 2.54;
         const ft = Math.floor(totalInches / 12);
         const inch = Math.round((totalInches % 12) * 10) / 10;
         setHeightFt(ft.toString());
@@ -209,27 +218,20 @@ export default function ProfileSettings() {
         setHeightIn("");
       }
 
-      if (profile.weight_kg != null && profile.weight_kg > 0) {
-        setWeightKg(profile.weight_kg.toString());
-        const lbs = Math.round(profile.weight_kg * 2.20462 * 10) / 10;
+      const effectiveW = profile.weight_kg ?? savedLocal.weight_kg;
+      if (effectiveW != null && effectiveW > 0) {
+        setWeightKg(effectiveW.toString());
+        const lbs = Math.round(effectiveW * 2.20462 * 10) / 10;
         setWeightLbs(lbs.toString());
       } else {
         setWeightKg("");
         setWeightLbs("");
       }
 
-      setDietaryPreference(profile.dietary_preference || "omnivore");
-      setFoodAllergies(profile.food_allergies || []);
-      setDietaryConditions(profile.dietary_conditions || []);
-      setDietaryNotes(profile.dietary_notes || "");
-
-      let savedLocal: any = {};
-      if (user?.id) {
-        try {
-          const raw = localStorage.getItem(`zebra_profile_${user.id}`);
-          if (raw) savedLocal = JSON.parse(raw);
-        } catch (e) {}
-      }
+      setDietaryPreference(profile.dietary_preference || savedLocal.dietary_preference || "omnivore");
+      setFoodAllergies(profile.food_allergies || savedLocal.food_allergies || []);
+      setDietaryConditions(profile.dietary_conditions || savedLocal.dietary_conditions || []);
+      setDietaryNotes(profile.dietary_notes || savedLocal.dietary_notes || "");
 
       setAge(profile.age ? String(profile.age) : savedLocal.age ? String(savedLocal.age) : "");
       setGender(profile.gender || savedLocal.gender || "");
@@ -375,6 +377,22 @@ export default function ProfileSettings() {
       patch.dietary_conditions = dietaryConditions;
       patch.dietary_notes = dietaryNotes.trim() || null;
 
+      // Save profile backup to localStorage directly
+      try {
+        const rawExisting = localStorage.getItem(`zebra_profile_${user.id}`);
+        const parsedExisting = rawExisting ? JSON.parse(rawExisting) : {};
+        localStorage.setItem(
+          `zebra_profile_${user.id}`,
+          JSON.stringify({
+            ...profile,
+            ...parsedExisting,
+            ...patch,
+          })
+        );
+      } catch (e) {
+        console.warn("[settings] local profile backup error:", e);
+      }
+
       // Save fitness preferences to localStorage
       try {
         localStorage.setItem(
@@ -414,6 +432,7 @@ export default function ProfileSettings() {
     }
 
     const { error } = await updateProfile(patch as any);
+    await refreshProfile();
     setSaving(false);
     if (error) {
       toast.error(error.message);

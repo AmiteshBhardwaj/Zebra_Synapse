@@ -62,7 +62,11 @@ const SEED_DOCTORS: DoctorMeta[] = [
   { id: "doc_julia_nguyen", name: "Dr. Julia Nguyen", specialty: "General Practice & Telehealth", relationshipType: "unlinked" },
 ];
 
-export default function PatientDoctorChat() {
+interface PatientDoctorChatProps {
+  embedded?: boolean;
+}
+
+export default function PatientDoctorChat({ embedded = false }: PatientDoctorChatProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile } = useAuth();
@@ -297,10 +301,11 @@ export default function PatientDoctorChat() {
       currentReqStatus === "accepted" ||
       messages.length > 0);
 
-  return (
-    <PatientPortalPage>
-      {/* Executive Header Bar matching Teleconsult Hub Theme */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 mb-6">
+  const bodyContent = (
+    <div className="w-full">
+      {/* Executive Header Bar matching Teleconsult Hub Theme (Omitted if embedded) */}
+      {!embedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 mb-6">
         <div className="flex items-center gap-3.5">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef8e8] text-[#4d8629] border border-[#d2ecb8] shadow-sm">
             <MessageSquare className="h-6 w-6 stroke-[2.2]" />
@@ -330,6 +335,7 @@ export default function PatientDoctorChat() {
           </Button>
         </div>
       </div>
+    )}
 
       {/* Main Chat Layout Container */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-210px)] min-h-[560px]">
@@ -799,6 +805,12 @@ export default function PatientDoctorChat() {
           </div>
         </div>
       )}
-    </PatientPortalPage>
+    </div>
   );
+
+  if (embedded) {
+    return bodyContent;
+  }
+
+  return <PatientPortalPage>{bodyContent}</PatientPortalPage>;
 }
