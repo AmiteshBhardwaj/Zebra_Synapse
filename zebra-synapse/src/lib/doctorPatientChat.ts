@@ -36,7 +36,7 @@ const REQUESTS_STORAGE_KEY = "zebra_chat_access_requests";
 const CHAT_BROADCAST_CHANNEL = "zebra_doctor_patient_chat";
 
 // Helper to broadcast changes across all browser tabs and windows
-function broadcastChatEvent(type: "message" | "request" | "read", data: any) {
+function broadcastChatEvent(type: "message" | "request" | "read" | "delete", data: any) {
   if (typeof window !== "undefined") {
     try {
       if ("BroadcastChannel" in window) {
@@ -428,3 +428,47 @@ export async function markDoctorPatientMessagesAsRead(
     console.warn("[doctorPatientChat] Error marking messages as read:", err);
   }
 }
+
+/**
+ * Permanently delete all messages in a conversation between doctor and patient.
+ */
+export async function deleteConversationMessages(
+  doctorId: string,
+  patientId: string,
+  doctorName?: string | null,
+  patientName?: string | null
+): Promise<void> {
+  const currentGlobal = getAllGlobalMessages();
+  const targetConvMsgs = filterConversationMessages(currentGlobal, doctorId, patientId, doctorName, patientName);
+  const targetIds = new Set(targetConvMsgs.map((m) => m.id));
+
+  // 1. Instantly clear from local universal storage
+  if (targetIds.size > 0 || currentGlobal.length > 0) {
+    const updatedGlobal = currentGlobal.filter((m) => !targetIds.has(m.id));
+    saveGlobalMessages(updatedGlobal);
+  }
+
+  // 2. Broadcast deletion event across tabs & windows
+  broadcastChatEvent("delete", { doctorId, patientId });
+
+  // 3. Persist deletion in Supabase database
+  if (!isSupabaseConfigured()) return;
+  const sb = getSupabase();
+  if (!sb) return;
+
+  try {
+    // Delete by participant IDs
+    const { error } = await sb
+      .from("doctor_patient_messages")
+      .delete()
+      .or(`and(doctor_id.eq.${doctorId},patient_id.eq.${patientId}),and(doctor_id.eq.${patientId},patient_id.eq.${doctorId})`);
+
+    if (error && targetIds.size > 0) {
+      // Fallback: Delete by target message IDs array
+      await sb.from("doctor_patient_messages").delete().in("id", Array.from(targetIds));
+    }
+  } catch (err) {
+    console.warn("[doctorPatientChat] Exception deleting conversation messages:", err);
+  }
+}
+

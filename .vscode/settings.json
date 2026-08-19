@@ -1,4 +1,5 @@
 {
   "deno.enable": true,
-  "deno.enablePaths": ["zebra-synapse/supabase/functions"]
+  "deno.enablePaths": ["zebra-synapse/supabase/functions"],
+  "css.lint.unknownAtRules": "ignore"
 }

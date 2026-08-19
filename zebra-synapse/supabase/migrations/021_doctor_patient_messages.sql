@@ -51,6 +51,12 @@ create policy "doctor_patient_messages_update"
   using (true)
   with check (true);
 
+-- Delete policy: Allow deleting conversation messages
+drop policy if exists "doctor_patient_messages_delete" on public.doctor_patient_messages;
+create policy "doctor_patient_messages_delete"
+  on public.doctor_patient_messages for delete
+  using (true);
+
 -- Enable Supabase Realtime broadcast for cross-device synchronization
 alter table public.doctor_patient_messages replica identity full;
 
