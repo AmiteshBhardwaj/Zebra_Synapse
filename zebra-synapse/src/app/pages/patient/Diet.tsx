@@ -47,6 +47,8 @@ import {
   LogOut,
   Bot,
   Send,
+  Settings,
+  ShieldAlert,
 } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import PatientDietChat from "./PatientDietChat";
@@ -116,6 +118,7 @@ export interface DietProps {
   onDateChange?: (dateStr: string) => void;
   loggedFoods?: LoggedMealItem[];
   onLoggedFoodsChange?: (logs: LoggedMealItem[]) => void;
+  onAskAiCoach?: (prompt: string) => void;
 }
 
 export default function Diet({
@@ -124,6 +127,7 @@ export default function Diet({
   onDateChange,
   loggedFoods: externalLoggedFoods,
   onLoggedFoodsChange,
+  onAskAiCoach,
 }: DietProps = {}) {
   const { profile, updateProfile } = useAuth();
   const { hasLabReports, uploads, loading: reportsLoading } = usePatientLabReports();
@@ -149,7 +153,7 @@ export default function Diet({
       if (tab === "weekly_plan" || tab === "meal_plan") return "weekly_plan";
       if (tab === "biomarker_rx") return "biomarker_rx";
     } catch {}
-    return "dashboard";
+    return embedded ? "weekly_plan" : "dashboard";
   });
 
   // Sync activeTab if location search changes
@@ -1496,6 +1500,82 @@ export default function Diet({
         {/* ========================================================================= */}
         {activeTab === "weekly_plan" && (
           <div className="space-y-6">
+            {/* Personalization Badge Banner */}
+            <div className="rounded-2xl border border-lime-200 bg-gradient-to-r from-lime-50 via-emerald-50 to-teal-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500 text-white font-bold shadow-sm">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 font-['Manrope']">
+                      Biomarker & Settings Calibrated
+                    </span>
+                    <Badge className="bg-lime-500 text-white text-[9px] font-bold px-2 py-0.5">
+                      Active
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    {activePanel?.recorded_at ? (
+                      <>
+                        Personalized using your <strong className="text-slate-900">{formatLabDate(activePanel.recorded_at)}</strong> lab panel + Account Settings dietary preferences.
+                      </>
+                    ) : (
+                      <>
+                        Personalized using Account Settings preferences. <Link to="/patient/records" className="font-bold text-lime-700 underline hover:text-lime-800">Upload a lab report</Link> for biomarker-tailored recommendations.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                to="/settings"
+                className="inline-flex items-center gap-1 text-xs font-bold text-lime-800 hover:text-lime-900 bg-white/80 border border-lime-200 rounded-xl px-3 py-1.5 shadow-xs shrink-0 self-start sm:self-auto"
+              >
+                <Settings className="h-3.5 w-3.5" /> Edit Preferences
+              </Link>
+            </div>
+
+            {/* Dietary Preferences Summary Panel */}
+            <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-lime-100 text-lime-700">
+                  <Utensils className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dietary Preference</span>
+                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
+                    {profile?.dietary_preference || settings.dietaryPreference || "Omnivore"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-orange-100 text-orange-700">
+                  <ShieldAlert className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Allergies & Exclusions</span>
+                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
+                    {profile?.food_allergies?.length ? profile.food_allergies.join(", ") : "None Specified"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-cyan-100 text-cyan-700">
+                  <HeartPulse className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Metabolic Conditions</span>
+                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
+                    {profile?.dietary_conditions?.length ? profile.dietary_conditions.join(", ") : "General Health"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">7-Day Biomarker-Guided Meal Plan</h2>

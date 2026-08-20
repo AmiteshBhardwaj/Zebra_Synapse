@@ -4,6 +4,7 @@ import {
   UtensilsCrossed,
   Utensils,
   Dumbbell,
+  Bot,
   Sparkles,
   Flame,
   Plus,
@@ -26,8 +27,9 @@ import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import Diet from "./Diet";
 import ExercisePlan from "./ExercisePlan";
+import PatientDietChat from "./PatientDietChat";
 
-export type DietFitnessTab = "overview" | "meals" | "exercise";
+export type DietFitnessTab = "overview" | "meals" | "exercise" | "chat";
 
 // Robust Local Date Parsing & Formatter (Prevents UTC Timezone Shift Bugs)
 function getTodayLocalDateStr(): string {
@@ -74,6 +76,7 @@ export default function PatientDietFitness() {
 
   const [activeTab, setActiveTab] = useState<DietFitnessTab>("overview");
   const [selectedExerciseDay, setSelectedExerciseDay] = useState<number>(1);
+  const [aiCoachPrompt, setAiCoachPrompt] = useState<string>("");
 
   // Sync active tab and exercise day from URL params (e.g. ?tab=exercise&day=3)
   useEffect(() => {
@@ -85,6 +88,8 @@ export default function PatientDietFitness() {
       setActiveTab("meals");
     } else if (tabParam === "exercise" || tabParam === "workout" || tabParam === "fitness") {
       setActiveTab("exercise");
+    } else if (tabParam === "chat" || tabParam === "ai_coach" || tabParam === "coach") {
+      setActiveTab("chat");
     } else if (tabParam === "overview") {
       setActiveTab("overview");
     }
@@ -286,6 +291,11 @@ export default function PatientDietFitness() {
     navigate({ search: searchParams.toString() }, { replace: true });
   };
 
+  const handleAskAiCoach = (prompt: string) => {
+    setAiCoachPrompt(prompt);
+    handleTabChange("chat");
+  };
+
   return (
     <PatientPortalPage>
       {/* Executive Header Bar */}
@@ -323,52 +333,54 @@ export default function PatientDietFitness() {
         </div>
       </div>
 
-      {/* Synchronized Date Switcher Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-2xl p-3 border border-slate-100 shadow-xs">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePrevDay}
-            className="h-8 rounded-xl px-2.5 text-xs gap-1 text-slate-700 hover:bg-slate-50"
-          >
-            <ChevronLeft className="h-4 w-4" /> Prev Day
-          </Button>
+      {/* Synchronized Date Switcher Bar (Applies to Overview & Meal Plan) */}
+      {activeTab !== "chat" && activeTab !== "exercise" && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-2xl p-3 border border-slate-100 shadow-xs">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrevDay}
+              className="h-8 rounded-xl px-2.5 text-xs gap-1 text-slate-700 hover:bg-slate-50"
+            >
+              <ChevronLeft className="h-4 w-4" /> Prev Day
+            </Button>
 
-          <div className="relative flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-800 hover:border-lime-400 transition-colors">
-            <Calendar className="h-4 w-4 text-lime-600" />
-            <span>{formattedDateTitle}</span>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-            />
+            <div className="relative flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-800 hover:border-lime-400 transition-colors">
+              <Calendar className="h-4 w-4 text-lime-600" />
+              <span>{formattedDateTitle}</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              />
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNextDay}
+              className="h-8 rounded-xl px-2.5 text-xs gap-1 text-slate-700 hover:bg-slate-50"
+            >
+              Next Day <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNextDay}
-            className="h-8 rounded-xl px-2.5 text-xs gap-1 text-slate-700 hover:bg-slate-50"
-          >
-            Next Day <ChevronRight className="h-4 w-4" />
-          </Button>
+          {selectedDate !== todayStr && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setSelectedDate(todayStr)}
+              className="h-8 rounded-xl px-3 text-xs font-bold bg-lime-100 text-lime-900 hover:bg-lime-200"
+            >
+              Jump to Today
+            </Button>
+          )}
         </div>
+      )}
 
-        {selectedDate !== todayStr && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setSelectedDate(todayStr)}
-            className="h-8 rounded-xl px-3 text-xs font-bold bg-lime-100 text-lime-900 hover:bg-lime-200"
-          >
-            Jump to Today
-          </Button>
-        )}
-      </div>
-
-      {/* Segmented Horizontal Tab Bar */}
+      {/* Segmented Horizontal Tab Bar (4 Tabs) */}
       <div className="overflow-x-auto pb-1 [scrollbar-width:none]">
         <div className="inline-flex min-w-full sm:min-w-0 items-center gap-1.5 rounded-2xl bg-slate-100 p-1.5 text-xs font-semibold text-slate-600 shadow-inner">
           <button
@@ -409,10 +421,23 @@ export default function PatientDietFitness() {
             <Dumbbell className="h-4 w-4" />
             <span>Exercise Plan</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange("chat")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-150 cursor-pointer ${
+              activeTab === "chat"
+                ? "bg-[#84cc16] text-slate-950 shadow-md shadow-lime-500/20"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
+            }`}
+          >
+            <Bot className="h-4 w-4" />
+            <span>AI Coach</span>
+          </button>
         </div>
       </div>
 
-      {/* Tab 1: OVERVIEW */}
+      {/* Tab 1: OVERVIEW (Glance Snapshot ONLY) */}
       {activeTab === "overview" && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Greeting Header */}
@@ -628,7 +653,7 @@ export default function PatientDietFitness() {
             </div>
           </div>
 
-          {/* Weekly Workout Snapshot Card (new) */}
+          {/* Weekly Workout Snapshot Card */}
           <div className={`${portalPanelClass} p-5 sm:p-6 space-y-4`}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2.5">
@@ -680,7 +705,7 @@ export default function PatientDietFitness() {
                           </span>
                         )}
                       </div>
-                      <p className={`text-[11px] font-bold mt-1 line-clamp-2 ${isToday ? "text-slate-950" : "text-slate-700"}`}>
+                      <p className={`text-[11px] font-bold mt-1 line-clamp-2 ${isToday ? "text-slate-900" : "text-slate-700"}`}>
                         {day.title}
                       </p>
                     </div>
@@ -699,7 +724,7 @@ export default function PatientDietFitness() {
         </div>
       )}
 
-      {/* Tab 2: MEAL PLAN */}
+      {/* Tab 2: MEAL PLAN (Planning & Personalization — No Duplicate Ring/Timeline) */}
       {activeTab === "meals" && (
         <div className="animate-in fade-in duration-200">
           <Diet
@@ -708,6 +733,7 @@ export default function PatientDietFitness() {
             onDateChange={setSelectedDate}
             loggedFoods={loggedMeals}
             onLoggedFoodsChange={handleLoggedMealsChange}
+            onAskAiCoach={handleAskAiCoach}
           />
         </div>
       )}
@@ -716,6 +742,13 @@ export default function PatientDietFitness() {
       {activeTab === "exercise" && (
         <div className="animate-in fade-in duration-200">
           <ExercisePlan embedded={true} initialDay={selectedExerciseDay} />
+        </div>
+      )}
+
+      {/* Tab 4: AI COACH */}
+      {activeTab === "chat" && (
+        <div className="animate-in fade-in duration-200">
+          <PatientDietChat embedded={true} initialPrompt={aiCoachPrompt} />
         </div>
       )}
     </PatientPortalPage>
