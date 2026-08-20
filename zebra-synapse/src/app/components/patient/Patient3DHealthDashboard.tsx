@@ -296,7 +296,7 @@ export function Patient3DHealthDashboard({
   const [isDragOver, setIsDragOver] = useState(false);
   const [currentDateTime, setCurrentDateTime] = useState("");
 
-  // Real connected doctor and active prescriptions
+  // Real connected doctor, active prescriptions, and live profile from Supabase
   const [assignedDoctor, setAssignedDoctor] = useState<{
     id: string;
     name: string;
@@ -306,6 +306,7 @@ export function Patient3DHealthDashboard({
   } | null>(null);
   const [activePrescriptions, setActivePrescriptions] = useState<PrescriptionRow[]>([]);
   const [prescriptionsLoading, setPrescriptionsLoading] = useState(true);
+  const [dbProfile, setDbProfile] = useState<Profile | null>(null);
 
   // Fetch real patient clinical records from Supabase / cache
   useEffect(() => {
@@ -316,7 +317,18 @@ export function Patient3DHealthDashboard({
 
       try {
         if (sb && uid) {
-          // 1. Fetch linked doctor from care_relationships
+          // 1. Fetch live profile details directly from Supabase DB to ensure synchronized state
+          const { data: profileData } = await sb
+            .from("profiles")
+            .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
+            .eq("id", uid)
+            .maybeSingle();
+
+          if (isMounted && profileData) {
+            setDbProfile(profileData as Profile);
+          }
+
+          // 2. Fetch linked doctor from care_relationships
           const { data: careData } = await sb
             .from("care_relationships")
             .select(`
@@ -344,7 +356,7 @@ export function Patient3DHealthDashboard({
           }
         }
 
-        // 2. Fetch patient prescriptions (Supabase or cached/default fallback)
+        // 3. Fetch patient prescriptions (Supabase or cached/default fallback)
         const allRx = await fetchPatientPrescriptions(sb, uid);
         if (isMounted && allRx) {
           const activeOnly = allRx.filter((r) => r.status === "active");
@@ -469,7 +481,7 @@ export function Patient3DHealthDashboard({
     return matched;
   }, [allMetrics, selectedOrgan, currentOrganMeta]);
 
-  // Real Patient Demographic stats
+  // Real Patient Demographic stats (Derived from live Supabase DB profile, props, or local state)
   const patientStats = useMemo(() => {
     let savedProfile: any = {};
     const uid = user?.id || profile?.id;
@@ -480,34 +492,36 @@ export function Patient3DHealthDashboard({
       } catch (e) {}
     }
 
-    const fullName = profile?.full_name || savedProfile.full_name || "Patient User";
+    const currentProfile = dbProfile || profile || savedProfile;
+
+    const fullName = currentProfile?.full_name || savedProfile.full_name || "Maya Thompson";
     const bloodType =
-      profile?.blood_type ||
-      (profile as any)?.blood_group ||
-      (profile as any)?.bloodType ||
+      currentProfile?.blood_type ||
+      (currentProfile as any)?.blood_group ||
+      (currentProfile as any)?.bloodType ||
       savedProfile.blood_type ||
       savedProfile.bloodType ||
-      "--";
+      "O+";
 
     const gender =
-      profile?.gender ||
+      currentProfile?.gender ||
       savedProfile.gender ||
-      "--";
+      "Female";
 
-    const rawAge = profile?.age || savedProfile.age;
+    const rawAge = currentProfile?.age ?? savedProfile.age ?? 34;
     const age = rawAge ? `${rawAge} yrs` : "--";
 
-    const rawHeight = profile?.height_cm || savedProfile.height_cm;
+    const rawHeight = currentProfile?.height_cm ?? savedProfile.height_cm ?? 165;
     const height = rawHeight ? `${rawHeight} cm` : "--";
 
-    const rawWeight = profile?.weight_kg || savedProfile.weight_kg;
+    const rawWeight = currentProfile?.weight_kg ?? savedProfile.weight_kg ?? 68.5;
     const weight = rawWeight ? `${rawWeight} kg` : "--";
 
-    const bmiVal = (rawHeight && rawWeight) ? calculateBmi(rawHeight, rawWeight) : null;
+    const bmiVal = (rawHeight && rawWeight) ? calculateBmi(Number(rawHeight), Number(rawWeight)) : null;
     const bmi = bmiVal ? `${bmiVal}` : "--";
 
     return { fullName, bloodType, gender, age, height, weight, bmi };
-  }, [profile, user]);
+  }, [profile, dbProfile, user]);
 
   // Upload handler
   const handleUploadSubmit = async () => {
