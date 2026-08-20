@@ -4,21 +4,14 @@ import {
   UtensilsCrossed,
   Utensils,
   Dumbbell,
-  Bot,
   Sparkles,
   Flame,
   Plus,
   ChevronRight,
+  ChevronLeft,
   Calendar,
   Activity,
-  CheckCircle2,
-  TrendingUp,
   Apple,
-  Clock,
-  ArrowRight,
-  SlidersHorizontal,
-  RotateCcw,
-  Zap,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
@@ -41,9 +34,8 @@ export default function PatientDietFitness() {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile } = useAuth();
-  const { hasLabReports, loading: reportsLoading } = usePatientLabReports();
-  const { panels, loading: panelsLoading } = usePatientLabPanels();
-  const { activePanel } = useActiveReport(panels);
+  const { hasLabReports } = usePatientLabReports();
+  const { panels } = usePatientLabPanels();
 
   const [activeTab, setActiveTab] = useState<DietFitnessTab>("overview");
   const [selectedExerciseDay, setSelectedExerciseDay] = useState<number>(1);
@@ -70,55 +62,181 @@ export default function PatientDietFitness() {
     }
   }, [location.search]);
 
+  // Unified Date State Across Overview & Meal Plan
+  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
+
+  const formattedDateTitle = useMemo(() => {
+    try {
+      const [year, month, day] = selectedDate.split("-").map(Number);
+      const d = new Date(year, month - 1, day);
+      return d.toLocaleDateString("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return selectedDate;
+    }
+  }, [selectedDate]);
+
+  const handlePrevDay = () => {
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const d = new Date(year, month - 1, day - 1);
+    setSelectedDate(d.toISOString().split("T")[0]);
+  };
+
+  const handleNextDay = () => {
+    const [year, month, day] = selectedDate.split("-").map(Number);
+    const d = new Date(year, month - 1, day + 1);
+    setSelectedDate(d.toISOString().split("T")[0]);
+  };
+
+  // Synchronized Food Logs State for Selected Date
+  const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${selectedDate}`;
+  const [loggedMeals, setLoggedMeals] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem(logsStorageKey);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    if (selectedDate === todayStr) {
+      return [
+        {
+          id: "log_1",
+          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
+          meal: "breakfast",
+          calories: 300,
+          protein: 20,
+          carbs: 25,
+          fat: 12,
+        },
+        {
+          id: "log_2",
+          name: "Grilled Chicken Salad with Avocado and Quinoa",
+          meal: "lunch",
+          calories: 450,
+          protein: 36,
+          carbs: 40,
+          fat: 20,
+        },
+        {
+          id: "log_3",
+          name: "Greek Yogurt with Mixed Berries and Almonds",
+          meal: "snack",
+          calories: 200,
+          protein: 12,
+          carbs: 18,
+          fat: 10,
+        },
+        {
+          id: "log_4",
+          name: "Grilled Chicken with Sweet Potato and Green Beans",
+          meal: "dinner",
+          calories: 500,
+          protein: 35,
+          carbs: 45,
+          fat: 20,
+        },
+      ];
+    }
+    return [];
+  });
+
+  // Re-read storage whenever selectedDate or profile changes
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(logsStorageKey);
+      if (saved) {
+        setLoggedMeals(JSON.parse(saved));
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    if (selectedDate === todayStr) {
+      setLoggedMeals([
+        {
+          id: "log_1",
+          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
+          meal: "breakfast",
+          calories: 300,
+          protein: 20,
+          carbs: 25,
+          fat: 12,
+        },
+        {
+          id: "log_2",
+          name: "Grilled Chicken Salad with Avocado and Quinoa",
+          meal: "lunch",
+          calories: 450,
+          protein: 36,
+          carbs: 40,
+          fat: 20,
+        },
+        {
+          id: "log_3",
+          name: "Greek Yogurt with Mixed Berries and Almonds",
+          meal: "snack",
+          calories: 200,
+          protein: 12,
+          carbs: 18,
+          fat: 10,
+        },
+        {
+          id: "log_4",
+          name: "Grilled Chicken with Sweet Potato and Green Beans",
+          meal: "dinner",
+          calories: 500,
+          protein: 35,
+          carbs: 45,
+          fat: 20,
+        },
+      ]);
+    } else {
+      setLoggedMeals([]);
+    }
+  }, [selectedDate, logsStorageKey, todayStr]);
+
+  const handleLoggedMealsChange = (nextMeals: any[]) => {
+    setLoggedMeals(nextMeals);
+    try {
+      localStorage.setItem(logsStorageKey, JSON.stringify(nextMeals));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Dynamic Totals Calculation from Logged Items
+  const totals = useMemo(() => {
+    return loggedMeals.reduce(
+      (acc, item) => ({
+        calories: acc.calories + (Number(item.calories) || 0),
+        protein: acc.protein + (Number(item.protein) || 0),
+        carbs: acc.carbs + (Number(item.carbs) || 0),
+        fat: acc.fat + (Number(item.fat) || 0),
+      }),
+      { calories: 0, protein: 0, carbs: 0, fat: 0 }
+    );
+  }, [loggedMeals]);
+
+  const targetCal = 2100;
+  const targetCarbs = 230;
+  const targetProtein = 140;
+  const targetFat = 65;
+
+  const carbPct = Math.min(100, Math.round((totals.carbs / targetCarbs) * 100));
+  const proteinPct = Math.min(100, Math.round((totals.protein / targetProtein) * 100));
+  const fatPct = Math.min(100, Math.round((totals.fat / targetFat) * 100));
+  const caloriesPct = Math.min(100, Math.round((totals.calories / targetCal) * 100));
+
   // Determine current day of week (1 = Mon ... 7 = Sun)
   const currentDayOfWeekNumber = useMemo(() => {
-    const jsDay = new Date().getDay(); // 0 = Sun, 1 = Mon ...
+    const jsDay = new Date().getDay();
     return jsDay === 0 ? 7 : jsDay;
   }, []);
-
-  // Today's Meal Items Sample/State
-  const todayMeals = [
-    {
-      type: "Breakfast",
-      time: "08:15 AM",
-      name: "Avocado Egg Toast & Steel-Cut Oats",
-      calories: 420,
-      carbs: "45g",
-      protein: "22g",
-      fat: "14g",
-      tag: "High Protein",
-    },
-    {
-      type: "Lunch",
-      time: "01:00 PM",
-      name: "Grilled Salmon Quinoa Bowl with Asparagus",
-      calories: 580,
-      carbs: "52g",
-      protein: "44g",
-      fat: "18g",
-      tag: "Heart Healthy",
-    },
-    {
-      type: "Evening Snack",
-      time: "04:45 PM",
-      name: "Greek Yogurt with Mixed Berries & Almonds",
-      calories: 210,
-      carbs: "18g",
-      protein: "16g",
-      fat: "7g",
-      tag: "Low GI",
-    },
-    {
-      type: "Dinner",
-      time: "07:30 PM",
-      name: "Herb Roasted Turkey Breast & Sweet Potato Mash",
-      calories: 440,
-      carbs: "40g",
-      protein: "38g",
-      fat: "10g",
-      tag: "Metabolic Reset",
-    },
-  ];
 
   // 7-day workout schedule snapshot
   const daysList = [
@@ -184,6 +302,51 @@ export default function PatientDietFitness() {
         </div>
       </div>
 
+      {/* Synchronized Date Switcher Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white rounded-2xl p-3 border border-slate-100 shadow-xs">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePrevDay}
+            className="h-8 rounded-xl px-2.5 text-xs gap-1 text-slate-700 hover:bg-slate-50"
+          >
+            <ChevronLeft className="h-4 w-4" /> Prev Day
+          </Button>
+
+          <div className="relative flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-800 hover:border-lime-400 transition-colors">
+            <Calendar className="h-4 w-4 text-lime-600" />
+            <span>{formattedDateTitle}</span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNextDay}
+            className="h-8 rounded-xl px-2.5 text-xs gap-1 text-slate-700 hover:bg-slate-50"
+          >
+            Next Day <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {selectedDate !== todayStr && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSelectedDate(todayStr)}
+            className="h-8 rounded-xl px-3 text-xs font-bold bg-lime-100 text-lime-900 hover:bg-lime-200"
+          >
+            Jump to Today
+          </Button>
+        )}
+      </div>
+
       {/* Segmented Horizontal Tab Bar */}
       <div className="overflow-x-auto pb-1 [scrollbar-width:none]">
         <div className="inline-flex min-w-full sm:min-w-0 items-center gap-1.5 rounded-2xl bg-slate-100 p-1.5 text-xs font-semibold text-slate-600 shadow-inner">
@@ -244,7 +407,7 @@ export default function PatientDietFitness() {
                 </span>
               </div>
               <p className="mt-1 text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl">
-                Your integrated dietary targets and 7-day exercise schedule are calibrated to your clinical biomarkers.
+                Integrated dietary targets and 7-day exercise schedule for <strong className="text-lime-300">{formattedDateTitle}</strong>.
               </p>
             </div>
 
@@ -271,11 +434,11 @@ export default function PatientDietFitness() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">Calories & Macros</h3>
-                    <p className="text-[11px] text-slate-500">Daily energy distribution</p>
+                    <p className="text-[11px] text-slate-500">Daily energy for {formattedDateTitle}</p>
                   </div>
                 </div>
                 <Badge className="border-lime-200 bg-lime-50 text-lime-800 text-[10px] font-bold">
-                  On Track
+                  {totals.calories === 0 ? "No Meals Logged" : totals.calories <= targetCal ? "On Track" : "Target Exceeded"}
                 </Badge>
               </div>
 
@@ -299,14 +462,14 @@ export default function PatientDietFitness() {
                       stroke="currentColor"
                       strokeWidth="12"
                       strokeDasharray={364}
-                      strokeDashoffset={364 - (364 * 1650) / 2100}
+                      strokeDashoffset={364 - (364 * caloriesPct) / 100}
                       strokeLinecap="round"
-                      className="text-lime-500 transition-all duration-1000 ease-out"
+                      className="text-lime-500 transition-all duration-700 ease-out"
                       fill="transparent"
                     />
                   </svg>
                   <div className="absolute flex flex-col items-center justify-center text-center">
-                    <span className="text-2xl font-black text-slate-900 font-mono">1,650</span>
+                    <span className="text-2xl font-black text-slate-900 font-mono">{totals.calories}</span>
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       / 2,100 kcal
                     </span>
@@ -320,7 +483,7 @@ export default function PatientDietFitness() {
                       <span className="h-3 w-3 rounded-full bg-lime-500" />
                       <span className="text-xs font-semibold text-slate-700">Calories Eaten</span>
                     </div>
-                    <span className="text-xs font-mono font-bold text-slate-900">1,650 kcal</span>
+                    <span className="text-xs font-mono font-bold text-slate-900">{totals.calories} kcal</span>
                   </div>
 
                   <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3 flex items-center justify-between gap-4">
@@ -338,30 +501,30 @@ export default function PatientDietFitness() {
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
                     <span>Carbohydrates</span>
-                    <span className="font-mono">185g / 230g (80%)</span>
+                    <span className="font-mono">{totals.carbs}g / {targetCarbs}g ({carbPct}%)</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full" style={{ width: "80%" }} />
+                    <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${carbPct}%` }} />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
                     <span>Protein</span>
-                    <span className="font-mono">110g / 140g (78%)</span>
+                    <span className="font-mono">{totals.protein}g / {targetProtein}g ({proteinPct}%)</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: "78%" }} />
+                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${proteinPct}%` }} />
                   </div>
                 </div>
 
                 <div>
                   <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
                     <span>Fats</span>
-                    <span className="font-mono">48g / 65g (73%)</span>
+                    <span className="font-mono">{totals.fat}g / {targetFat}g ({fatPct}%)</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden">
-                    <div className="h-full bg-sky-500 rounded-full" style={{ width: "73%" }} />
+                    <div className="h-full bg-sky-500 rounded-full transition-all duration-500" style={{ width: `${fatPct}%` }} />
                   </div>
                 </div>
               </div>
@@ -375,8 +538,8 @@ export default function PatientDietFitness() {
                     <Utensils className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">Today's Meals Timeline</h3>
-                    <p className="text-[11px] text-slate-500">Scheduled clinical menu</p>
+                    <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">Meals Timeline ({formattedDateTitle})</h3>
+                    <p className="text-[11px] text-slate-500">{loggedMeals.length} items logged</p>
                   </div>
                 </div>
                 <Button
@@ -388,39 +551,59 @@ export default function PatientDietFitness() {
                 </Button>
               </div>
 
-              <div className="space-y-3">
-                {todayMeals.map((meal, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 hover:bg-lime-50/40 hover:border-lime-200 transition-all"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-200 text-lime-700 font-bold shadow-xs">
-                        <Apple className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900">{meal.type}</span>
-                          <span className="text-[10px] font-medium text-slate-400">• {meal.time}</span>
-                          <Badge className="border-lime-200 bg-lime-50 text-lime-800 text-[9px] px-1.5 py-0 font-semibold">
-                            {meal.tag}
-                          </Badge>
+              {loggedMeals.length > 0 ? (
+                <div className="space-y-3">
+                  {loggedMeals.map((meal, idx) => (
+                    <div
+                      key={meal.id || idx}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 hover:bg-lime-50/40 hover:border-lime-200 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-200 text-lime-700 font-bold shadow-xs uppercase text-[10px]">
+                          <Apple className="h-5 w-5 text-lime-600" />
                         </div>
-                        <p className="text-xs font-semibold text-slate-700 mt-0.5">{meal.name}</p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                              {meal.meal || "Meal"}
+                            </span>
+                            <Badge className="border-lime-200 bg-lime-50 text-lime-800 text-[9px] px-1.5 py-0 font-semibold">
+                              Logged
+                            </Badge>
+                          </div>
+                          <p className="text-xs font-semibold text-slate-700 mt-0.5">{meal.name}</p>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-3 text-right">
-                      <div className="text-xs font-mono font-bold text-slate-900">
-                        {meal.calories} <span className="text-[10px] text-slate-400 font-sans">kcal</span>
-                      </div>
-                      <div className="text-[10px] font-mono text-slate-500 bg-white border border-slate-200 rounded-lg px-2 py-1">
-                        C:{meal.carbs} P:{meal.protein} F:{meal.fat}
+                      <div className="flex items-center justify-between sm:justify-end gap-3 text-right">
+                        <div className="text-xs font-mono font-bold text-slate-900">
+                          {meal.calories} <span className="text-[10px] text-slate-400 font-sans">kcal</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-500 bg-white border border-slate-200 rounded-lg px-2 py-1">
+                          C:{meal.carbs || 0}g P:{meal.protein || 0}g F:{meal.fat || 0}g
+                        </div>
                       </div>
                     </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-slate-50/50 space-y-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 mx-auto">
+                    <Utensils className="h-6 w-6" />
                   </div>
-                ))}
-              </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">No Meals Logged for {formattedDateTitle}</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">Calories taken and macro targets are currently at 0.</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => handleTabChange("meals")}
+                    className={`h-9 px-4 rounded-xl text-xs gap-1.5 ${portalPrimaryButtonClass}`}
+                  >
+                    <Plus className="h-4 w-4" /> Log Meal for {formattedDateTitle}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -476,7 +659,7 @@ export default function PatientDietFitness() {
                           </span>
                         )}
                       </div>
-                      <p className={`text-[11px] font-bold mt-1 line-clamp-2 ${isToday ? "text-slate-900" : "text-slate-700"}`}>
+                      <p className={`text-[11px] font-bold mt-1 line-clamp-2 ${isToday ? "text-slate-950" : "text-slate-700"}`}>
                         {day.title}
                       </p>
                     </div>
@@ -498,7 +681,13 @@ export default function PatientDietFitness() {
       {/* Tab 2: MEAL PLAN */}
       {activeTab === "meals" && (
         <div className="animate-in fade-in duration-200">
-          <Diet embedded={true} />
+          <Diet
+            embedded={true}
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+            loggedFoods={loggedMeals}
+            onLoggedFoodsChange={handleLoggedMealsChange}
+          />
         </div>
       )}
 

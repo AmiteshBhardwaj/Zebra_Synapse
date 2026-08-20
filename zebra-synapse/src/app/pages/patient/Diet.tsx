@@ -112,9 +112,19 @@ import { toast } from "sonner";
 
 export interface DietProps {
   embedded?: boolean;
+  selectedDate?: string;
+  onDateChange?: (dateStr: string) => void;
+  loggedFoods?: LoggedMealItem[];
+  onLoggedFoodsChange?: (logs: LoggedMealItem[]) => void;
 }
 
-export default function Diet({ embedded = false }: DietProps = {}) {
+export default function Diet({
+  embedded = false,
+  selectedDate: externalDate,
+  onDateChange,
+  loggedFoods: externalLoggedFoods,
+  onLoggedFoodsChange,
+}: DietProps = {}) {
   const { profile, updateProfile } = useAuth();
   const { hasLabReports, uploads, loading: reportsLoading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
@@ -248,89 +258,176 @@ export default function Diet({ embedded = false }: DietProps = {}) {
   );
 
   // ==========================================
-  // FOOD TRACKING STATE (Today's Logs)
+  // FOOD TRACKING STATE (Per Selected Date)
   // ==========================================
-  const todayKey = new Date().toISOString().split("T")[0];
-  const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${todayKey}`;
-  const [loggedFoods, setLoggedFoods] = useState<LoggedMealItem[]>(() => {
+  const activeDateKey = externalDate || new Date().toISOString().split("T")[0];
+  const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${activeDateKey}`;
+
+  const [internalLoggedFoods, setInternalLoggedFoods] = useState<LoggedMealItem[]>(() => {
     try {
       const saved = localStorage.getItem(logsStorageKey);
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    // Default demonstration logs matching Zebra Synapse Clinical Nutrition design
-    return [
-      {
-        id: "log_1",
-        name: "Scrambled Eggs with Spinach & Whole Grain Toast",
-        meal: "breakfast",
-        servings: 1,
-        servingSize: "1 plate",
-        calories: 300,
-        protein: 20,
-        carbs: 25,
-        fat: 12,
-        fiber: 6,
-        sodium: 240,
-        loggedAt: new Date().toISOString(),
-      },
-      {
-        id: "log_2",
-        name: "Grilled Chicken Salad with Avocado and Quinoa",
-        meal: "lunch",
-        servings: 1,
-        servingSize: "1 bowl",
-        calories: 450,
-        protein: 36,
-        carbs: 40,
-        fat: 20,
-        fiber: 8,
-        sodium: 320,
-        loggedAt: new Date().toISOString(),
-      },
-      {
-        id: "log_3",
-        name: "Greek Yogurt with Mixed Berries and Almonds",
-        meal: "snack",
-        servings: 1,
-        servingSize: "1 bowl",
-        calories: 200,
-        protein: 12,
-        carbs: 18,
-        fat: 10,
-        fiber: 4,
-        sodium: 60,
-        loggedAt: new Date().toISOString(),
-      },
-      {
-        id: "log_4",
-        name: "Grilled Chicken with Sweet Potato and Green Beans",
-        meal: "dinner",
-        servings: 1,
-        servingSize: "1 plate",
-        calories: 500,
-        protein: 35,
-        carbs: 45,
-        fat: 20,
-        fiber: 9,
-        sodium: 380,
-        loggedAt: new Date().toISOString(),
-      },
-    ];
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (activeDateKey === todayStr) {
+      return [
+        {
+          id: "log_1",
+          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
+          meal: "breakfast",
+          servings: 1,
+          servingSize: "1 plate",
+          calories: 300,
+          protein: 20,
+          carbs: 25,
+          fat: 12,
+          fiber: 6,
+          sodium: 240,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_2",
+          name: "Grilled Chicken Salad with Avocado and Quinoa",
+          meal: "lunch",
+          servings: 1,
+          servingSize: "1 bowl",
+          calories: 450,
+          protein: 36,
+          carbs: 40,
+          fat: 20,
+          fiber: 8,
+          sodium: 320,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_3",
+          name: "Greek Yogurt with Mixed Berries and Almonds",
+          meal: "snack",
+          servings: 1,
+          servingSize: "1 bowl",
+          calories: 200,
+          protein: 12,
+          carbs: 18,
+          fat: 10,
+          fiber: 4,
+          sodium: 60,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_4",
+          name: "Grilled Chicken with Sweet Potato and Green Beans",
+          meal: "dinner",
+          servings: 1,
+          servingSize: "1 plate",
+          calories: 500,
+          protein: 35,
+          carbs: 45,
+          fat: 20,
+          fiber: 9,
+          sodium: 380,
+          loggedAt: new Date().toISOString(),
+        },
+      ];
+    }
+    return [];
   });
 
-  // Persist logged foods
+  // Keep internal state updated if activeDateKey changes
   useEffect(() => {
     try {
-      localStorage.setItem(logsStorageKey, JSON.stringify(loggedFoods));
+      const saved = localStorage.getItem(logsStorageKey);
+      if (saved) {
+        setInternalLoggedFoods(JSON.parse(saved));
+        return;
+      }
     } catch (e) {
       console.error(e);
     }
-  }, [loggedFoods, logsStorageKey]);
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (activeDateKey === todayStr) {
+      setInternalLoggedFoods([
+        {
+          id: "log_1",
+          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
+          meal: "breakfast",
+          servings: 1,
+          servingSize: "1 plate",
+          calories: 300,
+          protein: 20,
+          carbs: 25,
+          fat: 12,
+          fiber: 6,
+          sodium: 240,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_2",
+          name: "Grilled Chicken Salad with Avocado and Quinoa",
+          meal: "lunch",
+          servings: 1,
+          servingSize: "1 bowl",
+          calories: 450,
+          protein: 36,
+          carbs: 40,
+          fat: 20,
+          fiber: 8,
+          sodium: 320,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_3",
+          name: "Greek Yogurt with Mixed Berries and Almonds",
+          meal: "snack",
+          servings: 1,
+          servingSize: "1 bowl",
+          calories: 200,
+          protein: 12,
+          carbs: 18,
+          fat: 10,
+          fiber: 4,
+          sodium: 60,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_4",
+          name: "Grilled Chicken with Sweet Potato and Green Beans",
+          meal: "dinner",
+          servings: 1,
+          servingSize: "1 plate",
+          calories: 500,
+          protein: 35,
+          carbs: 45,
+          fat: 20,
+          fiber: 9,
+          sodium: 380,
+          loggedAt: new Date().toISOString(),
+        },
+      ]);
+    } else {
+      setInternalLoggedFoods([]);
+    }
+  }, [activeDateKey, logsStorageKey]);
+
+  const loggedFoods = externalLoggedFoods ?? internalLoggedFoods;
+
+  const updateLoggedFoods = (updater: (prev: LoggedMealItem[]) => LoggedMealItem[]) => {
+    const next = updater(loggedFoods);
+    if (onLoggedFoodsChange) {
+      onLoggedFoodsChange(next);
+    } else {
+      setInternalLoggedFoods(next);
+      try {
+        localStorage.setItem(logsStorageKey, JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   // Water Intake State (Nutrigo widget)
-  const waterStorageKey = `zebra_water_logs_${profile?.id || "default"}_${todayKey}`;
+  const waterStorageKey = `zebra_water_logs_${profile?.id || "default"}_${activeDateKey}`;
   const [waterConsumedMl, setWaterConsumedMl] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(waterStorageKey);
@@ -485,7 +582,7 @@ export default function Diet({ embedded = false }: DietProps = {}) {
       sodium: Math.round(food.sodium * customServings),
       loggedAt: new Date().toISOString(),
     };
-    setLoggedFoods((prev) => [...prev, newEntry]);
+    updateLoggedFoods((prev) => [...prev, newEntry]);
     addActivity(`Logged ${food.name} (${newEntry.calories} kcal) to ${selectedMealForAdd.toUpperCase()}`, "food");
     toast.success(`Logged ${food.name} to ${selectedMealForAdd.toUpperCase()}`);
     setIsAddFoodOpen(false);
@@ -517,7 +614,7 @@ export default function Diet({ embedded = false }: DietProps = {}) {
       sodium: 0,
       loggedAt: new Date().toISOString(),
     };
-    setLoggedFoods((prev) => [...prev, newEntry]);
+    updateLoggedFoods((prev) => [...prev, newEntry]);
     addActivity(`Logged ${customFoodName} (${cal} kcal) to ${selectedMealForAdd.toUpperCase()}`, "food");
     toast.success(`Logged ${customFoodName} to ${selectedMealForAdd.toUpperCase()}`);
     setIsAddFoodOpen(false);
@@ -531,7 +628,7 @@ export default function Diet({ embedded = false }: DietProps = {}) {
 
   const handleDeleteLoggedFood = (id: string) => {
     const item = loggedFoods.find((f) => f.id === id);
-    setLoggedFoods((prev) => prev.filter((i) => i.id !== id));
+    updateLoggedFoods((prev) => prev.filter((i) => i.id !== id));
     if (item) {
       toast.info(`Removed ${item.name}`);
     }
@@ -604,7 +701,7 @@ export default function Diet({ embedded = false }: DietProps = {}) {
       sodium: 350,
       loggedAt: new Date().toISOString(),
     };
-    setLoggedFoods((prev) => [...prev, newEntry]);
+    updateLoggedFoods((prev) => [...prev, newEntry]);
     addActivity(`Logged ${recipe.title} (${recipe.calories} kcal) to ${recipe.mealType.toUpperCase()}`, "food");
     toast.success(`Logged "${recipe.title}" to Today's ${recipe.mealType.toUpperCase()}!`);
   };
@@ -864,221 +961,8 @@ export default function Diet({ embedded = false }: DietProps = {}) {
             {/* LEFT 8 COLUMNS: Top Stats, Radial Gauges, Workout Banner, Recommended Menus & Exercises */}
             <div className="xl:col-span-8 space-y-6">
               
-              {/* --- ROW OF 4 QUICK METRICS (Weight, Steps, Sleep, Water) --- */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
-                {/* 1. Weight Ruler Card */}
-                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Weight</span>
-                    <span className="p-1.5 rounded-xl bg-lime-50 text-lime-600">
-                      <Scale className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="my-2">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">{currentWeight}</span>
-                      <span className="text-xs font-semibold text-slate-400">kg</span>
-                    </div>
-                  </div>
-                  {/* Interactive Ruler scale slider */}
-                  <div className="relative pt-1">
-                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 pb-1">
-                      <span>85</span>
-                      <span>80</span>
-                      <span className="text-lime-600 font-bold">{currentWeight}</span>
-                      <span>70</span>
-                      <span>65</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
-                      <div
-                        className="h-full bg-lime-500 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(100, Math.max(10, ((85 - currentWeight) / 20) * 100))}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Steps Card */}
-                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Steps</span>
-                    <span className="p-1.5 rounded-xl bg-lime-50 text-lime-600">
-                      <Footprints className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="my-2">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">
-                        {stepsCount.toLocaleString()}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-400">steps</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 mb-1">
-                      <span className="text-lime-600 font-bold">{stepsPct}%</span>
-                      <span className="text-slate-400">{stepsLeft} steps left</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-lime-500 rounded-full transition-all duration-300"
-                        style={{ width: `${stepsPct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Sleep Card */}
-                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sleep</span>
-                    <span className="p-1.5 rounded-xl bg-amber-50 text-amber-500">
-                      <Moon className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="my-2">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">{sleepHours}</span>
-                      <span className="text-xs font-semibold text-slate-400">hours</span>
-                    </div>
-                  </div>
-                  {/* Vertical mini-bar chart */}
-                  <div className="flex items-end justify-between h-5 gap-1 pt-1">
-                    {[6, 7, 5.5, 8, 6.5, 7.5, 6.5].map((h, i) => (
-                      <div
-                        key={i}
-                        className={`w-full rounded-sm transition-all ${
-                          i === 4 ? "bg-orange-500" : "bg-orange-200"
-                        }`}
-                        style={{ height: `${(h / 8) * 100}%` }}
-                        title={`${h} hours`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* 4. Water Intake Card */}
-                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Water Intake</span>
-                    <button
-                      onClick={() => handleAddWater(250)}
-                      title="Drink 250ml"
-                      className="p-1.5 rounded-xl bg-lime-50 hover:bg-lime-100 text-lime-600 transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="my-2">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">
-                        {Math.max(0, (settings.dailyWaterTargetMl - waterConsumedMl) / 1000).toFixed(1)}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-400">litre left</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 mb-1">
-                      <span className="text-amber-500 font-bold">
-                        {(waterConsumedMl / 1000).toFixed(1)}/{(settings.dailyWaterTargetMl / 1000).toFixed(1)} litre
-                      </span>
-                      <button
-                        onClick={() => handleAddWater(250)}
-                        className="text-[10px] text-lime-700 font-bold hover:underline"
-                      >
-                        + 250ml
-                      </button>
-                    </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, Math.round((waterConsumedMl / settings.dailyWaterTargetMl) * 100))}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* --- HERO ROW: 2 GAUGE CARDS (Weight Semi-Circle & Calories Circular Ring) --- */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* 1. Weight Data Semi-Circle Gauge Card */}
-                <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between pb-2">
-                    <h3 className="font-bold text-slate-900 text-base">Weight Data</h3>
-                    <button
-                      onClick={() => setIsCustomizeOpen(true)}
-                      className="text-slate-400 hover:text-slate-600 text-xs font-semibold"
-                    >
-                      •••
-                    </button>
-                  </div>
-
-                  {/* Semi-Circular Radial Gauge */}
-                  <div className="relative flex flex-col items-center justify-center my-2 py-4">
-                    <svg className="w-56 h-32" viewBox="0 0 200 110">
-                      {/* Background arc */}
-                      <path
-                        d="M 20 100 A 80 80 0 0 1 180 100"
-                        fill="none"
-                        stroke="#f1f5f9"
-                        strokeWidth="16"
-                        strokeLinecap="round"
-                      />
-                      {/* Colored active gradient arc */}
-                      <defs>
-                        <linearGradient id="weightGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#f97316" />
-                          <stop offset="50%" stopColor="#facc15" />
-                          <stop offset="100%" stopColor="#84cc16" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M 20 100 A 80 80 0 0 1 180 100"
-                        fill="none"
-                        stroke="url(#weightGrad)"
-                        strokeWidth="16"
-                        strokeLinecap="round"
-                        strokeDasharray="251.2"
-                        strokeDashoffset={`${251.2 * (1 - Math.min(1, Math.max(0.15, (85 - currentWeight) / 20)))}`}
-                        className="transition-all duration-700 ease-out"
-                      />
-                    </svg>
-
-                    {/* Central Weight Display inside the arc */}
-                    <div className="absolute bottom-2 text-center">
-                      <div className="text-3xl font-black text-slate-900 tracking-tight">
-                        {currentWeight} <span className="text-base font-semibold text-slate-500">kg</span>
-                      </div>
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Current Weight</p>
-                      <p className="text-xs font-bold text-orange-500 mt-0.5">
-                        {Math.abs(currentWeight - settings.targetWeightKg).toFixed(1)} kg {currentWeight > settings.targetWeightKg ? "left to goal" : "gained"}
-                      </p>
-                    </div>
-
-                    {/* Scale tick numbers */}
-                    <div className="w-56 flex justify-between text-[11px] font-bold text-slate-400 px-2 mt-1">
-                      <span>85</span>
-                      <span>65</span>
-                    </div>
-                  </div>
-
-                  {/* Motivational / Biomarker Insight Note */}
-                  <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 mt-3 text-xs text-slate-600 leading-relaxed">
-                    <p className="font-medium text-slate-700">
-                      "Progress is progress, no matter how slow. Keep going, you're getting closer to your goal every day!"
-                    </p>
-                    {activePanel?.recorded_at && (
-                      <div className="flex items-center gap-1.5 text-[11px] text-lime-700 font-semibold mt-1.5 pt-1.5 border-t border-slate-200/60">
-                        <ShieldCheck className="h-3.5 w-3.5 text-lime-600" />
-                        <span>Biomarker adjusted for active lab panel ({formatLabDate(activePanel.recorded_at)})</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {/* --- HERO ROW: Calories Circular Ring & Macro Targets --- */}
+              <div className="grid grid-cols-1 gap-6">
 
                 {/* 2. Calories Intake Circular Ring Gauge Card */}
                 <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between">
