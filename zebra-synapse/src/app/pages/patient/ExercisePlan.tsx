@@ -18,6 +18,7 @@ import {
   Layers,
   Settings,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
@@ -42,6 +43,7 @@ import {
   type DayWorkout,
   type ExerciseProfileInput,
   generateAIExercisePlan,
+  generateDeterministicExercisePlan,
 } from "../../../lib/exercisePlan";
 import { toast } from "sonner";
 
@@ -79,8 +81,26 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
   const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>("general_health");
   const [durationMin, setDurationMin] = useState<number>(30);
 
-  // Plan generation state
-  const [plan, setPlan] = useState<WeeklyExercisePlan | null>(null);
+  // Instant plan calculation (0ms wait time)
+  const [plan, setPlan] = useState<WeeklyExercisePlan | null>(() => {
+    try {
+      const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch {
+      // ignore
+    }
+    return generateDeterministicExercisePlan(activePanel, biomarkerTrends, {
+      fitnessLevel,
+      equipment,
+      goal: primaryGoal,
+      targetDurationMin: durationMin,
+      heightCm,
+      weightKg,
+      age: 38,
+    });
+  });
+
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Active selected day (1 to 7)
@@ -107,43 +127,52 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     return null;
   }, [heightCm, weightKg]);
 
-  // Generate or load plan whenever activePanel / profile changes
+  // Instant local load + non-blocking background AI enhancement
   useEffect(() => {
     let cancelled = false;
 
-    async function loadPlan() {
-      if (!activePanel && panels.length === 0) return;
-      setIsGenerating(true);
+    const profileInput: ExerciseProfileInput = {
+      fitnessLevel,
+      equipment,
+      goal: primaryGoal,
+      targetDurationMin: durationMin,
+      heightCm: heightCm ?? null,
+      weightKg: weightKg ?? null,
+      dietaryConditions: profile?.dietary_conditions,
+      age: 38,
+      systolicBp: activePanel?.biomarkers?.["systolic_bp"] ?? activePanel?.biomarkers?.["systolic"] ?? null,
+      diastolicBp: activePanel?.biomarkers?.["diastolic_bp"] ?? activePanel?.biomarkers?.["diastolic"] ?? null,
+      heartRate: (profile as any)?.heart_rate ?? null,
+    } as any;
 
-      const profileInput: ExerciseProfileInput = {
-        fitnessLevel,
-        equipment,
-        goal: primaryGoal,
-        targetDurationMin: durationMin,
-        heightCm: heightCm ?? null,
-        weightKg: weightKg ?? null,
-        dietaryConditions: profile?.dietary_conditions,
-        age: 38,
-        systolicBp: activePanel?.biomarkers?.["systolic_bp"] ?? activePanel?.biomarkers?.["systolic"] ?? null,
-        diastolicBp: activePanel?.biomarkers?.["diastolic_bp"] ?? activePanel?.biomarkers?.["diastolic"] ?? null,
-        heartRate: (profile as any)?.heart_rate ?? null,
-      } as any;
+    const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}`;
+    const cached = localStorage.getItem(cacheKey);
 
+    if (cached) {
       try {
-        const generated = await generateAIExercisePlan(activePanel, biomarkerTrends, profileInput);
-        if (!cancelled) {
-          setPlan(generated);
-        }
-      } catch (err) {
-        console.error("Failed to generate exercise plan", err);
-      } finally {
-        if (!cancelled) {
-          setIsGenerating(false);
-        }
+        setPlan(JSON.parse(cached));
+      } catch {
+        setPlan(generateDeterministicExercisePlan(activePanel, biomarkerTrends, profileInput));
       }
+    } else {
+      setPlan(generateDeterministicExercisePlan(activePanel, biomarkerTrends, profileInput));
     }
 
-    loadPlan();
+    // Non-blocking async background enhancement
+    void generateAIExercisePlan(activePanel, biomarkerTrends, profileInput)
+      .then((generated) => {
+        if (!cancelled && generated) {
+          setPlan(generated);
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(generated));
+          } catch {
+            // ignore
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Background AI exercise plan enhancement skipped:", err);
+      });
 
     return () => {
       cancelled = true;
@@ -209,11 +238,16 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     return { totalExercises: totalEx, completedCount: completedEx, percent, completedDays };
   }, [plan, completedItems]);
 
-  if (reportsLoading || panelsLoading) {
+  const PageWrapper = embedded ? "div" : PatientPortalPage;
+
+  if ((reportsLoading || panelsLoading) && !plan) {
     return (
-      <PatientPortalPage>
-        <p className="text-sm text-[#A1A1AA]">Loading your exercise intelligence...</p>
-      </PatientPortalPage>
+      <PageWrapper className={embedded ? "p-4" : undefined}>
+        <div className="flex items-center gap-3 text-slate-500">
+          <RefreshCw className="h-5 w-5 animate-spin text-lime-500" />
+          <span className="text-sm font-medium">Loading your exercise intelligence...</span>
+        </div>
+      </PageWrapper>
     );
   }
 
@@ -225,8 +259,6 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
       />
     );
   }
-
-  const PageWrapper = embedded ? "div" : PatientPortalPage;
 
   return (
     <PageWrapper className={embedded ? "space-y-6" : undefined}>
