@@ -3,6 +3,7 @@ import { useAuth } from "../../../auth/AuthContext";
 import { getSupabase } from "../../../lib/supabase";
 import {
   PRESCRIPTIONS_SELECT,
+  fetchPatientPrescriptions,
   formatPrescriptionDate,
   prescriptionHeading,
   type PrescriptionRow,
@@ -27,24 +28,16 @@ export default function Prescription() {
   const load = useCallback(async () => {
     const sb = getSupabase();
     const uid = user?.id;
-    if (!sb || !uid) {
-      setList([]);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
-    const { data, error } = await sb
-      .from("prescriptions")
-      .select(PRESCRIPTIONS_SELECT)
-      .eq("patient_id", uid)
-      .order("created_at", { ascending: false });
-    setLoading(false);
-    if (error) {
-      toast.error(error.message);
+    try {
+      const data = await fetchPatientPrescriptions(sb, uid);
+      setList(data || []);
+    } catch (err) {
+      console.error("[Prescription page] Error loading prescriptions:", err);
       setList([]);
-      return;
+    } finally {
+      setLoading(false);
     }
-    setList(((data ?? []) as unknown) as PrescriptionRow[]);
   }, [user?.id]);
 
   useEffect(() => {
@@ -70,13 +63,13 @@ export default function Prescription() {
       {/* Sleek Executive Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
         <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
             <Pill className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Prescriptions</h1>
-              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider">
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
                 Medication Vault
               </span>
             </div>
@@ -112,7 +105,7 @@ export default function Prescription() {
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-start gap-4 min-w-0">
-                      <div className="w-12 h-12 bg-lime-500/15 text-lime-700 rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
+                      <div className="w-12 h-12 bg-sky-500/15 text-[#0099ff] rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
                         <Pill className="w-6 h-6" />
                       </div>
                       <div className="min-w-0">
@@ -120,20 +113,20 @@ export default function Prescription() {
                         <p className="text-xs text-slate-500 font-medium mt-0.5">Prescribed by {prescriberLabel(rx)}</p>
                       </div>
                     </div>
-                    <Badge className="border-lime-200 bg-lime-50 text-lime-800 font-bold text-xs shrink-0">
+                    <Badge className="border-sky-200 bg-sky-50 text-[#0284c7] font-bold text-xs shrink-0">
                       Active
                     </Badge>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
-                    <Calendar className="w-4 h-4 shrink-0 text-lime-600" />
+                    <Calendar className="w-4 h-4 shrink-0 text-[#0099ff]" />
                     <span>Prescribed: {formatPrescriptionDate(rx.created_at)}</span>
                   </div>
 
                   <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
                     <Button
                       size="sm"
-                      className="bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs rounded-2xl px-4 h-9 shadow-sm"
+                      className="bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs rounded-2xl px-4 h-9 shadow-sm"
                       onClick={() => handleRequestRefill(rx)}
                     >
                       Request Refill

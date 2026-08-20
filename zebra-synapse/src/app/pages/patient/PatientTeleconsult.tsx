@@ -478,192 +478,154 @@ export default function PatientTeleconsult() {
         <PatientDoctorChat embedded={true} />
       ) : (
         <div className="space-y-6">
-          <PatientPageHero
-            eyebrow="VIRTUAL CARE HUB"
-            title={
-              mode === "connected"
-                ? `Teleconsultation with ${activeDoctorName}`
-                : "Instant Teleconsultation Matching"
-            }
-            description="Connect with online physicians via encrypted end-to-end HD video call. Seek instant medical advice or consult with your care team."
-            icon={Video}
-            rightContent={
-              <div className="relative group flex items-center justify-center p-3 sm:p-4 bg-[#f8fafc] rounded-[32px] border border-slate-100/90 shadow-sm">
-                <img
-                  src="/teleconsult_hero_3d.jpg"
-                  alt="Teleconsultation Doctor Illustration"
-                  className="h-56 sm:h-64 lg:h-72 w-auto object-contain rounded-2xl transition-transform duration-300 group-hover:scale-105"
-                />
-              </div>
-            }
-            actions={
-              <Button
-                variant="outline"
-                className={portalSecondaryButtonClass}
-                onClick={() => navigate("/patient/appointments")}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Appointments
-              </Button>
-            }
-            meta={[
-              { label: "Provider", value: mode === "connected" ? activeDoctorName : "Searching Queue" },
-              { label: "Specialty", value: mode === "connected" ? activeSpecialty : "On-Demand Care" },
-              {
-                label: "Status",
-                value: (
-                  <StatusPill
-                    status={
-                      mode === "searching"
-                        ? "Searching"
-                        : mode === "connected"
-                        ? "In-Progress"
-                        : mode === "completed"
-                        ? "Completed"
-                        : "Idle"
-                    }
-                  />
-                ),
-              },
-              {
-                label: "Security",
-                value: (
-                  <span className="flex items-center gap-1.5 text-emerald-600 font-semibold">
-                    <ShieldCheck className="h-4 w-4" /> Peer-to-Peer Encrypted
+          {/* Active Doctor Room Notification Banner */}
+          {mode === "idle" && waitingDoctor && (
+            <div className="max-w-5xl mx-auto p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-cyan-950/90 via-slate-900/90 to-blue-950/90 border border-cyan-500/40 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 backdrop-blur-xl animate-in fade-in duration-200">
+              <div className="flex items-center gap-3 text-left min-w-0">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 relative">
+                  <PhoneCall className="h-4.5 w-4.5 animate-pulse" />
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                   </span>
-                ),
-              },
-            ]}
-          />
-
-      {/* Active Doctor Room Notification Banner */}
-      {mode === "idle" && waitingDoctor && (
-        <div className="max-w-4xl mx-auto my-3 p-4 sm:p-5 rounded-[24px] bg-gradient-to-r from-cyan-950/80 via-slate-900/90 to-blue-950/80 border border-cyan-500/40 shadow-[0_10px_30px_rgba(6,182,212,0.15)] flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-300">
-          <div className="flex items-center gap-3.5 text-left">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm relative">
-              <PhoneCall className="h-6 w-6 animate-pulse" />
-              <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-              </span>
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm text-white">{waitingDoctor.doctorName}</span>
-                <span className="rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2 py-0.5 border border-emerald-500/30">
-                  Ready in Room
-                </span>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs sm:text-sm text-white truncate">{waitingDoctor.doctorName}</span>
+                    <span className="rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-bold px-2 py-0.2 border border-emerald-500/30 shrink-0">
+                      Ready in Room
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-300 truncate">
+                    Your doctor is waiting in Room #{waitingDoctor.consultationId}
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Your doctor is currently waiting in Consultation Room #{waitingDoctor.consultationId}.
-              </p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            className="w-full sm:w-auto h-11 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-[0_4px_16px_rgba(6,182,212,0.35)] cursor-pointer active:scale-[0.98]"
-            onClick={() => handleJoinDoctorRoom(waitingDoctor)}
-          >
-            <Video className="mr-2 h-4 w-4" />
-            Join Consultation Now
-          </Button>
-        </div>
-      )}
-
-      {mode === "idle" && (
-        <section className="space-y-6 max-w-4xl mx-auto my-4">
-          <div className="rounded-[24px] border border-slate-100 bg-white p-8 text-slate-800 shadow-sm text-center space-y-6">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm mx-auto">
-              <Video className="h-8 w-8" />
-            </div>
-
-            <div className="space-y-2 max-w-xl mx-auto">
-              <div className="inline-flex items-center gap-2 rounded-full border border-lime-200 bg-lime-50 px-3.5 py-1 text-xs font-semibold text-lime-800">
-                <Sparkles className="h-3.5 w-3.5 text-lime-600" />
-                <span>Instant Physician Match</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight font-['Manrope']">
-                Request Live Teleconsultation
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                Click below to broadcast your consultation request to active doctors on duty. Once an available doctor accepts your request, your encrypted HD video call will launch automatically.
-              </p>
-            </div>
-
-            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button
-                className={`h-11 px-8 text-xs sm:text-sm font-bold shadow-sm ${portalPrimaryButtonClass}`}
-                onClick={handleStartSearching}
+                type="button"
+                className="w-full sm:w-auto h-8.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-xs shadow-sm cursor-pointer shrink-0 active:scale-[0.98]"
+                onClick={() => handleJoinDoctorRoom(waitingDoctor)}
               >
-                <Search className="mr-2 h-4 w-4" />
-                Start Searching for Doctors
+                <Video className="mr-1.5 h-3.5 w-3.5" />
+                Join Room Now
               </Button>
             </div>
+          )}
 
-            <div className="grid sm:grid-cols-3 gap-3.5 pt-6 border-t border-slate-100 text-left text-xs text-slate-600">
-              <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-                <Radio className="h-4 w-4 text-lime-600 shrink-0 mt-0.5" />
+          {/* IDLE / SEARCHING VIEW (UNIFIED 2-COLUMN HUB CARD) */}
+          {(mode === "idle" || mode === "searching") && (
+            <div className="rounded-[26px] bg-white border border-slate-200/80 p-5 sm:p-6 lg:p-7 shadow-[0_4px_24px_rgba(0,0,0,0.03)] flex flex-col gap-6">
+              {/* TOP HEADER */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 shrink-0">
                 <div>
-                  <p className="font-bold text-slate-900">Live Broadcast Queue</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Notifies online doctors in real-time</p>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-[0.16em] text-[#0284c7]">
+                      VIRTUAL CARE HUB
+                    </span>
+                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-sky-500/15 text-[#0099ff]">
+                      <Video className="h-3.5 w-3.5 stroke-[2.2]" />
+                    </span>
+                  </div>
+                  <h2 className="mt-2 text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                    Instant Teleconsultation Matching
+                  </h2>
+                  <p className="mt-1 text-xs sm:text-sm text-slate-500 max-w-2xl">
+                    Connect with online physicians via encrypted end-to-end HD video call. Seek instant medical advice or consult with your care team.
+                  </p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-                <UserCheck className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-slate-900">Automatic Roster Addition</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Auto-links records with accepting doctor</p>
+
+              {/* 2-COLUMN MAIN CONTENT */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-stretch">
+                {/* LEFT SECTION: ACTION & CALL-TO-ACTION CARD */}
+                <div className="lg:col-span-7 flex flex-col justify-center rounded-2xl bg-gradient-to-br from-sky-50/40 via-slate-50/50 to-white border border-slate-200/80 p-6 sm:p-8 shadow-2xs">
+                  {mode === "idle" ? (
+                    <div className="space-y-6">
+                      <div className="space-y-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sky-500/15 text-[#0099ff] shadow-xs">
+                          <Video className="h-5.5 w-5.5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base sm:text-lg font-bold text-slate-900 font-['Manrope']">
+                            Request Live Teleconsultation
+                          </h3>
+                          <p className="text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed max-w-md">
+                            Broadcast your request to active on-duty doctors for instant connection.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <Button
+                          className="w-full sm:w-auto h-11 px-7 text-xs sm:text-sm font-bold shadow-md shadow-sky-500/20 bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white rounded-xl cursor-pointer active:scale-[0.98] transition-all"
+                          onClick={handleStartSearching}
+                        >
+                          <Search className="mr-2 h-4 w-4" />
+                          Start Searching for Doctors
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-center py-6 space-y-4 max-w-md mx-auto">
+                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-100 text-[#0099ff] shadow-sm">
+                        <Loader2 className="h-7 w-7 animate-spin" />
+                      </div>
+                      <div className="space-y-1">
+                        <div className="inline-flex items-center gap-1.5 text-[#0099ff] text-[11px] font-bold uppercase tracking-wider">
+                          <Radio className="h-3.5 w-3.5 animate-pulse" />
+                          <span>Searching Active Doctor Queue</span>
+                        </div>
+                        <h3 className="text-lg font-bold text-slate-900 font-['Manrope']">
+                          Broadcasting to Online Doctors...
+                        </h3>
+                        <p className="text-xs text-slate-500 max-w-sm">
+                          Please stay on this screen while an available doctor accepts your visit request.
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold rounded-xl h-9 px-5 cursor-pointer"
+                        onClick={handleCancelSearch}
+                      >
+                        Cancel Search Request
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* RIGHT SECTION: 3D HERO ILLUSTRATION & CARE GUIDELINES */}
+                <div className="lg:col-span-5 flex flex-col justify-between gap-3 bg-gradient-to-br from-slate-50/90 via-[#f8fafd] to-sky-50/30 rounded-2xl p-4 sm:p-5 border border-slate-200/70">
+                  {/* 3D Illustration */}
+                  <div className="flex-1 flex items-center justify-center relative overflow-hidden py-1">
+                    <img
+                      src="/teleconsult_hero_3d.jpg"
+                      alt="Teleconsultation Doctor Illustration"
+                      className="max-h-40 sm:max-h-44 w-auto object-contain rounded-2xl transition-transform duration-300 hover:scale-[1.02] drop-shadow-sm"
+                    />
+                  </div>
+
+                  {/* Quick Guidelines Box */}
+                  <div className="rounded-xl bg-white border border-slate-200/80 p-3.5 shrink-0 text-xs text-slate-600 space-y-1.5 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px]">
+                      <Clock className="h-3.5 w-3.5 text-[#0099ff]" />
+                      <span>Quick Consultation Tips</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-snug">
+                      • Have your medical history &amp; recent lab reports accessible.
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-snug">
+                      • Use headphones in a quiet room for crystal clear audio.
+                    </p>
+                    <p className="text-[11px] text-slate-500 leading-snug">
+                      • Ensure camera &amp; microphone permissions are enabled.
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-                <ShieldCheck className="h-4 w-4 text-sky-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold text-slate-900">End-to-End HD Video</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Encrypted WebRTC peer-to-peer stream</p>
-                </div>
-              </div>
             </div>
-          </div>
-        </section>
-      )}
+          )}
 
-      {mode === "searching" && (
-        <section className="space-y-6 max-w-2xl mx-auto my-8">
-          <div className="rounded-[24px] border border-lime-200 bg-white p-10 text-center space-y-6 shadow-sm relative overflow-hidden">
-            {/* Animated Pulsing Radar Background */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-              <div className="h-64 w-64 rounded-full border border-lime-400 animate-ping" />
-            </div>
 
-            <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-2xl bg-lime-50 text-lime-700 mx-auto">
-              <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-
-            <div className="relative z-10 space-y-2">
-              <div className="inline-flex items-center gap-2 text-lime-700 text-xs font-semibold uppercase tracking-wider">
-                <Radio className="h-4 w-4 animate-pulse" />
-                <span>Live Searching Queue Active</span>
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">
-                Searching for Available Doctors...
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-                Your request has been broadcasted to doctors currently in the Teleconsultation portal. Please stay on this screen.
-              </p>
-            </div>
-
-            <div className="relative z-10 pt-2 flex justify-center">
-              <Button
-                variant="outline"
-                className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold rounded-xl h-10 px-6"
-                onClick={handleCancelSearch}
-              >
-                Cancel Search Request
-              </Button>
-            </div>
-          </div>
-        </section>
-      )}
 
       {mode === "connected" && (
         <section className="space-y-6">

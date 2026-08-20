@@ -4,7 +4,7 @@ import { Badge } from "../ui/badge";
 import { cn } from "../ui/utils";
 
 export const portalShellClass =
-  "min-h-full text-slate-800 pt-3 sm:pt-4 lg:pt-5 pb-6 sm:pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto font-sans selection:bg-lime-500/20 selection:text-lime-900 bg-[#f6f8f5]";
+  "min-h-full text-slate-800 pt-3 sm:pt-4 lg:pt-5 pb-6 sm:pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto font-sans selection:bg-sky-500/20 selection:text-sky-900 bg-[#f6f8f5]";
 
 export const portalContentClass = "flex flex-col gap-6 lg:gap-8 relative z-10";
 
@@ -18,7 +18,7 @@ export const portalInsetClass =
   "rounded-[20px] border border-slate-100 bg-[#f8fafc] shadow-inner text-slate-800";
 
 export const portalPrimaryButtonClass =
-  "border-transparent bg-[#84cc16] hover:bg-[#73b512] text-white font-semibold shadow-sm hover:shadow-md hover:shadow-lime-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all duration-150 rounded-2xl";
+  "border-transparent bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold shadow-[0_3px_12px_rgba(0,153,255,0.25)] hover:shadow-[0_4px_16px_rgba(0,153,255,0.35)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-150 rounded-2xl";
 
 export const portalSecondaryButtonClass =
   "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm transition-all duration-150 rounded-2xl";
@@ -27,16 +27,16 @@ export const portalDangerButtonClass =
   "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300 shadow-sm transition-all duration-150 rounded-2xl";
 
 export const portalInputClass =
-  "h-12 rounded-2xl border border-slate-200 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-lime-500 focus-visible:ring-[2px] focus-visible:ring-lime-500/20 transition-all";
+  "h-12 rounded-2xl border border-slate-200 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus-visible:border-[#0099ff] focus-visible:ring-[2px] focus-visible:ring-sky-500/20 transition-all";
 
 export const portalSelectTriggerClass =
-  "h-12 rounded-2xl border-slate-200 bg-white text-slate-900 data-[placeholder]:text-slate-400 focus-visible:border-lime-500 focus-visible:ring-lime-500/20 transition-all";
+  "h-12 rounded-2xl border-slate-200 bg-white text-slate-900 data-[placeholder]:text-slate-400 focus-visible:border-[#0099ff] focus-visible:ring-sky-500/20 transition-all";
 
 export const portalSelectContentClass =
   "border-slate-100 bg-white text-slate-900 shadow-xl rounded-2xl p-1.5 z-50";
 
 export const portalSelectItemClass =
-  "rounded-xl text-slate-700 focus:bg-lime-50 focus:text-lime-900 cursor-pointer text-xs sm:text-sm";
+  "rounded-xl text-slate-700 focus:bg-sky-50 focus:text-sky-950 cursor-pointer text-xs sm:text-sm";
 
 export const portalDialogClass =
   "border-slate-100 bg-white text-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.08)] rounded-[28px]";
@@ -53,7 +53,7 @@ export const portalTableCellClass = "px-4 py-4 align-top text-slate-700 border-b
 
 export function portalTableRowClass(index: number) {
   return cn(
-    "transition-colors hover:bg-lime-50/30",
+    "transition-colors hover:bg-sky-50/40",
     index % 2 === 0 ? "bg-white" : "bg-slate-50/50",
   );
 }
@@ -65,7 +65,7 @@ export function statusPillClass(status: string) {
     case "optimal":
       return "border-emerald-200 bg-emerald-50 text-emerald-700 shadow-sm";
     case "completed":
-      return "border-lime-200 bg-lime-50 text-lime-700 shadow-sm";
+      return "border-sky-200 bg-sky-50 text-[#0284c7] shadow-sm";
     case "cancelled":
     case "canceled":
     case "high":
@@ -136,11 +136,11 @@ export function PatientPageHero({
       <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="max-w-3xl flex-1">
           <div className="mb-4 flex flex-wrap items-center gap-3">
-            <span className="rounded-full border border-lime-200 bg-lime-50 px-3.5 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.2em] text-lime-800">
+            <span className="rounded-full border border-sky-200 bg-sky-50 px-3.5 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.2em] text-[#0284c7]">
               {eyebrowText}
             </span>
             {Icon && (
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
                 <Icon className="h-5 w-5 stroke-[2.2]" />
               </span>
             )}
@@ -152,7 +152,7 @@ export function PatientPageHero({
           {meta?.length ? (
             <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {meta.map((item) => (
-                <div key={item.label} className="rounded-[20px] border border-slate-100 bg-slate-50/80 px-4 py-3">
+                <div key={item.label} className="rounded-[20px] border border-slate-100 bg-[#f8fafc] px-4 py-3">
                   <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-slate-400">{item.label}</p>
                   <p className="mt-1.5 text-sm font-semibold text-slate-900">{item.value}</p>
                 </div>
@@ -188,7 +188,7 @@ export function SectionHeading({
     <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
       <div className="max-w-2xl">
         {eyebrow ? (
-          <p className="text-[11px] font-mono uppercase tracking-[0.24em] font-semibold text-lime-600">{eyebrow}</p>
+          <p className="text-[11px] font-mono uppercase tracking-[0.24em] font-semibold text-[#0099ff]">{eyebrow}</p>
         ) : null}
         <h2 className="mt-1 text-2xl font-bold text-slate-900 tracking-tight font-['Manrope']">{title}</h2>
         {description ? <p className="mt-1.5 text-sm leading-relaxed text-slate-500">{description}</p> : null}
@@ -215,7 +215,7 @@ export function MetricCard({
     tone === "orange"
       ? "border-orange-100 bg-orange-50/30 text-slate-900"
       : tone === "green"
-      ? "border-lime-100 bg-lime-50/30 text-slate-900"
+      ? "border-emerald-100 bg-emerald-50/30 text-slate-900"
       : tone === "rose"
       ? "border-rose-100 bg-rose-50/30 text-slate-900"
       : tone === "purple"
@@ -226,15 +226,15 @@ export function MetricCard({
     tone === "orange"
       ? "bg-orange-100 text-orange-600"
       : tone === "green"
-      ? "bg-lime-100 text-lime-700"
+      ? "bg-emerald-100 text-emerald-700"
       : tone === "rose"
       ? "bg-rose-100 text-rose-600"
       : tone === "purple"
       ? "bg-purple-100 text-purple-600"
-      : "bg-sky-100 text-sky-600";
+      : "bg-sky-100 text-[#0099ff]";
 
   return (
-    <div className={cn(portalPanelClass, "p-6 transition-all duration-200 hover:scale-[1.01]", toneClass)}>
+    <div className={cn(portalPanelClass, "p-6 transition-all duration-200 hover:scale-[1.01] hover:border-sky-200", toneClass)}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
@@ -265,7 +265,7 @@ export function EmptyStateCard({
   return (
     <div className={cn(portalPanelClass, "max-w-3xl")}>
       <div className="space-y-4 p-8">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
           <Icon className="h-6 w-6 stroke-[2.2]" />
         </div>
         <div className="space-y-1.5">

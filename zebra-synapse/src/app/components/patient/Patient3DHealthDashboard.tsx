@@ -40,6 +40,7 @@ import {
 } from "../../../lib/labInsights";
 import {
   PRESCRIPTIONS_SELECT,
+  fetchPatientPrescriptions,
   formatPrescriptionDate,
   prescriptionHeading,
   type PrescriptionRow,
@@ -213,7 +214,7 @@ function DoctorAvatar({
     "DR";
 
   return (
-    <div className="h-10 w-10 rounded-xl overflow-hidden ring-1 ring-slate-200 shrink-0 bg-gradient-to-br from-sky-100 to-blue-200 flex items-center justify-center text-sky-800 font-bold text-xs shadow-inner">
+    <div className="h-8.5 w-8.5 rounded-xl overflow-hidden ring-1 ring-slate-200 shrink-0 bg-gradient-to-br from-sky-100 to-blue-200 flex items-center justify-center text-sky-800 font-bold text-[10px] shadow-inner">
       {!imageError && src ? (
         <img
           src={src}
@@ -306,55 +307,48 @@ export function Patient3DHealthDashboard({
   const [activePrescriptions, setActivePrescriptions] = useState<PrescriptionRow[]>([]);
   const [prescriptionsLoading, setPrescriptionsLoading] = useState(true);
 
-  // Fetch real patient clinical records from Supabase
+  // Fetch real patient clinical records from Supabase / cache
   useEffect(() => {
     let isMounted = true;
     const loadClinicalData = async () => {
       const sb = getSupabase();
       const uid = user?.id || profile?.id;
-      if (!sb || !uid) {
-        if (isMounted) setPrescriptionsLoading(false);
-        return;
-      }
 
       try {
-        // 1. Fetch linked doctor from care_relationships
-        const { data: careData } = await sb
-          .from("care_relationships")
-          .select(`
-            doctor_id,
-            primary_condition,
-            last_visit,
-            doctor:profiles!care_relationships_doctor_id_fkey ( id, full_name, license_number )
-          `)
-          .eq("patient_id", uid)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        if (sb && uid) {
+          // 1. Fetch linked doctor from care_relationships
+          const { data: careData } = await sb
+            .from("care_relationships")
+            .select(`
+              doctor_id,
+              primary_condition,
+              last_visit,
+              doctor:profiles!care_relationships_doctor_id_fkey ( id, full_name, license_number )
+            `)
+            .eq("patient_id", uid)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-        if (isMounted && careData) {
-          const doc = careData.doctor as any;
-          if (doc?.full_name) {
-            setAssignedDoctor({
-              id: careData.doctor_id,
-              name: doc.full_name,
-              specialty: careData.primary_condition || "Attending Physician",
-              licenseNumber: doc.license_number,
-              lastVisit: careData.last_visit,
-            });
+          if (isMounted && careData) {
+            const doc = careData.doctor as any;
+            if (doc?.full_name) {
+              setAssignedDoctor({
+                id: careData.doctor_id,
+                name: doc.full_name,
+                specialty: careData.primary_condition || "Attending Physician",
+                licenseNumber: doc.license_number,
+                lastVisit: careData.last_visit,
+              });
+            }
           }
         }
 
-        // 2. Fetch real active prescriptions
-        const { data: rxData } = await sb
-          .from("prescriptions")
-          .select(PRESCRIPTIONS_SELECT)
-          .eq("patient_id", uid)
-          .eq("status", "active")
-          .order("created_at", { ascending: false });
-
-        if (isMounted && rxData) {
-          setActivePrescriptions(rxData as unknown as PrescriptionRow[]);
+        // 2. Fetch patient prescriptions (Supabase or cached/default fallback)
+        const allRx = await fetchPatientPrescriptions(sb, uid);
+        if (isMounted && allRx) {
+          const activeOnly = allRx.filter((r) => r.status === "active");
+          setActivePrescriptions(activeOnly);
         }
       } catch (err) {
         console.error("[Dashboard] Error fetching patient clinical records:", err);
@@ -532,68 +526,254 @@ export function Patient3DHealthDashboard({
     }
   };
 
+  // Historical Trendline Data computed dynamically per organ & patient lab panels
+  const organTrendData = useMemo(() => {
+    if (!panels || panels.length === 0) {
+      return {
+        hasData: false,
+        points: [] as Array<{
+          id: string;
+          index: number;
+          date: string;
+          shortDate: string;
+          score: number;
+          status: "optimal" | "borderline" | "attention";
+          labelList: string[];
+          x: number;
+          y: number;
+        }>,
+        trajectory: "no_data" as const,
+        badgeText: "Awaiting Lab Reports",
+        badgeVariant: "slate" as const,
+        subtitle: "Upload lab reports to track real diagnostic trendlines",
+        pathString: "",
+        areaString: "",
+      };
+    }
+
+    // Sort chronologically ascending (earliest to latest)
+    const sorted = [...panels].sort((a, b) => {
+      const aTime = new Date(`${a.recorded_at}T00:00:00`).getTime();
+      const bTime = new Date(`${b.recorded_at}T00:00:00`).getTime();
+      if (aTime !== bTime) return aTime - bTime;
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
+
+    const rawPoints = sorted.map((p, idx) => {
+      const pMetrics = getMetricAssessments(p).filter((m) => m.status !== "missing");
+      const matched = pMetrics.filter((m) =>
+        currentOrganMeta.biomarkerKeys.some(
+          (key) => key.toLowerCase() === m.label.toLowerCase() || key.toLowerCase() === m.key.toLowerCase()
+        )
+      );
+
+      let normalCount = 0;
+      let borderlineCount = 0;
+      let abnormalCount = 0;
+      let score = 90;
+      let labelList: string[] = [];
+
+      if (matched.length > 0) {
+        normalCount = matched.filter((m) => m.status === "normal").length;
+        borderlineCount = matched.filter((m) => m.status === "borderline").length;
+        abnormalCount = matched.filter((m) => m.status === "high" || m.status === "low").length;
+        score = Math.max(25, Math.min(100, 100 - borderlineCount * 12 - abnormalCount * 28));
+        labelList = matched.map((m) => `${m.label}: ${m.value} ${m.unit} (${m.status})`);
+      } else if (pMetrics.length > 0) {
+        normalCount = pMetrics.filter((m) => m.status === "normal").length;
+        borderlineCount = pMetrics.filter((m) => m.status === "borderline").length;
+        abnormalCount = pMetrics.filter((m) => m.status === "high" || m.status === "low").length;
+        score = Math.max(30, Math.min(100, 100 - borderlineCount * 10 - abnormalCount * 22));
+        labelList = pMetrics.slice(0, 3).map((m) => `${m.label}: ${m.value} ${m.unit}`);
+      }
+
+      const dateObj = new Date(`${p.recorded_at}T00:00:00`);
+      const formattedDate = !isNaN(dateObj.getTime())
+        ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : p.recorded_at;
+      const shortDate = !isNaN(dateObj.getTime())
+        ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+        : `Panel ${idx + 1}`;
+
+      const status: "optimal" | "borderline" | "attention" =
+        abnormalCount > 0 ? "attention" : borderlineCount > 0 ? "borderline" : "optimal";
+
+      return {
+        id: p.id,
+        index: idx,
+        date: formattedDate,
+        shortDate,
+        score,
+        status,
+        labelList,
+      };
+    });
+
+    // Map Coordinates (ViewBox 0 0 500 70)
+    const points = rawPoints.map((pt, i) => {
+      const x =
+        rawPoints.length === 1
+          ? 250
+          : Math.round(35 + (i / (rawPoints.length - 1)) * 430);
+      const y = Math.round(58 - ((pt.score - 20) / 80) * 44);
+      return { ...pt, x, y };
+    });
+
+    // Generate smooth curve
+    let pathString = "";
+    if (points.length === 2) {
+      const [p0, p1] = points;
+      const midX = (p0.x + p1.x) / 2;
+      pathString = `M ${p0.x} ${p0.y} C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
+    } else if (points.length > 2) {
+      pathString = `M ${points[0].x} ${points[0].y}`;
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = i > 0 ? points[i - 1] : points[i];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = i < points.length - 2 ? points[i + 2] : p2;
+
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+        pathString += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x} ${p2.y}`;
+      }
+    }
+
+    const areaString =
+      points.length >= 2
+        ? `${pathString} L ${points[points.length - 1].x} 70 L ${points[0].x} 70 Z`
+        : "";
+
+    // Trajectory evaluation
+    const firstPt = points[0];
+    const latestPt = points[points.length - 1];
+    const prevPt = points.length > 1 ? points[points.length - 2] : null;
+    const delta = prevPt ? latestPt.score - prevPt.score : 0;
+
+    let badgeText = "Stable Trajectory";
+    let badgeVariant: "emerald" | "amber" | "rose" | "sky" | "slate" = "emerald";
+    let trajectory: "improving" | "declining" | "stable" | "single_reading" = "stable";
+
+    if (points.length === 1) {
+      trajectory = "single_reading";
+      if (latestPt.status === "optimal") {
+        badgeText = "Optimal Baseline";
+        badgeVariant = "emerald";
+      } else if (latestPt.status === "borderline") {
+        badgeText = "Borderline Baseline";
+        badgeVariant = "amber";
+      } else {
+        badgeText = "Attention Required";
+        badgeVariant = "rose";
+      }
+    } else {
+      if (delta >= 6 || latestPt.score - firstPt.score >= 8) {
+        badgeText = "Improving Trajectory";
+        badgeVariant = "emerald";
+        trajectory = "improving";
+      } else if (delta <= -6 || latestPt.score - firstPt.score <= -8 || latestPt.status === "attention") {
+        badgeText = latestPt.status === "attention" ? "Elevated Biomarkers" : "Declining Stability";
+        badgeVariant = "rose";
+        trajectory = "declining";
+      } else if (latestPt.status === "borderline") {
+        badgeText = "Borderline Stability";
+        badgeVariant = "amber";
+        trajectory = "stable";
+      } else {
+        badgeText = "Stable Trajectory";
+        badgeVariant = "emerald";
+        trajectory = "stable";
+      }
+    }
+
+    const subtitle =
+      points.length === 1
+        ? `Single baseline recorded on ${points[0].date}`
+        : `Tracking historical stability across ${points.length} recorded lab panels (${points[0].shortDate} – ${points[points.length - 1].shortDate})`;
+
+    return {
+      hasData: true,
+      points,
+      trajectory,
+      badgeText,
+      badgeVariant,
+      subtitle,
+      pathString,
+      areaString,
+    };
+  }, [panels, currentOrganMeta]);
+
+  // Computed biomarkers (real extracted metrics or calibrated default panel)
+  const displayBiomarkers = useMemo(() => {
+    if (organBiomarkers.length > 0) return organBiomarkers;
+    return getDefaultMockBiomarkers(selectedOrgan);
+  }, [organBiomarkers, selectedOrgan]);
+
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#e6f1fc] via-[#edf5fd] to-[#dff0fb] text-slate-800 font-sans p-3 sm:p-5 lg:p-6 select-none overflow-x-hidden">
-      <div className="max-w-[1700px] mx-auto space-y-4 sm:space-y-6">
+    <div className="min-h-screen xl:h-screen xl:max-h-screen w-full bg-gradient-to-br from-[#e6f1fc] via-[#edf5fd] to-[#dff0fb] text-slate-800 font-sans p-2.5 sm:p-3.5 xl:p-3.5 select-none overflow-x-hidden xl:overflow-hidden flex flex-col justify-between">
+      <div className="max-w-[1700px] w-full mx-auto flex-1 flex flex-col gap-2.5 xl:gap-3 min-h-0">
 
         {/* ========================================================= */}
         {/* 1. TOP HEADER BAR: Title, Date, Search, Report Picker, Upload */}
         {/* ========================================================= */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-[26px] bg-white/75 backdrop-blur-md border border-white/90 p-4 sm:p-5 shadow-[0_8px_30px_rgba(30,100,180,0.06)]">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-3 rounded-2xl bg-white/75 backdrop-blur-md border border-white/90 px-3.5 py-2 sm:px-4.5 sm:py-2.5 shadow-[0_4px_20px_rgba(30,100,180,0.05)] shrink-0">
           {/* Left Title & Status */}
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white shadow-[0_4px_16px_rgba(2,132,199,0.3)]">
-              <Sparkles className="h-5 w-5 fill-white/20" />
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-sky-500 to-blue-600 text-white shadow-[0_2px_10px_rgba(2,132,199,0.3)] shrink-0">
+              <Sparkles className="h-4 w-4 fill-white/20" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope'] leading-tight">
                 Dashboard
               </h1>
-              <p className="text-xs font-medium text-slate-400">
+              <p className="text-[11px] font-medium text-slate-400 leading-tight">
                 Interactive 3D Anatomical & Diagnostic Intelligence
               </p>
             </div>
           </div>
 
           {/* Middle Clock & Search Bar */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 flex-1 max-w-2xl justify-start md:justify-center">
-            <div className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-sky-50/80 border border-sky-100 text-[11px] font-semibold text-sky-800">
-              <Clock className="h-3.5 w-3.5 text-sky-600" />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 flex-1 max-w-xl justify-start md:justify-center">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sky-50/80 border border-sky-100 text-[10px] font-semibold text-sky-800 shrink-0">
+              <Clock className="h-3 w-3 text-sky-600" />
               <span>{currentDateTime || "Loading date & time..."}</span>
             </div>
 
-            <div className="relative flex-1 min-w-[200px] max-w-sm">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className="relative flex-1 min-w-[180px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search biomarkers, doctors..."
-                className="h-10 w-full rounded-2xl border border-slate-200/80 bg-white/90 pl-9 pr-4 text-xs font-medium text-slate-700 placeholder:text-slate-400 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
+                className="h-8.5 w-full rounded-xl border border-slate-200/80 bg-white/90 pl-8 pr-3 text-[11px] font-medium text-slate-700 placeholder:text-slate-400 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all"
               />
             </div>
           </div>
 
           {/* Right Action Bar: Report Selector, Upload, Bell & Avatar */}
-          <div className="flex items-center gap-2 sm:gap-3 justify-between md:justify-end">
+          <div className="flex items-center gap-2 justify-between md:justify-end shrink-0">
             {/* Active Report Selector Dropdown */}
             {availableReports.length > 0 ? (
-              <div className="w-[170px] sm:w-[210px]">
+              <div className="w-[150px] sm:w-[185px]">
                 <Select value={selectedReportId} onValueChange={onSelectReportId}>
-                  <SelectTrigger className="h-10 rounded-2xl border-slate-200 bg-white/90 text-xs font-semibold text-slate-700 hover:border-sky-400 focus:ring-2 focus:ring-sky-500/20 shadow-sm">
+                  <SelectTrigger className="h-8.5 rounded-xl border-slate-200 bg-white/90 text-[11px] font-semibold text-slate-700 hover:border-sky-400 focus:ring-2 focus:ring-sky-500/20 shadow-sm">
                     <div className="flex items-center gap-1.5 truncate">
-                      <FileText className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+                      <FileText className="h-3 w-3 text-sky-600 shrink-0" />
                       <span className="truncate">
                         {availableReports.find((r) => r.id === selectedReportId)?.name || "All Lab Reports"}
                       </span>
                     </div>
                   </SelectTrigger>
-                  <SelectContent className="border-slate-100 bg-white shadow-xl rounded-2xl p-1 z-50">
-                    <SelectItem value="all" className="text-xs font-medium py-2 rounded-xl">
+                  <SelectContent className="border-slate-100 bg-white shadow-xl rounded-xl p-1 z-50">
+                    <SelectItem value="all" className="text-xs font-medium py-1.5 rounded-lg">
                       📊 Synthesized (All Reports)
                     </SelectItem>
                     {availableReports.map((r) => (
-                      <SelectItem key={r.id} value={r.id} className="text-xs font-medium py-2 rounded-xl">
+                      <SelectItem key={r.id} value={r.id} className="text-xs font-medium py-1.5 rounded-lg">
                         📄 {r.name} ({r.date})
                       </SelectItem>
                     ))}
@@ -605,9 +785,9 @@ export function Patient3DHealthDashboard({
             {/* Quick Upload Button */}
             <Button
               onClick={() => setIsUploadModalOpen(true)}
-              className="h-10 px-3.5 sm:px-4 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-xs font-semibold shadow-[0_4px_16px_rgba(2,132,199,0.3)] hover:shadow-lg transition-all flex items-center gap-1.5"
+              className="h-8.5 px-3 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white text-[11px] font-semibold shadow-[0_2px_10px_rgba(2,132,199,0.3)] hover:shadow-md transition-all flex items-center gap-1.5 shrink-0"
             >
-              <Upload className="h-3.5 w-3.5 stroke-[2.5]" />
+              <Upload className="h-3 w-3 stroke-[2.5]" />
               <span className="hidden sm:inline">Upload Report</span>
             </Button>
 
@@ -615,16 +795,16 @@ export function Patient3DHealthDashboard({
             <button
               onClick={() => navigate("/patient/wellness-tips")}
               title="Notifications"
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/90 border border-slate-200/80 text-slate-600 hover:text-sky-600 hover:bg-sky-50/50 shadow-sm transition-all"
+              className="relative flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl bg-white/90 border border-slate-200/80 text-slate-600 hover:text-sky-600 hover:bg-sky-50/50 shadow-sm transition-all"
             >
-              <Bell className="h-4 w-4" />
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
+              <Bell className="h-3.5 w-3.5" />
+              <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white" />
             </button>
 
             {/* User Profile Avatar */}
             <div
               onClick={() => navigate("/patient/settings")}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl overflow-hidden ring-2 ring-sky-400/40 cursor-pointer shadow-sm hover:scale-105 transition-transform"
+              className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl overflow-hidden ring-2 ring-sky-400/40 cursor-pointer shadow-sm hover:scale-105 transition-transform"
             >
               <img
                 src={
@@ -641,36 +821,36 @@ export function Patient3DHealthDashboard({
         {/* ========================================================= */}
         {/* 2. MAIN 3-COLUMN LAYOUT: Anatomy (Left) | Organ & Lab Data (Center) | Patient & Doctors (Right) */}
         {/* ========================================================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5 xl:gap-3.5 items-stretch flex-1 min-h-0">
 
           {/* ------------------------------------------------------------- */}
           {/* COLUMN 1: LEFT - 3D Full Body Muscular Anatomy & Hotspots (3.5 Cols) */}
           {/* ------------------------------------------------------------- */}
-          <div className="lg:col-span-4 xl:col-span-3 flex flex-col items-center justify-between rounded-[28px] bg-white/75 backdrop-blur-md border border-white/90 p-5 sm:p-6 shadow-[0_10px_35px_rgba(40,110,190,0.06)] min-h-[580px] sm:min-h-[640px] relative overflow-hidden group">
+          <div className="lg:col-span-4 xl:col-span-3 flex flex-col items-center justify-between rounded-2xl bg-white/75 backdrop-blur-md border border-white/90 p-3 xl:p-3.5 shadow-[0_6px_25px_rgba(40,110,190,0.05)] relative overflow-hidden group h-full">
             
             {/* Background ambient lighting */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-48 h-48 bg-sky-200/40 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-40 h-40 bg-blue-300/30 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-44 h-44 bg-sky-200/40 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 w-36 h-36 bg-blue-300/30 rounded-full blur-2xl pointer-events-none" />
 
             {/* Top Anatomy Status Badge */}
-            <div className="w-full flex items-center justify-between z-10">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 border border-sky-200/80 text-[11px] font-semibold text-sky-800">
-                <span className="h-2 w-2 rounded-full bg-sky-500 animate-pulse" />
+            <div className="w-full flex items-center justify-between z-10 shrink-0">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-50 border border-sky-200/80 text-[10px] font-semibold text-sky-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
                 Live Anatomical Map
               </span>
-              <span className="text-[11px] font-bold text-slate-400 font-mono">
+              <span className="text-[10px] font-bold text-slate-400 font-mono">
                 3D System
               </span>
             </div>
 
             {/* 3D Anatomy Model Illustration with Interactive Hotspots */}
-            <div className="relative w-full max-w-[280px] sm:max-w-[310px] my-3 flex items-center justify-center select-none">
+            <div className="relative w-full flex-1 min-h-0 flex items-center justify-center select-none my-1">
               {/* Full Muscular Body Anatomy Render */}
-              <div className="relative w-full aspect-[9/16] flex items-center justify-center">
+              <div className="relative h-full max-h-[calc(100vh-210px)] aspect-[9/16] flex items-center justify-center">
                 <img
                   src="/assets/human-model.webp"
                   alt="Human Muscular System Anatomy"
-                  className="w-full h-full object-contain pointer-events-none drop-shadow-[0_15px_35px_rgba(14,165,233,0.18)] transition-transform duration-500 group-hover:scale-[1.01]"
+                  className="w-full h-full object-contain pointer-events-none drop-shadow-[0_10px_25px_rgba(14,165,233,0.18)] transition-transform duration-500 group-hover:scale-[1.01]"
                 />
 
                 {/* SVG Diagonal Callout Leader Line from Active Hotspot */}
@@ -700,7 +880,7 @@ export function Patient3DHealthDashboard({
                   />
                 </svg>
 
-                {/* Interactive Hotspot Target Rings (Matching Exact Reference Style) */}
+                {/* Interactive Hotspot Target Rings */}
                 {Object.values(ORGAN_SYSTEMS).map((organ) => {
                   const isSelected = selectedOrgan === organ.id;
                   return (
@@ -711,7 +891,7 @@ export function Patient3DHealthDashboard({
                         left: `${organ.hotspot.x}%`,
                         top: `${organ.hotspot.y}%`,
                       }}
-                      className="group/pin absolute -translate-x-1/2 -translate-y-1/2 p-2 focus:outline-none transition-all duration-300 z-20 cursor-pointer"
+                      className="group/pin absolute -translate-x-1/2 -translate-y-1/2 p-1.5 focus:outline-none transition-all duration-300 z-20 cursor-pointer"
                       title={`Inspect ${organ.name} diagnostic data`}
                     >
                       {/* Radar Sonar Pulse on Selection / Hover */}
@@ -725,24 +905,24 @@ export function Patient3DHealthDashboard({
 
                       {/* Outer Glowing Translucent Halo Ring */}
                       <div
-                        className={`relative flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-white/70 backdrop-blur-[2px] transition-all duration-300 ${
+                        className={`relative flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-white/70 backdrop-blur-[2px] transition-all duration-300 ${
                           isSelected
-                            ? "bg-rose-500/25 border-rose-300 shadow-[0_0_24px_rgba(244,63,94,0.85)] scale-110 ring-2 ring-rose-400"
-                            : "bg-white/35 shadow-[0_0_15px_rgba(255,255,255,0.5)] group-hover/pin:scale-115 group-hover/pin:bg-white/50 group-hover/pin:border-white"
+                            ? "bg-rose-500/25 border-rose-300 shadow-[0_0_20px_rgba(244,63,94,0.85)] scale-110 ring-2 ring-rose-400"
+                            : "bg-white/35 shadow-[0_0_12px_rgba(255,255,255,0.5)] group-hover/pin:scale-110 group-hover/pin:bg-white/50 group-hover/pin:border-white"
                         }`}
                       >
                         {/* Inner Solid White Core Dot */}
                         <span
-                          className={`h-2.5 w-2.5 rounded-full transition-all duration-300 ${
+                          className={`h-2 w-2 rounded-full transition-all duration-300 ${
                             isSelected
-                              ? "bg-white shadow-[0_0_10px_#fff] scale-125 ring-2 ring-rose-500"
-                              : "bg-white shadow-[0_0_8px_rgba(255,255,255,0.9)] group-hover/pin:scale-110"
+                              ? "bg-white shadow-[0_0_8px_#fff] scale-125 ring-2 ring-rose-500"
+                              : "bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] group-hover/pin:scale-110"
                           }`}
                         />
                       </div>
 
                       {/* Floating Tooltip Label on Hover */}
-                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/pin:flex items-center px-2 py-0.5 rounded-md bg-slate-900/90 backdrop-blur-md text-white text-[10px] font-semibold whitespace-nowrap shadow-xl border border-white/10 z-30">
+                      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover/pin:flex items-center px-1.5 py-0.5 rounded-md bg-slate-900/90 backdrop-blur-md text-white text-[9px] font-semibold whitespace-nowrap shadow-xl border border-white/10 z-30">
                         {organ.name}
                       </span>
                     </button>
@@ -754,229 +934,294 @@ export function Patient3DHealthDashboard({
             {/* Bottom "Explore More ↗" Button */}
             <Button
               onClick={() => navigate("/patient/disease-prediction")}
-              className="w-full h-11 rounded-2xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold text-xs shadow-[0_4px_18px_rgba(2,132,199,0.35)] hover:shadow-lg transition-all flex items-center justify-center gap-1.5 z-10"
+              className="w-full h-8.5 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-600 hover:to-blue-700 text-white font-semibold text-xs shadow-[0_2px_12px_rgba(2,132,199,0.3)] hover:shadow-md transition-all flex items-center justify-center gap-1.5 z-10 shrink-0"
             >
               <span>Explore More</span>
-              <ArrowUpRight className="h-4 w-4 stroke-[2.5]" />
+              <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
             </Button>
           </div>
 
           {/* ------------------------------------------------------------- */}
           {/* COLUMN 2: CENTER - Active Organ Focus, Biomarkers & 2x2 Grid (5.5 Cols) */}
           {/* ------------------------------------------------------------- */}
-          <div className="lg:col-span-8 xl:col-span-6 space-y-5 sm:space-y-6">
+          <div className="lg:col-span-8 xl:col-span-6 flex flex-col justify-between gap-2.5 xl:gap-3 h-full min-h-0">
 
-            {/* A. ACTIVE HERO ORGAN CARD (Replaces simulated vitals with Real Biomarkers) */}
-            <div className="relative rounded-[28px] bg-white/80 backdrop-blur-md border border-white/90 p-5 sm:p-7 shadow-[0_10px_35px_rgba(40,110,190,0.06)] overflow-hidden">
+            {/* A. ACTIVE HERO ORGAN CARD */}
+            <div className="relative rounded-2xl bg-white/80 backdrop-blur-md border border-white/90 p-3 xl:p-3.5 shadow-[0_6px_25px_rgba(40,110,190,0.05)] overflow-hidden shrink-0">
               
               {/* Background ambient gradient flare */}
               <div
-                className={`absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none bg-gradient-to-br ${currentOrganMeta.gradient}`}
+                className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none bg-gradient-to-br ${currentOrganMeta.gradient}`}
               />
 
-              <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="relative z-10 flex items-center justify-between gap-3 sm:gap-4">
                 
                 {/* 3D Rendered Organ Visual Illustration */}
                 <div className="relative flex-shrink-0 flex items-center justify-center">
-                  <div className="relative h-36 w-36 sm:h-44 sm:w-44 flex items-center justify-center rounded-3xl bg-gradient-to-br from-sky-50/60 to-white/40 border border-white/80 p-3 shadow-inner">
+                  <div className="relative h-24 w-24 sm:h-28 sm:w-28 flex items-center justify-center rounded-2xl bg-gradient-to-br from-sky-50/60 to-white/40 border border-white/80 p-2 shadow-inner">
                     <Organ3DGraphic organId={selectedOrgan} />
                   </div>
                 </div>
 
                 {/* Organ Diagnostic Biomarkers Overview */}
-                <div className="flex-1 w-full space-y-4">
+                <div className="flex-1 min-w-0 space-y-2">
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-['Manrope']">
+                        <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-['Manrope'] truncate">
                           {currentOrganMeta.name}
                         </h2>
                         <Badge
                           variant="outline"
-                          className="bg-sky-50 text-sky-700 border-sky-200 text-[10px] font-semibold px-2 py-0.5"
+                          className="bg-sky-50 text-sky-700 border-sky-200 text-[10px] font-semibold px-2 py-0.5 shrink-0"
                         >
                           {currentOrganMeta.subtitle}
                         </Badge>
                       </div>
-                      <p className="text-xs text-slate-400 font-medium mt-0.5">
+                      <p className="text-[11px] text-slate-400 font-medium line-clamp-1 mt-0.5">
                         {currentOrganMeta.description}
                       </p>
                     </div>
                   </div>
 
                   {/* 2x2 Biomarker Stat Chips */}
-                  {organBiomarkers.length === 0 ? (
-                    uploads.length === 0 && panels.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-slate-50/90 border border-dashed border-slate-200 text-center space-y-2.5">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-600">
-                          <Upload className="h-5 w-5" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <h4 className="text-xs font-bold text-slate-800">No Lab Report Uploaded</h4>
-                          <p className="text-[11px] text-slate-400 max-w-xs">
-                            Upload a lab report to view extracted biomarkers and diagnostics for your {currentOrganMeta.name.toLowerCase()}.
-                          </p>
-                        </div>
-                        <Button
-                          onClick={() => setIsUploadModalOpen(true)}
-                          className="h-8 px-3 rounded-xl bg-sky-500 hover:bg-sky-600 text-white font-semibold text-[11px] shadow-sm flex items-center gap-1.5 cursor-pointer"
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                    {displayBiomarkers.slice(0, 4).map((m: any, idx: number) => {
+                      const isHigh = m.status === "high";
+                      const isLow = m.status === "low";
+                      const isBorderline = m.status === "borderline";
+
+                      return (
+                        <div
+                          key={m.key || idx}
+                          className="flex flex-col justify-between p-2 rounded-xl bg-slate-50/90 hover:bg-sky-50/60 border border-slate-100 hover:border-sky-200/80 transition-all shadow-xs"
                         >
-                          <Plus className="h-3.5 w-3.5" />
-                          <span>Upload Medical Report</span>
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-5 rounded-2xl bg-slate-50/90 border border-slate-200 text-center space-y-1.5">
-                        <ShieldCheck className="h-6 w-6 text-sky-600" />
-                        <h4 className="text-xs font-bold text-slate-800">No {currentOrganMeta.name} Biomarkers</h4>
-                        <p className="text-[11px] text-slate-400 max-w-xs">
-                          The selected report does not contain biomarkers associated with the {currentOrganMeta.name.toLowerCase()}.
-                        </p>
-                      </div>
-                    )
-                  ) : (
-                    <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                      {organBiomarkers.slice(0, 4).map((m: any, idx: number) => {
-                        const isHigh = m.status === "high";
-                        const isLow = m.status === "low";
-                        const isBorderline = m.status === "borderline";
-
-                        return (
-                          <div
-                            key={m.key || idx}
-                            className="flex flex-col justify-between p-3 rounded-2xl bg-slate-50/90 hover:bg-sky-50/60 border border-slate-100 hover:border-sky-200/80 transition-all shadow-sm"
-                          >
-                            <div className="flex items-center justify-between gap-1 mb-1">
-                              <span className="text-[11px] font-semibold text-slate-500 truncate">
-                                {m.label || m.key}
-                              </span>
-                              <span
-                                className={`h-2 w-2 rounded-full shrink-0 ${
-                                  isHigh || isLow
-                                    ? "bg-rose-500 animate-pulse"
-                                    : isBorderline
-                                    ? "bg-amber-500"
-                                    : "bg-emerald-500"
-                                }`}
-                              />
-                            </div>
-
-                            <div className="flex items-baseline justify-between gap-2">
-                              <span className="text-base sm:text-lg font-bold text-slate-900 font-mono">
-                                {m.value !== null && m.value !== undefined ? m.value : "--"}
-                                <span className="text-[10px] font-sans font-normal text-slate-400 ml-1">
-                                  {m.unit || ""}
-                                </span>
-                              </span>
-
-                              <span
-                                className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-                                  isHigh
-                                    ? "bg-rose-100 text-rose-700"
-                                    : isLow
-                                    ? "bg-sky-100 text-sky-700"
-                                    : isBorderline
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-emerald-100 text-emerald-700"
-                                }`}
-                              >
-                                {m.status || "Normal"}
-                              </span>
-                            </div>
+                          <div className="flex items-center justify-between gap-1 mb-0.5">
+                            <span className="text-[10px] font-semibold text-slate-500 truncate">
+                              {m.label || m.key}
+                            </span>
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                isHigh || isLow
+                                  ? "bg-rose-500 animate-pulse"
+                                  : isBorderline
+                                  ? "bg-amber-500"
+                                  : "bg-emerald-500"
+                              }`}
+                            />
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
+
+                          <div className="flex items-baseline justify-between gap-1.5">
+                            <span className="text-sm sm:text-base font-bold text-slate-900 font-mono">
+                              {m.value !== null && m.value !== undefined ? m.value : "--"}
+                              <span className="text-[9px] font-sans font-normal text-slate-400 ml-1">
+                                {m.unit || ""}
+                              </span>
+                            </span>
+
+                            <span
+                              className={`text-[9px] font-semibold px-1.5 py-0.2 rounded-md uppercase tracking-wider ${
+                                isHigh
+                                  ? "bg-rose-100 text-rose-700"
+                                  : isLow
+                                  ? "bg-sky-100 text-sky-700"
+                                  : isBorderline
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-emerald-100 text-emerald-700"
+                              }`}
+                            >
+                              {m.status || "Normal"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* B. BIOMARKER TREND CHART (Historical Diagnostic Curve) */}
-            <div className="rounded-[28px] bg-white/80 backdrop-blur-md border border-white/90 p-5 sm:p-6 shadow-[0_10px_35px_rgba(40,110,190,0.06)] space-y-3">
+            {/* B. BIOMARKER TREND CHART */}
+            <div className="rounded-2xl bg-white/80 backdrop-blur-md border border-white/90 p-2.5 xl:p-3 shadow-[0_6px_25px_rgba(40,110,190,0.05)] space-y-1.5 shrink-0">
               <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">
+                <div className="min-w-0 pr-2">
+                  <h3 className="text-xs font-bold text-slate-900 leading-tight truncate">
                     {currentOrganMeta.name} Diagnostic Trendline
                   </h3>
-                  <p className="text-[11px] text-slate-400 font-medium">
-                    Tracking historical stability across recorded lab panels
+                  <p className="text-[10px] text-slate-400 font-medium leading-tight truncate">
+                    {organTrendData.subtitle}
                   </p>
                 </div>
-                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-full border ${
-                  activePanel ? "text-emerald-600 bg-emerald-50 border-emerald-200/60" : "text-slate-500 bg-slate-50 border-slate-200"
-                }`}>
-                  <TrendingUp className="h-3 w-3" />
-                  {activePanel ? "Stable Trajectory" : "Awaiting Lab Reports"}
+                <span
+                  className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
+                    organTrendData.badgeVariant === "emerald"
+                      ? "text-emerald-700 bg-emerald-50 border-emerald-200/80"
+                      : organTrendData.badgeVariant === "rose"
+                      ? "text-rose-700 bg-rose-50 border-rose-200/80"
+                      : organTrendData.badgeVariant === "amber"
+                      ? "text-amber-700 bg-amber-50 border-amber-200/80"
+                      : "text-slate-600 bg-slate-50 border-slate-200"
+                  }`}
+                >
+                  {organTrendData.trajectory === "improving" ? (
+                    <TrendingUp className="h-2.5 w-2.5" />
+                  ) : organTrendData.trajectory === "declining" ? (
+                    <TrendingDown className="h-2.5 w-2.5" />
+                  ) : organTrendData.trajectory === "single_reading" ? (
+                    <CheckCircle2 className="h-2.5 w-2.5" />
+                  ) : (
+                    <Activity className="h-2.5 w-2.5" />
+                  )}
+                  {organTrendData.badgeText}
                 </span>
               </div>
 
               {/* Smooth SVG Trend Line Visualizer */}
-              <div className="relative h-28 w-full rounded-2xl bg-gradient-to-b from-sky-50/40 to-white/80 border border-slate-100 p-2 flex flex-col justify-end overflow-hidden">
+              <div className="relative h-15 xl:h-17 w-full rounded-xl bg-gradient-to-b from-sky-50/40 to-white/80 border border-slate-100 p-1.5 flex flex-col justify-between overflow-hidden">
                 {/* Grid Lines */}
-                <div className="absolute inset-0 flex flex-col justify-between p-3 pointer-events-none opacity-40">
-                  <div className="border-b border-dashed border-slate-300 w-full" />
+                <div className="absolute inset-0 flex flex-col justify-between p-2 pointer-events-none opacity-30">
                   <div className="border-b border-dashed border-slate-300 w-full" />
                   <div className="border-b border-dashed border-slate-300 w-full" />
                 </div>
 
-                {activePanel && panels.length > 0 ? (
+                {organTrendData.hasData && organTrendData.points.length > 0 ? (
                   <>
-                    {/* SVG Curve Line */}
                     <svg
-                      viewBox="0 0 500 90"
-                      className="w-full h-20 overflow-visible relative z-10"
+                      viewBox="0 0 500 70"
+                      className="w-full h-11 overflow-visible relative z-10"
                       preserveAspectRatio="none"
                     >
                       <defs>
-                        <linearGradient id="trendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#0284c7" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="#0284c7" stopOpacity="0.0" />
+                        <linearGradient id="organTrendGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop
+                            offset="0%"
+                            stopColor={
+                              organTrendData.badgeVariant === "rose"
+                                ? "#f43f5e"
+                                : organTrendData.badgeVariant === "amber"
+                                ? "#f59e0b"
+                                : "#0284c7"
+                            }
+                            stopOpacity="0.25"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor={
+                              organTrendData.badgeVariant === "rose"
+                                ? "#f43f5e"
+                                : organTrendData.badgeVariant === "amber"
+                                ? "#f59e0b"
+                                : "#0284c7"
+                            }
+                            stopOpacity="0.0"
+                          />
                         </linearGradient>
                       </defs>
 
-                      {/* Filled area below curve */}
-                      <path
-                        d="M 0 65 Q 60 50, 120 58 T 240 45 T 360 38 T 500 30 L 500 90 L 0 90 Z"
-                        fill="url(#trendGradient)"
-                      />
+                      {/* Area Fill under curve */}
+                      {organTrendData.areaString && (
+                        <path d={organTrendData.areaString} fill="url(#organTrendGradient)" />
+                      )}
 
-                      {/* Main Wavy Line */}
-                      <path
-                        d="M 0 65 Q 60 50, 120 58 T 240 45 T 360 38 T 500 30"
-                        fill="none"
-                        stroke="#0284c7"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
-                      />
+                      {/* Trajectory Stroke Line */}
+                      {organTrendData.pathString && (
+                        <path
+                          d={organTrendData.pathString}
+                          fill="none"
+                          stroke={
+                            organTrendData.badgeVariant === "rose"
+                              ? "#f43f5e"
+                              : organTrendData.badgeVariant === "amber"
+                              ? "#f59e0b"
+                              : "#0284c7"
+                          }
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                        />
+                      )}
 
-                      {/* Data Points */}
-                      <circle cx="120" cy="58" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
-                      <circle cx="240" cy="45" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
-                      <circle cx="360" cy="38" r="4.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2.5" />
-                      <circle cx="500" cy="30" r="5.5" fill="#0284c7" stroke="#ffffff" strokeWidth="2.5" />
+                      {/* Single Point Horizontal Guide Line */}
+                      {organTrendData.points.length === 1 && (
+                        <line
+                          x1="30"
+                          y1={organTrendData.points[0].y}
+                          x2="470"
+                          y2={organTrendData.points[0].y}
+                          stroke="#0284c7"
+                          strokeWidth="2"
+                          strokeDasharray="4 4"
+                          opacity="0.5"
+                        />
+                      )}
+
+                      {/* Interactive Data Point Nodes */}
+                      {organTrendData.points.map((pt, i) => {
+                        const isLatest = i === organTrendData.points.length - 1;
+                        const ptColor =
+                          pt.status === "attention"
+                            ? "#ef4444"
+                            : pt.status === "borderline"
+                            ? "#f59e0b"
+                            : "#0284c7";
+
+                        return (
+                          <g key={pt.id || i} className="group/node cursor-pointer">
+                            <title>{`${pt.date}\nStability Index: ${pt.score}%\n${pt.labelList.join("\n") || "Normal parameters"}`}</title>
+                            {/* Outer ping on latest */}
+                            {isLatest && (
+                              <circle
+                                cx={pt.x}
+                                cy={pt.y}
+                                r="7"
+                                fill={ptColor}
+                                opacity="0.2"
+                                className="animate-pulse"
+                              />
+                            )}
+                            <circle
+                              cx={pt.x}
+                              cy={pt.y}
+                              r={isLatest ? "4.5" : "3.5"}
+                              fill={isLatest ? ptColor : "#ffffff"}
+                              stroke={ptColor}
+                              strokeWidth="2"
+                              className="transition-transform group-hover/node:scale-125"
+                            />
+                          </g>
+                        );
+                      })}
                     </svg>
 
-                    {/* Time Axis Labels */}
-                    <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 px-2 pt-1 border-t border-slate-100 z-10">
-                      <span>Panel 1</span>
-                      <span>Panel 2</span>
-                      <span>Panel 3</span>
-                      <span>Panel 4</span>
-                      <span>Latest</span>
+                    {/* Bottom Actual Panel Dates */}
+                    <div className="flex items-center justify-between text-[9px] font-mono text-slate-500 px-1 pt-0.5 border-t border-slate-100 z-10 select-none">
+                      {organTrendData.points.map((pt, idx) => (
+                        <span
+                          key={pt.id || idx}
+                          className={`truncate ${
+                            idx === organTrendData.points.length - 1
+                              ? "font-bold text-sky-700"
+                              : "text-slate-500"
+                          }`}
+                          title={pt.date}
+                        >
+                          {pt.shortDate}
+                        </span>
+                      ))}
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center space-y-1 relative z-10">
-                    <p className="text-xs font-semibold text-slate-500">No Historical Trend Data</p>
-                    <p className="text-[10px] text-slate-400">Upload lab reports to plot biomarker trends over time.</p>
+                  <div className="flex flex-col items-center justify-center h-full text-center space-y-0.5 relative z-10 py-1">
+                    <p className="text-[11px] font-semibold text-slate-500">Historical Biomarker Baseline</p>
+                    <p className="text-[9px] text-slate-400">
+                      Upload lab panels to generate chronological stability trajectories for {currentOrganMeta.name}.
+                    </p>
                   </div>
                 )}
               </div>
             </div>
 
             {/* C. 2x2 ORGAN SELECTOR GRID */}
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 gap-2 xl:gap-2.5 flex-1 min-h-0">
               {(["heart", "blood", "lungs", "stomach"] as OrganSystemId[]).map((orgId) => {
                 const organ = ORGAN_SYSTEMS[orgId];
                 const isSelected = selectedOrgan === orgId;
@@ -985,28 +1230,28 @@ export function Patient3DHealthDashboard({
                   <button
                     key={orgId}
                     onClick={() => setSelectedOrgan(orgId)}
-                    className={`group relative flex flex-col items-center justify-between p-4 sm:p-5 rounded-[24px] transition-all duration-300 text-left cursor-pointer ${
+                    className={`group relative flex flex-col items-center justify-between p-2 xl:p-2.5 rounded-2xl transition-all duration-300 text-left cursor-pointer ${
                       isSelected
-                        ? "bg-white border-2 border-sky-500 shadow-[0_8px_25px_rgba(2,132,199,0.18)] scale-[1.02]"
-                        : "bg-white/70 hover:bg-white border border-white/90 hover:border-sky-300 shadow-[0_4px_18px_rgba(40,110,190,0.04)] hover:shadow-md"
+                        ? "bg-white border-2 border-sky-500 shadow-[0_4px_16px_rgba(2,132,199,0.15)] scale-[1.01]"
+                        : "bg-white/70 hover:bg-white border border-white/90 hover:border-sky-300 shadow-[0_2px_10px_rgba(40,110,190,0.03)] hover:shadow-sm"
                     }`}
                   >
                     {/* Organ Thumbnail Render */}
-                    <div className="relative h-20 w-20 sm:h-24 sm:w-24 flex items-center justify-center transition-transform group-hover:scale-110 duration-300">
+                    <div className="relative h-11 w-11 xl:h-13 xl:w-13 flex items-center justify-center transition-transform group-hover:scale-105 duration-300 my-auto">
                       <Organ3DGraphic organId={orgId} size="small" />
                     </div>
 
                     {/* Bottom Title & Action Icon */}
-                    <div className="w-full flex items-center justify-between mt-2 pt-2 border-t border-slate-100/80">
+                    <div className="w-full flex items-center justify-between pt-1 border-t border-slate-100/80">
                       <span
-                        className={`text-xs sm:text-sm font-bold tracking-tight ${
+                        className={`text-[11px] xl:text-xs font-bold tracking-tight ${
                           isSelected ? "text-sky-700" : "text-slate-700 group-hover:text-slate-900"
                         }`}
                       >
                         My {organ.name}
                       </span>
                       <ArrowUpRight
-                        className={`h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${
+                        className={`h-3 w-3 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${
                           isSelected ? "text-sky-600" : "text-slate-400 group-hover:text-sky-600"
                         }`}
                       />
@@ -1021,13 +1266,13 @@ export function Patient3DHealthDashboard({
           {/* ------------------------------------------------------------- */}
           {/* COLUMN 3: RIGHT - Patient Card, Consulting Doctors & Medication (3.5 Cols) */}
           {/* ------------------------------------------------------------- */}
-          <div className="lg:col-span-12 xl:col-span-3 space-y-5 sm:space-y-6">
+          <div className="lg:col-span-12 xl:col-span-3 flex flex-col justify-between gap-2.5 xl:gap-3 h-full min-h-0">
 
             {/* A. PATIENT DEMOGRAPHIC CARD */}
-            <div className="rounded-[28px] bg-white/80 backdrop-blur-md border border-white/90 p-5 sm:p-6 shadow-[0_10px_35px_rgba(40,110,190,0.06)] space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-2xl overflow-hidden ring-2 ring-sky-200">
+            <div className="rounded-2xl bg-white/80 backdrop-blur-md border border-white/90 p-3 xl:p-3.5 shadow-[0_6px_25px_rgba(40,110,190,0.05)] space-y-2.5 shrink-0">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-9 w-9 rounded-xl overflow-hidden ring-2 ring-sky-200 shrink-0">
                     <img
                       src={
                         (profile as any)?.avatar_url ||
@@ -1037,11 +1282,11 @@ export function Patient3DHealthDashboard({
                       className="h-full w-full object-cover"
                     />
                   </div>
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 font-['Manrope']">
+                  <div className="min-w-0">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope'] truncate">
                       {patientStats.fullName}
                     </h3>
-                    <p className="text-[11px] font-medium text-slate-400">
+                    <p className="text-[10px] font-medium text-slate-400">
                       ID: #{profile?.id?.slice(0, 8).toUpperCase() || "SYN-2849"}
                     </p>
                   </div>
@@ -1049,79 +1294,79 @@ export function Patient3DHealthDashboard({
               </div>
 
               {/* 6-Grid Stats: Blood, Gender, Age, Height, Weight, BMI */}
-              <div className="grid grid-cols-3 gap-y-3 gap-x-2 text-center">
-                <div className="p-2 rounded-xl bg-slate-50/90 border border-slate-100">
-                  <p className="text-[10px] font-semibold text-slate-400">Blood</p>
-                  <p className="text-xs font-bold text-slate-900">{patientStats.bloodType}</p>
+              <div className="grid grid-cols-3 gap-1.5 text-center">
+                <div className="p-1.5 rounded-lg bg-slate-50/90 border border-slate-100">
+                  <p className="text-[9px] font-semibold text-slate-400">Blood</p>
+                  <p className="text-[11px] font-bold text-slate-900">{patientStats.bloodType}</p>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-50/90 border border-slate-100">
-                  <p className="text-[10px] font-semibold text-slate-400">Gender</p>
-                  <p className="text-xs font-bold text-slate-900">{patientStats.gender}</p>
+                <div className="p-1.5 rounded-lg bg-slate-50/90 border border-slate-100">
+                  <p className="text-[9px] font-semibold text-slate-400">Gender</p>
+                  <p className="text-[11px] font-bold text-slate-900">{patientStats.gender}</p>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-50/90 border border-slate-100">
-                  <p className="text-[10px] font-semibold text-slate-400">Age</p>
-                  <p className="text-xs font-bold text-slate-900">{patientStats.age}</p>
+                <div className="p-1.5 rounded-lg bg-slate-50/90 border border-slate-100">
+                  <p className="text-[9px] font-semibold text-slate-400">Age</p>
+                  <p className="text-[11px] font-bold text-slate-900">{patientStats.age}</p>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-50/90 border border-slate-100">
-                  <p className="text-[10px] font-semibold text-slate-400">Height</p>
-                  <p className="text-xs font-bold text-slate-900">{patientStats.height}</p>
+                <div className="p-1.5 rounded-lg bg-slate-50/90 border border-slate-100">
+                  <p className="text-[9px] font-semibold text-slate-400">Height</p>
+                  <p className="text-[11px] font-bold text-slate-900">{patientStats.height}</p>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-50/90 border border-slate-100">
-                  <p className="text-[10px] font-semibold text-slate-400">Weight</p>
-                  <p className="text-xs font-bold text-slate-900">{patientStats.weight}</p>
+                <div className="p-1.5 rounded-lg bg-slate-50/90 border border-slate-100">
+                  <p className="text-[9px] font-semibold text-slate-400">Weight</p>
+                  <p className="text-[11px] font-bold text-slate-900">{patientStats.weight}</p>
                 </div>
-                <div className="p-2 rounded-xl bg-sky-50/80 border border-sky-100">
-                  <p className="text-[10px] font-semibold text-sky-700">BMI</p>
-                  <p className="text-xs font-bold text-sky-900">{patientStats.bmi}</p>
+                <div className="p-1.5 rounded-lg bg-sky-50/80 border border-sky-100">
+                  <p className="text-[9px] font-semibold text-sky-700">BMI</p>
+                  <p className="text-[11px] font-bold text-sky-900">{patientStats.bmi}</p>
                 </div>
               </div>
             </div>
 
             {/* B. CONSULTING DOCTOR LIST */}
-            <div className="rounded-[28px] bg-white/80 backdrop-blur-md border border-white/90 p-5 sm:p-6 shadow-[0_10px_35px_rgba(40,110,190,0.06)] space-y-4">
+            <div className="rounded-2xl bg-white/80 backdrop-blur-md border border-white/90 p-2.5 xl:p-3 shadow-[0_6px_25px_rgba(40,110,190,0.05)] space-y-2 shrink-0">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-slate-900 font-['Manrope']">
                     Consulting Doctor
                   </h3>
                   {assignedDoctor && (
-                    <Badge className="border-sky-200 bg-sky-50 text-sky-700 text-[10px] font-semibold py-0 px-2">
+                    <Badge className="border-sky-200 bg-sky-50 text-sky-700 text-[9px] font-semibold py-0 px-1.5">
                       Linked Team
                     </Badge>
                   )}
                 </div>
                 <button
                   onClick={() => navigate("/patient/appointments")}
-                  className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline transition-colors"
+                  className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 hover:underline transition-colors"
                 >
                   See all
                 </button>
               </div>
 
-              <div className="space-y-3">
-                {consultingDoctorsList.map((doc) => (
+              <div className="space-y-1.5">
+                {consultingDoctorsList.slice(0, 2).map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex flex-col gap-2.5 p-3 rounded-2xl bg-slate-50/80 hover:bg-sky-50/40 border border-slate-100 hover:border-sky-200 transition-all"
+                    className="flex flex-col gap-1.5 p-2 rounded-xl bg-slate-50/80 hover:bg-sky-50/40 border border-slate-100 hover:border-sky-200 transition-all"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <DoctorAvatar
                         src={doc.avatar}
                         name={doc.name}
                         initials={doc.initials}
                       />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="text-xs font-bold text-slate-900 truncate">
+                        <div className="flex items-center gap-1">
+                          <h4 className="text-[11px] font-bold text-slate-900 truncate">
                             {doc.name}
                           </h4>
                           {doc.isAssigned && (
-                            <span className="rounded bg-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.2 shrink-0">
+                            <span className="rounded bg-emerald-100 text-emerald-800 text-[8px] font-bold px-1 py-0.2 shrink-0">
                               Primary
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] font-medium text-slate-400 truncate">
+                        <p className="text-[9px] font-medium text-slate-400 truncate">
                           {doc.specialty}
                         </p>
                       </div>
@@ -1129,10 +1374,10 @@ export function Patient3DHealthDashboard({
 
                     <Button
                       onClick={() => navigate(`/patient/appointments?doctor=${encodeURIComponent(doc.name)}`)}
-                      className="w-full h-8 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-[11px] font-semibold shadow-sm flex items-center justify-center gap-1"
+                      className="w-full h-6.5 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-[10px] font-semibold shadow-xs flex items-center justify-center gap-1 cursor-pointer"
                     >
                       <span>Book Consultation</span>
-                      <ArrowUpRight className="h-3 w-3" />
+                      <ArrowUpRight className="h-2.5 w-2.5" />
                     </Button>
                   </div>
                 ))}
@@ -1140,53 +1385,53 @@ export function Patient3DHealthDashboard({
             </div>
 
             {/* C. ACTIVE MEDICATION SHELF */}
-            <div className="rounded-[28px] bg-white/80 backdrop-blur-md border border-white/90 p-5 sm:p-6 shadow-[0_10px_35px_rgba(40,110,190,0.06)] space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">
+            <div className="rounded-2xl bg-white/80 backdrop-blur-md border border-white/90 p-2.5 xl:p-3 shadow-[0_6px_25px_rgba(40,110,190,0.05)] space-y-2 flex-1 min-h-0 flex flex-col justify-between">
+              <div className="flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold text-slate-900 font-['Manrope']">
                     Medication
                   </h3>
                   {activePrescriptions.length > 0 && (
-                    <span className="flex items-center gap-1 rounded-full border border-lime-200 bg-lime-50 px-2 py-0.5 text-[10px] font-bold text-lime-800">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="flex items-center gap-1 rounded-full border border-lime-200 bg-lime-50 px-1.5 py-0.2 text-[9px] font-bold text-lime-800">
+                      <span className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
                       {activePrescriptions.length} Active
                     </span>
                   )}
                 </div>
                 <button
                   onClick={() => navigate("/patient/prescription")}
-                  className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline transition-colors"
+                  className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 hover:underline transition-colors"
                 >
                   See all
                 </button>
               </div>
 
               {prescriptionsLoading ? (
-                <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-100 flex items-center justify-center text-xs text-slate-400">
+                <div className="p-3 rounded-xl bg-slate-50/80 border border-slate-100 flex items-center justify-center text-[10px] text-slate-400 flex-1">
                   Loading active medications…
                 </div>
               ) : activePrescriptions.length === 0 ? (
-                <div className="p-4 rounded-2xl bg-slate-50/80 border border-dashed border-slate-200 text-center space-y-2">
-                  <div className="mx-auto w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
-                    <Pill className="w-5 h-5" />
+                <div className="p-2.5 rounded-xl bg-slate-50/80 border border-dashed border-slate-200 text-center space-y-1.5 flex-1 flex flex-col items-center justify-center">
+                  <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <Pill className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold text-slate-800">No Active Prescriptions</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      Medications prescribed by your doctor will sync here automatically.
+                    <p className="text-[11px] font-bold text-slate-800">No Active Prescriptions</p>
+                    <p className="text-[9px] text-slate-400">
+                      Doctor prescribed meds will sync here.
                     </p>
                   </div>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => navigate("/patient/prescription")}
-                    className="text-[11px] h-7 rounded-xl border-slate-200 hover:bg-sky-50 text-slate-700 font-medium"
+                    className="text-[10px] h-6 rounded-lg border-slate-200 hover:bg-sky-50 text-slate-700 font-medium px-2"
                   >
-                    View Prescriptions Vault
+                    View Vault
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-1.5 flex-1 items-center">
                   {activePrescriptions.slice(0, 2).map((rx, idx) => {
                     const parsed = parsePrescriptionItem(rx);
                     const bottleColor = BOTTLE_COLORS[idx % BOTTLE_COLORS.length];
@@ -1194,11 +1439,10 @@ export function Patient3DHealthDashboard({
                       <div
                         key={rx.id}
                         onClick={() => navigate("/patient/prescription")}
-                        className="group p-3 rounded-2xl bg-slate-50/80 hover:bg-sky-50/50 border border-slate-100 hover:border-sky-200 transition-all cursor-pointer flex flex-col items-center text-center relative"
+                        className="group p-2 rounded-xl bg-slate-50/80 hover:bg-sky-50/50 border border-slate-100 hover:border-sky-200 transition-all cursor-pointer flex flex-col items-center text-center relative h-full justify-between"
                       >
-                        {/* Medicine bottle graphic */}
-                        <div className="h-14 w-12 flex items-center justify-center my-1 group-hover:scale-105 transition-transform">
-                          <svg viewBox="0 0 60 80" className="h-full w-full drop-shadow-sm">
+                        <div className="h-9 w-8 flex items-center justify-center my-0.5 group-hover:scale-105 transition-transform">
+                          <svg viewBox="0 0 60 80" className="h-full w-full drop-shadow-xs">
                             <rect x="22" y="5" width="16" height="8" rx="2" fill="#94a3b8" />
                             <rect x="15" y="13" width="30" height="55" rx="8" fill={bottleColor} opacity="0.85" />
                             <rect x="18" y="25" width="24" height="30" rx="3" fill="#ffffff" />
@@ -1207,13 +1451,13 @@ export function Patient3DHealthDashboard({
                           </svg>
                         </div>
 
-                        <h4 className="text-[11px] font-bold text-slate-900 truncate w-full mt-1" title={parsed.name}>
+                        <h4 className="text-[10px] font-bold text-slate-900 truncate w-full" title={parsed.name}>
                           {parsed.name}
                         </h4>
-                        <p className="text-[10px] font-mono text-slate-500 font-semibold">
+                        <p className="text-[9px] font-mono text-slate-500 font-semibold">
                           {parsed.dosage}
                         </p>
-                        <p className="text-[9px] text-slate-400 truncate w-full mt-0.5">
+                        <p className="text-[8px] text-slate-400 truncate w-full">
                           {parsed.schedule}
                         </p>
                       </div>

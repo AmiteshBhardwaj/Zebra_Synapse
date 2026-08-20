@@ -29,7 +29,6 @@ import DoctorAppointments from "./pages/doctor/DoctorAppointments";
 
 import PatientLabChat from "./pages/patient/PatientLabChat";
 import PatientDietFitness from "./pages/patient/PatientDietFitness";
-import PatientDietChat from "./pages/patient/PatientDietChat";
 import PatientDoctorChat from "./pages/patient/PatientDoctorChat";
 import DoctorPatientChat from "./pages/doctor/DoctorPatientChat";
 

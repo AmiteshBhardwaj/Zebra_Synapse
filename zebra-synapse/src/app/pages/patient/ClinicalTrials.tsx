@@ -6,17 +6,10 @@ import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { useActiveReport } from "../../../hooks/useActiveReport";
 import { formatDisplayDate } from "../../../lib/careRelationships";
 import { formatLabDate, type LabPanelRow } from "../../../lib/labPanels";
-import { getLatestLabPanel, getTrialMatches } from "../../../lib/labInsights";
+import { getTrialMatches } from "../../../lib/labInsights";
 import { getSupabase } from "../../../lib/supabase";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
-import {
-  PatientPortalPage,
-  portalInsetClass,
-  portalPanelClass,
-  portalPrimaryButtonClass,
-  portalSecondaryButtonClass,
-  StatusPill,
-} from "../../components/patient/PortalTheme";
+import { StatusPill } from "../../components/patient/PortalTheme";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -60,29 +53,29 @@ function getSignalBullets(panel: LabPanelRow): string[] {
   const bullets: string[] = [];
 
   if (panel.hemoglobin_a1c != null && panel.hemoglobin_a1c >= 5.7) {
-    bullets.push(`Hemoglobin A1c ${panel.hemoglobin_a1c}% met the glucose-match threshold.`);
+    bullets.push(`HbA1c ${panel.hemoglobin_a1c}% met glucose-match threshold.`);
   } else if (panel.fasting_glucose != null && panel.fasting_glucose >= 100) {
-    bullets.push(`Glucose ${panel.fasting_glucose} mg/dL met the metabolic-match threshold.`);
+    bullets.push(`Glucose ${panel.fasting_glucose} mg/dL met metabolic threshold.`);
   }
 
   if (panel.ldl != null && panel.ldl >= 100) {
-    bullets.push(`LDL ${panel.ldl} mg/dL supported a cardiometabolic category.`);
+    bullets.push(`LDL ${panel.ldl} mg/dL supported cardiometabolic match.`);
   }
 
   if (panel.triglycerides != null && panel.triglycerides >= 150) {
-    bullets.push(`Triglycerides ${panel.triglycerides} mg/dL reinforced a lipid-focused category.`);
+    bullets.push(`Triglycerides ${panel.triglycerides} mg/dL supported lipid category.`);
   }
 
   if (panel.creatinine != null && panel.creatinine > 1.3) {
-    bullets.push(`Creatinine ${panel.creatinine} mg/dL supported a kidney-monitoring category.`);
+    bullets.push(`Creatinine ${panel.creatinine} mg/dL supported renal category.`);
   }
 
   if (panel.hemoglobin != null && panel.hemoglobin < 12) {
-    bullets.push(`Hemoglobin ${panel.hemoglobin} g/dL supported an anemia-related category.`);
+    bullets.push(`Hemoglobin ${panel.hemoglobin} g/dL supported hematology category.`);
   }
 
   if (bullets.length === 0) {
-    bullets.push("No strong lab-derived category was detected, so only a broad prevention search is shown.");
+    bullets.push("Broad prevention search based on general wellness indicators.");
   }
 
   return bullets;
@@ -150,9 +143,9 @@ export default function ClinicalTrials() {
 
   if (loading || panelsLoading || careLoading) {
     return (
-      <PatientPortalPage>
-        <p className="text-sm text-[#A1A1AA]">Loading...</p>
-      </PatientPortalPage>
+      <div className="h-full flex items-center justify-center p-6 bg-[#f6f8f5]">
+        <p className="text-sm text-[#A1A1AA]">Matching clinical research studies...</p>
+      </div>
     );
   }
 
@@ -166,203 +159,206 @@ export default function ClinicalTrials() {
   }
 
   return (
-    <PatientPortalPage>
-      {/* Executive Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
-            <FlaskConical className="h-6 w-6" />
+    <div className="h-full flex flex-col p-3 sm:p-4 lg:p-5 max-w-[1600px] mx-auto overflow-hidden bg-[#f6f8f5]">
+      {/* 1. COMPACT EXECUTIVE HEADER */}
+      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 mb-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
+            <FlaskConical className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Clinical Trials</h1>
-              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                Clinical Trials
+              </h1>
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
                 Research Matching
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
-              Patient-facing ClinicalTrials.gov references matched to your clinical signals.
+            <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1">
+              Patient-facing ClinicalTrials.gov references matched to your active clinical signals.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-1.5 text-slate-700 font-semibold shadow-sm">
+          <span className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-slate-700 font-semibold shadow-2xs">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            {activePanel ? `${matches.length} Matched Studies` : "Awaiting Biomarkers"}
+            {activePanel ? `${matches.length} Matched Categories` : "Awaiting Biomarkers"}
           </span>
         </div>
-      </div>
+      </header>
 
+      {/* 2. MAIN 2-COLUMN DASHBOARD */}
       {!activePanel ? (
-        <div className="space-y-6 max-w-4xl">
-          <Card className={`${portalPanelClass} p-2`}>
-            <CardHeader>
-              <div className="flex items-center gap-2.5">
-                <FlaskConical className="h-4.5 w-4.5 text-lime-600" />
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="rounded-[22px] bg-white border border-slate-100 p-5 shadow-sm">
+            <CardHeader className="p-0">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="h-5 w-5 text-[#0099ff]" />
                 <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">No trial matches yet</CardTitle>
               </div>
-              <CardDescription className="text-xs text-slate-500">
-                You have lab files on file, but no active structured biomarkers are available yet to drive clinical trial matching. Those will appear here after your reports are processed.
+              <CardDescription className="text-xs text-slate-500 mt-1">
+                You have lab files on file, but no active structured biomarkers are available yet to drive clinical trial matching.
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className={`${portalPanelClass} p-2`}>
-            <CardHeader>
-              <div className="flex items-center gap-2.5">
-                <Info className="h-4.5 w-4.5 text-sky-600" />
+          <Card className="rounded-[22px] bg-white border border-slate-100 p-5 shadow-sm">
+            <CardHeader className="p-0">
+              <div className="flex items-center gap-2">
+                <Info className="h-5 w-5 text-[#0099ff]" />
                 <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">What unlocks this section</CardTitle>
               </div>
-              <CardDescription className="text-xs text-slate-500">
+              <CardDescription className="text-xs text-slate-500 mt-1">
                 This view becomes active once structured biomarkers are available from your latest uploads or care records.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Clinical Matching</p>
-                <p className="mt-0.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  The clinical trial engine uses specific biomarker patterns to suggest relevant trials.
-                </p>
-              </div>
-            </CardContent>
           </Card>
         </div>
       ) : (
-        <div className="space-y-6 max-w-4xl">
-          <Card className={`${portalPanelClass} p-2`}>
-            <CardHeader>
-              <div className="flex items-center gap-2.5">
-                <FlaskConical className="h-4.5 w-4.5 text-lime-600" />
-                <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">Suggested Trial References</CardTitle>
-              </div>
-              <CardDescription className="text-xs text-slate-500">
-                These are curated research references based on your current signal, not enrollment recommendations.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4">
+          {/* LEFT COLUMN: MATCHED TRIALS LIST (SCROLLABLE CONTAINER) */}
+          <div className="lg:col-span-7 xl:col-span-8 flex flex-col min-h-0">
+            <div className="flex items-center justify-between mb-2 shrink-0">
+              <h2 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope']">
+                Suggested Trial References ({matches.length})
+              </h2>
+              <span className="text-[11px] text-slate-400 font-medium">Curated ClinicalTrials.gov Signal</span>
+            </div>
+
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
               {matches.map((match) => (
-                <div key={match.title} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 space-y-3">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope']">{match.title}</p>
-                      <Badge className="border border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-sm">
-                        {match.studies.length > 0 ? `${match.studies.length} pinned` : "Search only"}
-                      </Badge>
+                <article
+                  key={match.title}
+                  className="rounded-[22px] border border-slate-100 bg-white p-4 sm:p-4.5 text-slate-800 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-sky-200 hover:shadow-md transition-all space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-sm sm:text-base font-bold text-slate-900 font-['Manrope']">
+                          {match.title}
+                        </h3>
+                        <Badge className="border border-sky-200 bg-sky-50 text-[10px] font-bold text-[#0284c7]">
+                          {match.studies.length > 0 ? `${match.studies.length} pinned` : "Search only"}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed font-medium">
+                        {match.summary}
+                      </p>
                     </div>
-                    <p className="text-xs text-slate-500 leading-relaxed font-medium">{match.summary}</p>
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                      Search terms: {match.query}
-                    </p>
                   </div>
 
-                  {match.studies.length > 0 ? (
-                    <div className="space-y-2.5">
+                  {/* Pinned Studies */}
+                  {match.studies.length > 0 && (
+                    <div className="space-y-2">
                       {match.studies.map((study) => (
-                        <div key={study.nctId} className="rounded-xl border border-slate-200/80 bg-white p-3 sm:p-3.5 shadow-sm">
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                              <a
-                                href={study.href}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900 transition-colors hover:text-lime-700 font-['Manrope']"
-                              >
-                                {study.title}
-                                <ExternalLink className="h-3.5 w-3.5 text-lime-600" />
-                              </a>
-                              <p className="mt-0.5 text-[10px] uppercase font-mono text-slate-400">
-                                {study.nctId}
-                              </p>
-                            </div>
-                            <StatusPill status={study.status} />
+                        <div
+                          key={study.nctId}
+                          className="rounded-xl border border-slate-100 bg-[#f8fafc] p-3 text-xs space-y-1 hover:bg-white hover:border-sky-200 transition-all"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <a
+                              href={study.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-bold text-slate-900 hover:text-[#0099ff] inline-flex items-center gap-1 leading-snug"
+                            >
+                              <span>{study.title}</span>
+                              <ExternalLink className="h-3 w-3 shrink-0 text-slate-400" />
+                            </a>
+                            <StatusPill status={study.status} className="text-[9px] px-2 py-0.2 shrink-0" />
                           </div>
-                          <p className="mt-1.5 text-xs text-slate-600 leading-relaxed">{study.fitNote}</p>
+                          <p className="text-[10px] uppercase font-mono text-slate-400">{study.nctId}</p>
+                          <p className="text-[11px] text-slate-600 leading-snug">{study.fitNote}</p>
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-white p-3.5 text-xs text-slate-500">
-                      No specific study record is pinned for this broader category. Use the search link to browse current listings on ClinicalTrials.gov.
-                    </div>
                   )}
 
-                  <Button asChild variant="outline" className={`w-full ${portalSecondaryButtonClass} h-10 text-xs rounded-2xl shadow-sm`}>
-                    <a href={match.searchUrl} target="_blank" rel="noopener noreferrer">
-                      Search ClinicalTrials.gov
-                      <ExternalLink className="h-3.5 w-3.5 ml-1.5 text-lime-600" />
-                    </a>
-                  </Button>
-                </div>
+                  <div className="pt-1 flex justify-end">
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="h-8 px-3 rounded-xl border-slate-200 bg-white hover:bg-sky-50 hover:text-sky-700 hover:border-sky-200 text-xs font-semibold text-slate-700 gap-1 cursor-pointer transition-all"
+                    >
+                      <a href={match.searchUrl} target="_blank" rel="noopener noreferrer">
+                        <span>Browse Search on ClinicalTrials.gov</span>
+                        <ExternalLink className="h-3 w-3 text-slate-400" />
+                      </a>
+                    </Button>
+                  </div>
+                </article>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card className={`${portalPanelClass} p-2`}>
-            <CardHeader>
-              <div className="flex items-center gap-2.5">
-                <Info className="h-4.5 w-4.5 text-sky-600" />
-                <CardTitle className="text-base font-bold text-slate-900 font-['Manrope']">Selection Context</CardTitle>
-              </div>
-              <CardDescription className="text-xs text-slate-500">
-                Why these links were chosen and how to interpret them safely.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Why these links</p>
-                <p className="mt-0.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  Each category uses a fixed set of official ClinicalTrials.gov study pages that line up with common screening patterns for glucose, lipid, kidney, or anemia-related signals.
-                </p>
+          {/* RIGHT COLUMN: SIGNAL CONTEXT & SEARCH HELPER */}
+          <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-3 min-h-0 overflow-y-auto pr-0.5 [scrollbar-width:thin]">
+            {/* Selection Context Card */}
+            <div className="rounded-[24px] bg-white border border-slate-100 p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-3 shrink-0">
+              <div className="flex items-center gap-2 text-slate-900 font-bold text-xs sm:text-sm font-['Manrope'] border-b border-slate-100 pb-2.5">
+                <Info className="h-4 w-4 text-[#0099ff]" />
+                <span>Patient Signal Context</span>
               </div>
 
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4 space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Patient-specific signal</p>
-                <p className="text-xs sm:text-sm font-bold text-slate-900">{sourceLabel}</p>
-                <p className="text-xs text-slate-400">Latest signal recorded {sourceDate}</p>
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  {selectedPanel
-                    ? "Direct links were chosen from your active structured lab panel."
-                    : "No structured lab panel was available, so the page used your linked-care glucose snapshot as a minimal fallback."}
-                </p>
-                <div className="space-y-1 pt-1">
+              <div className="space-y-2 text-xs">
+                <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Signal Source</p>
+                  <p className="mt-0.5 font-bold text-slate-900">{sourceLabel}</p>
+                  <p className="text-[11px] text-slate-500">Recorded: {sourceDate || "Latest Active Panel"}</p>
+                </div>
+
+                <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5 space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Signal Evidence</p>
                   {signalBullets.map((bullet) => (
-                    <p key={bullet} className="text-xs text-slate-700 leading-relaxed font-medium">
+                    <p key={bullet} className="text-[11px] text-slate-700 leading-snug">
                       • {bullet}
                     </p>
                   ))}
                 </div>
-                {careFlags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 pt-1">
+
+                {careFlags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
                     {careFlags.map((flag) => (
                       <Badge
                         key={flag}
                         variant="outline"
-                        className="border-slate-200 bg-white px-2.5 py-0.5 text-[11px] font-bold text-slate-700 shadow-sm"
+                        className="border-slate-200 bg-white px-2 py-0.2 text-[10px] font-bold text-slate-700"
                       >
                         {flag}
                       </Badge>
                     ))}
                   </div>
-                ) : null}
+                )}
+              </div>
+            </div>
+
+            {/* Research Disclaimer Card */}
+            <div className="rounded-[24px] bg-white border border-slate-100 p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-2.5 flex-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-1.5 font-bold text-slate-900 text-xs sm:text-sm font-['Manrope'] border-b border-slate-100 pb-2">
+                  <ShieldCheck className="h-4 w-4 text-[#0099ff]" />
+                  <span>Clinical Research Notice</span>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-relaxed mt-2">
+                  These links are research references only. Always review eligibility, protocol risks, and relevance with your physician before seeking trial enrollment.
+                </p>
               </div>
 
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5 sm:p-4">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Clinical reminder</p>
-                <p className="mt-0.5 text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  These links are research references only. Review eligibility, risks, and relevance with your clinician before treating any study as a real option.
-                </p>
-                <Button asChild className={`mt-3 w-full ${portalPrimaryButtonClass} h-10 text-xs rounded-2xl shadow-sm`}>
-                  <a href="https://clinicaltrials.gov" target="_blank" rel="noopener noreferrer">
-                    Open ClinicalTrials.gov
-                    <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-                  </a>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              <Button
+                asChild
+                className="w-full h-9.5 rounded-xl bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs shadow-[0_3px_10px_rgba(0,153,255,0.25)] hover:shadow-[0_4px_14px_rgba(0,153,255,0.35)] cursor-pointer mt-3 transition-all active:scale-[0.98]"
+              >
+                <a href="https://clinicaltrials.gov" target="_blank" rel="noopener noreferrer">
+                  <span>Open ClinicalTrials.gov Portal</span>
+                  <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                </a>
+              </Button>
+            </div>
+          </div>
         </div>
       )}
-    </PatientPortalPage>
+    </div>
   );
 }

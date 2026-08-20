@@ -78,7 +78,7 @@ export default function ReportScopeSelector({
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-colors shrink-0 ${
               isComprehensive
-                ? "border-lime-200 bg-lime-50 text-lime-700 shadow-sm"
+                ? "border-sky-200 bg-sky-50 text-[#0099ff] shadow-sm"
                 : "border-sky-200 bg-sky-50 text-sky-700 shadow-sm"
             }`}
           >
@@ -94,11 +94,7 @@ export default function ReportScopeSelector({
                 Analysis Scope
               </p>
               <Badge
-                className={`text-[9px] px-1.5 py-0 h-4 uppercase font-semibold tracking-wider ${
-                  isComprehensive
-                    ? "border-lime-200 bg-lime-50 text-lime-800"
-                    : "border-sky-200 bg-sky-50 text-sky-800"
-                }`}
+                className="text-[9px] px-1.5 py-0 h-4 uppercase font-semibold tracking-wider border-sky-200 bg-sky-50 text-[#0284c7]"
               >
                 {isComprehensive ? "Multi-Report" : "Single Report"}
               </Badge>
@@ -114,7 +110,7 @@ export default function ReportScopeSelector({
         {/* Dropdown Scope Selector */}
         <div className="w-full sm:w-auto sm:min-w-[280px] sm:max-w-md">
           <Select value={selectedReportId} onValueChange={onSelectReportId}>
-            <SelectTrigger className="h-10 w-full rounded-xl border-slate-200 bg-slate-50/80 px-3 text-xs font-medium text-slate-800 hover:border-lime-400 focus:ring-1 focus:ring-lime-500 transition-all">
+            <SelectTrigger className="h-10 w-full rounded-xl border-slate-200 bg-slate-50/80 px-3 text-xs font-medium text-slate-800 hover:border-[#0099ff] focus:ring-1 focus:ring-[#0099ff] transition-all">
               <SelectValue placeholder="Choose analysis scope..." />
             </SelectTrigger>
             <SelectContent className="border-slate-100 bg-white text-slate-800 shadow-xl rounded-2xl p-1 max-w-[92vw] sm:max-w-md">
@@ -122,15 +118,15 @@ export default function ReportScopeSelector({
                 <SelectItem
                   key={opt.id}
                   value={opt.id}
-                  className="py-2.5 text-xs text-slate-700 focus:bg-lime-50 focus:text-lime-900 cursor-pointer rounded-xl"
+                  className="py-2.5 text-xs text-slate-700 focus:bg-sky-50 focus:text-sky-950 cursor-pointer rounded-xl"
                 >
                   <div className="flex items-center gap-2 min-w-0 pr-4">
                     {opt.isAll ? (
-                      <Sparkles className="h-3.5 w-3.5 text-lime-600 shrink-0" />
+                      <Sparkles className="h-3.5 w-3.5 text-[#0099ff] shrink-0" />
                     ) : (
                       <FileText className="h-3.5 w-3.5 text-sky-600 shrink-0" />
                     )}
-                    <span className={`truncate ${opt.isAll ? "font-bold text-lime-800" : "text-slate-700"}`}>
+                    <span className={`truncate ${opt.isAll ? "font-bold text-[#0284c7]" : "text-slate-700"}`}>
                       {opt.label}
                     </span>
                   </div>

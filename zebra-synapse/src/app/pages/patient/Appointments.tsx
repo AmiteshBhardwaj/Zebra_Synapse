@@ -9,9 +9,11 @@ import {
   FileText,
   MapPin,
   Plus,
+  Search,
+  Sparkles,
   Stethoscope,
-  XCircle,
   Video,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "../../components/ui/button";
@@ -33,13 +35,9 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import {
-  PatientPortalPage,
   StatusPill,
-  portalDialogClass,
-  portalInputClass,
   portalMutedPanelClass,
   portalPanelClass,
-  portalPrimaryButtonClass,
   portalSecondaryButtonClass,
   portalSelectContentClass,
   portalSelectItemClass,
@@ -242,7 +240,7 @@ function DoctorAvatarCircle({
   src,
   name,
   initials,
-  className = "h-12 w-12",
+  className = "h-11 w-11",
 }: {
   src?: string;
   name: string;
@@ -264,7 +262,7 @@ function DoctorAvatarCircle({
 
   return (
     <div
-      className={`${className} rounded-full overflow-hidden shrink-0 bg-[#dbeafe] flex items-center justify-center text-[#1e40af] font-bold text-sm sm:text-base ring-1 ring-black/5 shadow-inner`}
+      className={`${className} rounded-full overflow-hidden shrink-0 bg-[#dbeafe] flex items-center justify-center text-[#1e40af] font-bold text-xs sm:text-sm ring-1 ring-black/5 shadow-inner`}
     >
       {!imageError && src ? (
         <img
@@ -280,65 +278,14 @@ function DoctorAvatarCircle({
   );
 }
 
-// Consulting Doctor Card Block matching exact design
-function DoctorCardBlock({
-  doctor,
-  isPrimary,
-  onBook,
-}: {
-  doctor: DoctorOption;
-  isPrimary?: boolean;
-  onBook: (doctorValue: string) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-3.5 p-4 sm:p-5 rounded-[22px] bg-white border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-sky-200 hover:shadow-md transition-all duration-200">
-      <div className="flex items-center gap-3.5">
-        <DoctorAvatarCircle
-          src={doctor.value === "chloe-menon" ? undefined : doctor.avatar}
-          name={doctor.doctor}
-          initials={doctor.initials || "CM"}
-          className="h-12 w-12 sm:h-13 sm:w-13"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
-              {doctor.doctor}
-            </h4>
-            {isPrimary && (
-              <span className="rounded-md bg-[#dcfce7] text-[#15803d] text-[10px] sm:text-[11px] font-bold px-2 py-0.5 shrink-0">
-                Primary
-              </span>
-            )}
-          </div>
-          <p className="text-xs sm:text-[13px] font-medium text-slate-400 truncate mt-0.5">
-            {isPrimary
-              ? "Hypertension"
-              : doctor.specialty.includes(" - ")
-              ? doctor.specialty.split(" - ")[0]
-              : doctor.specialty}
-          </p>
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => onBook(doctor.value)}
-        className="w-full h-10 sm:h-11 rounded-full bg-[#00a8ff] hover:bg-[#0095e6] active:scale-[0.98] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_4px_14px_rgba(0,168,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,168,255,0.35)] transition-all duration-200 cursor-pointer"
-      >
-        <span>Book Consultation</span>
-        <ArrowUpRight className="h-4 w-4 stroke-[2.5]" />
-      </button>
-    </div>
-  );
-}
-
 export default function Appointments() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
-  const [showAllDoctors, setShowAllDoctors] = useState(false);
+  const [allDoctorsModalOpen, setAllDoctorsModalOpen] = useState(false);
+  const [doctorSearchQuery, setDoctorSearchQuery] = useState("");
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
@@ -462,7 +409,7 @@ export default function Appointments() {
         specialty: matchedOption.specialty,
         date: selectedDate,
         time: formatTimeLabel(selectedTime),
-        location: "Medical Plaza, Suite 210",
+        location: matchedOption.hospital ? `${matchedOption.hospital}, Suite 402` : "Medical Plaza, Suite 210",
         status: "Confirmed",
       };
 
@@ -471,7 +418,8 @@ export default function Appointments() {
       setScheduleOpen(false);
       resetScheduleForm();
       setActiveTab("upcoming");
-    }, 500);
+      toast.success(`Appointment confirmed with ${matchedOption.doctor}!`);
+    }, 450);
   };
 
   const handleReschedule = (appointment: Appointment) => {
@@ -502,7 +450,8 @@ export default function Appointments() {
       setSelectedAppointment(null);
       setRescheduleDate("");
       setRescheduleTime("");
-    }, 450);
+      toast.success("Appointment rescheduled successfully!");
+    }, 400);
   };
 
   const handleViewNotes = (appointment: Appointment) => {
@@ -571,47 +520,385 @@ export default function Appointments() {
   const isScheduleReady = Boolean(selectedDoctor && selectedDate && selectedTime);
   const isRescheduleReady = Boolean(selectedAppointment && rescheduleDate && rescheduleTime);
 
+  const filteredModalDoctors = doctorOptions.filter(
+    (d) =>
+      d.doctor.toLowerCase().includes(doctorSearchQuery.toLowerCase()) ||
+      d.specialty.toLowerCase().includes(doctorSearchQuery.toLowerCase()) ||
+      (d.hospital && d.hospital.toLowerCase().includes(doctorSearchQuery.toLowerCase()))
+  );
+
   return (
-    <PatientPortalPage>
-      <Dialog open={scheduleOpen} onOpenChange={handleScheduleOpenChange}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
-          <div className="flex items-center gap-3.5">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
-              <Calendar className="h-6 w-6" />
+    <div className="h-full flex flex-col p-3 sm:p-4 lg:p-5 max-w-[1600px] mx-auto overflow-hidden bg-[#f6f8f5]">
+      {/* 1. TOP HEADER (COMPACT) */}
+      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 mb-3 sm:mb-4">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
+            <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                Appointments
+              </h1>
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
+                Care Coordination
+              </span>
             </div>
-            <div>
+            <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1">
+              Manage upcoming visits and review completed medical appointments.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            onClick={() => setScheduleOpen(true)}
+            className="h-9 sm:h-10 px-4 rounded-xl sm:rounded-2xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_4px_14px_rgba(0,168,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,168,255,0.35)] transition-all cursor-pointer"
+          >
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            <span>Schedule Appointment</span>
+          </Button>
+        </div>
+      </header>
+
+      {/* 2. MAIN 2-COLUMN DASHBOARD GRID */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4.5">
+        {/* LEFT COLUMN: VISITS (Upcoming / Past) */}
+        <section className="lg:col-span-7 xl:col-span-7 flex flex-col min-h-0">
+          {/* Tab Filter Row */}
+          <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
+            <div className="flex items-center gap-2 bg-slate-200/60 p-1 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setActiveTab("upcoming")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === "upcoming"
+                    ? "bg-[#00a8ff] text-white shadow-sm shadow-[#00a8ff]/25"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Calendar className="h-3.5 w-3.5" />
+                <span>Upcoming Visits</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    activeTab === "upcoming" ? "bg-white/30 text-white" : "bg-slate-300 text-slate-700"
+                  }`}
+                >
+                  {upcomingAppointments.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("past")}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === "past"
+                    ? "bg-[#00a8ff] text-white shadow-sm shadow-[#00a8ff]/25"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                <span>Past Visits</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    activeTab === "past" ? "bg-white/30 text-white" : "bg-slate-300 text-slate-700"
+                  }`}
+                >
+                  {pastAppointments.length}
+                </span>
+              </button>
+            </div>
+
+            <span className="text-[11px] font-semibold text-slate-400 hidden sm:inline">
+              {activeTab === "upcoming"
+                ? `${upcomingAppointments.length} scheduled visit${upcomingAppointments.length === 1 ? "" : "s"}`
+                : `${pastAppointments.length} completed visit${pastAppointments.length === 1 ? "" : "s"}`}
+            </span>
+          </div>
+
+          {/* Visits Cards Container with internal clean scrollbar */}
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
+            {activeTab === "upcoming" && (
+              <>
+                {upcomingAppointments.length > 0 ? (
+                  upcomingAppointments.map((appointment) => {
+                    const matchedDoctor = doctorOptions.find(
+                      (d) =>
+                        d.doctor.toLowerCase() === appointment.doctor.toLowerCase() ||
+                        appointment.doctor.toLowerCase().includes(d.doctor.toLowerCase())
+                    );
+                    return (
+                      <article
+                        key={appointment.id}
+                        className="rounded-[22px] border border-slate-100 bg-white p-4 sm:p-4.5 text-slate-800 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-sky-200 hover:shadow-md transition-all duration-200 flex flex-col justify-between gap-3"
+                      >
+                        {/* Top: Doctor Info & Status */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <DoctorAvatarCircle
+                              src={matchedDoctor?.avatar}
+                              name={appointment.doctor}
+                              initials={matchedDoctor?.initials}
+                              className="h-11 w-11 sm:h-12 sm:w-12 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight font-['Manrope'] truncate">
+                                  {appointment.doctor}
+                                </h3>
+                              </div>
+                              <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
+                                {appointment.specialty}
+                              </p>
+                            </div>
+                          </div>
+                          <StatusPill status={appointment.status} className="shrink-0 text-[10px] py-0.5 px-2.5" />
+                        </div>
+
+                        {/* Middle: Details Pill Row */}
+                        <div className="rounded-xl border border-slate-100 bg-[#f8fafc] px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs font-semibold text-slate-700">
+                          <div className="flex items-center gap-1.5 text-slate-800">
+                            <Calendar className="h-3.5 w-3.5 text-lime-600 shrink-0" />
+                            <span>{formatDisplayDate(appointment.date)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-slate-800">
+                            <Clock className="h-3.5 w-3.5 text-lime-600 shrink-0" />
+                            <span>{appointment.time}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-slate-500 truncate max-w-[200px]">
+                            <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+                            <span className="truncate">{appointment.location || "Synapse Clinic"}</span>
+                          </div>
+                        </div>
+
+                        {/* Bottom: Action Buttons */}
+                        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                          <Button
+                            type="button"
+                            className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_3px_10px_rgba(0,153,255,0.25)] hover:shadow-[0_4px_14px_rgba(0,153,255,0.35)] transition-all cursor-pointer active:scale-[0.98]"
+                            onClick={() =>
+                              navigate(
+                                `/patient/teleconsult?id=apt-${appointment.id}&doctor=${encodeURIComponent(
+                                  appointment.doctor
+                                )}&specialty=${encodeURIComponent(appointment.specialty)}`
+                              )
+                            }
+                          >
+                            <Video className="h-3.5 w-3.5" />
+                            <span>Join Live Video Call</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className={`h-9 px-3 text-xs rounded-xl active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                            onClick={() => handleReschedule(appointment)}
+                          >
+                            Reschedule
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="border-rose-200 bg-rose-50/70 text-rose-700 hover:bg-rose-100 text-xs font-semibold rounded-xl h-9 px-3 transition-all cursor-pointer shadow-none active:scale-[0.98]"
+                            onClick={() => handleCancelClick(appointment)}
+                          >
+                            <XCircle className="mr-1 h-3.5 w-3.5 text-rose-500" />
+                            Cancel
+                          </Button>
+                        </div>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-slate-200 bg-white/60 p-8 text-center text-xs text-slate-400">
+                    <Calendar className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                    <p className="font-semibold text-slate-600">No upcoming visits scheduled.</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Click &quot;Schedule Appointment&quot; to book your next visit.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {activeTab === "past" && (
+              <>
+                {pastAppointments.length > 0 ? (
+                  pastAppointments.map((appointment) => {
+                    const matchedDoctor = doctorOptions.find(
+                      (d) =>
+                        d.doctor.toLowerCase() === appointment.doctor.toLowerCase() ||
+                        appointment.doctor.toLowerCase().includes(d.doctor.toLowerCase())
+                    );
+                    return (
+                      <article
+                        key={appointment.id}
+                        className="rounded-[22px] border border-slate-100 bg-white p-4 text-slate-800 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-slate-200 transition-all duration-200 flex flex-col justify-between gap-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <DoctorAvatarCircle
+                              src={matchedDoctor?.avatar}
+                              name={appointment.doctor}
+                              initials={matchedDoctor?.initials}
+                              className="h-10 w-10 sm:h-11 sm:w-11 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight font-['Manrope'] truncate">
+                                {appointment.doctor}
+                              </h3>
+                              <p className="text-xs text-slate-500 font-medium truncate mt-0.5">{appointment.specialty}</p>
+                            </div>
+                          </div>
+                          <StatusPill status={appointment.status} className="shrink-0 text-[10px] py-0.5 px-2.5" />
+                        </div>
+
+                        <div className="rounded-xl border border-slate-100 bg-[#f8fafc] px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs font-semibold text-slate-700">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-lime-600 shrink-0" />
+                            <span>{formatDisplayDate(appointment.date)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="h-3.5 w-3.5 text-lime-600 shrink-0" />
+                            <span>{appointment.time}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-slate-500 truncate max-w-[200px]">
+                            <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+                            <span className="truncate">{appointment.location || "Synapse Clinic"}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end pt-0.5">
+                          <Button
+                            variant="outline"
+                            className={`h-8.5 px-3 text-xs rounded-xl active:scale-[0.98] ${portalSecondaryButtonClass}`}
+                            onClick={() => handleViewNotes(appointment)}
+                          >
+                            <FileText className="h-3.5 w-3.5 mr-1 text-[#0099ff]" />
+                            View Notes
+                          </Button>
+                        </div>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-slate-200 bg-white/60 p-8 text-center text-xs text-slate-400">
+                    <Clock className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                    <p className="font-semibold text-slate-600">No past visits on record.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+
+        {/* RIGHT COLUMN: CONSULTING DOCTORS & QUICK CARE ASSIST */}
+        <section className="lg:col-span-5 xl:col-span-5 flex flex-col min-h-0 gap-3">
+          {/* Consulting Doctor Panel */}
+          <div className="rounded-[24px] bg-white border border-slate-100 p-4 sm:p-4.5 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col min-h-0 flex-1">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 shrink-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Appointments</h1>
-                <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
-                  Care Coordination
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 font-['Manrope'] tracking-tight">
+                  Consulting Doctor
+                </h2>
+                <span className="inline-flex items-center rounded-lg border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-[#0284c7]">
+                  Linked Team
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
-                Manage upcoming visits and review completed medical appointments.
-              </p>
+              <button
+                type="button"
+                onClick={() => setAllDoctorsModalOpen(true)}
+                className="text-xs font-bold text-[#0099ff] hover:text-sky-600 transition-colors cursor-pointer"
+              >
+                See all
+              </button>
+            </div>
+
+            {/* Doctors List */}
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 pr-0.5 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
+              {doctorOptions.slice(0, 3).map((doctor, idx) => (
+                <div
+                  key={doctor.value}
+                  className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-2xl bg-[#f8fafd]/80 border border-slate-100 hover:border-sky-200 hover:bg-white transition-all duration-200 group"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <DoctorAvatarCircle
+                      src={doctor.value === "chloe-menon" ? undefined : doctor.avatar}
+                      name={doctor.doctor}
+                      initials={doctor.initials || "CM"}
+                      className="h-10 w-10 sm:h-11 sm:w-11 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate">
+                          {doctor.doctor}
+                        </h4>
+                        {idx === 0 && (
+                          <span className="rounded-md bg-[#dcfce7] text-[#15803d] text-[9px] font-bold px-1.5 py-0.2 shrink-0">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] font-medium text-slate-400 truncate mt-0.5">
+                        {idx === 0
+                          ? "Hypertension"
+                          : doctor.specialty.includes(" - ")
+                          ? doctor.specialty.split(" - ")[0]
+                          : doctor.specialty}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedDoctor(doctor.value);
+                      setScheduleOpen(true);
+                    }}
+                    className="shrink-0 h-8.5 px-3 rounded-full bg-[#00a8ff] hover:bg-[#0095e6] active:scale-[0.98] text-white font-semibold text-xs flex items-center gap-1 shadow-[0_3px_10px_rgba(0,168,255,0.2)] hover:shadow-[0_4px_14px_rgba(0,168,255,0.3)] transition-all duration-200 cursor-pointer"
+                  >
+                    <span>Book</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 
-          <DialogTrigger asChild>
-            <Button className="h-11 px-5 rounded-2xl shadow-sm bg-[#00a8ff] hover:bg-[#0095e6] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_4px_14px_rgba(0,168,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,168,255,0.35)] transition-all cursor-pointer">
-              <Plus className="h-4 w-4 stroke-[2.5]" />
-              <span>Schedule Appointment</span>
+          {/* Quick Virtual Care Card */}
+          <div className="rounded-[22px] bg-gradient-to-br from-sky-50 via-sky-50/60 to-blue-50/40 border border-sky-100 p-3.5 shrink-0 flex items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <div className="h-9 w-9 rounded-xl bg-[#00a8ff] text-white flex items-center justify-center shadow-sm shrink-0">
+                <Sparkles className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">Virtual Clinic & Telehealth</h4>
+                <p className="text-[10px] sm:text-[11px] text-slate-500">Live HD consults with specialist doctors</p>
+              </div>
+            </div>
+            <Button
+              size="sm"
+              onClick={() => navigate("/patient/teleconsult")}
+              className="h-8 px-3 rounded-xl bg-white hover:bg-sky-50 text-[#0099ff] border border-sky-200 font-bold text-xs shadow-none cursor-pointer"
+            >
+              Start Room
             </Button>
-          </DialogTrigger>
-        </div>
+          </div>
+        </section>
+      </div>
 
-        <DialogContent className="sm:max-w-[560px] p-6 sm:p-7 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="space-y-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-[#0099ff] border border-sky-100 shadow-sm">
-                <Calendar className="h-6 w-6 stroke-[2.2]" />
+      {/* 3. MODALS & DIALOGS */}
+
+      {/* SCHEDULE MODAL */}
+      <Dialog open={scheduleOpen} onOpenChange={handleScheduleOpenChange}>
+        <DialogContent className="sm:max-w-[540px] p-5 sm:p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-[#0099ff] border border-sky-100 shadow-sm">
+                <Calendar className="h-5 w-5 stroke-[2.2]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                  <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-['Manrope']">
                     Schedule New Appointment
                   </DialogTitle>
-                  <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
+                  <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] font-bold text-[#0284c7] uppercase tracking-wider">
                     Care Visit
                   </span>
                 </div>
@@ -622,38 +909,38 @@ export default function Appointments() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-5 pt-2">
-            {/* 1. SELECT DOCTOR */}
-            <div className="space-y-2">
+          <div className="space-y-4 pt-1">
+            {/* SELECT DOCTOR */}
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="doctor" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <Stethoscope className="h-3.5 w-3.5 text-[#0099ff]" />
                   <span>Select Doctor</span>
                 </Label>
                 {selectedDoctor && (
-                  <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
                     Specialist Selected
                   </span>
                 )}
               </div>
 
               <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-                <SelectTrigger id="doctor" className="h-13 rounded-2xl border-slate-200 bg-slate-50/60 hover:bg-white text-slate-900 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all">
+                <SelectTrigger id="doctor" className="h-11 rounded-2xl border-slate-200 bg-slate-50/60 hover:bg-white text-slate-900 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all">
                   {selectedDoctor ? (
                     (() => {
                       const doc = doctorOptions.find((d) => d.value === selectedDoctor);
                       if (!doc) return <SelectValue placeholder="Choose a doctor" />;
                       return (
-                        <div className="flex items-center gap-2.5 min-w-0 text-left">
+                        <div className="flex items-center gap-2 min-w-0 text-left">
                           <DoctorAvatarCircle
                             src={doc.value === "chloe-menon" ? undefined : doc.avatar}
                             name={doc.doctor}
                             initials={doc.initials}
-                            className="h-7 w-7 text-[11px] shrink-0"
+                            className="h-6 w-6 text-[10px] shrink-0"
                           />
                           <div className="truncate">
-                            <span className="font-bold text-slate-900 text-xs sm:text-sm mr-2">{doc.doctor}</span>
-                            <span className="text-xs text-slate-500 hidden sm:inline">
+                            <span className="font-bold text-slate-900 text-xs mr-2">{doc.doctor}</span>
+                            <span className="text-[11px] text-slate-500 hidden sm:inline">
                               ({doc.specialty.split(" - ")[0]})
                             </span>
                           </div>
@@ -664,23 +951,23 @@ export default function Appointments() {
                     <SelectValue placeholder="Choose a doctor or specialist" />
                   )}
                 </SelectTrigger>
-                <SelectContent className="border-slate-100 bg-white text-slate-900 shadow-2xl rounded-2xl p-2 z-50 max-h-72">
+                <SelectContent className="border-slate-100 bg-white text-slate-900 shadow-2xl rounded-2xl p-2 z-50 max-h-64">
                   {doctorOptions.map((doctor) => (
                     <SelectItem
                       key={doctor.value}
                       value={doctor.value}
-                      className="rounded-xl py-2 px-3 text-slate-700 focus:bg-sky-50 focus:text-slate-900 cursor-pointer text-xs sm:text-sm my-0.5"
+                      className="rounded-xl py-2 px-3 text-slate-700 focus:bg-sky-50 focus:text-slate-900 cursor-pointer text-xs my-0.5"
                     >
-                      <div className="flex items-center gap-3 w-full">
+                      <div className="flex items-center gap-2.5 w-full">
                         <DoctorAvatarCircle
                           src={doctor.value === "chloe-menon" ? undefined : doctor.avatar}
                           name={doctor.doctor}
                           initials={doctor.initials}
-                          className="h-8 w-8 text-xs shrink-0"
+                          className="h-7 w-7 text-[10px] shrink-0"
                         />
                         <div className="flex flex-col min-w-0 text-left">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-slate-900 text-xs sm:text-sm">{doctor.doctor}</span>
+                            <span className="font-bold text-slate-900 text-xs">{doctor.doctor}</span>
                             {doctor.rating && (
                               <span className="text-[10px] font-semibold text-amber-600 flex items-center gap-0.5">
                                 ★ {doctor.rating}
@@ -696,39 +983,10 @@ export default function Appointments() {
                   ))}
                 </SelectContent>
               </Select>
-
-              {/* Selected Doctor Card Preview */}
-              {(() => {
-                const doc = doctorOptions.find((d) => d.value === selectedDoctor);
-                if (!doc) return null;
-                return (
-                  <div className="flex items-center gap-3 p-3 rounded-2xl bg-[#f8fafd] border border-sky-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all">
-                    <DoctorAvatarCircle
-                      src={doc.value === "chloe-menon" ? undefined : doc.avatar}
-                      name={doc.doctor}
-                      initials={doc.initials}
-                      className="h-11 w-11 shrink-0"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-                          {doc.doctor}
-                        </h4>
-                        <span className="rounded-md bg-[#dcfce7] text-[#15803d] text-[10px] font-bold px-1.5 py-0.5">
-                          {doc.rating ? `★ ${doc.rating}` : "Verified"}
-                        </span>
-                      </div>
-                      <p className="text-[11px] font-medium text-slate-500 truncate mt-0.5">
-                        {doc.specialty.split(" - ")[0]} • {doc.hospital || "Synapse Health Center"}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
 
-            {/* 2. DATE SELECTION */}
-            <div className="space-y-2">
+            {/* DATE SELECTION */}
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="date" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-[#0099ff]" />
@@ -741,7 +999,6 @@ export default function Appointments() {
                 )}
               </div>
 
-              {/* Quick Date Pills */}
               <div className="flex flex-wrap gap-1.5">
                 {[
                   { label: "Today", value: getQuickDateISO(0) },
@@ -753,7 +1010,7 @@ export default function Appointments() {
                     key={qd.label}
                     type="button"
                     onClick={() => setSelectedDate(qd.value)}
-                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 py-0.8 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                       selectedDate === qd.value
                         ? "bg-[#00a8ff] text-white shadow-sm font-bold"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -770,15 +1027,15 @@ export default function Appointments() {
                   id="date"
                   type="date"
                   min={getQuickDateISO(0)}
-                  className="h-12 pl-10 rounded-2xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all font-medium text-xs sm:text-sm"
+                  className="h-10 pl-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all font-medium text-xs"
                   value={selectedDate}
                   onChange={(event) => setSelectedDate(event.target.value)}
                 />
               </div>
             </div>
 
-            {/* 3. TIME SELECTION */}
-            <div className="space-y-2">
+            {/* TIME SELECTION */}
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="time" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <Clock className="h-3.5 w-3.5 text-[#0099ff]" />
@@ -791,8 +1048,7 @@ export default function Appointments() {
                 )}
               </div>
 
-              {/* Quick Time Slot Pills */}
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
                 {CLINIC_TIME_SLOTS.map((slot) => {
                   const isActive = selectedTime === slot.value;
                   return (
@@ -800,7 +1056,7 @@ export default function Appointments() {
                       key={slot.value}
                       type="button"
                       onClick={() => setSelectedTime(slot.value)}
-                      className={`py-1.5 px-2 rounded-xl text-[11px] font-semibold text-center transition-all cursor-pointer ${
+                      className={`py-1 px-1.5 rounded-lg text-[10px] font-semibold text-center transition-all cursor-pointer ${
                         isActive
                           ? "bg-[#00a8ff] text-white shadow-sm font-bold ring-2 ring-[#00a8ff]/30"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -817,7 +1073,7 @@ export default function Appointments() {
                 <Input
                   id="time"
                   type="time"
-                  className="h-12 pl-10 rounded-2xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all font-medium text-xs sm:text-sm"
+                  className="h-10 pl-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all font-medium text-xs"
                   value={selectedTime}
                   onChange={(event) => setSelectedTime(event.target.value)}
                 />
@@ -825,9 +1081,9 @@ export default function Appointments() {
             </div>
 
             {/* Visit Details Inset */}
-            <div className="rounded-2xl border border-slate-100 bg-[#f8fafc] p-3.5 flex items-center justify-between text-xs">
+            <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5 flex items-center justify-between text-[11px]">
               <div className="flex items-center gap-2 text-slate-700 font-medium truncate">
-                <MapPin className="h-4 w-4 text-[#00a8ff] shrink-0" />
+                <MapPin className="h-3.5 w-3.5 text-[#0099ff] shrink-0" />
                 <span className="truncate">
                   {(() => {
                     const doc = doctorOptions.find((d) => d.value === selectedDoctor);
@@ -841,11 +1097,11 @@ export default function Appointments() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-2.5 pt-1">
               <Button
                 type="button"
                 variant="outline"
-                className={`h-11 sm:h-12 px-5 rounded-2xl ${portalSecondaryButtonClass}`}
+                className={`h-10 px-4 rounded-xl ${portalSecondaryButtonClass}`}
                 onClick={() => setScheduleOpen(false)}
               >
                 Cancel
@@ -854,11 +1110,11 @@ export default function Appointments() {
                 type="button"
                 onClick={handleScheduleAppointment}
                 disabled={!isScheduleReady || isSavingSchedule}
-                className="flex-1 h-11 sm:h-12 rounded-2xl bg-[#00a8ff] hover:bg-[#0095e6] active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,168,255,0.28)] hover:shadow-[0_6px_22px_rgba(0,168,255,0.38)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 h-10 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,168,255,0.28)] hover:shadow-[0_6px_22px_rgba(0,168,255,0.38)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSavingSchedule ? (
                   <>
-                    <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                     <span>Confirming...</span>
                   </>
                 ) : (
@@ -873,19 +1129,106 @@ export default function Appointments() {
         </DialogContent>
       </Dialog>
 
+      {/* ALL DOCTORS BROWSE MODAL ("See all") */}
+      <Dialog open={allDoctorsModalOpen} onOpenChange={setAllDoctorsModalOpen}>
+        <DialogContent className="sm:max-w-[650px] p-5 sm:p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[85vh] flex flex-col">
+          <DialogHeader className="space-y-2 pb-3 border-b border-slate-100 shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-[#0099ff] border border-sky-100">
+                  <Stethoscope className="h-5 w-5 stroke-[2.2]" />
+                </div>
+                <div>
+                  <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-['Manrope']">
+                    All Consulting Specialists
+                  </DialogTitle>
+                  <DialogDescription className="text-xs text-slate-500">
+                    Connect with specialist doctors across the Zebra Synapse clinical network.
+                  </DialogDescription>
+                </div>
+              </div>
+            </div>
+
+            {/* Search filter */}
+            <div className="relative pt-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search by specialist name or department..."
+                value={doctorSearchQuery}
+                onChange={(e) => setDoctorSearchQuery(e.target.value)}
+                className="h-9.5 pl-9 rounded-xl border-slate-200 text-xs bg-slate-50/60"
+              />
+            </div>
+          </DialogHeader>
+
+          {/* List of doctors */}
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-2.5 py-3 pr-1">
+            {filteredModalDoctors.length > 0 ? (
+              filteredModalDoctors.map((doc) => (
+                <div
+                  key={doc.value}
+                  className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-[#f8fafc] border border-slate-100 hover:border-sky-200 hover:bg-white transition-all"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <DoctorAvatarCircle
+                      src={doc.value === "chloe-menon" ? undefined : doc.avatar}
+                      name={doc.doctor}
+                      initials={doc.initials}
+                      className="h-11 w-11 shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight truncate">
+                          {doc.doctor}
+                        </h4>
+                        {doc.rating && (
+                          <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.2 rounded-md">
+                            ★ {doc.rating}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        {doc.specialty} • <span className="text-slate-400">{doc.experience || "Specialist"}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">{doc.hospital || "Synapse Center"}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAllDoctorsModalOpen(false);
+                      setSelectedDoctor(doc.value);
+                      setScheduleOpen(true);
+                    }}
+                    className="shrink-0 h-8.5 px-3.5 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-semibold text-xs flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+                  >
+                    <span>Book</span>
+                    <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 text-center py-6">No specialists found matching your search.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* RESCHEDULE MODAL */}
       <Dialog open={rescheduleOpen} onOpenChange={handleRescheduleOpenChange}>
-        <DialogContent className="sm:max-w-[540px] p-6 sm:p-7 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="space-y-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 shadow-sm">
-                <Clock className="h-6 w-6 stroke-[2.2]" />
+        <DialogContent className="sm:max-w-[520px] p-5 sm:p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 shadow-sm">
+                <Clock className="h-5 w-5 stroke-[2.2]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                  <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-['Manrope']">
                     Reschedule Appointment
                   </DialogTitle>
-                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-800 uppercase tracking-wider">
                     Adjustment
                   </span>
                 </div>
@@ -896,16 +1239,16 @@ export default function Appointments() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-5 pt-2">
+          <div className="space-y-4 pt-1">
             {/* Current Appointment Preview */}
             {selectedAppointment && (
-              <div className="rounded-2xl border border-slate-100 bg-[#f8fafc] p-3.5 flex items-center gap-3">
+              <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5 flex items-center gap-2.5">
                 <DoctorAvatarCircle
                   name={selectedAppointment.doctor}
-                  className="h-10 w-10 shrink-0"
+                  className="h-9 w-9 shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{selectedAppointment.doctor}</h4>
+                  <h4 className="text-xs font-bold text-slate-900 truncate">{selectedAppointment.doctor}</h4>
                   <p className="text-[11px] text-slate-500 truncate">
                     Currently: {formatDisplayDate(selectedAppointment.date)} at {selectedAppointment.time}
                   </p>
@@ -914,10 +1257,10 @@ export default function Appointments() {
             )}
 
             {/* New Date */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="reschedule-date" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-[#00a8ff]" />
+                  <Calendar className="h-3.5 w-3.5 text-[#0099ff]" />
                   <span>New Date</span>
                 </Label>
                 {rescheduleDate && (
@@ -938,7 +1281,7 @@ export default function Appointments() {
                     key={qd.label}
                     type="button"
                     onClick={() => setRescheduleDate(qd.value)}
-                    className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                    className={`px-2.5 py-0.8 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
                       rescheduleDate === qd.value
                         ? "bg-[#00a8ff] text-white shadow-sm font-bold"
                         : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -955,7 +1298,7 @@ export default function Appointments() {
                   id="reschedule-date"
                   type="date"
                   min={getQuickDateISO(0)}
-                  className="h-12 pl-10 rounded-2xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all font-medium text-xs sm:text-sm"
+                  className="h-10 pl-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all font-medium text-xs"
                   value={rescheduleDate}
                   onChange={(event) => setRescheduleDate(event.target.value)}
                 />
@@ -963,10 +1306,10 @@ export default function Appointments() {
             </div>
 
             {/* New Time */}
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="reschedule-time" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-[#00a8ff]" />
+                  <Clock className="h-3.5 w-3.5 text-[#0099ff]" />
                   <span>New Time</span>
                 </Label>
                 {rescheduleTime && (
@@ -976,7 +1319,7 @@ export default function Appointments() {
                 )}
               </div>
 
-              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
                 {CLINIC_TIME_SLOTS.map((slot) => {
                   const isActive = rescheduleTime === slot.value;
                   return (
@@ -984,7 +1327,7 @@ export default function Appointments() {
                       key={slot.value}
                       type="button"
                       onClick={() => setRescheduleTime(slot.value)}
-                      className={`py-1.5 px-2 rounded-xl text-[11px] font-semibold text-center transition-all cursor-pointer ${
+                      className={`py-1 px-1.5 rounded-lg text-[10px] font-semibold text-center transition-all cursor-pointer ${
                         isActive
                           ? "bg-[#00a8ff] text-white shadow-sm font-bold ring-2 ring-[#00a8ff]/30"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -1001,7 +1344,7 @@ export default function Appointments() {
                 <Input
                   id="reschedule-time"
                   type="time"
-                  className="h-12 pl-10 rounded-2xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all font-medium text-xs sm:text-sm"
+                  className="h-10 pl-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] focus-visible:ring-[2px] focus-visible:ring-[#00a8ff]/20 transition-all font-medium text-xs"
                   value={rescheduleTime}
                   onChange={(event) => setRescheduleTime(event.target.value)}
                 />
@@ -1009,11 +1352,11 @@ export default function Appointments() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-2.5 pt-1">
               <Button
                 type="button"
                 variant="outline"
-                className={`h-11 sm:h-12 px-5 rounded-2xl ${portalSecondaryButtonClass}`}
+                className={`h-10 px-4 rounded-xl ${portalSecondaryButtonClass}`}
                 onClick={() => setRescheduleOpen(false)}
               >
                 Cancel
@@ -1022,11 +1365,11 @@ export default function Appointments() {
                 type="button"
                 onClick={handleConfirmReschedule}
                 disabled={!isRescheduleReady || isSavingReschedule}
-                className="flex-1 h-11 sm:h-12 rounded-2xl bg-[#00a8ff] hover:bg-[#0095e6] active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,168,255,0.28)] hover:shadow-[0_6px_22px_rgba(0,168,255,0.38)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex-1 h-10 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,168,255,0.28)] hover:shadow-[0_6px_22px_rgba(0,168,255,0.38)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSavingReschedule ? (
                   <>
-                    <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
                     <span>Updating Visit...</span>
                   </>
                 ) : (
@@ -1041,19 +1384,20 @@ export default function Appointments() {
         </DialogContent>
       </Dialog>
 
+      {/* NOTES MODAL */}
       <Dialog open={notesOpen} onOpenChange={setNotesOpen}>
-        <DialogContent className="sm:max-w-[540px] p-6 sm:p-7 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="space-y-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-[#0099ff] border border-sky-100 shadow-sm">
-                <FileText className="h-6 w-6 stroke-[2.2]" />
+        <DialogContent className="sm:max-w-[500px] p-5 sm:p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-[#0099ff] border border-sky-100 shadow-sm">
+                <FileText className="h-5 w-5 stroke-[2.2]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                  <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-['Manrope']">
                     Appointment Notes
                   </DialogTitle>
-                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800 uppercase tracking-wider">
+                  <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-800 uppercase tracking-wider">
                     Completed Visit
                   </span>
                 </div>
@@ -1064,52 +1408,52 @@ export default function Appointments() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 pt-2">
-            <div className="flex items-center gap-3.5 p-3.5 rounded-2xl border border-slate-100 bg-[#f8fafc]">
+          <div className="space-y-3 pt-1">
+            <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-[#f8fafc]">
               <DoctorAvatarCircle
                 name={selectedAppointment?.doctor || "Doctor"}
-                className="h-11 w-11 shrink-0"
+                className="h-10 w-10 shrink-0"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Consulting Specialist</p>
-                <p className="text-sm font-bold text-slate-900 leading-tight">{selectedAppointment?.doctor ?? "—"}</p>
+                <p className="text-[9px] uppercase tracking-wider font-bold text-slate-400">Consulting Specialist</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">{selectedAppointment?.doctor ?? "—"}</p>
                 <p className="text-[11px] text-slate-500">{selectedAppointment?.specialty ?? "Clinical Consultation"}</p>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-100 bg-[#f8fafc] p-3.5">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
-                  <Calendar className="h-3 w-3 text-[#00a8ff]" />
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5">
+                <p className="text-[9px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
+                  <Calendar className="h-3 w-3 text-[#0099ff]" />
                   <span>Visit Date</span>
                 </p>
-                <p className="mt-1 text-xs sm:text-sm font-bold text-slate-900">
+                <p className="mt-0.5 text-xs font-bold text-slate-900">
                   {selectedAppointment ? formatDisplayDate(selectedAppointment.date) : "—"}
                 </p>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-[#f8fafc] p-3.5">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-[#00a8ff]" />
+              <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5">
+                <p className="text-[9px] uppercase tracking-wider font-bold text-slate-400 flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-[#0099ff]" />
                   <span>Time</span>
                 </p>
-                <p className="mt-1 text-xs sm:text-sm font-bold text-slate-900">{selectedAppointment?.time ?? "—"}</p>
+                <p className="mt-0.5 text-xs font-bold text-slate-900">{selectedAppointment?.time ?? "—"}</p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <div className="mb-2 flex items-center gap-2 text-slate-900">
-                <FileText className="h-4 w-4 text-[#00a8ff]" />
-                <p className="text-xs sm:text-sm font-bold">Clinical Notes & Recommendations</p>
+            <div className="rounded-xl border border-slate-100 bg-white p-3 shadow-sm">
+              <div className="mb-1.5 flex items-center gap-1.5 text-slate-900">
+                <FileText className="h-3.5 w-3.5 text-[#0099ff]" />
+                <p className="text-xs font-bold">Clinical Notes & Recommendations</p>
               </div>
               <p className="text-xs leading-relaxed text-slate-600">
                 {selectedAppointment?.notes ?? "Clinical notes will appear here after each completed visit."}
               </p>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-1 flex justify-end">
               <Button
                 type="button"
-                className="h-11 px-6 rounded-2xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-bold text-xs sm:text-sm shadow-sm cursor-pointer"
+                className="h-9 px-5 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-bold text-xs shadow-sm cursor-pointer"
                 onClick={() => setNotesOpen(false)}
               >
                 Done
@@ -1119,19 +1463,20 @@ export default function Appointments() {
         </DialogContent>
       </Dialog>
 
+      {/* CANCEL MODAL */}
       <Dialog open={cancelOpen} onOpenChange={handleCancelOpenChange}>
-        <DialogContent className="sm:max-w-[500px] p-6 sm:p-7 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="space-y-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-3.5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 shadow-sm">
-                <AlertTriangle className="h-6 w-6 stroke-[2.2]" />
+        <DialogContent className="sm:max-w-[480px] p-5 sm:p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-2 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 shadow-sm">
+                <AlertTriangle className="h-5 w-5 stroke-[2.2]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <DialogTitle className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                  <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-['Manrope']">
                     Cancel Appointment
                   </DialogTitle>
-                  <span className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-[10px] font-bold text-rose-700 uppercase tracking-wider">
+                  <span className="rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[9px] font-bold text-rose-700 uppercase tracking-wider">
                     Cancellation
                   </span>
                 </div>
@@ -1142,15 +1487,15 @@ export default function Appointments() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 pt-2">
+          <div className="space-y-3 pt-1">
             {appointmentToCancel && (
-              <div className="rounded-2xl border border-rose-100 bg-rose-50/40 p-3.5 flex items-center gap-3">
+              <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-2.5 flex items-center gap-2.5">
                 <DoctorAvatarCircle
                   name={appointmentToCancel.doctor}
-                  className="h-10 w-10 shrink-0"
+                  className="h-9 w-9 shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{appointmentToCancel.doctor}</h4>
+                  <h4 className="text-xs font-bold text-slate-900 truncate">{appointmentToCancel.doctor}</h4>
                   <p className="text-[11px] text-slate-600 truncate mt-0.5">
                     {formatDisplayDate(appointmentToCancel.date)} at {appointmentToCancel.time}
                   </p>
@@ -1158,7 +1503,7 @@ export default function Appointments() {
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="cancel-reason" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 Reason for cancellation (optional)
               </Label>
@@ -1176,17 +1521,17 @@ export default function Appointments() {
               </Select>
             </div>
 
-            <div className="flex items-center justify-end gap-3 pt-3">
+            <div className="flex items-center justify-end gap-2.5 pt-2">
               <Button
                 variant="outline"
-                className={`h-11 rounded-2xl ${portalSecondaryButtonClass}`}
+                className={`h-10 rounded-xl ${portalSecondaryButtonClass}`}
                 onClick={() => setCancelOpen(false)}
                 disabled={isCancelling}
               >
                 Keep Appointment
               </Button>
               <Button
-                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm h-11 px-5 rounded-2xl shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs h-10 px-4 rounded-xl shadow-sm transition-all cursor-pointer disabled:opacity-50"
                 onClick={handleConfirmCancel}
                 disabled={isCancelling}
               >
@@ -1196,239 +1541,6 @@ export default function Appointments() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* 1. CONSULTING DOCTORS SECTION */}
-      <section className="mb-8 rounded-[32px] bg-[#f8fafd]/90 sm:bg-white/80 backdrop-blur-md border border-white/90 p-5 sm:p-6 shadow-[0_10px_35px_rgba(40,110,190,0.06)] space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 font-['Manrope'] tracking-tight">
-              Consulting Doctor
-            </h2>
-            <span className="inline-flex items-center rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-[#0284c7]">
-              Linked Team
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowAllDoctors(!showAllDoctors)}
-            className="text-sm font-bold text-[#0099ff] hover:text-sky-600 transition-colors cursor-pointer"
-          >
-            {showAllDoctors ? "Show less" : "See all"}
-          </button>
-        </div>
-
-        <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-          {(showAllDoctors ? doctorOptions : doctorOptions.slice(0, 3)).map((doctor, idx) => (
-            <DoctorCardBlock
-              key={doctor.value}
-              doctor={doctor}
-              isPrimary={idx === 0 && !showAllDoctors ? true : doctor.value === "amelia-hart"}
-              onBook={(docValue) => {
-                setSelectedDoctor(docValue);
-                setScheduleOpen(true);
-              }}
-            />
-          ))}
-        </div>
-      </section>
-
-      {/* Side-by-Side Tab Buttons: Upcoming vs Past */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <button
-          type="button"
-          onClick={() => setActiveTab("upcoming")}
-          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeTab === "upcoming"
-              ? "bg-lime-500 text-slate-950 shadow-sm"
-              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-          }`}
-        >
-          <Calendar className="h-4 w-4" />
-          <span>Upcoming Visits</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === "upcoming" ? "bg-slate-950/15 text-slate-950" : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {upcomingAppointments.length}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("past")}
-          className={`flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-            activeTab === "past"
-              ? "bg-lime-500 text-slate-950 shadow-sm"
-              : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-          }`}
-        >
-          <Clock className="h-4 w-4" />
-          <span>Past Visits</span>
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-              activeTab === "past" ? "bg-slate-950/15 text-slate-950" : "bg-slate-100 text-slate-600"
-            }`}
-          >
-            {pastAppointments.length}
-          </span>
-        </button>
-      </div>
-
-      {/* Tab View Display */}
-      {activeTab === "upcoming" && (
-        <section className="space-y-4 max-w-5xl">
-          <div className="space-y-4">
-            {upcomingAppointments.length > 0 ? (
-              upcomingAppointments.map((appointment) => {
-                const matchedDoctor = doctorOptions.find(
-                  (d) =>
-                    d.doctor.toLowerCase() === appointment.doctor.toLowerCase() ||
-                    appointment.doctor.toLowerCase().includes(d.doctor.toLowerCase())
-                );
-                return (
-                  <article
-                    key={appointment.id}
-                    className="rounded-[24px] border border-slate-100 bg-white p-5 sm:p-6 text-slate-800 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
-                  >
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex items-start gap-4">
-                        <DoctorAvatarCircle
-                          src={matchedDoctor?.avatar}
-                          name={appointment.doctor}
-                          initials={matchedDoctor?.initials}
-                          className="h-13 w-13 sm:h-14 sm:w-14"
-                        />
-                        <div>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-lg sm:text-xl font-bold text-slate-900 font-['Manrope']">{appointment.doctor}</h3>
-                            <StatusPill status={appointment.status} />
-                          </div>
-                          <p className="mt-0.5 text-xs text-slate-500 font-medium">{appointment.specialty}</p>
-                        </div>
-                      </div>
-                      <div className={portalMutedPanelClass}>
-                        <div className="grid gap-3 px-4 py-3 text-xs font-semibold text-slate-700 sm:grid-cols-3">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-lime-600" />
-                            <span>{formatDisplayDate(appointment.date)}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Clock className="h-4 w-4 text-lime-600" />
-                            <span>{appointment.time}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-sky-600" />
-                            <span>{appointment.location || "Clinic Center"}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-5 flex flex-wrap items-center gap-3">
-                      <Button
-                        type="button"
-                        className="h-10 px-4 rounded-2xl bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_4px_14px_rgba(0,153,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,153,255,0.35)] transition-all cursor-pointer active:scale-[0.98]"
-                        onClick={() =>
-                          navigate(
-                            `/patient/teleconsult?id=apt-${appointment.id}&doctor=${encodeURIComponent(
-                              appointment.doctor
-                            )}&specialty=${encodeURIComponent(appointment.specialty)}`
-                          )
-                        }
-                      >
-                        <Video className="h-4 w-4" />
-                        <span>Join Live Video Call</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className={`active:scale-[0.98] rounded-2xl text-xs ${portalSecondaryButtonClass}`}
-                        onClick={() => handleReschedule(appointment)}
-                      >
-                        Reschedule
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 text-xs font-semibold rounded-2xl h-10 px-4 transition-all cursor-pointer shadow-sm active:scale-[0.98]"
-                        onClick={() => handleCancelClick(appointment)}
-                      >
-                        <XCircle className="mr-1.5 h-4 w-4 text-rose-500" />
-                        Cancel Appointment
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })
-            ) : (
-              <div className={`${portalPanelClass} p-8 text-center text-xs text-slate-400`}>
-                No upcoming visits scheduled. Click &quot;Schedule Appointment&quot; above to book your next visit.
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-
-      {activeTab === "past" && (
-        <section className="space-y-4 max-w-5xl">
-          <div className="space-y-4">
-            {pastAppointments.length > 0 ? (
-              pastAppointments.map((appointment) => {
-                const matchedDoctor = doctorOptions.find(
-                  (d) =>
-                    d.doctor.toLowerCase() === appointment.doctor.toLowerCase() ||
-                    appointment.doctor.toLowerCase().includes(d.doctor.toLowerCase())
-                );
-                return (
-                  <article
-                    key={appointment.id}
-                    className="rounded-[24px] border border-slate-100 bg-white p-5 sm:p-6 text-slate-800 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-4">
-                        <DoctorAvatarCircle
-                          src={matchedDoctor?.avatar}
-                          name={appointment.doctor}
-                          initials={matchedDoctor?.initials}
-                          className="h-12 w-12 sm:h-13 sm:w-13"
-                        />
-                        <div>
-                          <h3 className="text-base font-bold text-slate-900 font-['Manrope']">{appointment.doctor}</h3>
-                          <p className="mt-0.5 text-xs text-slate-500">{appointment.specialty}</p>
-                        </div>
-                      </div>
-                      <StatusPill status={appointment.status} />
-                    </div>
-                    <div className="mt-4 grid gap-3 text-xs font-semibold text-slate-700 sm:grid-cols-3">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-lime-600" />
-                        <span>{formatDisplayDate(appointment.date)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-lime-600" />
-                        <span>{appointment.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-sky-600" />
-                        <span>{appointment.location || "In-Person"}</span>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      className={`mt-5 active:scale-[0.98] rounded-2xl text-xs ${portalSecondaryButtonClass}`}
-                      onClick={() => handleViewNotes(appointment)}
-                    >
-                      View Notes
-                    </Button>
-                  </article>
-                );
-              })
-            ) : (
-              <div className={`${portalPanelClass} p-8 text-center text-xs text-slate-400`}>
-                No past visits on record.
-              </div>
-            )}
-          </div>
-        </section>
-      )}
-    </PatientPortalPage>
+    </div>
   );
 }

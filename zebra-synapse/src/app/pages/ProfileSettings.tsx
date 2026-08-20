@@ -3,39 +3,33 @@ import { useAuth } from "../../auth/AuthContext";
 import { getSupabase } from "../../lib/supabase";
 import { calculateBmi, getBmiCategory } from "../../lib/careRelationships";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import {
   Copy,
   Check,
   ShieldCheck,
   UserCircle2,
-  KeyRound,
   Sparkles,
   Ruler,
   Scale,
   Activity,
   HeartPulse,
-  Info,
   Utensils,
   Leaf,
   Flame,
-  ShieldAlert,
   Apple,
-  Timer,
+  Save,
+  User,
+  Shield,
+  Clock,
+  Info,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  PatientPortalPage,
-  portalInputClass,
-  portalPanelClass,
-  portalPrimaryButtonClass,
-  portalSecondaryButtonClass,
-} from "../components/patient/PortalTheme";
 
 type UnitSystem = "metric" | "imperial";
+type SettingsTab = "identity" | "vitals" | "diet";
 
 const DIET_TYPES = [
   { id: "omnivore", label: "Non-Vegetarian (Omnivore)", desc: "Meat, poultry, seafood, dairy & plants" },
@@ -52,8 +46,7 @@ const DIET_TYPES = [
 const FOOD_ALLERGIES = [
   { id: "lactose", label: "Lactose Intolerant", badge: "Dairy Free" },
   { id: "gluten", label: "Gluten / Celiac", badge: "Gluten Free" },
-  { id: "peanuts", label: "Peanuts", badge: "Nut Free" },
-  { id: "tree_nuts", label: "Tree Nuts (Almonds/Walnuts)", badge: "Nut Free" },
+  { id: "peanuts", label: "Peanuts & Tree Nuts", badge: "Nut Free" },
   { id: "shellfish", label: "Shellfish & Crustaceans", badge: "Allergen" },
   { id: "soy", label: "Soy & Soybeans", badge: "Soy Free" },
   { id: "eggs", label: "Eggs", badge: "Egg Free" },
@@ -62,16 +55,17 @@ const FOOD_ALLERGIES = [
 
 const DIETARY_CONDITIONS = [
   { id: "gerd", label: "GERD / Acid Reflux", desc: "Avoid high-acid, citrus, fried, caffeine & late dinners" },
-  { id: "ibs", label: "IBS (Irritable Bowel)", desc: "Low-FODMAP and soothing, gentle digestive nutrition" },
-  { id: "gastritis", label: "Gastritis / Peptic Ulcer", desc: "Non-irritating, low-spice, stomach-friendly meals" },
+  { id: "ibs", label: "IBS (Low FODMAP)", desc: "Gentle, soothing digestive nutrition" },
   { id: "diabetes", label: "Diabetes / Low Glycemic", desc: "Complex carbs, high fiber, steady glycemic response" },
   { id: "hypertension", label: "Hypertension / Low Sodium", desc: "DASH diet principles, strictly < 2,000mg sodium daily" },
-  { id: "gout", label: "Gout / Low Purine", desc: "Limit red meat, organ meats, shellfish, alcohol" },
   { id: "kidney_disease", label: "Renal / Kidney Support", desc: "Monitored potassium, phosphorus & balanced protein" },
+  { id: "gout", label: "Gout / Low Purine", desc: "Limit red meat, organ meats, shellfish, alcohol" },
 ];
 
 export default function ProfileSettings() {
   const { user, profile, refreshProfile, updateProfile } = useAuth();
+  const [activeTab, setActiveTab] = useState<SettingsTab>("identity");
+
   const [fullName, setFullName] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
   const [unitSystem, setUnitSystem] = useState<UnitSystem>("metric");
@@ -80,12 +74,12 @@ export default function ProfileSettings() {
   const [heightCm, setHeightCm] = useState<string>("");
   const [weightKg, setWeightKg] = useState<string>("");
 
-  // Imperial states (for UI display and editing in imperial mode)
+  // Imperial states
   const [heightFt, setHeightFt] = useState<string>("");
   const [heightIn, setHeightIn] = useState<string>("");
   const [weightLbs, setWeightLbs] = useState<string>("");
 
-  // Demographics state (Age, Gender, Blood Type)
+  // Demographics state
   const [age, setAge] = useState<string>("");
   const [gender, setGender] = useState<string>("");
   const [bloodType, setBloodType] = useState<string>("");
@@ -96,7 +90,7 @@ export default function ProfileSettings() {
   const [dietaryConditions, setDietaryConditions] = useState<string[]>([]);
   const [dietaryNotes, setDietaryNotes] = useState<string>("");
 
-  // Diet & Metabolic Goals states (persisted in localStorage + sync with Diet mini-app)
+  // Diet & Metabolic Goals states
   const dietStorageKey = `zebra_diet_settings_${user?.id || "default"}`;
   const [activityLevel, setActivityLevel] = useState<string>(() => {
     try {
@@ -122,27 +116,10 @@ export default function ProfileSettings() {
       return "";
     }
   });
-  const [weeklyPaceKg, setWeeklyPaceKg] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem(`zebra_diet_settings_${user?.id || "default"}`);
-      return saved ? String(JSON.parse(saved).weeklyPaceKg ?? "0") : "0";
-    } catch {
-      return "0";
-    }
-  });
-  const [dailyWaterTargetMl, setDailyWaterTargetMl] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem(`zebra_diet_settings_${user?.id || "default"}`);
-      return saved ? String(JSON.parse(saved).dailyWaterTargetMl || "2500") : "2500";
-    } catch {
-      return "2500";
-    }
-  });
 
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // Initialize values when profile loads
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name ?? "");
@@ -203,7 +180,6 @@ export default function ProfileSettings() {
     );
   };
 
-  // Handle Height changes in Metric
   const handleHeightCmChange = (val: string) => {
     setHeightCm(val);
     const num = parseFloat(val);
@@ -219,7 +195,6 @@ export default function ProfileSettings() {
     }
   };
 
-  // Handle Height changes in Imperial
   const handleHeightImperialChange = (ftVal: string, inVal: string) => {
     setHeightFt(ftVal);
     setHeightIn(inVal);
@@ -234,7 +209,6 @@ export default function ProfileSettings() {
     }
   };
 
-  // Handle Weight changes in Metric
   const handleWeightKgChange = (val: string) => {
     setWeightKg(val);
     const num = parseFloat(val);
@@ -246,7 +220,6 @@ export default function ProfileSettings() {
     }
   };
 
-  // Handle Weight changes in Imperial
   const handleWeightLbsChange = (val: string) => {
     setWeightLbs(val);
     const num = parseFloat(val);
@@ -258,7 +231,6 @@ export default function ProfileSettings() {
     }
   };
 
-  // Computed BMI values
   const currentHeightNum = parseFloat(heightCm);
   const currentWeightNum = parseFloat(weightKg);
 
@@ -270,7 +242,6 @@ export default function ProfileSettings() {
     return getBmiCategory(liveBmi);
   }, [liveBmi]);
 
-  // Healthy weight range for current height
   const healthyWeightRange = useMemo(() => {
     if (!currentHeightNum || currentHeightNum <= 0) return null;
     const heightM = currentHeightNum / 100;
@@ -290,15 +261,15 @@ export default function ProfileSettings() {
     try {
       await navigator.clipboard.writeText(id);
       setCopied(true);
-      toast.success("Profile ID copied");
+      toast.success("Clinical ID copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Could not copy to clipboard");
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!user || !profile) {
       toast.error("Not signed in");
       return;
@@ -323,7 +294,6 @@ export default function ProfileSettings() {
       patch.dietary_conditions = dietaryConditions;
       patch.dietary_notes = dietaryNotes.trim() || null;
 
-      // Save profile backup to localStorage directly
       try {
         const rawExisting = localStorage.getItem(`zebra_profile_${user.id}`);
         const parsedExisting = rawExisting ? JSON.parse(rawExisting) : {};
@@ -339,7 +309,6 @@ export default function ProfileSettings() {
         console.warn("[settings] local profile backup error:", e);
       }
 
-      // Save diet & metabolic settings to localStorage
       try {
         const existing = localStorage.getItem(dietStorageKey);
         const parsed = existing ? JSON.parse(existing) : {};
@@ -350,8 +319,6 @@ export default function ProfileSettings() {
             activityLevel,
             goal: dietGoal,
             targetWeightKg: parseFloat(targetWeightKg) || (parsedW > 0 ? parsedW : 70),
-            weeklyPaceKg: parseFloat(weeklyPaceKg) || 0,
-            dailyWaterTargetMl: parseInt(dailyWaterTargetMl, 10) || 2500,
             dietaryPreference,
             foodAllergies,
             dietaryConditions,
@@ -370,671 +337,542 @@ export default function ProfileSettings() {
       toast.error(error.message);
       return;
     }
-    toast.success("Profile updated successfully");
+    toast.success("All settings saved successfully!");
   };
 
   if (!profile || !user) {
     return (
-      <PatientPortalPage>
-        <p className="text-sm text-[#A1A1AA]">Loading...</p>
-      </PatientPortalPage>
+      <div className="h-full flex items-center justify-center p-6 bg-[#f6f8f5]">
+        <p className="text-sm text-[#A1A1AA]">Loading settings...</p>
+      </div>
     );
   }
 
   return (
-    <PatientPortalPage>
-      {/* Sleek Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
-            <UserCircle2 className="h-6 w-6" />
+    <div className="h-full flex flex-col p-3 sm:p-4 lg:p-5 max-w-[1600px] mx-auto overflow-hidden bg-[#f6f8f5]">
+      {/* 1. TOP HEADER BAR */}
+      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-slate-200/80 mb-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
+            <UserCircle2 className="h-5 w-5 sm:h-6 sm:w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Account Settings</h1>
-              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                Account Settings
+              </h1>
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
                 {profile.role}
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
+            <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1">
               {profile.role === "patient"
-                ? "Manage your personal credentials, height, weight, and clinical connection ID."
-                : "Manage your display name, physician credentials, and portal identity preferences."}
+                ? "Manage personal identity, physical vitals, BMI tracking, and nutrition preferences."
+                : "Manage clinical credentials, display name, and portal preferences."}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-slate-700 font-medium shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            Connected
-          </span>
+        <div className="flex items-center gap-2.5">
+          <Button
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="h-9 sm:h-10 px-5 rounded-xl sm:rounded-2xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-bold text-xs sm:text-sm flex items-center gap-1.5 shadow-[0_4px_14px_rgba(0,168,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,168,255,0.35)] transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50"
+          >
+            {saving ? (
+              <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
+            <span>{saving ? "Saving..." : "Save Settings"}</span>
+          </Button>
+        </div>
+      </header>
+
+      {/* 2. TOP SEGMENTED NAVIGATION TABS (MATCHING APPOINTMENTS BLUE) */}
+      <div className="mb-3.5 shrink-0">
+        <div className="inline-flex items-center gap-1 p-1 bg-slate-200/60 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => setActiveTab("identity")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              activeTab === "identity"
+                ? "bg-[#00a8ff] text-white shadow-sm shadow-[#00a8ff]/25"
+                : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+            }`}
+          >
+            <User className="h-3.5 w-3.5" />
+            <span>Profile & Identity</span>
+          </button>
+
+          {profile.role === "patient" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveTab("vitals")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === "vitals"
+                    ? "bg-[#00a8ff] text-white shadow-sm shadow-[#00a8ff]/25"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                }`}
+              >
+                <HeartPulse className="h-3.5 w-3.5" />
+                <span>Body Metrics & Vitals</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("diet")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === "diet"
+                    ? "bg-[#00a8ff] text-white shadow-sm shadow-[#00a8ff]/25"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-white/50"
+                }`}
+              >
+                <Utensils className="h-3.5 w-3.5" />
+                <span>Diet & Health Preferences</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Vertical Stacked Cards Layout */}
-      <div className="space-y-6 max-w-4xl">
-        {/* Main Settings Form */}
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6">
-          {/* Profile Identity Card */}
-          <Card className={`${portalPanelClass} p-2`}>
-            <CardHeader>
-              <div className="flex items-center gap-2.5">
-                <Sparkles className="h-4.5 w-4.5 text-lime-600" />
-                <CardTitle className="text-base font-bold text-slate-900">Profile Information</CardTitle>
-              </div>
-              <CardDescription className="text-xs text-slate-500">
-                Update your display name and credentials used across the clinical portal.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="full_name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Display Name
-                </Label>
-                <Input
-                  id="full_name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Your full name"
-                  autoComplete="name"
-                  className={portalInputClass}
-                />
+      {/* 3. ACTIVE TAB CONTENT AREA */}
+      <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
+        {/* TAB 1: PROFILE & IDENTITY */}
+        {activeTab === "identity" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            {/* Left Column: Form Details */}
+            <div className="lg:col-span-7 rounded-[26px] bg-white border border-slate-100 p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Sparkles className="h-4.5 w-4.5 text-[#0099ff]" />
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 font-['Manrope']">Personal Identification</h2>
+                  <p className="text-xs text-slate-500">Your registered credentials used across Zebra Synapse.</p>
+                </div>
               </div>
 
-              {profile.role === "doctor" ? (
+              <div className="space-y-3.5 max-w-lg">
                 <div className="space-y-1.5">
-                  <Label htmlFor="license" className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Medical License Number
+                  <Label htmlFor="full_name" className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Full Legal / Display Name
                   </Label>
                   <Input
-                    id="license"
-                    value={licenseNumber}
-                    onChange={(e) => setLicenseNumber(e.target.value)}
-                    placeholder="License number"
-                    className={portalInputClass}
+                    id="full_name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Your full name"
+                    className="h-11 rounded-2xl border-slate-200 text-xs sm:text-sm bg-slate-50/50 focus-visible:ring-[#00a8ff]"
                   />
                 </div>
-              ) : null}
-            </CardContent>
-          </Card>
 
-          {/* Patient Physical Vitals & BMI Card (Shown for Patients only) */}
-          {profile.role === "patient" && (
-            <Card className={`${portalPanelClass} p-2`}>
-              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2.5">
-                    <HeartPulse className="h-4.5 w-4.5 text-lime-600" />
-                    <CardTitle className="text-base font-bold text-slate-900">Height & Weight Settings</CardTitle>
+                {profile.role === "doctor" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="license" className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                      Physician License Number
+                    </Label>
+                    <Input
+                      id="license"
+                      value={licenseNumber}
+                      onChange={(e) => setLicenseNumber(e.target.value)}
+                      placeholder="e.g. MD-948201-CAL"
+                      className="h-11 rounded-2xl border-slate-200 text-xs sm:text-sm bg-slate-50/50 focus-visible:ring-[#00a8ff]"
+                    />
                   </div>
-                  <CardDescription className="text-xs text-slate-500 mt-0.5">
-                    Keep your body metrics up to date for precise clinical risk tracking and personalized insights.
-                  </CardDescription>
+                )}
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Clinical Linkage & Teleconsultation ID
+                  </Label>
+                  <div className="flex items-center justify-between rounded-2xl bg-slate-50 border border-slate-200/80 p-3 text-xs">
+                    <div className="truncate pr-2">
+                      <p className="text-[10px] font-mono uppercase text-slate-400 font-bold">Secure ID</p>
+                      <p className="font-mono text-slate-900 text-xs sm:text-sm font-semibold truncate">{user?.id}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={copyId}
+                      className="h-8 px-3 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold shrink-0"
+                    >
+                      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600 mr-1" /> : <Copy className="h-3.5 w-3.5 mr-1" />}
+                      <span>{copied ? "Copied" : "Copy ID"}</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Security & Role Summary */}
+            <div className="lg:col-span-5 flex flex-col gap-3">
+              <div className="rounded-[26px] bg-white border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-3">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                  <ShieldCheck className="h-4.5 w-4.5 text-[#0099ff]" />
+                  <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">Account & Security Status</h3>
+                </div>
+                <div className="space-y-2 text-xs text-slate-600">
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="font-bold text-slate-700">Account Type</span>
+                    <span className="capitalize font-bold text-[#0284c7] bg-sky-100 px-2 py-0.5 rounded-md">
+                      {profile.role}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="font-bold text-slate-700">Data Encryption</span>
+                    <span className="font-bold text-emerald-700 flex items-center gap-1">
+                      <Check className="h-3 w-3" /> AES-256 GCM
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: BODY METRICS & VITALS */}
+        {activeTab === "vitals" && profile.role === "patient" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            {/* Left Column: Demographics & Inputs */}
+            <div className="lg:col-span-7 rounded-[26px] bg-white border border-slate-100 p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <HeartPulse className="h-4.5 w-4.5 text-[#0099ff]" />
+                  <div>
+                    <h2 className="text-base font-bold text-slate-900 font-['Manrope']">Demographics & Physical Metrics</h2>
+                    <p className="text-xs text-slate-500">Essential measurements for personalized lab insights.</p>
+                  </div>
                 </div>
 
-                {/* Unit Switcher Button Group */}
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 shrink-0 self-start sm:self-auto">
+                {/* Unit Switcher */}
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs shrink-0">
                   <button
                     type="button"
                     onClick={() => setUnitSystem("metric")}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                      unitSystem === "metric"
-                        ? "bg-white text-lime-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-900"
+                    className={`px-2.5 py-1 font-bold rounded-lg transition-all ${
+                      unitSystem === "metric" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500"
                     }`}
                   >
-                    Metric (cm / kg)
+                    Metric (cm/kg)
                   </button>
                   <button
                     type="button"
                     onClick={() => setUnitSystem("imperial")}
-                    className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                      unitSystem === "imperial"
-                        ? "bg-white text-lime-900 shadow-sm"
-                        : "text-slate-500 hover:text-slate-900"
+                    className={`px-2.5 py-1 font-bold rounded-lg transition-all ${
+                      unitSystem === "imperial" ? "bg-white text-slate-900 shadow-2xs" : "text-slate-500"
                     }`}
                   >
-                    Imperial (ft-in / lbs)
+                    Imperial (ft/lbs)
                   </button>
                 </div>
-              </CardHeader>
+              </div>
 
-              <CardContent className="space-y-5">
-                {/* Demographics Row: Age, Gender, Blood Group */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 p-3.5 rounded-2xl border border-slate-100 bg-slate-50/70">
-                  {/* Age Field */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="patient_age" className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                      Age
-                    </Label>
+              {/* Demographics row */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Age</Label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      min="1"
+                      max="120"
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      placeholder="28"
+                      className="h-10 rounded-xl border-slate-200 text-xs sm:text-sm bg-slate-50/50 pr-10 focus-visible:ring-[#00a8ff]"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">yrs</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Gender</Label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="w-full h-10 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50/50 px-2.5 text-slate-800 focus:ring-[#00a8ff]"
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                    <option value="Non-binary">Non-binary</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-bold text-slate-600 uppercase tracking-wider">Blood Group</Label>
+                  <select
+                    value={bloodType}
+                    onChange={(e) => setBloodType(e.target.value)}
+                    className="w-full h-10 rounded-xl border border-slate-200 text-xs sm:text-sm bg-slate-50/50 px-2.5 text-slate-800 focus:ring-[#00a8ff]"
+                  >
+                    <option value="">Select Blood Group</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Height & Weight Inputs */}
+              <div className="grid grid-cols-2 gap-3.5 pt-1">
+                <div className="rounded-2xl border border-slate-100 bg-[#f8fafc] p-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <Ruler className="h-4 w-4 text-[#0099ff]" /> Height
+                    </span>
+                    <span className="text-slate-400">{unitSystem === "metric" ? "Centimeters" : "Feet & Inches"}</span>
+                  </div>
+
+                  {unitSystem === "metric" ? (
                     <div className="relative">
                       <Input
-                        id="patient_age"
                         type="number"
-                        min="1"
-                        max="120"
-                        value={age}
-                        onChange={(e) => setAge(e.target.value)}
-                        placeholder="e.g. 28"
-                        className={`${portalInputClass} pr-12`}
+                        step="0.1"
+                        value={heightCm}
+                        onChange={(e) => handleHeightCmChange(e.target.value)}
+                        placeholder="175"
+                        className="h-10 rounded-xl border-slate-200 text-xs sm:text-sm bg-white pr-10 focus-visible:ring-[#00a8ff]"
                       />
-                      <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
-                        yrs
-                      </span>
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">cm</span>
                     </div>
-                  </div>
-
-                  {/* Gender Select */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="patient_gender" className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                      Gender
-                    </Label>
-                    <select
-                      id="patient_gender"
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                      className={`${portalInputClass} bg-white cursor-pointer`}
-                    >
-                      <option value="">-- Select Gender --</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Non-binary">Non-binary</option>
-                      <option value="Prefer not to say">Prefer not to say</option>
-                    </select>
-                  </div>
-
-                  {/* Blood Type Select */}
-                  <div className="space-y-1.5">
-                    <Label htmlFor="patient_blood" className="text-xs font-semibold uppercase tracking-wider text-slate-700">
-                      Blood Group
-                    </Label>
-                    <select
-                      id="patient_blood"
-                      value={bloodType}
-                      onChange={(e) => setBloodType(e.target.value)}
-                      className={`${portalInputClass} bg-white cursor-pointer`}
-                    >
-                      <option value="">-- Select Blood Group --</option>
-                      <option value="A+">A+</option>
-                      <option value="A-">A-</option>
-                      <option value="B+">B+</option>
-                      <option value="B-">B-</option>
-                      <option value="AB+">AB+</option>
-                      <option value="AB-">AB-</option>
-                      <option value="O+">O+</option>
-                      <option value="O-">O-</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Inputs Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Height Field */}
-                  <div className="space-y-1.5 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                        <Ruler className="h-3.5 w-3.5 text-sky-600" />
-                        Height
-                      </Label>
-                      <span className="text-[11px] text-slate-400">
-                        {unitSystem === "metric" ? "Centimeters" : "Feet & Inches"}
-                      </span>
-                    </div>
-
-                    {unitSystem === "metric" ? (
-                      <div className="relative">
-                        <Input
-                          id="height_cm"
-                          type="number"
-                          step="0.1"
-                          min="50"
-                          max="260"
-                          value={heightCm}
-                          onChange={(e) => handleHeightCmChange(e.target.value)}
-                          placeholder="e.g. 175"
-                          className={`${portalInputClass} pr-12`}
-                        />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
-                          cm
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="relative">
-                          <Input
-                            id="height_ft"
-                            type="number"
-                            min="1"
-                            max="8"
-                            value={heightFt}
-                            onChange={(e) => handleHeightImperialChange(e.target.value, heightIn)}
-                            placeholder="5"
-                            className={`${portalInputClass} pr-8`}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
-                            ft
-                          </span>
-                        </div>
-                        <div className="relative">
-                          <Input
-                            id="height_in"
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max="11.9"
-                            value={heightIn}
-                            onChange={(e) => handleHeightImperialChange(heightFt, e.target.value)}
-                            placeholder="9"
-                            className={`${portalInputClass} pr-8`}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
-                            in
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Weight Field */}
-                  <div className="space-y-1.5 rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                        <Scale className="h-3.5 w-3.5 text-emerald-600" />
-                        Weight
-                      </Label>
-                      <span className="text-[11px] text-slate-400">
-                        {unitSystem === "metric" ? "Kilograms" : "Pounds"}
-                      </span>
-                    </div>
-
-                    {unitSystem === "metric" ? (
-                      <div className="relative">
-                        <Input
-                          id="weight_kg"
-                          type="number"
-                          step="0.1"
-                          min="20"
-                          max="300"
-                          value={weightKg}
-                          onChange={(e) => handleWeightKgChange(e.target.value)}
-                          placeholder="e.g. 70"
-                          className={`${portalInputClass} pr-12`}
-                        />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
-                          kg
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="relative">
-                        <Input
-                          id="weight_lbs"
-                          type="number"
-                          step="0.1"
-                          min="44"
-                          max="660"
-                          value={weightLbs}
-                          onChange={(e) => handleWeightLbsChange(e.target.value)}
-                          placeholder="e.g. 154"
-                          className={`${portalInputClass} pr-12`}
-                        />
-                        <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-mono text-slate-400">
-                          lbs
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Real-time Calculated BMI Banner */}
-                <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4.5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex items-start sm:items-center gap-3.5">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
-                        <Activity className="h-5 w-5 text-lime-600" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                            Body Mass Index (BMI)
-                          </p>
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${bmiCategory.badgeClass}`}
-                          >
-                            {bmiCategory.label}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          {liveBmi != null
-                            ? `Calculated dynamically from your recorded height & weight.`
-                            : "Enter both height and weight above to calculate your BMI."}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="text-left sm:text-right shrink-0">
-                      <p className="text-2xl font-bold font-mono text-slate-900 tracking-tight">
-                        {liveBmi != null ? liveBmi : "—"}
-                        <span className="text-xs font-normal text-slate-400 ml-1">kg/m²</span>
-                      </p>
-                      {healthyWeightRange && (
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Healthy target:{" "}
-                          <span className="text-slate-800 font-semibold">
-                            {unitSystem === "metric"
-                              ? healthyWeightRange.metric
-                              : healthyWeightRange.imperial}
-                          </span>
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* BMI Spectrum Visual Bar */}
-                  {liveBmi != null && (
-                    <div className="mt-4 pt-3 border-t border-slate-200/80 space-y-1.5">
-                      <div className="flex justify-between text-[10px] font-mono text-slate-400">
-                        <span>Underweight (&lt;18.5)</span>
-                        <span>Normal (18.5–24.9)</span>
-                        <span>Overweight (25–29.9)</span>
-                        <span>Obese (≥30)</span>
-                      </div>
-                      <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden flex">
-                        <div className="h-full bg-amber-400" style={{ width: "25%" }} />
-                        <div className="h-full bg-lime-500" style={{ width: "30%" }} />
-                        <div className="h-full bg-orange-400" style={{ width: "25%" }} />
-                        <div className="h-full bg-rose-500" style={{ width: "20%" }} />
-                      </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        type="number"
+                        value={heightFt}
+                        onChange={(e) => handleHeightImperialChange(e.target.value, heightIn)}
+                        placeholder="5 ft"
+                        className="h-10 rounded-xl border-slate-200 text-xs sm:text-sm bg-white focus-visible:ring-[#00a8ff]"
+                      />
+                      <Input
+                        type="number"
+                        value={heightIn}
+                        onChange={(e) => handleHeightImperialChange(heightFt, e.target.value)}
+                        placeholder="9 in"
+                        className="h-10 rounded-xl border-slate-200 text-xs sm:text-sm bg-white focus-visible:ring-[#00a8ff]"
+                      />
                     </div>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Dietary Preferences & Health Profile Card (Shown for Patients only) */}
-          {profile.role === "patient" && (
-            <Card className={`${portalPanelClass} p-2`}>
-              <CardHeader>
-                <div className="flex items-center gap-2.5">
-                  <Utensils className="h-4.5 w-4.5 text-lime-600" />
-                  <CardTitle className="text-base font-bold text-slate-900">Dietary Preferences & Health Conditions</CardTitle>
-                </div>
-                <CardDescription className="text-xs text-slate-500">
-                  Configure your food choices, intolerances, and gastrointestinal conditions to personalize meal plans and clinical alerts.
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* 1. Primary Diet Type */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                      <Leaf className="w-3.5 h-3.5 text-lime-600" />
-                      Primary Diet Type
-                    </Label>
-                    <span className="text-[11px] text-slate-400 font-medium">Select 1 option</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    {DIET_TYPES.map((dt) => {
-                      const isSelected = dietaryPreference === dt.id;
-                      return (
-                        <button
-                          key={dt.id}
-                          type="button"
-                          onClick={() => setDietaryPreference(dt.id)}
-                          className={`flex flex-col text-left p-3 rounded-2xl border transition-all ${
-                            isSelected
-                              ? "border-lime-400 bg-lime-50 text-lime-950 font-semibold shadow-sm ring-1 ring-lime-400"
-                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-1.5">
-                            <span className={`text-xs font-bold ${isSelected ? "text-lime-900" : "text-slate-900"}`}>
-                              {dt.label}
-                            </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-lime-600 shrink-0" />}
-                          </div>
-                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed line-clamp-2">
-                            {dt.desc}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. Food Intolerances & Allergies */}
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                      <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-                      Food Allergies & Intolerances
-                    </Label>
-                    <span className="text-[11px] text-slate-400 font-medium">
-                      {foodAllergies.length > 0 ? `${foodAllergies.length} selected` : "Select all that apply"}
+                <div className="rounded-2xl border border-slate-100 bg-[#f8fafc] p-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-xs font-bold uppercase text-slate-600">
+                    <span className="flex items-center gap-1.5">
+                      <Scale className="h-4 w-4 text-[#00a8ff]" /> Weight
                     </span>
+                    <span className="text-slate-400">{unitSystem === "metric" ? "Kilograms" : "Pounds"}</span>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {FOOD_ALLERGIES.map((allergy) => {
-                      const isSelected = foodAllergies.includes(allergy.id);
-                      return (
-                        <button
-                          key={allergy.id}
-                          type="button"
-                          onClick={() => toggleAllergy(allergy.id)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium transition-all ${
-                            isSelected
-                              ? "border-amber-400 bg-amber-50 text-amber-900 shadow-sm font-semibold ring-1 ring-amber-400"
-                              : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
-                          }`}
-                        >
-                          <span className={`h-2 w-2 rounded-full ${isSelected ? "bg-amber-500" : "bg-slate-300"}`} />
-                          {allergy.label}
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-md ${isSelected ? "bg-amber-100 text-amber-800 font-bold" : "bg-slate-100 text-slate-500"}`}>
-                            {allergy.badge}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 3. Digestive & Health Conditions */}
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                      <Flame className="w-3.5 h-3.5 text-rose-500" />
-                      Digestive & Dietary Health Conditions
-                    </Label>
-                    <span className="text-[11px] text-slate-400 font-medium">
-                      {dietaryConditions.length > 0 ? `${dietaryConditions.length} selected` : "Select all that apply"}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {DIETARY_CONDITIONS.map((cond) => {
-                      const isSelected = dietaryConditions.includes(cond.id);
-                      return (
-                        <button
-                          key={cond.id}
-                          type="button"
-                          onClick={() => toggleCondition(cond.id)}
-                          className={`flex flex-col text-left p-3 rounded-2xl border transition-all ${
-                            isSelected
-                              ? "border-rose-400 bg-rose-50 text-rose-900 font-semibold shadow-sm ring-1 ring-rose-400"
-                              : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-1.5">
-                            <span className={`text-xs font-bold ${isSelected ? "text-rose-900" : "text-slate-900"}`}>
-                              {cond.label}
-                            </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-rose-600 shrink-0" />}
-                          </div>
-                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
-                            {cond.desc}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 4. Metabolic Goals & Activity Multiplier */}
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                      <Scale className="w-3.5 h-3.5 text-lime-600" />
-                      Metabolic Targets & Caloric Goals
-                    </Label>
-                    <span className="text-[11px] text-lime-700 font-semibold">Syncs with Diet Mini-App</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Primary Health Goal */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-slate-700">Primary Metabolic Goal</Label>
-                      <select
-                        value={dietGoal}
-                        onChange={(e) => setDietGoal(e.target.value)}
-                        className={`${portalInputClass} text-xs bg-white`}
-                      >
-                        <option value="fat_loss">Fat Loss & Caloric Deficit (-0.5 kg/wk)</option>
-                        <option value="maintain_longevity">Maintenance & Metabolic Longevity</option>
-                        <option value="muscle_gain">Lean Muscle Building (+0.25 kg/wk)</option>
-                        <option value="blood_sugar_balance">Blood Sugar & Insulin Regulation</option>
-                        <option value="heart_cardiovascular">Cardiovascular & Lipid Optimization</option>
-                      </select>
-                    </div>
-
-                    {/* Activity Level */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-slate-700">Daily Activity Level</Label>
-                      <select
-                        value={activityLevel}
-                        onChange={(e) => setActivityLevel(e.target.value)}
-                        className={`${portalInputClass} text-xs bg-white`}
-                      >
-                        <option value="sedentary">Sedentary (Desk Job, 1.2x TDEE)</option>
-                        <option value="light">Lightly Active (1-3 days/wk, 1.375x TDEE)</option>
-                        <option value="moderate">Moderately Active (3-5 days/wk, 1.55x TDEE)</option>
-                        <option value="very_active">Very Active (6-7 days/wk, 1.725x TDEE)</option>
-                        <option value="extra_active">Extremely Active (Athletic, 1.9x TDEE)</option>
-                      </select>
-                    </div>
-
-                    {/* Target Weight */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-slate-700">Target Goal Weight (kg)</Label>
+                  {unitSystem === "metric" ? (
+                    <div className="relative">
                       <Input
                         type="number"
-                        step="0.5"
-                        placeholder="e.g. 68"
-                        value={targetWeightKg}
-                        onChange={(e) => setTargetWeightKg(e.target.value)}
-                        className={`${portalInputClass} text-xs`}
+                        step="0.1"
+                        value={weightKg}
+                        onChange={(e) => handleWeightKgChange(e.target.value)}
+                        placeholder="70"
+                        className="h-10 rounded-xl border-slate-200 text-xs sm:text-sm bg-white pr-10 focus-visible:ring-[#00a8ff]"
                       />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">kg</span>
                     </div>
-
-                    {/* Daily Water Target */}
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-medium text-slate-700">Daily Hydration Target (ml)</Label>
+                  ) : (
+                    <div className="relative">
                       <Input
                         type="number"
-                        step="250"
-                        placeholder="e.g. 2500"
-                        value={dailyWaterTargetMl}
-                        onChange={(e) => setDailyWaterTargetMl(e.target.value)}
-                        className={`${portalInputClass} text-xs`}
+                        step="0.1"
+                        value={weightLbs}
+                        onChange={(e) => handleWeightLbsChange(e.target.value)}
+                        placeholder="154"
+                        className="h-10 rounded-xl border-slate-200 text-xs sm:text-sm bg-white pr-10 focus-visible:ring-[#00a8ff]"
                       />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">lbs</span>
                     </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Dynamic BMI Calculation & Targets */}
+            <div className="lg:col-span-5 flex flex-col gap-3">
+              <div className="rounded-[26px] bg-white border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-3.5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4.5 w-4.5 text-[#0099ff]" />
+                    <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">Body Mass Index (BMI)</h3>
                   </div>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${bmiCategory.badgeClass}`}>
+                    {bmiCategory.label}
+                  </span>
                 </div>
 
-                {/* 5. Custom Dietary Notes */}
-                <div className="space-y-2 pt-4 border-t border-slate-100">
-                  <Label htmlFor="dietary_notes" className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                    <Apple className="w-3.5 h-3.5 text-lime-600" />
-                    Custom Dietary Notes & Food Dislikes
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-[#f8fafc] border border-slate-100">
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-400">Current BMI Score</p>
+                    <p className="text-2xl sm:text-3xl font-bold font-mono text-slate-900">
+                      {liveBmi != null ? liveBmi : "—"}{" "}
+                      <span className="text-xs font-normal text-slate-400 font-sans">kg/m²</span>
+                    </p>
+                  </div>
+                  {healthyWeightRange && (
+                    <div className="text-right text-xs">
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Healthy Weight Range</p>
+                      <p className="font-bold text-slate-800 text-xs sm:text-sm">
+                        {unitSystem === "metric" ? healthyWeightRange.metric : healthyWeightRange.imperial}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* BMI Gauge Visual Bar */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                    <span>Underweight (&lt;18.5)</span>
+                    <span>Normal (18.5–24.9)</span>
+                    <span>Overweight (25–29.9)</span>
+                    <span>Obese (≥30)</span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-slate-200 overflow-hidden flex">
+                    <div className="h-full bg-amber-400" style={{ width: "25%" }} />
+                    <div className="h-full bg-sky-500" style={{ width: "30%" }} />
+                    <div className="h-full bg-orange-400" style={{ width: "25%" }} />
+                    <div className="h-full bg-rose-500" style={{ width: "20%" }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: DIET & HEALTH PREFERENCES */}
+        {activeTab === "diet" && profile.role === "patient" && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+            {/* Left Column: Primary Diet Style & Allergies */}
+            <div className="lg:col-span-7 rounded-[26px] bg-white border border-slate-100 p-5 sm:p-6 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Utensils className="h-4.5 w-4.5 text-[#0099ff]" />
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 font-['Manrope']">Dietary Structure & Allergies</h2>
+                  <p className="text-xs text-slate-500">Used by AI meal planning to construct safe nutrition protocols.</p>
+                </div>
+              </div>
+
+              {/* 1. Primary Diet Style */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                    <Leaf className="h-3.5 w-3.5 text-[#0099ff]" /> Primary Diet Style
                   </Label>
-                  <Textarea
-                    id="dietary_notes"
+                  <span className="text-[10px] text-slate-400 font-medium">Select 1 option</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {DIET_TYPES.map((dt) => {
+                    const isSelected = dietaryPreference === dt.id;
+                    return (
+                      <button
+                        key={dt.id}
+                        type="button"
+                        onClick={() => setDietaryPreference(dt.id)}
+                        className={`h-10 px-3.5 rounded-xl text-xs font-semibold flex items-center justify-between gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
+                          isSelected
+                            ? "bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold shadow-[0_3px_10px_rgba(0,153,255,0.25)] hover:shadow-[0_4px_14px_rgba(0,153,255,0.35)]"
+                            : "border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 shadow-xs"
+                        }`}
+                      >
+                        <span className="truncate">{dt.label}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-white shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 2. Food Allergies & Intolerances */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                  Food Allergies & Intolerances
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {FOOD_ALLERGIES.map((fa) => {
+                    const isSelected = foodAllergies.includes(fa.id);
+                    return (
+                      <button
+                        key={fa.id}
+                        type="button"
+                        onClick={() => toggleAllergy(fa.id)}
+                        className={`h-9 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
+                          isSelected
+                            ? "border border-rose-200 bg-rose-50/70 text-rose-700 hover:bg-rose-100 font-bold shadow-none"
+                            : "border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 shadow-xs"
+                        }`}
+                      >
+                        {isSelected && <XCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />}
+                        <span>{fa.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: GI & Metabolic Considerations & Notes */}
+            <div className="lg:col-span-5 flex flex-col gap-3">
+              <div className="rounded-[26px] bg-white border border-slate-100 p-5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-3.5">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
+                  <Apple className="h-4.5 w-4.5 text-[#0099ff]" />
+                  <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">GI & Clinical Considerations</h3>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Clinical Dietary Focus
+                  </Label>
+                  <div className="flex flex-wrap gap-2">
+                    {DIETARY_CONDITIONS.map((dc) => {
+                      const isSelected = dietaryConditions.includes(dc.id);
+                      return (
+                        <button
+                          key={dc.id}
+                          type="button"
+                          onClick={() => toggleCondition(dc.id)}
+                          className={`h-9 px-3.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] ${
+                            isSelected
+                              ? "bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold shadow-[0_3px_10px_rgba(0,153,255,0.25)] hover:shadow-[0_4px_14px_rgba(0,153,255,0.35)]"
+                              : "border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-slate-700 shadow-xs"
+                          }`}
+                        >
+                          {isSelected && <Check className="h-3.5 w-3.5 text-white shrink-0" />}
+                          <span>{dc.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                    Additional Dietary & Prep Notes
+                  </Label>
+                  <Input
                     value={dietaryNotes}
                     onChange={(e) => setDietaryNotes(e.target.value)}
-                    placeholder="e.g. Avoid spicy dinners due to acid reflux, prefer plant-based oat milk, fasting on Mondays, low sodium salt only..."
-                    rows={3}
-                    className={`${portalInputClass} resize-none`}
+                    placeholder="e.g. Prefer dinner before 8 PM, high protein..."
+                    className="h-10 rounded-xl border-slate-200 text-xs bg-slate-50/50 focus-visible:ring-[#00a8ff]"
                   />
-                  <p className="text-[11px] text-slate-400">
-                    These personal restrictions will guide your AI nutrition suggestions and be visible to your physician.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Submit Profile Changes */}
-          <Button type="submit" disabled={saving} className={`w-full h-11 rounded-2xl ${portalPrimaryButtonClass}`}>
-            {saving ? "Saving Changes…" : "Save Profile Changes"}
-          </Button>
-        </form>
-
-        {/* Security & Physician Connection ID Card */}
-        <Card className={`${portalPanelClass} p-2`}>
-          <CardHeader>
-            <div className="flex items-center gap-2.5">
-              <KeyRound className="h-4.5 w-4.5 text-sky-600" />
-              <CardTitle className="text-base font-bold text-slate-900">Security & Connection ID</CardTitle>
-            </div>
-            <CardDescription className="text-xs text-slate-500">
-              {profile.role === "patient"
-                ? "Share this unique Profile ID with your physician to link your records."
-                : "Your unique system identification code."}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-                Your Connection Profile ID
-              </Label>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs font-mono text-slate-800">
-                  {user.id}
-                </code>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className={`${portalSecondaryButtonClass} h-10 px-4 shrink-0 rounded-2xl text-xs`}
-                  onClick={() => void copyId()}
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
-                  {copied ? "Copied" : "Copy ID"}
-                </Button>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-3.5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sky-200 bg-sky-50">
-                  <ShieldCheck className="h-4.5 w-4.5 text-sky-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Portal Identity & Privacy</p>
-                  <p className="mt-0.5 text-[11px] text-slate-500 leading-relaxed">
-                    Your profile details are encrypted end-to-end and synced securely across patient and doctor workspaces.
-                  </p>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
-    </PatientPortalPage>
+    </div>
   );
 }

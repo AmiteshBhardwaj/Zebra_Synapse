@@ -45,13 +45,10 @@ import {
   BookOpen,
   MessageSquare,
   LogOut,
-  Bot,
-  Send,
   Settings,
   ShieldAlert,
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router";
-import PatientDietChat from "./PatientDietChat";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
@@ -145,12 +142,11 @@ export default function Diet({
   const navigate = useNavigate();
 
   // Active Navigation Mode for Zebra Synapse Sidebar
-  type DietNavTab = "dashboard" | "weekly_plan" | "biomarker_rx" | "messages";
+  type DietNavTab = "dashboard" | "weekly_plan" | "biomarker_rx";
   const [activeTab, setActiveTab] = useState<DietNavTab>(() => {
     try {
       const params = new URLSearchParams(location.search);
       const tab = params.get("tab");
-      if (tab === "messages" || tab === "dietitian" || tab === "chat") return "messages";
       if (tab === "weekly_plan" || tab === "meal_plan") return "weekly_plan";
       if (tab === "biomarker_rx") return "biomarker_rx";
     } catch {}
@@ -162,21 +158,10 @@ export default function Diet({
     try {
       const params = new URLSearchParams(location.search);
       const tab = params.get("tab");
-      if (tab === "messages" || tab === "dietitian" || tab === "chat") setActiveTab("messages");
-      else if (tab === "weekly_plan" || tab === "meal_plan") setActiveTab("weekly_plan");
+      if (tab === "weekly_plan" || tab === "meal_plan") setActiveTab("weekly_plan");
       else if (tab === "biomarker_rx") setActiveTab("biomarker_rx");
     } catch {}
   }, [location.search]);
-
-  // AI Dietitian Chat Messages State
-  const [aiChatInput, setAiChatInput] = useState("");
-  const [aiChatLogs, setAiChatLogs] = useState<{ sender: "ai" | "user"; text: string; time: string }[]>([
-    {
-      sender: "ai",
-      text: "Hello! I am your Zebra Synapse AI Nutritionist. Based on your current biomarkers and calorie targets, I can suggest delicious antioxidant-rich meals, advise on low-sodium swaps, and optimize your macro intake. How can I help you today?",
-      time: "10:30 AM",
-    },
-  ]);
 
   // User Diet & Metabolic Settings
   const settingsStorageKey = `zebra_diet_settings_${profile?.id || "default"}`;
@@ -900,22 +885,13 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
     );
   }
 
-  if (!hasLabReports && activeTab !== "messages") {
+  if (!hasLabReports) {
     return (
       <div className="p-6 bg-[#f6f8f5] min-h-full space-y-6">
         <LabReportsRequiredPlaceholder
           title="Clinical Biomarker Lab Reports Required for Dashboard"
-          description="Upload your blood panel to unlock precision biomarker targets, metabolic BMR adjustments, and cardiovascular dietary prescriptions. Or chat directly with your AI Dietitian right now without any lab reports!"
+          description="Upload your blood panel to unlock precision biomarker targets, metabolic BMR adjustments, and cardiovascular dietary prescriptions."
         />
-        <div className="flex justify-center">
-          <Button
-            onClick={() => setActiveTab("messages")}
-            className="h-12 px-6 rounded-2xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold shadow-md shadow-lime-500/20 flex items-center gap-2"
-          >
-            <Bot className="h-5 w-5" />
-            <span>Open AI Dietitian Chat (No Lab Reports Required)</span>
-          </Button>
-        </div>
       </div>
     );
   }
@@ -958,7 +934,6 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
               [
                 { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
                 { id: "weekly_plan", label: "Calendar", icon: Calendar },
-                { id: "messages", label: "AI Dietitian", icon: Bot },
                 { id: "weekly_plan", label: "Meal Plan", icon: ClipboardList, hasSubmenu: true },
               ] as Array<{
                 id: string;
@@ -1630,82 +1605,6 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
         {/* ========================================================================= */}
         {activeTab === "weekly_plan" && (
           <div className="space-y-6">
-            {/* Personalization Badge Banner */}
-            <div className="rounded-2xl border border-lime-200 bg-gradient-to-r from-lime-50 via-emerald-50 to-teal-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500 text-white font-bold shadow-sm">
-                  <Sparkles className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-900 font-['Manrope']">
-                      Biomarker & Settings Calibrated
-                    </span>
-                    <Badge className="bg-lime-500 text-white text-[9px] font-bold px-2 py-0.5">
-                      Active
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    {activePanel?.recorded_at ? (
-                      <>
-                        Personalized using your <strong className="text-slate-900">{formatLabDate(activePanel.recorded_at)}</strong> lab panel + Account Settings dietary preferences.
-                      </>
-                    ) : (
-                      <>
-                        Personalized using Account Settings preferences. <Link to="/patient/records" className="font-bold text-lime-700 underline hover:text-lime-800">Upload a lab report</Link> for biomarker-tailored recommendations.
-                      </>
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => navigate("/patient/settings")}
-                className="inline-flex items-center gap-1 text-xs font-bold text-lime-800 hover:text-lime-900 bg-white/80 border border-lime-200 rounded-xl px-3 py-1.5 shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
-              >
-                <Settings className="h-3.5 w-3.5" /> Edit Preferences
-              </button>
-            </div>
-
-            {/* Dietary Preferences Summary Panel */}
-            <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-lime-100 text-lime-700">
-                  <Utensils className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dietary Preference</span>
-                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
-                    {profile?.dietary_preference || settings.dietaryPreference || "Omnivore"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-orange-100 text-orange-700">
-                  <ShieldAlert className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Allergies & Exclusions</span>
-                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
-                    {profile?.food_allergies?.length ? profile.food_allergies.join(", ") : "None Specified"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
-                <div className="p-2 rounded-xl bg-cyan-100 text-cyan-700">
-                  <HeartPulse className="h-4 w-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Metabolic Conditions</span>
-                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
-                    {profile?.dietary_conditions?.length ? profile.dietary_conditions.join(", ") : "General Health"}
-                  </p>
-                </div>
-              </div>
-            </div>
 
             <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
@@ -1869,15 +1768,6 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
                 <p className="text-[11px] text-lime-700 font-medium mt-1">Optimizes renal clearance rate</p>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* VIEW 4: AI DIETITIAN MESSAGES CHAT */}
-        {/* ========================================================================= */}
-        {activeTab === "messages" && (
-          <div className="w-full">
-            <PatientDietChat embedded />
           </div>
         )}
 

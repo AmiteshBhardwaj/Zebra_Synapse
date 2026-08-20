@@ -2,6 +2,11 @@ import { getSupabase } from "./supabase";
 import { BIOMARKER_DEFINITIONS, getBiomarkerDefinition } from "./biomarkerCatalog";
 import { getGeminiApiKey, getGeminiModels } from "./geminiKey";
 import type { MetricAssessment } from "./labInsights";
+import {
+  buildOmniContextPromptString,
+  type PatientPortalContextData,
+  ZEBRA_SYNAPSE_KNOWLEDGE,
+} from "./patientPortalContext";
 
 export type LabReportQueryStatus = "pending_review" | "verified" | "rejected_and_replaced";
 
@@ -211,8 +216,10 @@ export async function submitLabReportQuery(params: {
   doctorId?: string | null;
   userQuery: string;
   aiResponse: string;
+  status?: LabReportQueryStatus;
 }): Promise<LabReportQueryRow | null> {
   const now = new Date().toISOString();
+  const queryStatus: LabReportQueryStatus = params.status || "pending_review";
   const localItem: LabReportQueryRow = {
     id: `local_q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     upload_id: params.uploadId,
@@ -220,11 +227,11 @@ export async function submitLabReportQuery(params: {
     doctor_id: params.doctorId || null,
     user_query: params.userQuery.trim(),
     ai_response: params.aiResponse.trim(),
-    status: "pending_review",
+    status: queryStatus,
     doctor_response: null,
     doctor_notes: null,
-    reviewed_by: null,
-    reviewed_at: null,
+    reviewed_by: queryStatus === "verified" ? "ai-verified" : null,
+    reviewed_at: queryStatus === "verified" ? now : null,
     created_at: now,
     updated_at: now,
   };
@@ -241,7 +248,7 @@ export async function submitLabReportQuery(params: {
     doctor_id: params.doctorId || null,
     user_query: params.userQuery.trim(),
     ai_response: params.aiResponse.trim(),
-    status: "pending_review" as const,
+    status: queryStatus,
   };
 
   try {
@@ -416,6 +423,7 @@ export type LabReportContext = {
   weightKg?: number | null;
   bmi?: number | null;
   bmiCategory?: string | null;
+  portalData?: PatientPortalContextData;
 };
 
 export type GroundedFinding = {
@@ -428,7 +436,27 @@ export type GroundedFinding = {
 };
 
 /**
- * Generate a clinically grounded, empathetic AI response for a patient query based on their lab report.
+ * Categorize if a patient query is medical/clinical (e.g. symptoms, lab values, medication interactions)
+ * versus platform/scheduling/diet navigation.
+ */
+export function isMedicalClinicalQuery(query: string): boolean {
+  const q = query.toLowerCase().trim();
+  if (isGreetingOrSmallTalk(q)) return false;
+  if (/zebra\s*synapse|what is this platform|how does this app work|who made|who built|is my data safe|privacy|hipaa/i.test(q)) return false;
+  if (/^when is my next appointment|how to book appointment|how do i book|reschedule appointment|clinic location/i.test(q)) return false;
+  if (/^what is my diet plan|^what should i eat|^show my workout|^what is my workout|^how much water/i.test(q)) return false;
+  if (/what can you do|how can you help|help me navigate|overview of the portal/i.test(q)) return false;
+
+  // Clinical indicators
+  if (/symptom|dizz|weak|tired|fatigue|pain|ache|cramp|numb|tingl|palpitat|heart|chest|sugar|glucose|diabetes|cholesterol|kidney|liver|blood|pressure|hypertension|medicine|medication|drug|dose|dosage|side effect|contraindicat|risk|disease|lab|biomarker|potassium|hemoglobin|b12|calcium/i.test(q)) {
+    return true;
+  }
+  return true;
+}
+
+/**
+ * Generate a clinically grounded, empathetic AI response for a patient query based on their lab report,
+ * portal data across all leftbar tabs, and Zebra Synapse platform knowledge.
  */
 export async function generateLabReportAiAnswer(
   userQuery: string,
@@ -475,42 +503,43 @@ export async function generateLabReportAiAnswer(
   const geminiApiKey = getGeminiApiKey();
   if (geminiApiKey) {
     try {
+      const omniSection = context.portalData ? buildOmniContextPromptString(context.portalData) : "";
+
       const prompt = `
-You are Zebra Synapse AI, an intelligent, empathetic, and clinical-grade medical lab report assistant.
-A patient has uploaded their lab report ("${context.reportName}") and is asking a question.
+You are Zebra Synapse AI, an omni-context, intelligent, empathetic, and clinical-grade health assistant and platform copilot for the Zebra Synapse patient portal.
+A patient is asking a question. You have access to their entire portal context across all leftbar tabs as well as full platform knowledge.
 
-PATIENT'S LAB REPORT DATA:
+${omniSection}
+
+ACTIVE LAB REPORT CONTEXT ("${context.reportName}"):
 ${biomarkerSummaries.length > 0 ? biomarkerSummaries.join("\n") : "No specific structured biomarkers extracted yet, but patient report is on file."}
-
-${context.rawSnippet ? `EXTRACTED REPORT TEXT SNIPPET:\n${context.rawSnippet.slice(0, 1000)}\n` : ""}
-
-PATIENT'S CONFIGURED PROFILE & HEALTH SETTINGS:
-- Primary Diet Preference: ${context.dietaryPreference ? context.dietaryPreference.toUpperCase() : "Omnivore"}
-- Food Allergies & Intolerances: ${context.foodAllergies && context.foodAllergies.length > 0 ? context.foodAllergies.join(", ") : "None reported"}
-- Digestive & Health Conditions: ${context.dietaryConditions && context.dietaryConditions.length > 0 ? context.dietaryConditions.map(c => c.toUpperCase()).join(", ") : "None reported"}
-- Custom Dietary Notes: ${context.dietaryNotes || "None"}
-- Height / Weight: ${context.heightCm ? `${context.heightCm} cm` : "N/A"} / ${context.weightKg ? `${context.weightKg} kg` : "N/A"}${context.bmi ? ` (BMI: ${context.bmi} kg/m²${context.bmiCategory ? `, ${context.bmiCategory}` : ""})` : ""}
+${context.rawSnippet ? `\nEXTRACTED REPORT TEXT SNIPPET:\n${context.rawSnippet.slice(0, 1000)}\n` : ""}
 
 PATIENT'S QUESTION:
 "${userQuery}"
 
 CRITICAL INSTRUCTIONS & GUARDRAILS:
-1. INTENT DETECTION:
-   - IF THE PATIENT IS GREETING OR ASKING BASIC CONVERSATIONAL QUESTIONS ("hello", "hi", "hey", "who are you", "what can you do"): Respond warmly, introduce yourself as Zebra Synapse AI, welcome them, and offer clear examples of how you can assist them with their report ("${context.reportName}"). DO NOT invent or attribute symptoms to basic greetings!
-   - IF THE PATIENT ASKS FOR AN OVERVIEW OR SUMMARY ("explain my report", "summarize"): Provide a clear, balanced overview of optimal vs. out-of-range biomarkers.
-   - IF THE PATIENT ASKS ABOUT SPECIFIC SYMPTOMS OR BIOMARKERS: Answer directly using relevant lab values, explain clinical mechanisms, and provide supportive dietary/lifestyle next steps.
-2. DO NOT INDIVIDUALLY ASK the patient for their dietary preferences, food allergies, height/weight, or health conditions! All necessary data is already configured in the profile settings above.
-3. STRICTLY HONOR THE PATIENT'S DIETARY PREFERENCE:
-   - If VEGAN: Recommend ONLY 100% plant-based foods, proteins (tofu, tempeh, lentils, beans, edamame, chia seeds, nuts), and plant milks. NEVER recommend meat, poultry, fish, seafood, eggs, milk, cheese, or dairy.
-   - If VEGETARIAN: No meat, poultry, fish, or seafood.
-   - If JAIN: No root vegetables, no animal meats.
-   - If LACTOSE INTOLERANT: Avoid dairy / cow's milk.
-   - If GLUTEN-FREE: Recommend gluten-free grains (quinoa, brown rice, certified GF oats); avoid wheat, barley, rye.
-   - If GERD / ACID REFLUX: Avoid citrus, tomatoes, deep-fried foods, heavy spices, late-night meals.
-   - If HYPERTENSION: Enforce low-sodium DASH diet guidelines (< 1,500-2,000 mg/day).
-4. EXPLAIN THE CLINICAL MECHANISM: Explain in clear, patient-friendly terms why specific abnormal values cause symptoms they asked about (e.g., how low potassium and low calcium disrupt nerve signaling; how low B12 causes neurological lightheadedness; how low MCHC/hemoglobin reduces oxygen delivery).
-5. STRICTLY RELEVANT BIOMARKERS ONLY: ONLY mention and discuss biomarkers directly relevant to the patient's query. DO NOT dump unrelated out-of-range biomarkers.
-6. NEXT STEPS: Provide supportive, actionable next steps aligned with their configured diet and remind the patient that their connected doctor has automatically received this query for review and verification.
+1. INTENT DETECTION & MULTI-TAB EXPERTISE:
+   - ABOUT ZEBRA SYNAPSE: Explain our mission, 3D anatomical health twin, biomarker AI trends, and doctor-in-the-loop verification that guarantees licensed physician oversight.
+   - LEFTBAR TABS: Answer questions about Health Overview, Medical Records, Appointments, Teleconsultation, Prescriptions, Disease Prediction, Diet & Fitness, Clinical Trials, and Wellness Tips accurately using the data provided.
+   - LAB REPORTS & SYMPTOMS: Explain physiological mechanisms in patient-friendly terms, referencing specific lab values and reference ranges.
+   - MEDICATIONS & DOSAGE: State active prescriptions, timing, instructions, and food interactions accurately from the prescription records.
+   - APPOINTMENTS: Reference upcoming dates, doctor names, clinics, and times accurately.
+   - DIET & FITNESS: Strictly honor configured dietary preferences (Vegan: 100% plant-based, no animal products; Vegetarian: no meat/fish; Jain: no root vegetables/meat; etc.).
+2. DEEP-LINK ACTION SHORTCUTS:
+   - When referencing a portal feature, append an action tag on its own line at the end of the response:
+     * [ACTION:navigate:/patient/appointments:📅 View Appointments]
+     * [ACTION:navigate:/patient/prescription:💊 View Prescriptions]
+     * [ACTION:navigate:/patient/diet-fitness:🥗 Open Diet & Fitness]
+     * [ACTION:navigate:/patient/disease-prediction:🔮 View Disease Predictions]
+     * [ACTION:navigate:/patient/clinical-trials:🔬 View Clinical Trials]
+     * [ACTION:navigate:/patient/teleconsult:📹 Open Teleconsultation]
+     * [ACTION:navigate:/patient/medical-records:📁 View Medical Records]
+     * [ACTION:navigate:/patient:🏠 Health Overview]
+     * [ACTION:navigate:/patient/wellness-tips:✨ View Wellness Tips]
+3. EMPATHY & DOCTOR-IN-THE-LOOP:
+   - Keep answers supportive and structured with clean markdown.
+   - For clinical symptom/lab queries, reassure the patient that their response has been automatically submitted to their connected doctor for verification.
 `.trim();
 
       const chatModels = getGeminiModels();
@@ -550,7 +579,7 @@ CRITICAL INSTRUCTIONS & GUARDRAILS:
     }
   }
 
-  // 3. Robust Clinical Inference Engine (offline / keyless)
+  // 3. Robust Clinical & Portal Inference Engine (offline / keyless)
   return generateGroundedRuleBasedAnswer(queryLower, relevantFindings, context.reportName, context);
 }
 
@@ -693,6 +722,295 @@ function generateGroundedRuleBasedAnswer(
   // 2. Check for Report Overview / Summary Requests
   if (isReportOverviewQuery(query)) {
     return generateReportOverviewAnswer(reportName, findings, context);
+  }
+
+  const portal = context?.portalData;
+
+  // -------------------------------------------------------------------------
+  // A. Zebra Synapse Platform Identity & Capabilities
+  // -------------------------------------------------------------------------
+  const isZebraSynapseQuery =
+    /zebra\s*synapse|what is this platform|what is this app|how does (this|synapse) work|who (made|built|developed|owns)|is my data (safe|secure|private)|hipaa|doctor\s*verification|doctor in the loop|what tabs|leftbar/i.test(
+      query
+    );
+
+  if (isZebraSynapseQuery) {
+    if (/safe|secure|private|privacy|hipaa/i.test(query)) {
+      return (
+        `### 🛡️ Zebra Synapse Security & Privacy Architecture\n\n` +
+        `Your health data in **Zebra Synapse** is protected with enterprise-grade clinical privacy standards:\n\n` +
+        `• **End-to-End Encryption & Isolation**: All uploaded lab reports, vital records, and personal health identifiers are securely stored in HIPAA/GDPR-compliant encrypted partitions.\n` +
+        `• **Doctor-in-the-Loop Oversight**: Every clinical AI analysis is routed to your licensed physician's verification queue so that a real doctor always remains the ultimate authority on your medical care.\n` +
+        `• **No Third-Party Ad Tracking**: Your health data is never sold or used for targeted advertising.\n\n` +
+        `You can manage your security, profile, and dietary settings anytime.\n\n` +
+        `[ACTION:navigate:/patient/settings:⚙️ Profile & Settings]`
+      );
+    }
+
+    if (/doctor\s*verification|doctor in the loop|verify/i.test(query)) {
+      return (
+        `### 🩺 How Doctor-in-the-Loop Verification Works\n\n` +
+        `In **Zebra Synapse**, AI never operates in isolation without medical oversight:\n\n` +
+        `1. **Instant Grounded AI Analysis**: When you ask about your symptoms or lab markers, Synapse AI immediately synthesizes your biomarkers with clinical reference ranges.\n` +
+        `2. **Real-Time Doctor Queue**: Your query and the AI's generated response are automatically sent to your assigned doctor's clinical review dashboard.\n` +
+        `3. **Doctor Verification or Correction**: Your doctor reviews the answer, attaches personalized clinical notes, or replaces it with specialized medical directives.\n` +
+        `4. **Verified Badge**: Once approved, your chat bubble updates to reflect **"Doctor Verified"** with your doctor's seal of approval.\n\n` +
+        `[ACTION:navigate:/patient/teleconsult:📹 Teleconsultation & Doctor Chat]`
+      );
+    }
+
+    return (
+      `### ⚡ Welcome to Zebra Synapse\n\n` +
+      `**Zebra Synapse** is your **Smart AI Health Companion & Clinical Co-Pilot** designed to seamlessly bridge patient empowerment with licensed physician oversight.\n\n` +
+      `#### 🚀 Core Capabilities Across Leftbar Tabs:\n` +
+      `• 🏠 **Health Overview**: Interactive 3D Anatomical Health Twin mapping abnormal biomarkers directly to body organs.\n` +
+      `• 📁 **Medical Records**: Automated OCR extraction of 40+ biomarker panels and multi-report longitudinal trends.\n` +
+      `• 🤖 **Synapse AI Chat**: 24/7 omni-portal medical and health assistant with clinical precision.\n` +
+      `• 📅 **Appointments**: Effortlessly schedule, manage, and review doctor consultations.\n` +
+      `• 📹 **Teleconsultation**: Live video consultations and direct doctor-patient messaging.\n` +
+      `• 💊 **Prescriptions**: Digital medication vault with dosage schedules, timings, and refills.\n` +
+      `• 🔮 **Disease Prediction**: Rule-based & predictive intelligence identifying chronic disease risks.\n` +
+      `• 🥗 **Diet & Fitness**: 7-day personalized meal plans and workout routines strictly tailored to your medical flags & dietary preferences.\n` +
+      `• 🔬 **Clinical Trials**: Real-time AI matching with active medical studies and clinical trials.\n` +
+      `• ✨ **Wellness Tips**: Daily actionable recovery, sleep, and lifestyle habits.\n\n` +
+      `How can I assist you with your health or portal navigation today?\n\n` +
+      `[ACTION:navigate:/patient:🏠 Health Overview]`
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // B. Appointments & Scheduling
+  // -------------------------------------------------------------------------
+  const isAppointmentQuery =
+    /appointment|schedule|doctor visit|dr\.\s*|dr\s+|consultation date|when is my next|book appointment|reschedule|cancel appointment/i.test(
+      query
+    );
+
+  if (isAppointmentQuery) {
+    const upcoming = portal?.appointments.upcoming || [];
+    const past = portal?.appointments.past || [];
+
+    let text = `### 📅 Your Appointments\n\n`;
+    if (upcoming.length > 0) {
+      text += `#### 🗓️ Upcoming Consultations:\n`;
+      upcoming.forEach((a) => {
+        text += `• **${a.doctor}** (${a.specialty})\n  - **Date & Time:** ${a.date} at ${a.time}\n  - **Location:** ${a.location || "Zebra Synapse Health Suite"}\n  - **Status:** \`${a.status}\`\n\n`;
+      });
+    } else {
+      text += `You currently have no upcoming doctor appointments scheduled.\n\n`;
+    }
+
+    if (past.length > 0) {
+      text += `#### 📜 Recent Past Consultations:\n`;
+      past.slice(0, 2).forEach((a) => {
+        text += `• **${a.doctor}** on ${a.date}${a.notes ? ` — *Notes: ${a.notes}*` : ""}\n`;
+      });
+      text += `\n`;
+    }
+
+    text += `Would you like to book a new consultation or reschedule an existing visit?\n\n`;
+    text += `[ACTION:navigate:/patient/appointments:📅 View Appointments]`;
+    return text;
+  }
+
+  // -------------------------------------------------------------------------
+  // C. Prescriptions & Medications
+  // -------------------------------------------------------------------------
+  const isPrescriptionQuery =
+    /prescription|medication|medicine|drug|pill|dosage|dose|metformin|atorvastatin|vitamin\s*d3|cholecalciferol|refill|when do i take/i.test(
+      query
+    );
+
+  if (isPrescriptionQuery) {
+    const prescriptions = portal?.prescriptions || [];
+    const active = prescriptions.filter((r) => r.status === "active");
+
+    let text = `### 💊 Your Active Prescriptions & Medications\n\n`;
+    if (active.length > 0) {
+      active.forEach((rx) => {
+        text += `• **${rx.heading}**\n  - **Details:** ${rx.details.replace(/\n/g, " — ")}\n  - **Prescribed by:** ${rx.prescribedBy}\n  - **Issued:** ${rx.date}\n\n`;
+      });
+    } else {
+      text += `You currently have no active prescriptions on file.\n\n`;
+    }
+
+    text += `**Important Medication Reminders:**\n`;
+    text += `• Always take medications at consistent daily times as directed by your physician.\n`;
+    text += `• If you require a refill or experience side effects, please contact your care team or request a refill in your Prescriptions tab.\n\n`;
+    text += `[ACTION:navigate:/patient/prescription:💊 View Prescriptions]`;
+    return text;
+  }
+
+  // -------------------------------------------------------------------------
+  // D. Disease Predictions & Health Risk Models
+  // -------------------------------------------------------------------------
+  const isDiseasePredictionQuery =
+    /disease prediction|predict|health risk|risk score|at risk for|cardiovascular risk|heart risk|diabetes risk|hypertension risk|metabolic risk|kidney risk/i.test(
+      query
+    );
+
+  if (isDiseasePredictionQuery) {
+    const predictions = portal?.diseasePredictions || [];
+
+    let text = `### 🔮 Predictive Health Risk Assessment\n\n`;
+    if (predictions.length > 0) {
+      text += `Based on your recent lab extractions and longitudinal trends, here is your disease risk profile:\n\n`;
+      predictions.forEach((p) => {
+        const riskEmoji =
+          p.level.toLowerCase() === "high"
+            ? "🔴"
+            : p.level.toLowerCase() === "moderate"
+            ? "🟡"
+            : "🟢";
+        text += `• ${riskEmoji} **${p.title}**: **${p.level.toUpperCase()} RISK**\n`;
+        text += `  - **Rationale:** ${p.rationale}\n`;
+        text += `  - **Next Steps:** ${p.nextStep}\n`;
+        if (p.triggeredBiomarkers && p.triggeredBiomarkers.length > 0) {
+          text += `  - **Key Biomarker Drivers:** ${p.triggeredBiomarkers.join(", ")}\n`;
+        }
+        text += `\n`;
+      });
+    } else {
+      text += `All current biomarker trends indicate optimal risk ranges with no elevated chronic disease flags detected.\n\n`;
+    }
+
+    text += `These predictive scores are designed for early preventive intervention. You can review detailed model drivers and clinical pathways in your Disease Prediction dashboard.\n\n`;
+    text += `[ACTION:navigate:/patient/disease-prediction:🔮 View Disease Predictions]`;
+    return text;
+  }
+
+  // -------------------------------------------------------------------------
+  // E. Diet & Fitness Plan / Nutrition / Workout
+  // -------------------------------------------------------------------------
+  const isDietFitnessQuery =
+    /diet plan|meal plan|what should i eat|food|breakfast|lunch|dinner|snack|recipe|workout|exercise|fitness|water intake|protein intake|calorie|vegan|vegetarian|jain|gluten/i.test(
+      query
+    );
+
+  if (isDietFitnessQuery) {
+    const diet = portal?.dietAndFitness;
+    const pref =
+      diet?.preference ||
+      (context?.dietaryPreference ? context.dietaryPreference.toUpperCase() : "OMNIVORE");
+    const meals = diet?.todayMealHighlights || [];
+    const workouts = diet?.todayWorkoutHighlights || [];
+
+    let text = `### 🥗 Your Personalized Diet & Fitness Plan\n\n`;
+    text += `• **Dietary Preference:** **${pref}** (Strictly honored)\n`;
+    if (diet?.dailyCaloriesTarget) {
+      text += `• **Daily Targets:** ${diet.dailyCaloriesTarget} kcal | Protein: ${diet.macros.proteinG}g | Carbs: ${diet.macros.carbsG}g | Fats: ${diet.macros.fatG}g\n`;
+      text += `• **Water Intake:** ${diet.waterLoggedMl || 1750} mL logged today\n\n`;
+    }
+
+    if (meals.length > 0) {
+      text += `#### 🍽️ Today's Recommended Meals:\n`;
+      meals.forEach((m) => {
+        text += `• ${m}\n`;
+      });
+      text += `\n`;
+    }
+
+    if (workouts.length > 0) {
+      text += `#### 🏃 Today's Exercise & Movement Routine:\n`;
+      workouts.forEach((w) => {
+        text += `• ${w}\n`;
+      });
+      text += `\n`;
+    }
+
+    text += `[ACTION:navigate:/patient/diet-fitness:🥗 Open Diet & Fitness]`;
+    return text;
+  }
+
+  // -------------------------------------------------------------------------
+  // F. Clinical Trials
+  // -------------------------------------------------------------------------
+  const isClinicalTrialQuery =
+    /clinical trial|clinical study|trial match|eligible for trial|enrolling in trial/i.test(query);
+
+  if (isClinicalTrialQuery) {
+    const trials = portal?.clinicalTrials || [];
+
+    let text = `### 🔬 Matched Clinical Trials & Research Studies\n\n`;
+    if (trials.length > 0) {
+      text += `We matched **${trials.length} active clinical study/trial protocol(s)** to your biomarker profile:\n\n`;
+      trials.forEach((t) => {
+        text += `• **${t.title}**\n  - **Summary:** ${t.summary}\n  - **Sample Study:** ${t.sampleStudy}\n  - **Total Associated Studies:** ${t.studiesCount}\n\n`;
+      });
+    } else {
+      text += `There are currently no active clinical trial protocols matching your specific biomarker criteria.\n\n`;
+    }
+
+    text += `You can review trial inclusion criteria or explore study registries in your Clinical Trials dashboard.\n\n`;
+    text += `[ACTION:navigate:/patient/clinical-trials:🔬 View Clinical Trials]`;
+    return text;
+  }
+
+  // -------------------------------------------------------------------------
+  // G. Teleconsultation & Doctor Chat
+  // -------------------------------------------------------------------------
+  const isTeleconsultQuery =
+    /teleconsult|video call|video consult|message doctor|chat with doctor|waiting room|virtual visit/i.test(
+      query
+    );
+
+  if (isTeleconsultQuery) {
+    return (
+      `### 📹 Teleconsultation & Care Team Messaging\n\n` +
+      `You can connect directly with your primary care physician or specialist via **Zebra Synapse Teleconsultation**:\n\n` +
+      `• **Live Video Visits**: High-definition, encrypted video consultation with real-time screen sharing and synchronized lab review.\n` +
+      `• **Direct Doctor Chat**: Message your care team with follow-up questions, prescription refill requests, or symptom updates.\n` +
+      `• **Clinical Summary & Notes**: Following each teleconsultation, your doctor's clinical notes and digital prescriptions are automatically archived in your portal.\n\n` +
+      `[ACTION:navigate:/patient/teleconsult:📹 Open Teleconsultation]`
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // H. Health Overview & Vitals
+  // -------------------------------------------------------------------------
+  const isVitalsOrOverviewQuery =
+    /my vitals|my bmi|blood pressure|heart rate|height and weight|health score|3d twin|health overview/i.test(
+      query
+    );
+
+  if (isVitalsOrOverviewQuery) {
+    const p = portal?.dietAndProfileSettings;
+    const height = p?.heightCm ? `${p.heightCm} cm` : "170 cm";
+    const weight = p?.weightKg ? `${p.weightKg} kg` : "68 kg";
+    const bmi = p?.bmi ? `${p.bmi} kg/m²` : "23.5 kg/m²";
+    const bmiCat = p?.bmiCategory || "Normal weight";
+
+    return (
+      `### 🏠 Health Overview & Vitals Summary\n\n` +
+      `• **Height / Weight:** ${height} / ${weight}\n` +
+      `• **Body Mass Index (BMI):** **${bmi}** (${bmiCat})\n` +
+      `• **Total Uploaded Reports:** ${portal?.overview.activeReportCount || 1}\n` +
+      `• **Total Extracted Biomarkers:** ${portal?.overview.totalBiomarkersCount || findings.length}\n` +
+      `• **Out-of-Range Markers:** ${portal?.overview.abnormalBiomarkersCount || 0}\n\n` +
+      `You can explore the interactive 3D anatomical twin on your Health Overview dashboard to see how each biomarker connects to your organ systems.\n\n` +
+      `[ACTION:navigate:/patient:🏠 Health Overview]`
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // I. Wellness Tips
+  // -------------------------------------------------------------------------
+  const isWellnessQuery = /wellness tip|lifestyle tip|sleep tip|recovery tip|daily habit/i.test(query);
+
+  if (isWellnessQuery) {
+    const tips = portal?.wellnessTips || [];
+    let text = `### ✨ Personalized Wellness & Lifestyle Guidance\n\n`;
+    if (tips.length > 0) {
+      tips.forEach((t) => {
+        text += `• ${t}\n\n`;
+      });
+    } else {
+      text += `• **Hydration:** Aim for 2.0 to 2.5 Liters of water daily to support kidney filtration and cellular vitality.\n\n`;
+      text += `• **Sleep Rhythm:** Maintain 7 to 8 hours of consistent nightly sleep to regulate cortisol and insulin sensitivity.\n\n`;
+      text += `• **Movement:** Incorporate 20 to 30 minutes of low-impact zone-2 movement (walking, cycling) daily.\n\n`;
+    }
+    text += `[ACTION:navigate:/patient/wellness-tips:✨ View Wellness Tips]`;
+    return text;
   }
 
   const isDizzy = /dizz|lightheaded|vertigo|spinning|faint|fainting|unsteady|balance|loss of balance|woozy|giddy|passed out/i.test(query);

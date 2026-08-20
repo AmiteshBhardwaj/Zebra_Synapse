@@ -2,7 +2,10 @@ import { FormattedMarkdown } from "../../components/ui/FormattedMarkdown";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
+  Activity,
+  ArrowUpRight,
   Bot,
+  Calendar,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -10,17 +13,22 @@ import {
   Copy,
   FilePlus2,
   FileText,
+  FlaskConical,
   Mic,
   MicOff,
   PanelLeft,
   PanelLeftClose,
   Paperclip,
+  Pill,
   Plus,
   RefreshCw,
   RotateCcw,
   Send,
   Sparkles,
   Stethoscope,
+  TrendingUp,
+  UtensilsCrossed,
+  Video,
   Zap,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
@@ -33,9 +41,11 @@ import {
   fetchPatientAllQueries,
   fetchQueriesForReport,
   generateLabReportAiAnswer,
+  isMedicalClinicalQuery,
   submitLabReportQuery,
   type LabReportQueryRow,
 } from "../../../lib/labReportChat";
+import { assemblePatientPortalContext } from "../../../lib/patientPortalContext";
 import { getSupabase } from "../../../lib/supabase";
 import {
   DropdownMenu,
@@ -47,6 +57,155 @@ import {
 } from "../../components/ui/dropdown-menu";
 import { ChatSessionSidebar } from "../../components/patient/ChatSessionSidebar";
 import { toast } from "sonner";
+
+/**
+ * Extracts [ACTION:navigate:<path>:<label>] tags from raw markdown
+ * and provides cleaned markdown text + structured actions.
+ */
+function extractActionTags(rawText: string): {
+  cleanText: string;
+  actions: Array<{ path: string; label: string }>;
+} {
+  const actions: Array<{ path: string; label: string }> = [];
+  const actionRegex = /\[ACTION:navigate:([^:]+):([^\]]+)\]/g;
+
+  let match;
+  while ((match = actionRegex.exec(rawText)) !== null) {
+    actions.push({ path: match[1].trim(), label: match[2].trim() });
+  }
+
+  const cleanText = rawText.replace(actionRegex, "").trim();
+  return { cleanText, actions };
+}
+
+interface PromptCategory {
+  id: string;
+  categoryName: string;
+  categoryIcon: any;
+  accent: string;
+  chips: Array<{ emoji: string; text: string; query: string }>;
+}
+
+const CATEGORIZED_PROMPT_PILLS: PromptCategory[] = [
+  {
+    id: "zebra",
+    categoryName: "About Zebra Synapse",
+    categoryIcon: Zap,
+    accent: "bg-cyan-50 text-cyan-800 border-cyan-200 hover:bg-cyan-100/80",
+    chips: [
+      {
+        emoji: "⚡",
+        text: "What is Zebra Synapse?",
+        query: "What is Zebra Synapse and what can you help me with across my health portal?",
+      },
+      {
+        emoji: "🩺",
+        text: "How does Doctor Verification work?",
+        query: "How does doctor-in-the-loop verification work in Zebra Synapse?",
+      },
+      {
+        emoji: "🛡️",
+        text: "Is my medical data secure?",
+        query: "How is my medical data and privacy protected in Zebra Synapse?",
+      },
+    ],
+  },
+  {
+    id: "labs",
+    categoryName: "Lab Insights",
+    categoryIcon: Sparkles,
+    accent: "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100/80",
+    chips: [
+      {
+        emoji: "🧠",
+        text: "Why am I weak & tired?",
+        query: "I feel weak and tired, what does my lab report say about why?",
+      },
+      {
+        emoji: "👋",
+        text: "Why do I feel dizzy?",
+        query: "Why do I feel dizzy or lightheaded based on my lab results?",
+      },
+      {
+        emoji: "🩸",
+        text: "Check Blood Sugar & HbA1c",
+        query: "Are my fasting glucose and HbA1c in the safe normal range?",
+      },
+    ],
+  },
+  {
+    id: "meds",
+    categoryName: "Prescriptions",
+    categoryIcon: Pill,
+    accent: "bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100/80",
+    chips: [
+      {
+        emoji: "💊",
+        text: "What medications am I taking?",
+        query: "What active medications and prescriptions are on my file?",
+      },
+      {
+        emoji: "⏰",
+        text: "When do I take my doses?",
+        query: "When should I take my daily doses and are there specific instructions?",
+      },
+    ],
+  },
+  {
+    id: "appointments",
+    categoryName: "Appointments",
+    categoryIcon: Calendar,
+    accent: "bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100/80",
+    chips: [
+      {
+        emoji: "📅",
+        text: "When is my next appointment?",
+        query: "When is my next scheduled doctor appointment and who is the physician?",
+      },
+      {
+        emoji: "🏥",
+        text: "How to book a specialist visit?",
+        query: "How do I book a consultation with a specialist in the portal?",
+      },
+    ],
+  },
+  {
+    id: "diet",
+    categoryName: "Diet & Fitness",
+    categoryIcon: UtensilsCrossed,
+    accent: "bg-lime-50 text-lime-800 border-lime-200 hover:bg-lime-100/80",
+    chips: [
+      {
+        emoji: "🥗",
+        text: "Today's meal & workout plan",
+        query: "What is my personalized meal plan and exercise routine for today?",
+      },
+      {
+        emoji: "💧",
+        text: "Water & macro targets",
+        query: "What are my daily water, calorie, and protein intake targets?",
+      },
+    ],
+  },
+  {
+    id: "risks",
+    categoryName: "Disease Prediction",
+    categoryIcon: TrendingUp,
+    accent: "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100/80",
+    chips: [
+      {
+        emoji: "🔮",
+        text: "What health risks are predicted?",
+        query: "What disease risks or health predictions are identified from my lab trends?",
+      },
+      {
+        emoji: "🔬",
+        text: "Am I eligible for clinical trials?",
+        query: "Are there any clinical trials or medical studies matching my biomarkers?",
+      },
+    ],
+  },
+];
 
 /**
  * 3D-styled Cute Glowing Robot Mascot Component
@@ -71,12 +230,12 @@ function RobotMascot() {
               <stop offset="100%" stopColor="#0e7490" />
             </linearGradient>
             {/* Bezel Gradient */}
-            <linearGradient id="bezelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <linearGradient id="bezelGrad" x1="0%" y1="0%" x2="100%">
               <stop offset="0%" stopColor="#083344" />
               <stop offset="100%" stopColor="#021f2d" />
             </linearGradient>
             {/* Screen Gradient */}
-            <linearGradient id="screenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <linearGradient id="screenGrad" x1="0%" y1="0%" x2="100%">
               <stop offset="0%" stopColor="#082f49" />
               <stop offset="100%" stopColor="#021422" />
             </linearGradient>
@@ -206,13 +365,6 @@ function RobotMascot() {
     </div>
   );
 }
-
-const QUICK_PROMPT_PILLS = [
-  { emoji: "🤔", text: "What can you do?", query: "What can you help me with regarding my lab report and health?" },
-  { emoji: "🧠", text: "Why am I weak & tired?", query: "I feel weak and tired, what does my lab report say about why?" },
-  { emoji: "👋", text: "Why do I feel dizzy?", query: "Why do I feel dizzy or lightheaded based on my lab results?" },
-  { emoji: "🩸", text: "Check blood sugar & HbA1c", query: "Are my fasting glucose and HbA1c in the safe normal range?" },
-];
 
 export default function PatientLabChat() {
   const { user, profile } = useAuth();
@@ -431,7 +583,7 @@ export default function PatientLabChat() {
   const handleClearSessionHistory = async (reportId: string) => {
     try {
       await clearQueriesForReport(reportId);
-      
+
       const remainingQueries = allQueries.filter((q) => q.upload_id !== reportId);
       setAllQueries(remainingQueries);
 
@@ -515,10 +667,6 @@ export default function PatientLabChat() {
       toast.error("You must be logged in as a patient");
       return;
     }
-    if (!activeReport) {
-      toast.error("Please select a lab report first");
-      return;
-    }
 
     setSending(true);
     setInputQuery("");
@@ -527,8 +675,20 @@ export default function PatientLabChat() {
     }
 
     try {
-      // 1. Generate clinically grounded AI response
-      const reportName = activeReport.original_filename || "Lab Report";
+      // Assemble full real-time patient context across all tabs
+      const portalData = assemblePatientPortalContext({
+        profile,
+        panels,
+        activePanel,
+        uploads,
+        selectedReportId,
+      });
+
+      const isClinical = isMedicalClinicalQuery(query);
+      const reportName = activeReport?.original_filename || "Active Health Profile";
+      const uploadId = activeReport?.id || "omni-portal";
+
+      // 1. Generate clinically grounded & omni-portal AI response
       const aiAnswer = await generateLabReportAiAnswer(query, {
         reportName,
         recordedAt: activePanel?.recorded_at,
@@ -541,22 +701,28 @@ export default function PatientLabChat() {
         dietaryNotes: profile?.dietary_notes,
         heightCm: profile?.height_cm,
         weightKg: profile?.weight_kg,
+        portalData,
       });
 
-      // 2. Persist to database with status: 'pending_review'
+      // 2. Persist to database with intelligent status
       const inserted = await submitLabReportQuery({
-        uploadId: activeReport.id,
+        uploadId,
         patientId: user.id,
         doctorId: connectedDoctor?.id || null,
         userQuery: query,
         aiResponse: aiAnswer,
+        status: isClinical ? "pending_review" : "verified",
       });
 
       if (inserted) {
         setMessages((prev) => [...prev, inserted]);
-        setLoadedSessionId(activeReport.id);
+        setLoadedSessionId(uploadId);
         setAllQueries((prev) => [inserted, ...prev]);
-        toast.success("Response generated & queued for doctor review!");
+        if (isClinical) {
+          toast.success("Clinical analysis generated & queued for doctor review!");
+        } else {
+          toast.success("Response generated & verified!");
+        }
       }
     } catch (e: any) {
       console.error(e);
@@ -628,7 +794,7 @@ export default function PatientLabChat() {
                 )}
               </div>
               <span className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5 select-none font-['Manrope']">
-                Synapse Chat
+                Zebra Chat
               </span>
             </button>
 
@@ -658,11 +824,10 @@ export default function PatientLabChat() {
                       <DropdownMenuItem
                         key={u.id}
                         onClick={() => handleSelectReportContext(u.id)}
-                        className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs cursor-pointer ${
-                          isSelected
+                        className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs cursor-pointer ${isSelected
                             ? "bg-lime-50 text-lime-950 font-bold"
                             : "hover:bg-slate-50 text-slate-700"
-                        }`}
+                          }`}
                       >
                         <span className="truncate max-w-[220px]">
                           {customTitle || u.original_filename}
@@ -725,40 +890,57 @@ export default function PatientLabChat() {
 
         {/* Workspace Body */}
         <div className="flex-1 overflow-y-auto flex flex-col justify-between relative px-3 sm:px-6 py-2 sm:py-3 [scrollbar-width:thin]">
-          {/* STATE A: Initial Empty Screen with Robot Mascot */}
+          {/* STATE A: Initial Empty Screen with Robot Mascot & Multi-Category Starter Chips */}
           {!hasMessages && !loadingMessages && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center max-w-3xl mx-auto w-full py-1 sm:py-2 animate-in fade-in zoom-in-95 duration-300 my-auto">
+            <div className="flex-1 flex flex-col items-center justify-center text-center max-w-4xl mx-auto w-full py-4 sm:py-6 animate-in fade-in zoom-in-95 duration-300 my-auto">
               {/* Mascot */}
-              <div className="mb-2 sm:mb-2.5">
+              <div className="mb-2 sm:mb-3">
                 <RobotMascot />
               </div>
 
               {/* Bold Title */}
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-slate-900 mb-1 font-['Manrope']">
-                Your smart AI buddy
+                Your smart AI health buddy
                 <span className="block text-lime-700 font-semibold mt-0.5">
-                  for all things digital & health
+                  for all things digital, clinical & portal
                 </span>
               </h1>
 
               {/* Subtitle */}
-              <p className="text-xs sm:text-[13px] text-slate-500 mb-3 sm:mb-4 max-w-md">
-                Ask, analyze, explore — with Synapse
+              <p className="text-xs sm:text-[13px] text-slate-500 mb-5 max-w-lg">
+                Ask about any leftbar tab — lab reports, appointments, medications, diet & workouts, disease risks, or Zebra Synapse platform features.
               </p>
 
-              {/* Suggestion Interactive Pills */}
-              <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 max-w-2xl">
-                {QUICK_PROMPT_PILLS.map((pill, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => void handleSendMessage(pill.query)}
-                    disabled={sending}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-lime-50/60 border border-slate-200/80 hover:border-lime-300 text-[11px] sm:text-xs font-semibold text-slate-800 transition-all shadow-xs hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                  >
-                    <span className="text-sm sm:text-base">{pill.emoji}</span>
-                    <span>{pill.text}</span>
-                  </button>
-                ))}
+              {/* Multi-Category Suggestion Chips Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3 w-full text-left max-w-3xl">
+                {CATEGORIZED_PROMPT_PILLS.map((cat) => {
+                  const CatIcon = cat.categoryIcon;
+                  return (
+                    <div
+                      key={cat.id}
+                      className="p-2.5 sm:p-3 rounded-2xl bg-white/90 border border-slate-200/80 shadow-xs flex flex-col justify-between space-y-2 hover:border-slate-300 transition-all"
+                    >
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wide uppercase text-slate-500">
+                        <CatIcon className="h-3.5 w-3.5 text-lime-600 shrink-0" />
+                        <span>{cat.categoryName}</span>
+                      </div>
+
+                      <div className="flex flex-col gap-1.5">
+                        {cat.chips.map((chip, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => void handleSendMessage(chip.query)}
+                            disabled={sending}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-50/80 hover:bg-lime-50/70 border border-slate-100 hover:border-lime-300 text-[11px] font-medium text-slate-800 transition-all text-left group hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+                          >
+                            <span className="text-sm shrink-0">{chip.emoji}</span>
+                            <span className="line-clamp-1 group-hover:text-lime-900">{chip.text}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -766,122 +948,140 @@ export default function PatientLabChat() {
           {/* STATE B: Active Conversation Stream */}
           {hasMessages && (
             <div className="max-w-3xl mx-auto w-full space-y-5 pb-6">
-              {messages.map((item) => (
-                <div key={item.id} className="space-y-3">
-                  {/* User Message Bubble */}
-                  <div className="flex justify-end items-start gap-3">
-                    <div className="max-w-[85%] sm:max-w-xl bg-lime-500 text-slate-950 rounded-2xl rounded-tr-none px-4 py-3 text-sm font-medium shadow-sm">
-                      <p className="whitespace-pre-wrap leading-relaxed">{item.user_query}</p>
-                    </div>
-                  </div>
+              {messages.map((item) => {
+                const rawContent =
+                  item.status === "rejected_and_replaced"
+                    ? item.doctor_response || ""
+                    : item.ai_response;
+                const { cleanText, actions } = extractActionTags(rawContent);
 
-                  {/* AI Response Card */}
-                  <div className="flex justify-start items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700 shadow-sm mt-1">
-                      {item.status === "rejected_and_replaced" ? (
-                        <Stethoscope className="h-5 w-5 text-emerald-600" />
-                      ) : (
-                        <Bot className="h-5 w-5 text-lime-700" />
-                      )}
+                return (
+                  <div key={item.id} className="space-y-3">
+                    {/* User Message Bubble */}
+                    <div className="flex justify-end items-start gap-3">
+                      <div className="max-w-[85%] sm:max-w-xl bg-lime-500 text-slate-950 rounded-2xl rounded-tr-none px-4 py-3 text-sm font-medium shadow-sm">
+                        <p className="whitespace-pre-wrap leading-relaxed">{item.user_query}</p>
+                      </div>
                     </div>
 
-                    <div className="max-w-[92%] sm:max-w-2xl w-full space-y-2">
-                      {/* Status Pill Header */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {item.status === "pending_review" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                            <Clock className="h-3.5 w-3.5 animate-pulse text-amber-600" />
-                            Pending Doctor Verification
-                          </span>
+                    {/* AI Response Card */}
+                    <div className="flex justify-start items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700 shadow-sm mt-1">
+                        {item.status === "rejected_and_replaced" ? (
+                          <Stethoscope className="h-5 w-5 text-emerald-600" />
+                        ) : (
+                          <Bot className="h-5 w-5 text-lime-700" />
                         )}
-
-                        {item.status === "verified" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                            Verified by{" "}
-                            {item.reviewer_profile?.full_name
-                              ? `Dr. ${item.reviewer_profile.full_name}`
-                              : "Physician"}
-                          </span>
-                        )}
-
-                        {item.status === "rejected_and_replaced" && (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-200">
-                            <Stethoscope className="h-3.5 w-3.5 text-sky-600" />
-                            Doctor's Clinical Guidance
-                          </span>
-                        )}
-
-                        <span className="text-[11px] text-slate-400 ml-auto">
-                          {new Date(item.created_at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
                       </div>
 
-                      {/* Content Card */}
-                      <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 text-slate-800 text-sm leading-relaxed space-y-3 shadow-sm">
-                        {item.status === "rejected_and_replaced" ? (
-                          <div>
-                            <div className="mb-2 pb-2 border-b border-slate-100 flex items-center justify-between text-xs text-emerald-700 font-bold">
-                              <span>
-                                Clinical Guidance from{" "}
-                                {item.reviewer_profile?.full_name
-                                  ? `Dr. ${item.reviewer_profile.full_name}`
-                                  : "Your Doctor"}
-                                :
-                              </span>
-                              {item.reviewed_at && (
-                                <span className="text-[10px] text-slate-400 font-normal">
-                                  {new Date(item.reviewed_at).toLocaleDateString()}
+                      <div className="max-w-[92%] sm:max-w-2xl w-full space-y-2">
+                        {/* Status Pill Header */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {item.status === "pending_review" && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                              <Clock className="h-3.5 w-3.5 animate-pulse text-amber-600" />
+                              Pending Doctor Verification
+                            </span>
+                          )}
+
+                          {item.status === "verified" && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                              {item.reviewed_by === "ai-verified"
+                                ? "Synapse Assistant Verified"
+                                : item.reviewer_profile?.full_name
+                                ? `Verified by Dr. ${item.reviewer_profile.full_name}`
+                                : "Doctor Verified"}
+                            </span>
+                          )}
+
+                          {item.status === "rejected_and_replaced" && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-200">
+                              <Stethoscope className="h-3.5 w-3.5 text-sky-600" />
+                              Doctor's Clinical Guidance
+                            </span>
+                          )}
+
+                          <span className="text-[11px] text-slate-400 ml-auto">
+                            {new Date(item.created_at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+
+                        {/* Content Card */}
+                        <div className="rounded-2xl bg-white border border-slate-100 p-4 sm:p-5 text-slate-800 text-sm leading-relaxed space-y-3 shadow-sm">
+                          {item.status === "rejected_and_replaced" ? (
+                            <div>
+                              <div className="mb-2 pb-2 border-b border-slate-100 flex items-center justify-between text-xs text-emerald-700 font-bold">
+                                <span>
+                                  Clinical Guidance from{" "}
+                                  {item.reviewer_profile?.full_name
+                                    ? `Dr. ${item.reviewer_profile.full_name}`
+                                    : "Your Doctor"}
+                                  :
                                 </span>
+                                {item.reviewed_at && (
+                                  <span className="text-[10px] text-slate-400 font-normal">
+                                    {new Date(item.reviewed_at).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </div>
+                              <FormattedMarkdown content={cleanText} />
+                            </div>
+                          ) : (
+                            <div>
+                              <FormattedMarkdown content={cleanText} />
+                              {item.doctor_notes && (
+                                <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                                  <strong>Doctor's Note:</strong> {item.doctor_notes}
+                                </div>
                               )}
                             </div>
-                            <FormattedMarkdown content={item.doctor_response || ""} />
-                          </div>
-                        ) : (
-                          <div>
-                            <FormattedMarkdown content={item.ai_response} />
-                            {item.doctor_notes && (
-                              <div className="mt-3 pt-3 border-t border-slate-100 text-xs text-emerald-800 bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
-                                <strong>Doctor's Note:</strong> {item.doctor_notes}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                          )}
 
-                        {/* Actions (Copy) */}
-                        <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 text-xs text-slate-400">
-                          <button
-                            onClick={() =>
-                              handleCopy(
-                                item.status === "rejected_and_replaced"
-                                   ? item.doctor_response || ""
-                                  : item.ai_response,
-                                item.id
-                              )
-                            }
-                            className="flex items-center gap-1 hover:text-slate-800 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
-                          >
-                            {copiedId === item.id ? (
-                              <>
-                                <Check className="h-3.5 w-3.5 text-emerald-600" />
-                                <span className="text-emerald-700 font-semibold">Copied</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="h-3.5 w-3.5" />
-                                <span>Copy</span>
-                              </>
-                            )}
-                          </button>
+                          {/* Deep-link Action Shortcut Buttons */}
+                          {actions.length > 0 && (
+                            <div className="pt-2.5 flex flex-wrap items-center gap-2 border-t border-slate-100 mt-2">
+                              {actions.map((act, i) => (
+                                <button
+                                  key={i}
+                                  onClick={() => navigate(act.path)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs hover:shadow-md hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+                                >
+                                  <span>{act.label}</span>
+                                  <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Actions (Copy) */}
+                          <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 text-xs text-slate-400">
+                            <button
+                              onClick={() => handleCopy(cleanText, item.id)}
+                              className="flex items-center gap-1 hover:text-slate-800 transition-colors px-2 py-1 rounded-lg hover:bg-slate-50"
+                            >
+                              {copiedId === item.id ? (
+                                <>
+                                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                  <span className="text-emerald-700 font-semibold">Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3.5 w-3.5" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* Sending Skeleton */}
               {sending && (
@@ -941,11 +1141,10 @@ export default function PatientLabChat() {
                 type="button"
                 onClick={toggleVoiceInput}
                 title={isListening ? "Stop listening" : "Voice input"}
-                className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl transition-colors cursor-pointer ${
-                  isListening
+                className={`flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl transition-colors cursor-pointer ${isListening
                     ? "bg-rose-500 text-white animate-pulse"
                     : "bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800"
-                }`}
+                  }`}
               >
                 {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </button>
