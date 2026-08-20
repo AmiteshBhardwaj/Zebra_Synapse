@@ -733,31 +733,33 @@ export default function PatientDetail() {
   const recentNotes = careActions.filter((action) => action.action_type === "note").slice(0, 3);
   let patientHeight = rel?.patient?.height_cm ?? null;
   let patientWeight = rel?.patient?.weight_kg ?? null;
+  let patientAge = rel?.patient?.age ?? null;
+  let patientGender = rel?.patient?.gender ?? null;
+  let patientBloodType = rel?.patient?.blood_type ?? null;
   let patientDietaryPreference = rel?.patient?.dietary_preference ?? null;
   let patientFoodAllergies = rel?.patient?.food_allergies ?? null;
   let patientDietaryConditions = rel?.patient?.dietary_conditions ?? null;
   let patientDietaryNotes = rel?.patient?.dietary_notes ?? null;
-  let patientGender = "Male";
-  let patientBloodType = "A+";
-  let patientPhone = "+1 (555) 349-8201";
-  let patientEmail = `${patientName.toLowerCase().replace(/\s+/g, ".")}@synapse.med`;
-  let patientEmergencyContact = "+1 (555) 912-4432 (Primary Kin)";
+  let patientPhone = "";
+  let patientEmail = "";
+  let patientEmergencyContact = "";
   let patientAvatarUrl = "";
-  let patientActivityLevel = "Moderate Active";
-  let patientDietGoal = "Maintain Longevity & Metabolic Balance";
+  let patientActivityLevel = "";
+  let patientDietGoal = "";
 
   try {
     const localProfileStr = patientId ? localStorage.getItem(`zebra_profile_${patientId}`) : null;
     if (localProfileStr) {
       const p = JSON.parse(localProfileStr);
-      if (p.height_cm != null) patientHeight = Number(p.height_cm);
-      if (p.weight_kg != null) patientWeight = Number(p.weight_kg);
-      if (p.dietary_preference) patientDietaryPreference = p.dietary_preference;
-      if (p.food_allergies && p.food_allergies.length > 0) patientFoodAllergies = p.food_allergies;
-      if (p.dietary_conditions && p.dietary_conditions.length > 0) patientDietaryConditions = p.dietary_conditions;
-      if (p.dietary_notes) patientDietaryNotes = p.dietary_notes;
-      if (p.gender) patientGender = p.gender;
-      if (p.blood_type || p.bloodType) patientBloodType = p.blood_type || p.bloodType;
+      if (p.height_cm != null && !patientHeight) patientHeight = Number(p.height_cm);
+      if (p.weight_kg != null && !patientWeight) patientWeight = Number(p.weight_kg);
+      if (p.age != null && !patientAge) patientAge = Number(p.age);
+      if (p.gender && !patientGender) patientGender = p.gender;
+      if ((p.blood_type || p.bloodType) && !patientBloodType) patientBloodType = p.blood_type || p.bloodType;
+      if (p.dietary_preference && !patientDietaryPreference) patientDietaryPreference = p.dietary_preference;
+      if (p.food_allergies && p.food_allergies.length > 0 && !patientFoodAllergies) patientFoodAllergies = p.food_allergies;
+      if (p.dietary_conditions && p.dietary_conditions.length > 0 && !patientDietaryConditions) patientDietaryConditions = p.dietary_conditions;
+      if (p.dietary_notes && !patientDietaryNotes) patientDietaryNotes = p.dietary_notes;
       if (p.phone) patientPhone = p.phone;
       if (p.email) patientEmail = p.email;
       if (p.emergency_contact) patientEmergencyContact = p.emergency_contact;
@@ -774,19 +776,12 @@ export default function PatientDetail() {
     console.warn("Could not read local patient profile details", e);
   }
 
-  // Clinical realistic defaults if fields are unpopulated so Height, Weight, BMI & Diet never show as blank/null
-  if (patientHeight == null) patientHeight = 172;
-  if (patientWeight == null) patientWeight = 68;
-  if (!patientDietaryPreference) patientDietaryPreference = "Balanced Omnivore";
-  if (!patientFoodAllergies || patientFoodAllergies.length === 0) patientFoodAllergies = ["Peanuts (Mild)", "Shellfish"];
-  if (!patientDietaryConditions || patientDietaryConditions.length === 0) patientDietaryConditions = ["Mild Lactose Sensitivity"];
-  if (!patientDietaryNotes) patientDietaryNotes = "Patient prefers low-sodium whole foods and adequate daily hydration.";
-
   const patient = {
     name: patientName,
     gender: patientGender,
     bloodType: patientBloodType,
-    condition: rel?.primary_condition?.trim() || "Hypertension & Metabolic Care",
+    age: patientAge,
+    condition: rel?.primary_condition?.trim() || "Care Record",
     phone: patientPhone,
     email: patientEmail,
     emergencyContact: patientEmergencyContact,
@@ -798,9 +793,16 @@ export default function PatientDetail() {
   const nextAppointmentLabel = nextFollowUp?.scheduled_for
     ? formatCareActionDateTime(nextFollowUp.scheduled_for)
     : "-";
+  const formattedGender = patientGender
+    ? patientGender.charAt(0).toUpperCase() + patientGender.slice(1)
+    : null;
+  const formattedAge = patientAge ? `${patientAge} yrs` : null;
+  const formattedBlood = patientBloodType ? `Blood Type: ${patientBloodType}` : null;
+  const formattedId = patientId ? `ID: ${patientId.slice(0, 8)}` : null;
+
   const patientIdentityLine = joinAvailableValues(
-    [patient.gender, `Blood Type: ${patient.bloodType}`, `ID: ${patientId?.slice(0, 8)}`],
-    "Profile details not available",
+    [formattedGender, formattedAge, formattedBlood, formattedId],
+    "Demographic details not specified",
   );
   const patientContactLine = joinAvailableValues(
     [patient.phone, patient.email],
@@ -811,14 +813,17 @@ export default function PatientDetail() {
   const patientBmiCategory = getBmiCategory(patientBmi);
 
   const vitalsSummary = {
-    heartRate: rel?.heart_rate ?? 72,
+    heartRate: rel?.heart_rate ?? null,
     bloodPressure: formatBloodPressure(
-      rel?.blood_pressure_systolic ?? 120,
-      rel?.blood_pressure_diastolic ?? 80,
-    ) ?? "120/80 mmHg",
-    glucose: rel?.glucose ?? 96,
+      rel?.blood_pressure_systolic ?? null,
+      rel?.blood_pressure_diastolic ?? null,
+    ),
+    glucose: rel?.glucose ?? null,
     height: patientHeight,
     weight: patientWeight,
+    age: patientAge,
+    gender: patientGender,
+    bloodType: patientBloodType,
     bmi: patientBmi,
     bmiCategory: patientBmiCategory,
     dietaryPreference: patientDietaryPreference,
@@ -833,53 +838,8 @@ export default function PatientDetail() {
     if (labPanels && labPanels.length > 0) {
       return labPanels;
     }
-
-    const baselinePanel: LabPanelRow = {
-      id: `baseline-${patientId || "patient"}`,
-      patient_id: patientId || "patient",
-      upload_id: null,
-      source_extraction_id: null,
-      recorded_at: rel?.last_visit || rel?.created_at || new Date().toISOString().split("T")[0],
-      biomarkers: {
-        fasting_glucose: rel?.glucose ?? 96,
-        blood_pressure_systolic: rel?.blood_pressure_systolic ?? 128,
-        blood_pressure_diastolic: rel?.blood_pressure_diastolic ?? 82,
-        heart_rate: rel?.heart_rate ?? 72,
-        total_cholesterol: 198,
-        ldl: 115,
-        hdl: 54,
-        triglycerides: 140,
-        hemoglobin_a1c: 5.6,
-        hemoglobin: 14.2,
-        wbc: 6.8,
-        platelets: 245,
-        creatinine: 0.9,
-        serum_bilirubin: 0.8,
-        alt: 24,
-        ast: 22,
-        serum_albumin: 4.2,
-        tsh: 2.1,
-        free_t4: 1.2,
-        total_t3: 110,
-        serum_calcium: 9.4,
-        serum_sodium: 139,
-      },
-      hemoglobin_a1c: 5.6,
-      fasting_glucose: rel?.glucose ?? 96,
-      total_cholesterol: 198,
-      ldl: 115,
-      hdl: 54,
-      triglycerides: 140,
-      hemoglobin: 14.2,
-      wbc: 6.8,
-      platelets: 245,
-      creatinine: 0.9,
-      notes: "Baseline clinical evaluation panel",
-      created_at: new Date().toISOString(),
-    };
-
-    return [baselinePanel];
-  }, [labPanels, patientId, rel]);
+    return [];
+  }, [labPanels]);
 
   const synthesizedLab = useMemo(() => synthesizeMultiPanelData(effectiveLabPanels), [effectiveLabPanels]);
   const activeDoctorPanel = synthesizedLab.panel;
@@ -1434,43 +1394,17 @@ export default function PatientDetail() {
         <Card className={portalPanelClass}>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-1.5">
-              <Heart className="w-4 h-4 text-rose-500" />
-              <p className="text-xs text-slate-400 font-medium">Heart Rate</p>
-            </div>
-            <p className="text-xl font-bold text-slate-900">
-              {vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Activity className="w-4 h-4 text-lime-600" />
-              <p className="text-xs text-slate-400 font-medium">Blood Pressure</p>
-            </div>
-            <p className="text-xl font-bold text-slate-900">{vitalsSummary.bloodPressure ?? "—"}</p>
-          </CardContent>
-        </Card>
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <TrendingUp className="w-4 h-4 text-sky-600" />
-              <p className="text-xs text-slate-400 font-medium">Glucose</p>
-            </div>
-            <p className="text-xl font-bold text-slate-900">
-              {vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "—"}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1.5">
               <Ruler className="w-4 h-4 text-purple-600" />
               <p className="text-xs text-slate-400 font-medium">Height</p>
             </div>
             <p className="text-xl font-bold text-slate-900 truncate" title={formatHeight(vitalsSummary.height)}>
               {vitalsSummary.height ? `${vitalsSummary.height} cm` : "—"}
             </p>
+            {vitalsSummary.height && (
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                {formatHeight(vitalsSummary.height).split("(")[1]?.replace(")", "") || ""}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
@@ -1482,6 +1416,11 @@ export default function PatientDetail() {
             <p className="text-xl font-bold text-slate-900 truncate" title={formatWeight(vitalsSummary.weight)}>
               {vitalsSummary.weight ? `${vitalsSummary.weight} kg` : "—"}
             </p>
+            {vitalsSummary.weight && (
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                {formatWeight(vitalsSummary.weight).split("(")[1]?.replace(")", "") || ""}
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card className={portalPanelClass}>
@@ -1499,6 +1438,39 @@ export default function PatientDetail() {
             </div>
             <p className="text-xl font-bold text-slate-900">
               {vitalsSummary.bmi != null ? vitalsSummary.bmi : "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Clock className="w-4 h-4 text-blue-600" />
+              <p className="text-xs text-slate-400 font-medium">Age</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900">
+              {vitalsSummary.age ? `${vitalsSummary.age} yrs` : "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <User className="w-4 h-4 text-indigo-600" />
+              <p className="text-xs text-slate-400 font-medium">Gender</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900 capitalize">
+              {vitalsSummary.gender || "—"}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <FlaskConical className="w-4 h-4 text-rose-600" />
+              <p className="text-xs text-slate-400 font-medium">Blood Type</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900">
+              {vitalsSummary.bloodType || "—"}
             </p>
           </CardContent>
         </Card>

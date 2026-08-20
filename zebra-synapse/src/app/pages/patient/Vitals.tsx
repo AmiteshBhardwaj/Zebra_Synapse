@@ -1,18 +1,30 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 import {
   Activity,
   AlertTriangle,
+  Clock,
   Clock3,
-  HeartPulse,
+  FlaskConical,
+  Ruler,
+  Scale,
   ShieldCheck,
   TrendingUp,
-  Watch,
+  User,
+  ExternalLink,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { useActiveReport } from "../../../hooks/useActiveReport";
 import { getSupabase } from "../../../lib/supabase";
-import { formatBloodPressure, formatDisplayDate } from "../../../lib/careRelationships";
+import {
+  calculateBmi,
+  formatBloodPressure,
+  formatDisplayDate,
+  formatHeight,
+  formatWeight,
+  getBmiCategory,
+} from "../../../lib/careRelationships";
 import { formatLabDate, type LabPanelRow } from "../../../lib/labPanels";
 import { getOverallStatus } from "../../../lib/labInsights";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
@@ -178,6 +190,15 @@ export default function Vitals() {
     );
   }
 
+  const navigate = useNavigate();
+  const patientHeight = profile?.height_cm ?? null;
+  const patientWeight = profile?.weight_kg ?? null;
+  const patientAge = profile?.age ?? null;
+  const patientGender = profile?.gender ?? null;
+  const patientBloodType = profile?.blood_type ?? null;
+  const patientBmi = calculateBmi(patientHeight, patientWeight);
+  const patientBmiCategory = getBmiCategory(patientBmi);
+
   return (
     <PatientPortalPage>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
@@ -187,21 +208,21 @@ export default function Vitals() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Vitals</h1>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Vitals & Body Metrics</h1>
               <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider">
-                Body Signals
+                Real Profile
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
-              Track heart rate, blood pressure, glucose, and metabolic status in real time.
+              Track height, weight, BMI, and clinical biomarkers synced across your medical profile.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs">
           <span className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-1.5 text-slate-700 font-semibold shadow-sm">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            {summary?.statusLabel ?? "Active Tracking"}
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            {summary?.statusLabel ?? "Profile Synced"}
           </span>
         </div>
       </div>
@@ -220,31 +241,113 @@ export default function Vitals() {
         </section>
       ) : null}
 
+      {/* 1. Demographics & Anthropometrics 6 Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-8">
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Ruler className="w-4 h-4 text-purple-600" />
+              <p className="text-xs text-slate-400 font-medium">Height</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900 truncate" title={formatHeight(patientHeight)}>
+              {patientHeight ? `${patientHeight} cm` : "—"}
+            </p>
+            {patientHeight && (
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                {formatHeight(patientHeight).split("(")[1]?.replace(")", "") || ""}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Scale className="w-4 h-4 text-emerald-600" />
+              <p className="text-xs text-slate-400 font-medium">Weight</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900 truncate" title={formatWeight(patientWeight)}>
+              {patientWeight ? `${patientWeight} kg` : "—"}
+            </p>
+            {patientWeight && (
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                {formatWeight(patientWeight).split("(")[1]?.replace(")", "") || ""}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-1 mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <Activity className="w-4 h-4 text-lime-600" />
+                <p className="text-xs text-slate-400 font-medium">BMI</p>
+              </div>
+              {patientBmi != null && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${patientBmiCategory.badgeClass}`}>
+                  {patientBmiCategory.label}
+                </span>
+              )}
+            </div>
+            <p className="text-xl font-bold text-slate-900">
+              {patientBmi != null ? patientBmi : "—"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Clock className="w-4 h-4 text-blue-600" />
+              <p className="text-xs text-slate-400 font-medium">Age</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900">
+              {patientAge ? `${patientAge} yrs` : "—"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <User className="w-4 h-4 text-indigo-600" />
+              <p className="text-xs text-slate-400 font-medium">Gender</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900 capitalize">
+              {patientGender || "—"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={portalPanelClass}>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <FlaskConical className="w-4 h-4 text-rose-600" />
+              <p className="text-xs text-slate-400 font-medium">Blood Type</p>
+            </div>
+            <p className="text-xl font-bold text-slate-900">
+              {patientBloodType || "—"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 2. Lab Biomarkers / Clinical Section */}
       {hasAnyVitals && summary ? (
         <>
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             <Card className={portalPanelClass}>
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center gap-2">
-                  <HeartPulse className="h-4 w-4 text-rose-500" />
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Heart Rate</p>
+                  <TrendingUp className="h-4 w-4 text-lime-600" />
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Fasting Glucose</p>
                 </div>
                 <p className="text-3xl font-extrabold text-slate-900 font-['Manrope']">
-                  {summary.heartRate != null ? `${summary.heartRate}` : "—"}
+                  {summary.glucose != null ? `${summary.glucose}` : "—"}
                 </p>
-                <p className="mt-1 text-xs text-slate-500 font-medium">bpm</p>
-              </CardContent>
-            </Card>
-
-            <Card className={portalPanelClass}>
-              <CardContent className="p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-sky-600" />
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Blood Pressure</p>
-                </div>
-                <p className="text-3xl font-extrabold text-slate-900 font-['Manrope']">{summary.bloodPressure ?? "—"}</p>
                 <p className="mt-1 text-xs text-slate-500 font-medium">
-                  {summary.bloodPressure ? "mmHg" : "No linked reading"}
+                  {summary.glucose != null ? "mg/dL (From Verified Labs)" : "No lab reading on file"}
                 </p>
               </CardContent>
             </Card>
@@ -253,12 +356,14 @@ export default function Vitals() {
               <CardContent className="p-5">
                 <div className="mb-3 flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-lime-600" />
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Glucose</p>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Hemoglobin A1c</p>
                 </div>
                 <p className="text-3xl font-extrabold text-slate-900 font-['Manrope']">
-                  {summary.glucose != null ? `${summary.glucose}` : "—"}
+                  {summary.a1c != null ? `${summary.a1c}` : "—"}
                 </p>
-                <p className="mt-1 text-xs text-slate-500 font-medium">mg/dL</p>
+                <p className="mt-1 text-xs text-slate-500 font-medium">
+                  {summary.a1c != null ? "% (From Verified Labs)" : "Available after structured lab extraction"}
+                </p>
               </CardContent>
             </Card>
 
@@ -274,40 +379,6 @@ export default function Vitals() {
                   {summary.statusLabel}
                 </Badge>
                 <p className="mt-3 text-xs text-slate-500 font-medium">Updated {summary.lastUpdated}</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 mt-6">
-            <Card className={portalPanelClass}>
-              <CardContent className="p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-lime-600" />
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Hemoglobin A1c</p>
-                </div>
-                <p className="text-3xl font-extrabold text-slate-900 font-['Manrope']">
-                  {summary.a1c != null ? `${summary.a1c}` : "—"}
-                </p>
-                <p className="mt-1 text-xs text-slate-500 font-medium">
-                  {summary.a1c != null ? "%" : "Available after structured lab extraction"}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className={portalPanelClass}>
-              <CardContent className="p-5">
-                <div className="mb-3 flex items-center gap-2">
-                  <Clock3 className="h-4 w-4 text-sky-600" />
-                  <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Data Source</p>
-                </div>
-                <p className="text-xl font-bold text-slate-900 font-['Manrope']">
-                  {summary.source === "care" ? "Linked Care Record" : "Latest Lab Panel"}
-                </p>
-                <p className="mt-1.5 text-xs text-slate-500 leading-relaxed font-medium">
-                  {summary.source === "care"
-                    ? "These readings came from your linked doctor record."
-                    : "These values were derived from your latest uploaded structured lab report."}
-                </p>
               </CardContent>
             </Card>
           </div>
