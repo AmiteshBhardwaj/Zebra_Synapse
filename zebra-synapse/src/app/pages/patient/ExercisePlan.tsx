@@ -81,6 +81,10 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
   const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>("general_health");
   const [durationMin, setDurationMin] = useState<number>(30);
 
+  // Calculate BMI
+  const heightCm = profile?.height_cm;
+  const weightKg = profile?.weight_kg;
+
   // Instant plan calculation (0ms wait time)
   const [plan, setPlan] = useState<WeeklyExercisePlan | null>(() => {
     try {
@@ -117,9 +121,6 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     }
   });
 
-  // Calculate BMI
-  const heightCm = profile?.height_cm;
-  const weightKg = profile?.weight_kg;
   const calculatedBmi = useMemo(() => {
     if (heightCm && weightKg && heightCm > 0) {
       return Number((weightKg / Math.pow(heightCm / 100, 2)).toFixed(1));
