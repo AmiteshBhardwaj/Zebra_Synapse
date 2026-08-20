@@ -47,21 +47,21 @@ export default function WellnessTips() {
   return (
     <div className="h-full flex flex-col p-3 sm:p-4 lg:p-5 max-w-[1600px] mx-auto overflow-hidden bg-[#f6f8f5]">
       {/* 1. COMPACT EXECUTIVE HEADER */}
-      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 mb-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
-            <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
+      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 rounded-2xl bg-white/75 backdrop-blur-md border border-white/90 px-3.5 py-2 sm:px-4.5 sm:py-2.5 shadow-[0_4px_20px_rgba(30,100,180,0.05)] mb-2.5 sm:mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
+            <Sparkles className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope'] leading-tight">
                 Wellness Tips
               </h1>
-              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider font-['Manrope']">
                 Lifestyle Guidance
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1">
+            <p className="text-[11px] font-medium text-slate-400 leading-tight">
               {isAllReports
                 ? `Personalized recovery, movement, and habit suggestions synthesizing all ${panels.length} uploaded lab reports.`
                 : `Personalized recovery, movement, and habit suggestions generated from report dated ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
@@ -69,8 +69,8 @@ export default function WellnessTips() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-slate-700 font-semibold shadow-2xs">
+        <div className="flex items-center gap-2 text-xs font-['Manrope']">
+          <span className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-slate-700 font-semibold shadow-2xs font-['Manrope']">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             {hasPanels && activePanel ? `${tips.length} Custom Tips` : "Awaiting Biomarkers"}
           </span>

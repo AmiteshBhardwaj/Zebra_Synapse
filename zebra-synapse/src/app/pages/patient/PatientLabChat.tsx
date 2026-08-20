@@ -26,7 +26,6 @@ import {
   Send,
   Sparkles,
   Stethoscope,
-  TrendingUp,
   UtensilsCrossed,
   Video,
   Zap,
@@ -88,29 +87,6 @@ interface PromptCategory {
 
 const CATEGORIZED_PROMPT_PILLS: PromptCategory[] = [
   {
-    id: "zebra",
-    categoryName: "About Zebra Synapse",
-    categoryIcon: Zap,
-    accent: "bg-cyan-50 text-cyan-800 border-cyan-200 hover:bg-cyan-100/80",
-    chips: [
-      {
-        emoji: "⚡",
-        text: "What is Zebra Synapse?",
-        query: "What is Zebra Synapse and what can you help me with across my health portal?",
-      },
-      {
-        emoji: "🩺",
-        text: "How does Doctor Verification work?",
-        query: "How does doctor-in-the-loop verification work in Zebra Synapse?",
-      },
-      {
-        emoji: "🛡️",
-        text: "Is my medical data secure?",
-        query: "How is my medical data and privacy protected in Zebra Synapse?",
-      },
-    ],
-  },
-  {
     id: "labs",
     categoryName: "Lab Insights",
     categoryIcon: Sparkles,
@@ -120,11 +96,6 @@ const CATEGORIZED_PROMPT_PILLS: PromptCategory[] = [
         emoji: "🧠",
         text: "Why am I weak & tired?",
         query: "I feel weak and tired, what does my lab report say about why?",
-      },
-      {
-        emoji: "👋",
-        text: "Why do I feel dizzy?",
-        query: "Why do I feel dizzy or lightheaded based on my lab results?",
       },
       {
         emoji: "🩸",
@@ -184,24 +155,6 @@ const CATEGORIZED_PROMPT_PILLS: PromptCategory[] = [
         emoji: "💧",
         text: "Water & macro targets",
         query: "What are my daily water, calorie, and protein intake targets?",
-      },
-    ],
-  },
-  {
-    id: "risks",
-    categoryName: "Disease Prediction",
-    categoryIcon: TrendingUp,
-    accent: "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100/80",
-    chips: [
-      {
-        emoji: "🔮",
-        text: "What health risks are predicted?",
-        query: "What disease risks or health predictions are identified from my lab trends?",
-      },
-      {
-        emoji: "🔬",
-        text: "Am I eligible for clinical trials?",
-        query: "Are there any clinical trials or medical studies matching my biomarkers?",
       },
     ],
   },
@@ -908,11 +861,11 @@ export default function PatientLabChat() {
 
               {/* Subtitle */}
               <p className="text-xs sm:text-[13px] text-slate-500 mb-5 max-w-lg">
-                Ask about any leftbar tab — lab reports, appointments, medications, diet & workouts, disease risks, or Zebra Synapse platform features.
+                Ask about your lab reports, prescriptions, appointments, or wellness plan.
               </p>
 
               {/* Multi-Category Suggestion Chips Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3 w-full text-left max-w-3xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 w-full text-left max-w-2xl">
                 {CATEGORIZED_PROMPT_PILLS.map((cat) => {
                   const CatIcon = cat.categoryIcon;
                   return (

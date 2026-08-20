@@ -530,21 +530,21 @@ export default function Appointments() {
   return (
     <div className="h-full flex flex-col p-3 sm:p-4 lg:p-5 max-w-[1600px] mx-auto overflow-hidden bg-[#f6f8f5]">
       {/* 1. TOP HEADER (COMPACT) */}
-      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/80 mb-3 sm:mb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
-            <Calendar className="h-5 w-5 sm:h-6 sm:w-6" />
+      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 rounded-2xl bg-white/75 backdrop-blur-md border border-white/90 px-3.5 py-2 sm:px-4.5 sm:py-2.5 shadow-[0_4px_20px_rgba(30,100,180,0.05)] mb-2.5 sm:mb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
+            <Calendar className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope'] leading-tight">
                 Appointments
               </h1>
-              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider font-['Manrope']">
                 Care Coordination
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-500 line-clamp-1">
+            <p className="text-[11px] font-medium text-slate-400 leading-tight">
               Manage upcoming visits and review completed medical appointments.
             </p>
           </div>
@@ -553,9 +553,9 @@ export default function Appointments() {
         <div className="flex items-center gap-2.5">
           <Button
             onClick={() => setScheduleOpen(true)}
-            className="h-9 sm:h-10 px-4 rounded-xl sm:rounded-2xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_4px_14px_rgba(0,168,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,168,255,0.35)] transition-all cursor-pointer"
+            className="h-8.5 px-3.5 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-[0_4px_14px_rgba(0,168,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,168,255,0.35)] transition-all cursor-pointer font-['Manrope']"
           >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
+            <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
             <span>Schedule Appointment</span>
           </Button>
         </div>

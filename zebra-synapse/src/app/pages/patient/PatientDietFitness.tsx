@@ -235,21 +235,21 @@ export default function PatientDietFitness() {
   return (
     <div className="h-full flex flex-col p-3 sm:p-4 lg:p-5 max-w-[1600px] mx-auto overflow-hidden bg-[#f6f8f5]">
       {/* 1. COMPACT TOP HEADER & NAVIGATION BAR */}
-      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-200/80 mb-2.5">
-        <div className="flex items-center gap-3">
+      <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 rounded-2xl bg-white/75 backdrop-blur-md border border-white/90 px-3.5 py-2 sm:px-4.5 sm:py-2.5 shadow-[0_4px_20px_rgba(30,100,180,0.05)] mb-2.5">
+        <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
             <UtensilsCrossed className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope'] leading-tight">
                 Diet & Fitness
               </h1>
-              <span className="rounded-full border border-lime-200 bg-lime-50 px-2 py-0.2 text-[9px] font-bold text-lime-800 uppercase tracking-wider">
+              <span className="rounded-full border border-lime-200 bg-lime-50 px-2 py-0.5 text-[9px] font-bold text-lime-800 uppercase tracking-wider font-['Manrope']">
                 Integrated
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 line-clamp-1">
+            <p className="text-[11px] font-medium text-slate-400 leading-tight">
               Nutrition tracking, macro goals, and conditioning schedule
             </p>
           </div>
@@ -258,11 +258,11 @@ export default function PatientDietFitness() {
         {/* Tab switcher + Date stepper + Quick action */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Segmented Tab Group */}
-          <div className="inline-flex items-center gap-1 rounded-xl bg-slate-200/60 p-0.5 text-xs font-semibold text-slate-600">
+          <div className="inline-flex items-center gap-1 rounded-xl bg-slate-200/60 p-0.5 text-xs font-semibold text-slate-600 font-['Manrope']">
             <button
               type="button"
               onClick={() => handleTabChange("overview")}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer font-['Manrope'] ${
                 activeTab === "overview"
                   ? "bg-[#84cc16] text-slate-950 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -274,7 +274,7 @@ export default function PatientDietFitness() {
             <button
               type="button"
               onClick={() => handleTabChange("meals")}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer font-['Manrope'] ${
                 activeTab === "meals"
                   ? "bg-[#84cc16] text-slate-950 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -286,7 +286,7 @@ export default function PatientDietFitness() {
             <button
               type="button"
               onClick={() => handleTabChange("exercise")}
-              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer font-['Manrope'] ${
                 activeTab === "exercise"
                   ? "bg-[#84cc16] text-slate-950 shadow-2xs"
                   : "text-slate-600 hover:text-slate-900"
@@ -299,7 +299,7 @@ export default function PatientDietFitness() {
 
           {/* Date Selector */}
           {activeTab !== "exercise" && (
-            <div className="flex items-center gap-1 bg-white rounded-xl p-0.5 border border-slate-200 shadow-2xs text-xs">
+            <div className="flex items-center gap-1 bg-white rounded-xl p-0.5 border border-slate-200 shadow-2xs text-xs font-['Manrope']">
               <Button
                 variant="ghost"
                 size="sm"
@@ -308,7 +308,7 @@ export default function PatientDietFitness() {
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </Button>
-              <span className="font-bold text-slate-800 text-[11px] px-1">{formattedDateTitle}</span>
+              <span className="font-bold text-slate-800 text-[11px] px-1 font-['Manrope']">{formattedDateTitle}</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -323,7 +323,7 @@ export default function PatientDietFitness() {
           <Button
             size="sm"
             onClick={() => handleTabChange("meals")}
-            className="h-8 px-3 rounded-xl bg-[#84cc16] hover:bg-[#73b512] text-white text-xs font-bold gap-1 shadow-2xs cursor-pointer"
+            className="h-8 px-3 rounded-xl bg-[#84cc16] hover:bg-[#73b512] text-white text-xs font-bold gap-1 shadow-2xs cursor-pointer font-['Manrope']"
           >
             <Plus className="h-3.5 w-3.5" /> Log Meal
           </Button>
@@ -549,7 +549,7 @@ export default function PatientDietFitness() {
 
       {/* Tab 2: MEAL PLAN */}
       {activeTab === "meals" && (
-        <div className="flex-1 min-h-0 overflow-y-auto animate-in fade-in duration-200">
+        <div className="flex-1 min-h-0 overflow-y-auto animate-in fade-in duration-200 pr-1 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
           <Diet
             embedded={true}
             selectedDate={selectedDate}
@@ -562,7 +562,7 @@ export default function PatientDietFitness() {
 
       {/* Tab 3: EXERCISE PLAN */}
       {activeTab === "exercise" && (
-        <div className="flex-1 min-h-0 overflow-y-auto animate-in fade-in duration-200">
+        <div className="flex-1 min-h-0 overflow-y-auto animate-in fade-in duration-200 pr-1 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
           <ExercisePlan embedded={true} initialDay={selectedExerciseDay} />
         </div>
       )}

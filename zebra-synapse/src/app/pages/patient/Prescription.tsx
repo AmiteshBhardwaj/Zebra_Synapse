@@ -61,26 +61,28 @@ export default function Prescription() {
   return (
     <PatientPortalPage>
       {/* Sleek Executive Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 mb-6">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
-            <Pill className="h-6 w-6" />
+      <div className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 rounded-2xl bg-white/75 backdrop-blur-md border border-white/90 px-3.5 py-2 sm:px-4.5 sm:py-2.5 shadow-[0_4px_20px_rgba(30,100,180,0.05)] mb-4 sm:mb-6">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
+            <Pill className="h-5 w-5" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">Prescriptions</h1>
-              <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[10px] font-bold text-[#0284c7] uppercase tracking-wider">
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope'] leading-tight">
+                Prescriptions
+              </h1>
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider font-['Manrope']">
                 Medication Vault
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
+            <p className="text-[11px] font-medium text-slate-400 leading-tight">
               Medications prescribed by your care team, dosage schedules, and active refill requests.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-1.5 text-slate-700 font-semibold shadow-sm">
+        <div className="flex items-center gap-2 text-xs font-['Manrope']">
+          <span className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-slate-700 font-semibold shadow-2xs font-['Manrope']">
             <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             {active.length} Active Rx
           </span>

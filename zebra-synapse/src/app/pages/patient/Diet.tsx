@@ -1005,58 +1005,60 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
         <div className="flex-1 min-w-0 space-y-6">
           
           {/* TOP APP HEADER: BRAND / GREETING / SEARCH / SUB-TABS / LOG FOOD BUTTON */}
-          <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-[24px] p-5 sm:p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
-            <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
-                <Apple className="h-6 w-6 stroke-[2.2]" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                    Hello, {profile?.full_name?.split(" ")[0] || "Adam"}!
-                  </h1>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2.5 py-0.5 text-xs font-semibold text-lime-800">
-                    <Sparkles className="h-3 w-3" /> Zebra Synapse Active
-                  </span>
+          {!embedded && (
+            <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white rounded-[24px] p-5 sm:p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)]">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-600 shadow-sm">
+                  <Apple className="h-6 w-6 stroke-[2.2]" />
                 </div>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  Let's begin our journey to better health today
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="relative hidden md:block w-48 lg:w-60">
-                <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Search anything..."
-                  value={foodSearchQuery}
-                  onChange={(e) => setFoodSearchQuery(e.target.value)}
-                  className="pl-9 h-11 rounded-2xl bg-slate-50 border-slate-200/70 text-xs text-slate-700"
-                />
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                      Hello, {profile?.full_name?.split(" ")[0] || "Adam"}!
+                    </h1>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-lime-100 px-2.5 py-0.5 text-xs font-semibold text-lime-800">
+                      <Sparkles className="h-3 w-3" /> Zebra Synapse Active
+                    </span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Let's begin our journey to better health today
+                  </p>
+                </div>
               </div>
 
-              <Button
-                onClick={() => setIsCustomizeOpen(true)}
-                variant="outline"
-                className="h-11 px-4 rounded-2xl border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 flex items-center gap-2 text-xs"
-              >
-                <SlidersHorizontal className="h-4 w-4 text-slate-500" />
-                Goals
-              </Button>
+              <div className="flex items-center gap-3">
+                <div className="relative hidden md:block w-48 lg:w-60">
+                  <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+                  <Input
+                    placeholder="Search anything..."
+                    value={foodSearchQuery}
+                    onChange={(e) => setFoodSearchQuery(e.target.value)}
+                    className="pl-9 h-11 rounded-2xl bg-slate-50 border-slate-200/70 text-xs text-slate-700"
+                  />
+                </div>
 
-              <Button
-                onClick={() => {
-                  setSelectedMealForAdd("breakfast");
-                  setIsAddFoodOpen(true);
-                }}
-                className="h-11 px-5 rounded-2xl bg-[#84cc16] hover:bg-[#73b512] text-white font-semibold shadow-md shadow-lime-500/25 transition-all active:scale-[0.98] flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4 stroke-[2.5]" />
-                Log Food
-              </Button>
-            </div>
-          </header>
+                <Button
+                  onClick={() => setIsCustomizeOpen(true)}
+                  variant="outline"
+                  className="h-11 px-4 rounded-2xl border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 flex items-center gap-2 text-xs"
+                >
+                  <SlidersHorizontal className="h-4 w-4 text-slate-500" />
+                  Goals
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setSelectedMealForAdd("breakfast");
+                    setIsAddFoodOpen(true);
+                  }}
+                  className="h-11 px-5 rounded-2xl bg-[#84cc16] hover:bg-[#73b512] text-white font-semibold shadow-md shadow-lime-500/25 transition-all active:scale-[0.98] flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4 stroke-[2.5]" />
+                  Log Food
+                </Button>
+              </div>
+            </header>
+          )}
 
         {/* ========================================================================= */}
         {/* VIEW 1: ZEBRA SYNAPSE MAIN DAILY DASHBOARD */}
@@ -1606,14 +1608,16 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
         {activeTab === "weekly_plan" && (
           <div className="space-y-6">
 
-            <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">7-Day Biomarker-Guided Meal Plan</h2>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                  Clinically calibrated meals matching your metabolic target of {calorieTarget} kcal/day
-                </p>
+            {!embedded && (
+              <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">7-Day Biomarker-Guided Meal Plan</h2>
+                  <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+                    Clinically calibrated meals matching your metabolic target of {calorieTarget} kcal/day
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Weekly Recipes Plan View */}
             <div className="space-y-6">
