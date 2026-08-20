@@ -101,7 +101,7 @@ export default function DoctorPatientChat() {
       globalMsgs.forEach((m) => {
         const mDocId = (m.doctor_id || "").toLowerCase().trim();
         const mDocName = (m.doctor_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
-        if (mDocId === docIdNorm || mDocId === "doc_amelia_hart" || (docNameNorm && mDocName.includes(docNameNorm))) {
+        if (mDocId === docIdNorm || (docIdNorm === "doc_amelia_hart" && mDocId === "doc_amelia_hart") || (docNameNorm && docNameNorm !== "doctor" && mDocName.includes(docNameNorm))) {
           if (m.patient_id && !patsMap.has(m.patient_id)) {
             patsMap.set(m.patient_id, {
               id: m.patient_id,

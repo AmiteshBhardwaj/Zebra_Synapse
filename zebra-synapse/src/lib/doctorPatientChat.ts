@@ -289,84 +289,58 @@ export function filterConversationMessages(
   doctorName?: string | null,
   patientName?: string | null
 ): DoctorPatientMessage[] {
-  const normDocName = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
-  const normPatName = (patientName || "").toLowerCase().trim();
+  const normTargetDocId = (doctorId || "").trim();
+  const normTargetPatId = (patientId || "").trim();
+  const normTargetDocName = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
+  const normTargetPatName = (patientName || "").toLowerCase().trim();
 
-  // Match flags
-  const isDefaultPatientSearch =
-    patientId === "pat_maya_thompson" ||
-    patientId === "patient" ||
-    normPatName.includes("maya") ||
-    normPatName.includes("thompson") ||
-    normPatName.includes("patient user") ||
-    normPatName === "patient" ||
-    normPatName === "user";
-
-  const isDefaultDoctorSearch =
-    doctorId === "doc_amelia_hart" ||
-    doctorId === "doctor" ||
-    normDocName.includes("amelia") ||
-    normDocName.includes("hart") ||
-    normDocName.includes("dr. alex smith") ||
-    normDocName === "doctor" ||
-    normDocName === "alex smith";
+  if (!normTargetDocId && !normTargetDocName) return [];
+  if (!normTargetPatId && !normTargetPatName) return [];
 
   return messages.filter((m) => {
-    // 0. Filter out deleted conversations
+    // 0. Exclude locally deleted conversations
     if (isConversationDeletedLocally(m.doctor_id, m.patient_id, m.doctor_name, m.patient_name)) {
       return false;
     }
 
-    const mDocId = m.doctor_id || "";
-    const mPatId = m.patient_id || "";
+    const mDocId = (m.doctor_id || "").trim();
+    const mPatId = (m.patient_id || "").trim();
     const mDocName = (m.doctor_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
     const mPatName = (m.patient_name || "").toLowerCase().trim();
 
-    // 1. Direct ID match
-    if (
-      (mDocId === doctorId && mPatId === patientId) ||
-      (mDocId === patientId && mPatId === doctorId)
-    ) {
-      return true;
+    // Doctor match: ID must match OR normalized name must match
+    let doctorMatches = false;
+    if (mDocId && normTargetDocId) {
+      if (mDocId === normTargetDocId) {
+        doctorMatches = true;
+      } else if (
+        (normTargetDocId === "doc_amelia_hart" || normTargetDocId === "doctor") &&
+        (mDocId === "doc_amelia_hart" || mDocId === "doctor")
+      ) {
+        doctorMatches = true;
+      }
+    } else if (normTargetDocName && mDocName) {
+      doctorMatches = mDocName.includes(normTargetDocName) || normTargetDocName.includes(mDocName);
     }
 
-    // 2. Name-based match
-    if (
-      normDocName &&
-      normPatName &&
-      (mDocName.includes(normDocName) || normDocName.includes(mDocName)) &&
-      (mPatName.includes(normPatName) || normPatName.includes(mPatName))
-    ) {
-      return true;
+    if (!doctorMatches) return false;
+
+    // Patient match: ID must match OR normalized name must match
+    let patientMatches = false;
+    if (mPatId && normTargetPatId) {
+      if (mPatId === normTargetPatId) {
+        patientMatches = true;
+      } else if (
+        (normTargetPatId === "pat_maya_thompson" || normTargetPatId === "patient") &&
+        (mPatId === "pat_maya_thompson" || mPatId === "patient")
+      ) {
+        patientMatches = true;
+      }
+    } else if (normTargetPatName && mPatName) {
+      patientMatches = mPatName.includes(normTargetPatName) || normTargetPatName.includes(mPatName);
     }
 
-    // 3. Match Patient default/demo cross-link
-    const isMessageDefaultPat =
-      mPatId === "pat_maya_thompson" ||
-      mPatId === "patient" ||
-      mPatName.includes("maya") ||
-      mPatName.includes("thompson") ||
-      mPatName.includes("patient user") ||
-      mPatName === "patient" ||
-      mPatName === "user";
-
-    if (isDefaultPatientSearch && isMessageDefaultPat) {
-      return true;
-    }
-
-    // 4. Match Doctor default/demo cross-link
-    const isMessageDefaultDoc =
-      mDocId === "doc_amelia_hart" ||
-      mDocId === "doctor" ||
-      mDocName.includes("amelia") ||
-      mDocName.includes("hart") ||
-      mDocName.includes("dr. alex smith");
-
-    if (isDefaultDoctorSearch && isMessageDefaultDoc) {
-      return true;
-    }
-
-    return false;
+    return patientMatches;
   });
 }
 
