@@ -258,7 +258,7 @@ export default function DoctorDashboard() {
         </header>
 
         {/* Scrollable View Container */}
-        <main ref={mainRef} className="flex-1 overflow-y-auto bg-[#F4F6FC] p-4 md:p-6 [scrollbar-width:thin]">
+        <main ref={mainRef} className="flex-1 overflow-y-auto bg-[#F4F6FC] p-3 md:p-4 lg:p-5 [scrollbar-width:thin]">
           <Outlet />
         </main>
       </div>

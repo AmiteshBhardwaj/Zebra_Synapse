@@ -55,156 +55,16 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 
-export type DoctorAppointment = {
-  id: string;
-  patientId?: string;
-  patientName: string;
-  patientAge?: number;
-  patientGender?: string;
-  condition: string;
-  date: string; // YYYY-MM-DD
-  time: string;
-  durationMinutes: number;
-  type: "in-person" | "teleconsult" | "follow-up" | "lab-review";
-  status: "Confirmed" | "Completed" | "Cancelled" | "In-Progress";
-  location?: string;
-  notes?: string;
-  vitalsSummary?: string;
-  urgency?: "normal" | "priority" | "urgent";
-};
+import {
+  type DoctorAppointment,
+  TIME_SLOTS,
+  INITIAL_APPOINTMENTS,
+  loadDoctorAppointments,
+  saveDoctorAppointments,
+} from "../../../lib/doctorAppointments";
 
-export const TIME_SLOTS = [
-  "08:30 AM",
-  "09:00 AM",
-  "09:30 AM",
-  "10:00 AM",
-  "10:30 AM",
-  "11:00 AM",
-  "11:30 AM",
-  "01:30 PM",
-  "02:00 PM",
-  "02:30 PM",
-  "03:00 PM",
-  "03:30 PM",
-  "04:00 PM",
-  "04:30 PM",
-  "05:00 PM",
-];
+export { type DoctorAppointment, TIME_SLOTS, INITIAL_APPOINTMENTS };
 
-const INITIAL_APPOINTMENTS: DoctorAppointment[] = [
-  {
-    id: "apt-101",
-    patientName: "Eleanor Vance",
-    patientAge: 34,
-    patientGender: "Female",
-    condition: "Ehlers-Danlos Syndrome (EDS)",
-    date: "2026-08-15",
-    time: "09:00 AM",
-    durationMinutes: 30,
-    type: "in-person",
-    status: "Confirmed",
-    location: "Synapse Clinical Suite 402",
-    notes: "Joint hypermobility follow-up and physical therapy progress review.",
-    vitalsSummary: "BP: 118/76 · HR: 72 bpm",
-    urgency: "normal",
-  },
-  {
-    id: "apt-102",
-    patientName: "Marcus Sterling",
-    patientAge: 48,
-    patientGender: "Male",
-    condition: "Fabry Disease (GLA Gene)",
-    date: "2026-08-15",
-    time: "10:30 AM",
-    durationMinutes: 45,
-    type: "teleconsult",
-    status: "Confirmed",
-    location: "Virtual Consult Room #1",
-    notes: "Enzyme replacement therapy (ERT) response evaluation and renal panel review.",
-    vitalsSummary: "BP: 132/85 · HR: 78 bpm",
-    urgency: "priority",
-  },
-  {
-    id: "apt-103",
-    patientName: "Sophia Martinez",
-    patientAge: 29,
-    patientGender: "Female",
-    condition: "Marfan Syndrome Surveillance",
-    date: "2026-08-15",
-    time: "02:00 PM",
-    durationMinutes: 30,
-    type: "in-person",
-    status: "Confirmed",
-    location: "Synapse Clinical Suite 402",
-    notes: "Annual aortic root echocardiogram telemetry correlation.",
-    vitalsSummary: "BP: 110/70 · HR: 68 bpm",
-    urgency: "normal",
-  },
-  {
-    id: "apt-104",
-    patientName: "David Zhao",
-    patientAge: 52,
-    patientGender: "Male",
-    condition: "Gaucher Disease Type 1",
-    date: "2026-08-16",
-    time: "11:00 AM",
-    durationMinutes: 30,
-    type: "teleconsult",
-    status: "Confirmed",
-    location: "Virtual Consult Room #2",
-    notes: "Platelet count monitoring and bone density scan discussion.",
-    vitalsSummary: "BP: 124/80 · HR: 74 bpm",
-    urgency: "normal",
-  },
-  {
-    id: "apt-105",
-    patientName: "Liam O'Connor",
-    patientAge: 41,
-    patientGender: "Male",
-    condition: "Familial Hypercholesterolemia",
-    date: "2026-08-17",
-    time: "03:30 PM",
-    durationMinutes: 30,
-    type: "lab-review",
-    status: "Confirmed",
-    location: "Synapse Clinical Suite 402",
-    notes: "PCSK9 inhibitor titration and lipid multi-omics panel evaluation.",
-    vitalsSummary: "BP: 138/88 · HR: 82 bpm",
-    urgency: "priority",
-  },
-  {
-    id: "apt-106",
-    patientName: "Aaliyah Khan",
-    patientAge: 26,
-    patientGender: "Female",
-    condition: "Wilson Disease",
-    date: "2026-08-12",
-    time: "09:30 AM",
-    durationMinutes: 30,
-    type: "in-person",
-    status: "Completed",
-    location: "Synapse Clinical Suite 402",
-    notes: "24-hour urinary copper excretion stable on zinc acetate therapy.",
-    vitalsSummary: "BP: 115/75 · HR: 70 bpm",
-    urgency: "normal",
-  },
-  {
-    id: "apt-107",
-    patientName: "Jameson Blake",
-    patientAge: 61,
-    patientGender: "Male",
-    condition: "Huntington's Disease Early Phenotyping",
-    date: "2026-08-10",
-    time: "01:30 PM",
-    durationMinutes: 45,
-    type: "teleconsult",
-    status: "Completed",
-    location: "Virtual Consult Room #1",
-    notes: "UHDRS motor assessment and speech therapy referral issued.",
-    vitalsSummary: "BP: 128/82 · HR: 76 bpm",
-    urgency: "normal",
-  },
-];
 
 export default function DoctorAppointments() {
   const navigate = useNavigate();
@@ -559,36 +419,36 @@ export default function DoctorAppointments() {
   };
 
   return (
-    <div className="space-y-6 pb-12 font-poppins text-[#111111]">
+    <div className="space-y-3.5 pb-2 font-poppins text-[#111111]">
       {/* Top Banner & Quick Actions */}
-      <div className="rounded-[26px] bg-gradient-to-r from-[#3E36B0] via-[#4A42C4] to-[#6A61EB] p-6 md:p-8 text-white shadow-xl shadow-[#3E36B0]/15 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="rounded-2xl bg-gradient-to-r from-[#3E36B0] via-[#4A42C4] to-[#6A61EB] px-5 py-3.5 text-white shadow-md shadow-[#3E36B0]/15 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {/* Ambient background glows */}
-        <div className="absolute -top-16 -right-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 right-36 w-48 h-48 bg-[#A8DEF7]/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 right-36 w-36 h-36 bg-[#A8DEF7]/20 rounded-full blur-2xl pointer-events-none" />
 
         <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2.5 mb-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-xs font-semibold text-[#A8DEF7] border border-white/20 backdrop-blur-sm">
-              <Calendar className="w-3.5 h-3.5" />
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-[11px] font-semibold text-[#A8DEF7] border border-white/20 backdrop-blur-sm">
+              <Calendar className="w-3 h-3" />
               Clinical Schedule & Encounters
             </span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+          <h1 className="text-xl md:text-2xl font-extrabold tracking-tight">
             Appointment Center
           </h1>
-          <p className="mt-1.5 text-xs md:text-sm text-white/80 leading-relaxed font-medium">
+          <p className="mt-0.5 text-xs text-white/80 leading-snug font-medium line-clamp-1">
             Manage your daily patient consultation queue, organize in-person visits, and launch high-definition multi-omics teleconsultations.
           </p>
         </div>
 
-        <div className="relative z-10 flex flex-wrap items-center gap-3">
+        <div className="relative z-10 flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => {
               setNewDate("2026-08-15");
               setScheduleModalOpen(true);
             }}
-            className="h-11 px-5 rounded-2xl bg-white hover:bg-white/95 text-[#3E36B0] font-bold text-xs md:text-sm flex items-center justify-center gap-2 shadow-lg shadow-black/10 active:scale-98 transition-all cursor-pointer"
+            className="h-9 px-4 rounded-xl bg-white hover:bg-white/95 text-[#3E36B0] font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm active:scale-98 transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>New Appointment</span>
@@ -597,27 +457,27 @@ export default function DoctorAppointments() {
       </div>
 
       {/* 4 KPI Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Today's Appointments */}
         <div
           onClick={() => setTabFilter("today")}
-          className={`p-4 md:p-5 rounded-[22px] bg-white border cursor-pointer transition-all ${
+          className={`p-3 rounded-2xl bg-white border cursor-pointer transition-all ${
             tabFilter === "today"
-              ? "border-[#3E36B0] shadow-md ring-2 ring-[#3E36B0]/10"
-              : "border-slate-200/70 hover:border-slate-300 shadow-sm"
+              ? "border-[#3E36B0] shadow-sm ring-1 ring-[#3E36B0]/15"
+              : "border-slate-200/70 hover:border-slate-300 shadow-xs"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Today's Visits</span>
-            <div className="w-9 h-9 rounded-xl bg-[#D8D9FF] text-[#3E36B0] flex items-center justify-center">
-              <CalendarCheck className="w-5 h-5" />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Today's Visits</span>
+            <div className="w-7 h-7 rounded-lg bg-[#D8D9FF] text-[#3E36B0] flex items-center justify-center">
+              <CalendarCheck className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-extrabold text-[#111111]">
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-xl md:text-2xl font-extrabold text-[#111111]">
               {stats.todayCount}
             </span>
-            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
               Active Shift
             </span>
           </div>
@@ -626,46 +486,46 @@ export default function DoctorAppointments() {
         {/* Upcoming */}
         <div
           onClick={() => setTabFilter("upcoming")}
-          className={`p-4 md:p-5 rounded-[22px] bg-white border cursor-pointer transition-all ${
+          className={`p-3 rounded-2xl bg-white border cursor-pointer transition-all ${
             tabFilter === "upcoming"
-              ? "border-[#3E36B0] shadow-md ring-2 ring-[#3E36B0]/10"
-              : "border-slate-200/70 hover:border-slate-300 shadow-sm"
+              ? "border-[#3E36B0] shadow-sm ring-1 ring-[#3E36B0]/15"
+              : "border-slate-200/70 hover:border-slate-300 shadow-xs"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Upcoming Total</span>
-            <div className="w-9 h-9 rounded-xl bg-[#A8DEF7]/40 text-[#0284c7] flex items-center justify-center">
-              <CalendarClock className="w-5 h-5" />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Upcoming Total</span>
+            <div className="w-7 h-7 rounded-lg bg-[#A8DEF7]/40 text-[#0284c7] flex items-center justify-center">
+              <CalendarClock className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-extrabold text-[#111111]">
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-xl md:text-2xl font-extrabold text-[#111111]">
               {stats.upcomingCount}
             </span>
-            <span className="text-[11px] font-semibold text-slate-500">Scheduled</span>
+            <span className="text-[10px] font-semibold text-slate-500">Scheduled</span>
           </div>
         </div>
 
         {/* Teleconsultations */}
         <div
           onClick={() => setTabFilter("teleconsult")}
-          className={`p-4 md:p-5 rounded-[22px] bg-white border cursor-pointer transition-all ${
+          className={`p-3 rounded-2xl bg-white border cursor-pointer transition-all ${
             tabFilter === "teleconsult"
-              ? "border-[#3E36B0] shadow-md ring-2 ring-[#3E36B0]/10"
-              : "border-slate-200/70 hover:border-slate-300 shadow-sm"
+              ? "border-[#3E36B0] shadow-sm ring-1 ring-[#3E36B0]/15"
+              : "border-slate-200/70 hover:border-slate-300 shadow-xs"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Teleconsults</span>
-            <div className="w-9 h-9 rounded-xl bg-[#F62088]/10 text-[#F62088] flex items-center justify-center">
-              <Video className="w-5 h-5" />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Teleconsults</span>
+            <div className="w-7 h-7 rounded-lg bg-[#F62088]/10 text-[#F62088] flex items-center justify-center">
+              <Video className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-extrabold text-[#111111]">
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-xl md:text-2xl font-extrabold text-[#111111]">
               {stats.teleconsultCount}
             </span>
-            <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+            <span className="text-[10px] font-semibold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded-full">
               Live Ready
             </span>
           </div>
@@ -674,36 +534,36 @@ export default function DoctorAppointments() {
         {/* Completed */}
         <div
           onClick={() => setTabFilter("completed")}
-          className={`p-4 md:p-5 rounded-[22px] bg-white border cursor-pointer transition-all ${
+          className={`p-3 rounded-2xl bg-white border cursor-pointer transition-all ${
             tabFilter === "completed"
-              ? "border-[#3E36B0] shadow-md ring-2 ring-[#3E36B0]/10"
-              : "border-slate-200/70 hover:border-slate-300 shadow-sm"
+              ? "border-[#3E36B0] shadow-sm ring-1 ring-[#3E36B0]/15"
+              : "border-slate-200/70 hover:border-slate-300 shadow-xs"
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Completed</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5" />
+            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Completed</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+              <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl md:text-3xl font-extrabold text-[#111111]">
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <span className="text-xl md:text-2xl font-extrabold text-[#111111]">
               {stats.completedCount}
             </span>
-            <span className="text-[11px] font-semibold text-slate-500">Encounters</span>
+            <span className="text-[10px] font-semibold text-slate-500">Encounters</span>
           </div>
         </div>
       </div>
 
       {/* 2-Column Section: Appointments List + Calendar Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 items-start">
         {/* Left Column: Filter and Search Bar + Appointments List */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+        <div className="lg:col-span-7 xl:col-span-8 space-y-2.5">
           {/* Active date filter chip banner (if selectedCalendarDate is active) */}
           {selectedCalendarDate && (
-            <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#D8D9FF]/40 border border-[#3E36B0]/20 text-xs shadow-sm">
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#D8D9FF]/40 border border-[#3E36B0]/20 text-xs shadow-xs">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-[#3E36B0]" />
+                <Calendar className="w-3.5 h-3.5 text-[#3E36B0]" />
                 <span className="font-bold text-[#111111]">
                   Filtered by Date:{" "}
                   {new Date(selectedCalendarDate + "T00:00:00").toLocaleDateString("en-US", {
@@ -729,11 +589,11 @@ export default function DoctorAppointments() {
             </div>
           )}
 
-          <div className="bg-white rounded-[26px] p-5 md:p-6 shadow-sm border border-slate-200/70 space-y-5">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/70 flex flex-col">
             {/* Top Filter and Search Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
               {/* Tabs */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+              <div className="flex items-center gap-1 overflow-x-auto pb-0.5 [scrollbar-width:none]">
                 {[
                   { id: "today", label: "Today's Schedule" },
                   { id: "upcoming", label: "Upcoming" },
@@ -745,9 +605,9 @@ export default function DoctorAppointments() {
                     key={tab.id}
                     type="button"
                     onClick={() => handleTabClick(tab.id as any)}
-                    className={`px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                       tabFilter === tab.id && !selectedCalendarDate
-                        ? "bg-[#3E36B0] text-white shadow-sm"
+                        ? "bg-[#3E36B0] text-white shadow-xs"
                         : "bg-[#F4F6FC] text-slate-600 hover:bg-slate-200/70"
                     }`}
                   >
@@ -757,22 +617,22 @@ export default function DoctorAppointments() {
               </div>
 
               {/* Search & Type Filter */}
-              <div className="flex items-center gap-2.5">
-                <div className="relative w-full sm:w-48 md:w-56">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div className="flex items-center gap-2">
+                <div className="relative w-full sm:w-44 md:w-48">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                   <input
                     type="text"
                     placeholder="Search patient, disease..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-9 pl-9 pr-3 rounded-xl bg-[#F4F6FC] border border-transparent focus:border-[#3E36B0]/30 text-xs text-[#111111] placeholder:text-slate-400 outline-none transition-all"
+                    className="w-full h-8 pl-8 pr-2.5 rounded-lg bg-[#F4F6FC] border border-transparent focus:border-[#3E36B0]/30 text-xs text-[#111111] placeholder:text-slate-400 outline-none transition-all"
                   />
                 </div>
 
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
-                  className="h-9 px-3 rounded-xl bg-[#F4F6FC] border border-slate-200 text-xs font-semibold text-slate-700 outline-none cursor-pointer hover:bg-slate-100 shrink-0"
+                  className="h-8 px-2.5 rounded-lg bg-[#F4F6FC] border border-slate-200 text-xs font-semibold text-slate-700 outline-none cursor-pointer hover:bg-slate-100 shrink-0"
                 >
                   <option value="all">All Types</option>
                   <option value="in-person">In-Person</option>
@@ -783,240 +643,242 @@ export default function DoctorAppointments() {
               </div>
             </div>
 
-            {/* Appointments List Render */}
-            {filteredAppointments.length === 0 ? (
-              <div className="py-16 text-center space-y-3">
-                <div className="w-14 h-14 rounded-2xl bg-[#F4F6FC] text-slate-400 flex items-center justify-center mx-auto">
-                  <CalendarX className="w-7 h-7" />
+            {/* Appointments List Render (with smooth constrained internal scroll) */}
+            <div className="pt-3 max-h-[calc(100vh-325px)] min-h-[180px] overflow-y-auto pr-1 [scrollbar-width:thin]">
+              {filteredAppointments.length === 0 ? (
+                <div className="py-10 text-center space-y-2">
+                  <div className="w-11 h-11 rounded-xl bg-[#F4F6FC] text-slate-400 flex items-center justify-center mx-auto">
+                    <CalendarX className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-bold text-slate-700">No appointments found</p>
+                  <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                    No appointments matching current filters. Click "New Appointment" to schedule an encounter.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCalendarDate(null);
+                      setSelectedDay(null);
+                      setTabFilter("all");
+                      setSearchQuery("");
+                      setTypeFilter("all");
+                    }}
+                    className="mt-1 text-xs font-bold text-[#3E36B0] hover:underline cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
                 </div>
-                <p className="text-sm font-bold text-slate-700">No appointments found</p>
-                <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  No appointments matching current filters. Click "New Appointment" to schedule an encounter.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCalendarDate(null);
-                    setSelectedDay(null);
-                    setTabFilter("all");
-                    setSearchQuery("");
-                    setTypeFilter("all");
-                  }}
-                  className="mt-2 text-xs font-bold text-[#3E36B0] hover:underline cursor-pointer"
-                >
-                  Reset Filters
-                </button>
-              </div>
-            ) : (
-              <div className="grid gap-3.5">
-                {filteredAppointments.map((apt) => {
-                  const isToday = apt.date === "2026-08-15";
+              ) : (
+                <div className="grid gap-2.5">
+                  {filteredAppointments.map((apt) => {
+                    const isToday = apt.date === "2026-08-15";
 
-                  return (
-                    <div
-                      key={apt.id}
-                      className={`p-4 md:p-5 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${
-                        apt.status === "Completed"
-                          ? "bg-slate-50/70 border-slate-100 opacity-85"
-                          : apt.status === "Cancelled"
-                          ? "bg-rose-50/30 border-rose-100 opacity-75"
-                          : isToday
-                          ? "bg-white border-[#3E36B0]/30 shadow-sm ring-1 ring-[#3E36B0]/10 hover:border-[#3E36B0]"
-                          : "bg-white border-slate-200/70 hover:border-slate-300 shadow-sm"
-                      }`}
-                    >
-                      {/* Left: Patient Info & Details */}
-                      <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-                        <div
-                          className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0 shadow-sm ${
-                            apt.type === "teleconsult"
-                              ? "bg-purple-100 text-[#3E36B0]"
-                              : "bg-[#E5ECF9] text-[#3E36B0]"
-                          }`}
-                        >
-                          {getInitials(apt.patientName)}
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-sm md:text-base font-extrabold text-[#111111] leading-tight">
-                              {apt.patientName}
-                            </h3>
-                            {apt.patientAge && (
-                              <span className="text-xs text-slate-400 font-medium">
-                                ({apt.patientAge}y {apt.patientGender ? `· ${apt.patientGender[0]}` : ""})
-                              </span>
-                            )}
-
-                            {/* Status badge */}
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                apt.status === "Confirmed"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : apt.status === "Completed"
-                                ? "bg-slate-100 text-slate-600 border border-slate-200"
-                                : apt.status === "Cancelled"
-                                ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                : "bg-amber-50 text-amber-700 border border-amber-200"
-                              }`}
-                            >
-                              {apt.status}
-                            </span>
-
-                            {/* Type badge */}
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                                apt.type === "teleconsult"
-                                  ? "bg-purple-50 text-purple-700 border border-purple-200"
-                                  : "bg-sky-50 text-[#0284c7] border border-sky-200"
-                              }`}
-                            >
-                              {apt.type === "teleconsult" ? (
-                                <Video className="w-3 h-3" />
-                              ) : (
-                                <MapPin className="w-3 h-3" />
-                              )}
-                              {apt.type === "teleconsult"
-                                ? "Teleconsult"
-                                : apt.type === "lab-review"
-                                ? "Lab Review"
-                                : apt.type === "follow-up"
-                                ? "Follow-Up"
-                                : "In-Person"}
-                            </span>
+                    return (
+                      <div
+                        key={apt.id}
+                        className={`p-3 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 ${
+                          apt.status === "Completed"
+                            ? "bg-slate-50/70 border-slate-100 opacity-85"
+                            : apt.status === "Cancelled"
+                            ? "bg-rose-50/30 border-rose-100 opacity-75"
+                            : isToday
+                            ? "bg-white border-[#3E36B0]/30 shadow-xs ring-1 ring-[#3E36B0]/10 hover:border-[#3E36B0]"
+                            : "bg-white border-slate-200/70 hover:border-slate-300 shadow-xs"
+                        }`}
+                      >
+                        {/* Left: Patient Info & Details */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${
+                              apt.type === "teleconsult"
+                                ? "bg-purple-100 text-[#3E36B0]"
+                                : "bg-[#E5ECF9] text-[#3E36B0]"
+                            }`}
+                          >
+                            {getInitials(apt.patientName)}
                           </div>
 
-                          <p className="text-xs font-semibold text-slate-600 mt-0.5 truncate">
-                            {apt.condition}
-                          </p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h3 className="text-xs md:text-sm font-extrabold text-[#111111] leading-tight">
+                                {apt.patientName}
+                              </h3>
+                              {apt.patientAge && (
+                                <span className="text-[11px] text-slate-400 font-medium">
+                                  ({apt.patientAge}y {apt.patientGender ? `· ${apt.patientGender[0]}` : ""})
+                                </span>
+                              )}
 
-                          {apt.notes && (
-                            <p className="text-[11px] text-slate-400 mt-1 line-clamp-1">
-                              Note: {apt.notes}
+                              {/* Status badge */}
+                              <span
+                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                  apt.status === "Confirmed"
+                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                  : apt.status === "Completed"
+                                  ? "bg-slate-100 text-slate-600 border border-slate-200"
+                                  : apt.status === "Cancelled"
+                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                  : "bg-amber-50 text-amber-700 border border-amber-200"
+                                }`}
+                              >
+                                {apt.status}
+                              </span>
+
+                              {/* Type badge */}
+                              <span
+                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-1 ${
+                                  apt.type === "teleconsult"
+                                    ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                    : "bg-sky-50 text-[#0284c7] border border-sky-200"
+                                }`}
+                              >
+                                {apt.type === "teleconsult" ? (
+                                  <Video className="w-2.5 h-2.5" />
+                                ) : (
+                                  <MapPin className="w-2.5 h-2.5" />
+                                )}
+                                {apt.type === "teleconsult"
+                                  ? "Teleconsult"
+                                  : apt.type === "lab-review"
+                                  ? "Lab Review"
+                                  : apt.type === "follow-up"
+                                  ? "Follow-Up"
+                                  : "In-Person"}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] font-semibold text-slate-600 mt-0.5 truncate">
+                              {apt.condition}
                             </p>
+
+                            {apt.notes && (
+                              <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
+                                Note: {apt.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Center: Date & Time Schedule Box */}
+                        <div className="flex items-center gap-3 bg-[#F4F6FC] px-2.5 py-1.5 rounded-lg border border-slate-200/60 shrink-0">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#3E36B0]" />
+                            <div className="text-left">
+                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Date</p>
+                              <p className="text-[11px] font-bold text-[#111111]">{apt.date}</p>
+                            </div>
+                          </div>
+
+                          <div className="h-5 w-px bg-slate-200" />
+
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-[#3E36B0]" />
+                            <div className="text-left">
+                              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Slot</p>
+                              <p className="text-[11px] font-bold text-[#111111]">{apt.time}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right: Action Buttons */}
+                        <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:flex-nowrap">
+                          {apt.type === "teleconsult" && apt.status === "Confirmed" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                navigate(
+                                  `/doctor/teleconsult?id=${apt.id}&patient=${encodeURIComponent(
+                                    apt.patientName
+                                  )}&patientId=${apt.patientId || ""}`
+                                )
+                              }
+                              className="h-8 px-3 rounded-lg bg-[#3E36B0] hover:bg-[#312B91] text-white text-xs font-bold flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                              title="Start Teleconsult Video Call"
+                            >
+                              <Video className="w-3 h-3 text-[#A8DEF7]" />
+                              <span>Start Call</span>
+                            </button>
+                          )}
+
+                          {apt.status === "Confirmed" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAppointment(apt);
+                                  setCompleteModalOpen(true);
+                                }}
+                                className="h-8 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                title="Complete Encounter"
+                              >
+                                <Check className="w-3 h-3" />
+                                <span className="hidden md:inline">Complete</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAppointment(apt);
+                                  setRescheduleDate(apt.date);
+                                  setRescheduleTime(apt.time);
+                                  setRescheduleModalOpen(true);
+                                }}
+                                className="h-8 px-2.5 rounded-lg bg-[#F4F6FC] hover:bg-[#E5ECF9] text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
+                                title="Reschedule"
+                              >
+                                Reschedule
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedAppointment(apt);
+                                  setCancelModalOpen(true);
+                                }}
+                                className="h-8 px-2 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer"
+                                title="Cancel"
+                              >
+                                ✕
+                              </button>
+                            </>
+                          )}
+
+                          {apt.patientId && (
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/doctor/patient/${apt.patientId}`)}
+                              className="h-8 px-2.5 rounded-lg bg-[#F4F6FC] hover:bg-[#E5ECF9] text-[#3E36B0] border border-slate-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                              title="View Patient Dossier"
+                            >
+                              <User className="w-3 h-3" />
+                              <span className="hidden sm:inline">Dossier</span>
+                            </button>
                           )}
                         </div>
                       </div>
-
-                      {/* Center: Date & Time Schedule Box */}
-                      <div className="flex items-center gap-4 bg-[#F4F6FC] px-3.5 py-2 rounded-xl border border-slate-200/60 shrink-0">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-[#3E36B0]" />
-                          <div className="text-left">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Date</p>
-                            <p className="text-xs font-bold text-[#111111]">{apt.date}</p>
-                          </div>
-                        </div>
-
-                        <div className="h-6 w-px bg-slate-200" />
-
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-[#3E36B0]" />
-                          <div className="text-left">
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Slot</p>
-                            <p className="text-xs font-bold text-[#111111]">{apt.time}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: Action Buttons */}
-                      <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
-                        {apt.type === "teleconsult" && apt.status === "Confirmed" && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/doctor/teleconsult?id=${apt.id}&patient=${encodeURIComponent(
-                                  apt.patientName
-                                )}&patientId=${apt.patientId || ""}`
-                              )
-                            }
-                            className="h-9 px-3.5 rounded-xl bg-[#3E36B0] hover:bg-[#312B91] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                            title="Start Teleconsult Video Call"
-                          >
-                            <Video className="w-3.5 h-3.5 text-[#A8DEF7]" />
-                            <span>Start Call</span>
-                          </button>
-                        )}
-
-                        {apt.status === "Confirmed" && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedAppointment(apt);
-                                setCompleteModalOpen(true);
-                              }}
-                              className="h-9 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                              title="Complete Encounter"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              <span className="hidden md:inline">Complete</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedAppointment(apt);
-                                setRescheduleDate(apt.date);
-                                setRescheduleTime(apt.time);
-                                setRescheduleModalOpen(true);
-                              }}
-                              className="h-9 px-3 rounded-xl bg-[#F4F6FC] hover:bg-[#E5ECF9] text-slate-700 border border-slate-200 text-xs font-bold transition-all cursor-pointer"
-                              title="Reschedule"
-                            >
-                              Reschedule
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedAppointment(apt);
-                                setCancelModalOpen(true);
-                              }}
-                              className="h-9 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer"
-                              title="Cancel"
-                            >
-                              ✕
-                            </button>
-                          </>
-                        )}
-
-                        {apt.patientId && (
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/doctor/patient/${apt.patientId}`)}
-                            className="h-9 px-3 rounded-xl bg-[#F4F6FC] hover:bg-[#E5ECF9] text-[#3E36B0] border border-slate-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                            title="View Patient Dossier"
-                          >
-                            <User className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Dossier</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Right Column: Calendar Widget & Upcoming Visits */}
-        <div className="lg:col-span-5 xl:col-span-4 space-y-4">
-          <div className="bg-white rounded-[26px] p-5 md:p-6 shadow-sm border border-slate-200/70 flex flex-col justify-between">
+        <div className="lg:col-span-5 xl:col-span-4">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/70 flex flex-col justify-between">
             {/* Calendar Header */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-base font-bold text-[#111111] flex items-center gap-2">
+              <div className="flex items-center justify-between mb-2.5">
+                <h2 className="text-sm font-bold text-[#111111] flex items-center gap-1.5">
                   <Calendar className="w-4 h-4 text-[#3E36B0]" />
                   Calendar
                 </h2>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-slate-600 bg-[#F4F6FC] px-2.5 py-1 rounded-lg">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-slate-600 bg-[#F4F6FC] px-2 py-0.5 rounded-md">
                     {monthNames[currentMonthDate.getMonth()]} {currentMonthDate.getFullYear()}
                   </span>
-                  <div className="flex items-center gap-1 text-slate-400">
+                  <div className="flex items-center gap-0.5 text-slate-400">
                     <button
                       type="button"
                       onClick={() =>
@@ -1024,9 +886,9 @@ export default function DoctorAppointments() {
                           new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1)
                         )
                       }
-                      className="p-1 hover:text-[#3E36B0] hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                      className="p-1 hover:text-[#3E36B0] hover:bg-slate-100 rounded transition-colors cursor-pointer"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
                     <button
                       type="button"
@@ -1035,16 +897,16 @@ export default function DoctorAppointments() {
                           new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1)
                         )
                       }
-                      className="p-1 hover:text-[#3E36B0] hover:bg-slate-100 rounded-md transition-colors cursor-pointer"
+                      className="p-1 hover:text-[#3E36B0] hover:bg-slate-100 rounded transition-colors cursor-pointer"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
               </div>
 
               {/* Days of Week Header */}
-              <div className="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400 mb-2">
+              <div className="grid grid-cols-7 text-center text-[9px] font-bold text-slate-400 mb-1">
                 <span>SUN</span>
                 <span>MON</span>
                 <span>TUE</span>
@@ -1055,10 +917,10 @@ export default function DoctorAppointments() {
               </div>
 
               {/* Mini Calendar Grid */}
-              <div className="grid grid-cols-7 gap-1 text-center text-xs">
+              <div className="grid grid-cols-7 gap-0.5 text-center text-xs">
                 {calendarDays.map((item, idx) => {
                   if (!item.isCurrentMonth || item.day === null) {
-                    return <div key={`empty-${idx}`} className="h-7 w-7" />;
+                    return <div key={`empty-${idx}`} className="h-6 w-6" />;
                   }
                   const isSelected = item.day === selectedDay;
                   return (
@@ -1066,15 +928,15 @@ export default function DoctorAppointments() {
                       key={`day-${item.day}`}
                       type="button"
                       onClick={() => handleSelectCalendarDay(item.day!)}
-                      className={`h-7 w-7 mx-auto rounded-full flex flex-col items-center justify-center font-medium transition-all relative cursor-pointer ${
+                      className={`h-6 w-6 mx-auto rounded-full flex flex-col items-center justify-center text-[11px] font-medium transition-all relative cursor-pointer ${
                         isSelected
-                          ? "bg-[#3E36B0] text-white font-bold shadow-md shadow-[#3E36B0]/30"
+                          ? "bg-[#3E36B0] text-white font-bold shadow-xs shadow-[#3E36B0]/30"
                           : "text-slate-700 hover:bg-[#F4F6FC]"
                       }`}
                     >
                       <span>{item.day}</span>
                       {item.hasDot && !isSelected && (
-                        <span className="w-1 h-1 rounded-full bg-[#F62088] absolute bottom-1" />
+                        <span className="w-1 h-1 rounded-full bg-[#F62088] absolute bottom-0.5" />
                       )}
                     </button>
                   );
@@ -1083,9 +945,9 @@ export default function DoctorAppointments() {
             </div>
 
             {/* Upcoming Visits Section */}
-            <div className="mt-5 pt-4 border-t border-slate-100">
-              <div className="flex items-center justify-between mb-2.5">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Upcoming Visits</h3>
+            <div className="mt-3 pt-2.5 border-t border-slate-100">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Upcoming Visits</h3>
                 <button
                   type="button"
                   onClick={() => {
@@ -1093,15 +955,15 @@ export default function DoctorAppointments() {
                     setSelectedDay(null);
                     setTabFilter("upcoming");
                   }}
-                  className="text-xs font-semibold text-[#3E36B0] hover:underline cursor-pointer"
+                  className="text-[11px] font-semibold text-[#3E36B0] hover:underline cursor-pointer"
                 >
                   View All
                 </button>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5 max-h-[140px] overflow-y-auto [scrollbar-width:thin] pr-0.5">
                 {upcomingVisitsList.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-4">No upcoming visits scheduled.</p>
+                  <p className="text-xs text-slate-400 text-center py-2">No upcoming visits scheduled.</p>
                 ) : (
                   upcomingVisitsList.slice(0, 3).map((apt) => (
                     <div
@@ -1118,20 +980,20 @@ export default function DoctorAppointments() {
                           setDetailsModalOpen(true);
                         }
                       }}
-                      className="flex items-center gap-3 p-3 rounded-2xl bg-[#F4F6FC] hover:bg-[#EBF1FC] border border-slate-200/50 cursor-pointer transition-all group"
+                      className="flex items-center gap-2.5 p-2 rounded-xl bg-[#F4F6FC] hover:bg-[#EBF1FC] border border-slate-200/50 cursor-pointer transition-all group"
                     >
-                      <div className="w-9 h-9 rounded-xl bg-[#3E36B0] text-white flex items-center justify-center shrink-0 font-bold text-xs shadow-sm">
+                      <div className="w-7 h-7 rounded-lg bg-[#3E36B0] text-white flex items-center justify-center shrink-0 font-bold text-[10px] shadow-xs">
                         {apt.type === "teleconsult" ? (
-                          <Video className="w-4 h-4 text-[#A8DEF7]" />
+                          <Video className="w-3.5 h-3.5 text-[#A8DEF7]" />
                         ) : (
-                          <Calendar className="w-4 h-4 text-[#A8DEF7]" />
+                          <Calendar className="w-3.5 h-3.5 text-[#A8DEF7]" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold text-[#111111] truncate group-hover:text-[#3E36B0] transition-colors">
+                        <p className="text-[11px] font-bold text-[#111111] truncate group-hover:text-[#3E36B0] transition-colors">
                           {apt.patientName} · {apt.condition}
                         </p>
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">
+                        <p className="text-[9px] text-slate-500 font-medium">
                           {new Date(apt.date + "T00:00:00").toLocaleDateString("en-GB", {
                             day: "numeric",
                             month: "short",
@@ -1140,7 +1002,7 @@ export default function DoctorAppointments() {
                           · {apt.time} ({apt.type === "teleconsult" ? "Teleconsult" : "In-Person"})
                         </p>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-[#3E36B0] group-hover:translate-x-0.5 transition-all" />
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#3E36B0] group-hover:translate-x-0.5 transition-all" />
                     </div>
                   ))
                 )}
