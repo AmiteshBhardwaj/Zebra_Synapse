@@ -85,8 +85,8 @@ export default function DoctorPatientChat() {
 
   // Load patient list (Filtered to ONLY Linked, Teleconsulted, or Accepted Request Patients)
   useEffect(() => {
-    async function loadPatients() {
-      setLoadingPatients(true);
+    async function loadPatients(isInitial = false) {
+      if (isInitial) setLoadingPatients(true);
       const patsMap = new Map<string, PatientMeta>();
       const linkedConditionsMap = new Map<string, string>();
 
@@ -101,7 +101,7 @@ export default function DoctorPatientChat() {
       globalMsgs.forEach((m) => {
         const mDocId = (m.doctor_id || "").toLowerCase().trim();
         const mDocName = (m.doctor_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
-        if (mDocId === docIdNorm || mDocId === "doc_amelia_hart" || (docNameNorm && mDocName.includes(docNameNorm))) {
+        if (mDocId === docIdNorm || (docIdNorm === "doc_amelia_hart" && mDocId === "doc_amelia_hart") || (docNameNorm && docNameNorm !== "doctor" && mDocName.includes(docNameNorm))) {
           if (m.patient_id && !patsMap.has(m.patient_id)) {
             patsMap.set(m.patient_id, {
               id: m.patient_id,
@@ -178,11 +178,11 @@ export default function DoctorPatientChat() {
       setLoadingPatients(false);
     }
 
-    void loadPatients();
+    void loadPatients(patientsList.length === 0);
 
     // Listen to sync events
     const handleSync = () => {
-      void loadPatients();
+      void loadPatients(false);
       setRequestTick((t) => t + 1);
     };
     window.addEventListener("zebra_doctor_patient_sync", handleSync);

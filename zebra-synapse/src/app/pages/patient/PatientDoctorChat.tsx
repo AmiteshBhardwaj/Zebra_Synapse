@@ -92,8 +92,8 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
 
   // Load real registered doctors from Supabase + Seed doctors fallback
   useEffect(() => {
-    async function loadDoctors() {
-      setLoadingDoctors(true);
+    async function loadDoctors(isInitial = false) {
+      if (isInitial) setLoadingDoctors(true);
       const docsMap = new Map<string, DoctorMeta>();
 
       SEED_DOCTORS.forEach((d) => docsMap.set(d.id, d));
@@ -158,11 +158,12 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
       setLoadingDoctors(false);
     }
 
-    void loadDoctors();
+    void loadDoctors(doctorsList.length === 0);
 
     // Listen to live cross-tab/multi-device sync events
     const handleSync = () => {
       setRequestTick((t) => t + 1);
+      void loadDoctors(false);
     };
     window.addEventListener("zebra_doctor_patient_sync", handleSync);
     window.addEventListener("storage", handleSync);
@@ -182,7 +183,7 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
       window.removeEventListener("storage", handleSync);
       if (bc) bc.close();
     };
-  }, [user?.id, selectedDoctorId]);
+  }, [user?.id]);
 
   const filteredDoctors = useMemo(() => {
     let result = doctorsList;
