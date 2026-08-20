@@ -14,6 +14,9 @@ export type CareRelationshipListRow = {
     full_name: string | null;
     height_cm?: number | null;
     weight_kg?: number | null;
+    age?: number | null;
+    gender?: string | null;
+    blood_type?: string | null;
     dietary_preference?: string | null;
     food_allergies?: string[] | null;
     dietary_conditions?: string[] | null;
@@ -46,7 +49,7 @@ export const CARE_RELATIONSHIPS_LIST_SELECT = `
   health_status,
   risk_flags,
   created_at,
-  patient:profiles!care_relationships_patient_id_fkey ( full_name, height_cm, weight_kg, dietary_preference, food_allergies, dietary_conditions, dietary_notes )
+  patient:profiles!care_relationships_patient_id_fkey ( full_name, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes )
 `.trim();
 
 export const CARE_RELATIONSHIPS_FALLBACK_SELECT = `
