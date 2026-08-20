@@ -110,7 +110,11 @@ import {
 } from "../../../lib/dietEngine";
 import { toast } from "sonner";
 
-export default function Diet() {
+export interface DietProps {
+  embedded?: boolean;
+}
+
+export default function Diet({ embedded = false }: DietProps = {}) {
   const { profile, updateProfile } = useAuth();
   const { hasLabReports, uploads, loading: reportsLoading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
@@ -694,30 +698,31 @@ export default function Diet() {
 
   // Render sub-views or main Zebra Synapse dashboard with dedicated Left Sidebar
   return (
-    <div className="min-h-screen bg-[#f8faf6] text-slate-800 font-sans selection:bg-lime-200 selection:text-slate-900 pt-2 sm:pt-3 lg:pt-4 pb-4 sm:pb-6 lg:pb-8 px-2 sm:px-4 lg:px-6">
-      <div className="max-w-[1680px] mx-auto flex flex-col lg:flex-row gap-5 lg:gap-6 items-start w-full">
+    <div className={embedded ? "w-full" : "min-h-screen bg-[#f8faf6] text-slate-800 font-sans selection:bg-lime-200 selection:text-slate-900 pt-2 sm:pt-3 lg:pt-4 pb-4 sm:pb-6 lg:pb-8 px-2 sm:px-4 lg:px-6"}>
+      <div className={embedded ? "w-full flex flex-col gap-6" : "max-w-[1680px] mx-auto flex flex-col lg:flex-row gap-5 lg:gap-6 items-start w-full"}>
         
         {/* ========================================================================= */}
         {/* 1. ZEBRA SYNAPSE LEFT SIDEBAR (DEDICATED TO DIET SECTION) */}
         {/* ========================================================================= */}
-        <aside className="w-full lg:w-[245px] xl:w-[255px] shrink-0 lg:sticky lg:top-4 bg-white rounded-[28px] p-4 sm:p-5 border border-slate-100/90 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between self-stretch lg:self-auto min-h-fit lg:min-h-[calc(100vh-3rem)] select-none">
-          {/* Brand Header */}
-          <div
-            onClick={() => setActiveTab("dashboard")}
-            className="flex items-center gap-3 pb-4 pt-1 px-1 border-b border-slate-100/70 cursor-pointer group"
-          >
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-lime-400 border border-slate-700/40 shadow-sm transition-transform group-hover:scale-105">
-              <Activity className="h-5 w-5 stroke-[2.3]" />
+        {!embedded && (
+          <aside className="w-full lg:w-[245px] xl:w-[255px] shrink-0 lg:sticky lg:top-4 bg-white rounded-[28px] p-4 sm:p-5 border border-slate-100/90 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between self-stretch lg:self-auto min-h-fit lg:min-h-[calc(100vh-3rem)] select-none">
+            {/* Brand Header */}
+            <div
+              onClick={() => setActiveTab("dashboard")}
+              className="flex items-center gap-3 pb-4 pt-1 px-1 border-b border-slate-100/70 cursor-pointer group"
+            >
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-lime-400 border border-slate-700/40 shadow-sm transition-transform group-hover:scale-105">
+                <Activity className="h-5 w-5 stroke-[2.3]" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                  Zebra Synapse
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 tracking-wider">
+                  Clinical Nutrition & Diet
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
-                Zebra Synapse
-              </span>
-              <span className="text-[10px] font-semibold text-slate-400 tracking-wider">
-                Clinical Nutrition & Diet
-              </span>
-            </div>
-          </div>
 
           {/* Navigation Links */}
           <nav className="my-3 space-y-1 flex-1 overflow-y-auto [scrollbar-width:none]">
@@ -789,6 +794,7 @@ export default function Diet() {
             <span>Exit to Portal</span>
           </Link>
         </aside>
+        )}
 
         {/* ========================================================================= */}
         {/* 2. MAIN DIET CONTENT AREA */}

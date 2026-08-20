@@ -45,7 +45,12 @@ import {
 } from "../../../lib/exercisePlan";
 import { toast } from "sonner";
 
-export default function ExercisePlan() {
+export interface ExercisePlanProps {
+  embedded?: boolean;
+  initialDay?: number;
+}
+
+export default function ExercisePlan({ embedded = false, initialDay }: ExercisePlanProps = {}) {
   const { profile } = useAuth();
   const { hasLabReports, uploads, loading: reportsLoading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
@@ -57,6 +62,15 @@ export default function ExercisePlan() {
     selectedReportId,
     setSelectedReportId,
   } = useActiveReport(panels);
+
+  // Selected day tab (1 to 7)
+  const [selectedDay, setSelectedDay] = useState<number>(initialDay || 1);
+
+  useEffect(() => {
+    if (initialDay && initialDay >= 1 && initialDay <= 7) {
+      setSelectedDay(initialDay);
+    }
+  }, [initialDay]);
 
   // Customization dialog state
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
@@ -212,52 +226,56 @@ export default function ExercisePlan() {
     );
   }
 
-  return (
-    <PatientPortalPage>
-      {/* Executive Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
-            <Dumbbell className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">7-Day Exercise Plan</h1>
-              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-lime-600" /> AI Prescription
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
-              {isAllReports
-                ? `Evidence-based physical conditioning tailored to your longitudinal lab profile (${panels.length} reports) and biometric vitals.`
-                : `Conditioning protocol calibrated for report dated ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
-            </p>
-          </div>
-        </div>
+  const PageWrapper = embedded ? "div" : PatientPortalPage;
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsCustomizeOpen(true)}
-            className={`h-9 rounded-2xl text-xs gap-1.5 shadow-sm ${portalSecondaryButtonClass}`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5 text-lime-700" />
-            Customize Plan
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResetProgress}
-            className="h-9 border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-2xl text-xs gap-1 shadow-sm"
-            title="Reset weekly completed checkboxes"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset Week
-          </Button>
+  return (
+    <PageWrapper className={embedded ? "space-y-6" : undefined}>
+      {/* Executive Header Bar */}
+      {!embedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+              <Dumbbell className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">7-Day Exercise Plan</h1>
+                <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-lime-600" /> AI Prescription
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
+                {isAllReports
+                  ? `Evidence-based physical conditioning tailored to your longitudinal lab profile (${panels.length} reports) and biometric vitals.`
+                  : `Conditioning protocol calibrated for report dated ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
+              </p>
+            </div>
+          </div>
+
+          {/* Action Controls */}
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCustomizeOpen(true)}
+              className={`h-9 rounded-2xl text-xs gap-1.5 shadow-sm ${portalSecondaryButtonClass}`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5 text-lime-700" />
+              Customize Plan
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetProgress}
+              className="h-9 border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-2xl text-xs gap-1 shadow-sm"
+              title="Reset weekly completed checkboxes"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset Week
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Lab Report Scope Selector */}
       {hasPanels && panels.length > 1 && (
@@ -567,7 +585,7 @@ export default function ExercisePlan() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PatientPortalPage>
+    </PageWrapper>
   );
 }
 

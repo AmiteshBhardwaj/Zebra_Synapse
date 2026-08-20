@@ -53,11 +53,10 @@ export const PATIENT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     altPaths: ["/patient/lab-chat"],
   },
   {
-    path: "/patient/diet",
-    label: "Meal Plan",
-    icon: ClipboardList,
-    hasSubmenu: true,
-    altPaths: ["/patient/nutrition", "/patient/diet-chat", "/patient/dietitian"],
+    path: "/patient/diet-fitness",
+    label: "Diet & Fitness",
+    icon: UtensilsCrossed,
+    altPaths: ["/patient/diet", "/patient/nutrition", "/patient/exercise", "/patient/workout", "/patient/diet-chat"],
   },
   {
     path: "/patient/teleconsult",
