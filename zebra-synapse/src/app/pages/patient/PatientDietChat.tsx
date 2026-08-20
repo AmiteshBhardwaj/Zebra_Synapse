@@ -241,9 +241,10 @@ const DIET_QUICK_PROMPT_PILLS = [
 
 type PatientDietChatProps = {
   embedded?: boolean;
+  initialPrompt?: string;
 };
 
-export default function PatientDietChat({ embedded = false }: PatientDietChatProps) {
+export default function PatientDietChat({ embedded = false, initialPrompt = "" }: PatientDietChatProps) {
   const { user, profile } = useAuth();
   const patientId = user?.id || "guest";
 
@@ -251,8 +252,14 @@ export default function PatientDietChat({ embedded = false }: PatientDietChatPro
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<DietChatMessage[]>([]);
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
-  const [inputQuery, setInputQuery] = useState<string>("");
+  const [inputQuery, setInputQuery] = useState<string>(initialPrompt);
   const [sending, setSending] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (initialPrompt) {
+      setInputQuery(initialPrompt);
+    }
+  }, [initialPrompt]);
 
   // Retractable Sidebar State
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {

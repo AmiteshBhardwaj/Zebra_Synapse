@@ -27,6 +27,7 @@ import DoctorTeleconsult from "./pages/doctor/DoctorTeleconsult";
 import DoctorAppointments from "./pages/doctor/DoctorAppointments";
 
 import PatientLabChat from "./pages/patient/PatientLabChat";
+import PatientDietFitness from "./pages/patient/PatientDietFitness";
 import PatientDietChat from "./pages/patient/PatientDietChat";
 import PatientDoctorChat from "./pages/patient/PatientDoctorChat";
 import DoctorPatientChat from "./pages/doctor/DoctorPatientChat";
@@ -68,7 +69,7 @@ export const router = createBrowserRouter([
       { path: "records", Component: MedicalRecords },
       { path: "medical-records", Component: MedicalRecords },
       { path: "lab-chat", Component: PatientLabChat },
-      { path: "diet-chat", Component: PatientDietChat },
+      { path: "diet-chat", Component: PatientDietFitness },
       { path: "ai-chat", Component: PatientLabChat },
       { path: "appointments", Component: Appointments },
       { path: "teleconsult", Component: PatientTeleconsult },
@@ -77,9 +78,11 @@ export const router = createBrowserRouter([
       { path: "prescription", Component: Prescription },
       { path: "predictions", Component: DiseasePrediction },
       { path: "disease-prediction", Component: DiseasePrediction },
-      { path: "diet", Component: Diet },
-      { path: "nutrition", Component: Nutrition },
-      { path: "exercise", Component: ExercisePlan },
+      { path: "diet-fitness", Component: PatientDietFitness },
+      { path: "diet", Component: PatientDietFitness },
+      { path: "nutrition", Component: PatientDietFitness },
+      { path: "exercise", Component: PatientDietFitness },
+      { path: "workout", Component: PatientDietFitness },
       { path: "clinical-trials", Component: ClinicalTrials },
       { path: "wellness-tips", Component: WellnessTips },
       { path: "settings", Component: ProfileSettings },

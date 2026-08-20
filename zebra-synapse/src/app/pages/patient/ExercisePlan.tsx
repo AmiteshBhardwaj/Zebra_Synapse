@@ -18,6 +18,7 @@ import {
   Layers,
   Settings,
   Check,
+  RefreshCw,
 } from "lucide-react";
 import { Link } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
@@ -42,10 +43,16 @@ import {
   type DayWorkout,
   type ExerciseProfileInput,
   generateAIExercisePlan,
+  generateDeterministicExercisePlan,
 } from "../../../lib/exercisePlan";
 import { toast } from "sonner";
 
-export default function ExercisePlan() {
+export interface ExercisePlanProps {
+  embedded?: boolean;
+  initialDay?: number;
+}
+
+export default function ExercisePlan({ embedded = false, initialDay }: ExercisePlanProps = {}) {
   const { profile } = useAuth();
   const { hasLabReports, uploads, loading: reportsLoading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
@@ -58,6 +65,15 @@ export default function ExercisePlan() {
     setSelectedReportId,
   } = useActiveReport(panels);
 
+  // Selected day tab (1 to 7)
+  const [selectedDay, setSelectedDay] = useState<number>(initialDay || 1);
+
+  useEffect(() => {
+    if (initialDay && initialDay >= 1 && initialDay <= 7) {
+      setSelectedDay(initialDay);
+    }
+  }, [initialDay]);
+
   // Customization dialog state
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel>("beginner");
@@ -65,8 +81,30 @@ export default function ExercisePlan() {
   const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>("general_health");
   const [durationMin, setDurationMin] = useState<number>(30);
 
-  // Plan generation state
-  const [plan, setPlan] = useState<WeeklyExercisePlan | null>(null);
+  // Calculate BMI
+  const heightCm = profile?.height_cm;
+  const weightKg = profile?.weight_kg;
+
+  // Instant plan calculation (0ms wait time)
+  const [plan, setPlan] = useState<WeeklyExercisePlan | null>(() => {
+    try {
+      const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch {
+      // ignore
+    }
+    return generateDeterministicExercisePlan(activePanel, biomarkerTrends, {
+      fitnessLevel,
+      equipment,
+      goal: primaryGoal,
+      targetDurationMin: durationMin,
+      heightCm,
+      weightKg,
+      age: 38,
+    });
+  });
+
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Active selected day (1 to 7)
@@ -83,9 +121,6 @@ export default function ExercisePlan() {
     }
   });
 
-  // Calculate BMI
-  const heightCm = profile?.height_cm;
-  const weightKg = profile?.weight_kg;
   const calculatedBmi = useMemo(() => {
     if (heightCm && weightKg && heightCm > 0) {
       return Number((weightKg / Math.pow(heightCm / 100, 2)).toFixed(1));
@@ -93,43 +128,52 @@ export default function ExercisePlan() {
     return null;
   }, [heightCm, weightKg]);
 
-  // Generate or load plan whenever activePanel / profile changes
+  // Instant local load + non-blocking background AI enhancement
   useEffect(() => {
     let cancelled = false;
 
-    async function loadPlan() {
-      if (!activePanel && panels.length === 0) return;
-      setIsGenerating(true);
+    const profileInput: ExerciseProfileInput = {
+      fitnessLevel,
+      equipment,
+      goal: primaryGoal,
+      targetDurationMin: durationMin,
+      heightCm: heightCm ?? null,
+      weightKg: weightKg ?? null,
+      dietaryConditions: profile?.dietary_conditions,
+      age: 38,
+      systolicBp: activePanel?.biomarkers?.["systolic_bp"] ?? activePanel?.biomarkers?.["systolic"] ?? null,
+      diastolicBp: activePanel?.biomarkers?.["diastolic_bp"] ?? activePanel?.biomarkers?.["diastolic"] ?? null,
+      heartRate: (profile as any)?.heart_rate ?? null,
+    } as any;
 
-      const profileInput: ExerciseProfileInput = {
-        fitnessLevel,
-        equipment,
-        goal: primaryGoal,
-        targetDurationMin: durationMin,
-        heightCm: heightCm ?? null,
-        weightKg: weightKg ?? null,
-        dietaryConditions: profile?.dietary_conditions,
-        age: 38,
-        systolicBp: activePanel?.biomarkers?.["systolic_bp"] ?? activePanel?.biomarkers?.["systolic"] ?? null,
-        diastolicBp: activePanel?.biomarkers?.["diastolic_bp"] ?? activePanel?.biomarkers?.["diastolic"] ?? null,
-        heartRate: (profile as any)?.heart_rate ?? null,
-      } as any;
+    const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}`;
+    const cached = localStorage.getItem(cacheKey);
 
+    if (cached) {
       try {
-        const generated = await generateAIExercisePlan(activePanel, biomarkerTrends, profileInput);
-        if (!cancelled) {
-          setPlan(generated);
-        }
-      } catch (err) {
-        console.error("Failed to generate exercise plan", err);
-      } finally {
-        if (!cancelled) {
-          setIsGenerating(false);
-        }
+        setPlan(JSON.parse(cached));
+      } catch {
+        setPlan(generateDeterministicExercisePlan(activePanel, biomarkerTrends, profileInput));
       }
+    } else {
+      setPlan(generateDeterministicExercisePlan(activePanel, biomarkerTrends, profileInput));
     }
 
-    loadPlan();
+    // Non-blocking async background enhancement
+    void generateAIExercisePlan(activePanel, biomarkerTrends, profileInput)
+      .then((generated) => {
+        if (!cancelled && generated) {
+          setPlan(generated);
+          try {
+            localStorage.setItem(cacheKey, JSON.stringify(generated));
+          } catch {
+            // ignore
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn("Background AI exercise plan enhancement skipped:", err);
+      });
 
     return () => {
       cancelled = true;
@@ -195,11 +239,16 @@ export default function ExercisePlan() {
     return { totalExercises: totalEx, completedCount: completedEx, percent, completedDays };
   }, [plan, completedItems]);
 
-  if (reportsLoading || panelsLoading) {
+  const PageWrapper = embedded ? "div" : PatientPortalPage;
+
+  if ((reportsLoading || panelsLoading) && !plan) {
     return (
-      <PatientPortalPage>
-        <p className="text-sm text-[#A1A1AA]">Loading your exercise intelligence...</p>
-      </PatientPortalPage>
+      <PageWrapper className={embedded ? "p-4" : undefined}>
+        <div className="flex items-center gap-3 text-slate-500">
+          <RefreshCw className="h-5 w-5 animate-spin text-lime-500" />
+          <span className="text-sm font-medium">Loading your exercise intelligence...</span>
+        </div>
+      </PageWrapper>
     );
   }
 
@@ -213,51 +262,53 @@ export default function ExercisePlan() {
   }
 
   return (
-    <PatientPortalPage>
+    <PageWrapper className={embedded ? "space-y-6" : undefined}>
       {/* Executive Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
-            <Dumbbell className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">7-Day Exercise Plan</h1>
-              <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-lime-600" /> AI Prescription
-              </span>
+      {!embedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-500/15 text-lime-700 shadow-sm">
+              <Dumbbell className="h-6 w-6" />
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
-              {isAllReports
-                ? `Evidence-based physical conditioning tailored to your longitudinal lab profile (${panels.length} reports) and biometric vitals.`
-                : `Conditioning protocol calibrated for report dated ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-['Manrope']">7-Day Exercise Plan</h1>
+                <span className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-0.5 text-[10px] font-bold text-lime-800 uppercase tracking-wider flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-lime-600" /> AI Prescription
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 leading-relaxed">
+                {isAllReports
+                  ? `Evidence-based physical conditioning tailored to your longitudinal lab profile (${panels.length} reports) and biometric vitals.`
+                  : `Conditioning protocol calibrated for report dated ${activePanel ? formatLabDate(activePanel.recorded_at) : "selected panel"}.`}
+              </p>
+            </div>
+          </div>
+
+          {/* Action Controls */}
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCustomizeOpen(true)}
+              className={`h-9 rounded-2xl text-xs gap-1.5 shadow-sm ${portalSecondaryButtonClass}`}
+            >
+              <SlidersHorizontal className="h-3.5 w-3.5 text-lime-700" />
+              Customize Plan
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetProgress}
+              className="h-9 border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-2xl text-xs gap-1 shadow-sm"
+              title="Reset weekly completed checkboxes"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset Week
+            </Button>
           </div>
         </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsCustomizeOpen(true)}
-            className={`h-9 rounded-2xl text-xs gap-1.5 shadow-sm ${portalSecondaryButtonClass}`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5 text-lime-700" />
-            Customize Plan
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResetProgress}
-            className="h-9 border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 rounded-2xl text-xs gap-1 shadow-sm"
-            title="Reset weekly completed checkboxes"
-          >
-            <RotateCcw className="h-3.5 w-3.5" />
-            Reset Week
-          </Button>
-        </div>
-      </div>
+      )}
 
       {/* Lab Report Scope Selector */}
       {hasPanels && panels.length > 1 && (
@@ -567,7 +618,7 @@ export default function ExercisePlan() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PatientPortalPage>
+    </PageWrapper>
   );
 }
 
