@@ -50,7 +50,7 @@ import {
   Settings,
   ShieldAlert,
 } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import PatientDietChat from "./PatientDietChat";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
@@ -142,6 +142,7 @@ export default function Diet({
   } = useActiveReport(panels);
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Active Navigation Mode for Zebra Synapse Sidebar
   type DietNavTab = "dashboard" | "weekly_plan" | "biomarker_rx" | "messages";
@@ -1529,12 +1530,13 @@ export default function Diet({
                 </div>
               </div>
 
-              <Link
-                to="/settings"
-                className="inline-flex items-center gap-1 text-xs font-bold text-lime-800 hover:text-lime-900 bg-white/80 border border-lime-200 rounded-xl px-3 py-1.5 shadow-xs shrink-0 self-start sm:self-auto"
+              <button
+                type="button"
+                onClick={() => navigate("/patient/settings")}
+                className="inline-flex items-center gap-1 text-xs font-bold text-lime-800 hover:text-lime-900 bg-white/80 border border-lime-200 rounded-xl px-3 py-1.5 shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
               >
                 <Settings className="h-3.5 w-3.5" /> Edit Preferences
-              </Link>
+              </button>
             </div>
 
             {/* Dietary Preferences Summary Panel */}
@@ -1583,83 +1585,10 @@ export default function Diet({
                   Clinically calibrated meals matching your metabolic target of {calorieTarget} kcal/day
                 </p>
               </div>
-
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => setGrocerySubTab(!grocerySubTab)}
-                  className={`h-10 px-4 rounded-xl text-xs font-semibold transition-all ${
-                    grocerySubTab
-                      ? "bg-lime-500 text-white shadow-md shadow-lime-500/20"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  {grocerySubTab ? "View Recipes" : "Grocery List"}
-                </Button>
-              </div>
             </div>
 
-            {grocerySubTab ? (
-              /* Grocery List View */
-              <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-lime-600" />
-                    Interactive Smart Grocery List
-                  </h3>
-                  <Button
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        Object.entries(groceryList)
-                          .map(([cat, items]) => `${cat.toUpperCase()}:\n${items.map((i) => `- ${i.name} (${i.amount})`).join("\n")}`)
-                          .join("\n\n")
-                      );
-                      toast.success("Grocery list copied to clipboard!");
-                    }}
-                    className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
-                  >
-                    Copy List
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {Object.entries(groceryList).map(([category, items]) => (
-                    <div key={category} className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100">
-                      <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
-                        <span>{category.replace("_", " ")}</span>
-                        <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border">
-                          {items.length}
-                        </span>
-                      </h4>
-                      <div className="space-y-2">
-                        {items.map((item) => {
-                          const isChecked = !!checkedGroceryItems[item.name];
-                          return (
-                            <label
-                              key={item.name}
-                              onClick={() => toggleGroceryItem(item.name)}
-                              className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer p-1.5 rounded-lg hover:bg-white transition-colors"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => {}}
-                                className="mt-0.5 rounded text-lime-600 focus:ring-lime-500"
-                              />
-                              <span className={isChecked ? "line-through text-slate-400" : ""}>
-                                {item.name} <span className="text-[10px] text-slate-400">({item.amount})</span>
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* Weekly Recipes Plan View */
-              <div className="space-y-6">
+            {/* Weekly Recipes Plan View */}
+            <div className="space-y-6">
                 {/* Day selector tabs */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 [scrollbar-width:none]">
                   {weeklyPlan.map((day) => (
@@ -1754,7 +1683,6 @@ export default function Diet({
                   );
                 })()}
               </div>
-            )}
           </div>
         )}
 
