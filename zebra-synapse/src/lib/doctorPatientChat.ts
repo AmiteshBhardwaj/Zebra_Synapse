@@ -289,8 +289,8 @@ export function filterConversationMessages(
   doctorName?: string | null,
   patientName?: string | null
 ): DoctorPatientMessage[] {
-  const normTargetDocId = (doctorId || "").trim();
-  const normTargetPatId = (patientId || "").trim();
+  const normTargetDocId = (doctorId || "").toLowerCase().trim();
+  const normTargetPatId = (patientId || "").toLowerCase().trim();
   const normTargetDocName = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
   const normTargetPatName = (patientName || "").toLowerCase().trim();
 
@@ -303,41 +303,49 @@ export function filterConversationMessages(
       return false;
     }
 
-    const mDocId = (m.doctor_id || "").trim();
-    const mPatId = (m.patient_id || "").trim();
+    const mDocId = (m.doctor_id || "").toLowerCase().trim();
+    const mPatId = (m.patient_id || "").toLowerCase().trim();
     const mDocName = (m.doctor_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
     const mPatName = (m.patient_name || "").toLowerCase().trim();
 
-    // Doctor match: ID must match OR normalized name must match
+    // Check Doctor match
     let doctorMatches = false;
-    if (mDocId && normTargetDocId) {
-      if (mDocId === normTargetDocId) {
-        doctorMatches = true;
-      } else if (
-        (normTargetDocId === "doc_amelia_hart" || normTargetDocId === "doctor") &&
-        (mDocId === "doc_amelia_hart" || mDocId === "doctor")
-      ) {
-        doctorMatches = true;
-      }
+    if (
+      mDocId &&
+      normTargetDocId &&
+      (mDocId === normTargetDocId || mDocId.includes(normTargetDocId) || normTargetDocId.includes(mDocId))
+    ) {
+      doctorMatches = true;
+    } else if (
+      (normTargetDocId === "doc_amelia_hart" || normTargetDocId === "doctor") &&
+      (mDocId === "doc_amelia_hart" || mDocId === "doctor")
+    ) {
+      doctorMatches = true;
     } else if (normTargetDocName && mDocName) {
       doctorMatches = mDocName.includes(normTargetDocName) || normTargetDocName.includes(mDocName);
+    } else if (!mDocId && !normTargetDocId) {
+      doctorMatches = true;
     }
 
     if (!doctorMatches) return false;
 
-    // Patient match: ID must match OR normalized name must match
+    // Check Patient match
     let patientMatches = false;
-    if (mPatId && normTargetPatId) {
-      if (mPatId === normTargetPatId) {
-        patientMatches = true;
-      } else if (
-        (normTargetPatId === "pat_maya_thompson" || normTargetPatId === "patient") &&
-        (mPatId === "pat_maya_thompson" || mPatId === "patient")
-      ) {
-        patientMatches = true;
-      }
+    if (
+      mPatId &&
+      normTargetPatId &&
+      (mPatId === normTargetPatId || mPatId.includes(normTargetPatId) || normTargetPatId.includes(mPatId))
+    ) {
+      patientMatches = true;
+    } else if (
+      (normTargetPatId === "pat_maya_thompson" || normTargetPatId === "patient") &&
+      (mPatId === "pat_maya_thompson" || mPatId === "patient")
+    ) {
+      patientMatches = true;
     } else if (normTargetPatName && mPatName) {
       patientMatches = mPatName.includes(normTargetPatName) || normTargetPatName.includes(mPatName);
+    } else if (!mPatId && !normTargetPatId) {
+      patientMatches = true;
     }
 
     return patientMatches;

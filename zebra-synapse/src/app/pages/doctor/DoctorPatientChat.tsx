@@ -85,8 +85,8 @@ export default function DoctorPatientChat() {
 
   // Load patient list (Filtered to ONLY Linked, Teleconsulted, or Accepted Request Patients)
   useEffect(() => {
-    async function loadPatients() {
-      setLoadingPatients(true);
+    async function loadPatients(isInitial = false) {
+      if (isInitial) setLoadingPatients(true);
       const patsMap = new Map<string, PatientMeta>();
       const linkedConditionsMap = new Map<string, string>();
 
@@ -178,11 +178,11 @@ export default function DoctorPatientChat() {
       setLoadingPatients(false);
     }
 
-    void loadPatients();
+    void loadPatients(patientsList.length === 0);
 
     // Listen to sync events
     const handleSync = () => {
-      void loadPatients();
+      void loadPatients(false);
       setRequestTick((t) => t + 1);
     };
     window.addEventListener("zebra_doctor_patient_sync", handleSync);
