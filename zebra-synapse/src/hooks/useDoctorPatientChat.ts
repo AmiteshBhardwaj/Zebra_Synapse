@@ -3,6 +3,7 @@ import { useAuth } from "../auth/AuthContext";
 import {
   type ChatAttachment,
   type DoctorPatientMessage,
+  deleteConversationMessages,
   fetchDoctorPatientMessages,
   markDoctorPatientMessagesAsRead,
   sendDoctorPatientMessage,
@@ -168,11 +169,23 @@ export function useDoctorPatientChat(
     [activeDoctorId, activePatientId, activeDoctorName, activePatientName, user?.id, profile]
   );
 
+  const deleteChat = useCallback(async () => {
+    if (!activeDoctorId || !activePatientId) return;
+    await deleteConversationMessages(
+      activeDoctorId,
+      activePatientId,
+      activeDoctorName,
+      activePatientName
+    );
+    setMessages([]);
+  }, [activeDoctorId, activePatientId, activeDoctorName, activePatientName]);
+
   return {
     messages,
     loading,
     sending,
     sendMessage,
+    deleteConversation: deleteChat,
     refetch: loadMessages,
   };
 }

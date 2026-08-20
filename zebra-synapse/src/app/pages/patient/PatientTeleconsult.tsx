@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, useNavigate } from "react-router";
+import { useSearchParams, useNavigate, useLocation } from "react-router";
 import {
   Video,
   ArrowLeft,
@@ -17,10 +17,12 @@ import {
   FileText,
   CheckCircle2,
   ChevronRight,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import VideoCall from "../../components/teleconsult/VideoCall";
 import RealtimeNote from "../../components/teleconsult/RealtimeNote";
+import PatientDoctorChat from "./PatientDoctorChat";
 import {
   PatientPortalPage,
   PatientPageHero,
@@ -43,11 +45,26 @@ interface DoctorWaitingInfo {
 export default function PatientTeleconsult() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, profile } = useAuth();
 
   const queryId = searchParams.get("id");
   const queryDoctor = searchParams.get("doctor");
   const querySpecialty = searchParams.get("specialty");
+  const queryTab = searchParams.get("tab");
+
+  const isMessagesRoute = location.pathname.includes("/messages") || location.pathname.includes("/chat");
+  const [activeHubTab, setActiveHubTab] = useState<"video" | "messages">(
+    queryTab === "messages" || isMessagesRoute ? "messages" : "video"
+  );
+
+  useEffect(() => {
+    if (queryTab === "messages" || isMessagesRoute) {
+      setActiveHubTab("messages");
+    } else if (queryTab === "video") {
+      setActiveHubTab("video");
+    }
+  }, [queryTab, isMessagesRoute]);
 
   // Status modes: "idle" | "searching" | "connected" | "completed"
   const [mode, setMode] = useState<"idle" | "searching" | "connected" | "completed">(
@@ -419,54 +436,105 @@ export default function PatientTeleconsult() {
 
   return (
     <PatientPortalPage>
-      <PatientPageHero
-        eyebrow="Virtual Care Hub"
-        title={
-          mode === "connected"
-            ? `Teleconsultation with ${activeDoctorName}`
-            : "Instant Teleconsultation Matching"
-        }
-        description="Connect with online physicians via encrypted end-to-end HD video call. Seek instant medical advice or consult with your care team."
-        icon={Video}
-        actions={
-          <Button
-            variant="outline"
-            className={portalSecondaryButtonClass}
-            onClick={() => navigate("/patient/appointments")}
+      {/* Sub-Navigation Hub Tabs (Video Consultation vs Messages) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="inline-flex items-center gap-1.5 p-1.5 bg-white rounded-full border border-slate-200 shadow-2xs">
+          <button
+            onClick={() => {
+              setActiveHubTab("video");
+              navigate("/patient/teleconsult?tab=video", { replace: true });
+            }}
+            className={`px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
+              activeHubTab === "video"
+                ? "bg-[#f0f9eb] text-slate-900 border border-[#84cc16] shadow-2xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent font-medium"
+            }`}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Appointments
-          </Button>
-        }
-        meta={[
-          { label: "Provider", value: mode === "connected" ? activeDoctorName : "Searching Queue" },
-          { label: "Specialty", value: mode === "connected" ? activeSpecialty : "On-Demand Care" },
-          {
-            label: "Status",
-            value: (
-              <StatusPill
-                status={
-                  mode === "searching"
-                    ? "Searching"
-                    : mode === "connected"
-                    ? "In-Progress"
-                    : mode === "completed"
-                    ? "Completed"
-                    : "Idle"
-                }
-              />
-            ),
-          },
-          {
-            label: "Security",
-            value: (
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <ShieldCheck className="h-4 w-4" /> Peer-to-Peer Encrypted
-              </span>
-            ),
-          },
-        ]}
-      />
+            <Video className={`h-4 w-4 ${activeHubTab === "video" ? "text-[#65a30d]" : "text-slate-400"}`} />
+            <span>Video Consultation</span>
+          </button>
+          <button
+            onClick={() => {
+              setActiveHubTab("messages");
+              navigate("/patient/teleconsult?tab=messages", { replace: true });
+            }}
+            className={`px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm flex items-center gap-2 transition-all cursor-pointer ${
+              activeHubTab === "messages"
+                ? "bg-[#f0f9eb] text-slate-900 border border-[#84cc16] shadow-2xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-transparent font-medium"
+            }`}
+          >
+            <MessageSquare className={`h-4 w-4 ${activeHubTab === "messages" ? "text-[#65a30d]" : "text-slate-400"}`} />
+            <span>Messages</span>
+          </button>
+        </div>
+
+        <p className="text-xs text-slate-500 font-medium max-w-md leading-relaxed">
+          Choose how you want to connect with your doctor. Start a video consultation or send a secure message.
+        </p>
+      </div>
+
+      {activeHubTab === "messages" ? (
+        <PatientDoctorChat embedded={true} />
+      ) : (
+        <div className="space-y-6">
+          <PatientPageHero
+            eyebrow="VIRTUAL CARE HUB"
+            title={
+              mode === "connected"
+                ? `Teleconsultation with ${activeDoctorName}`
+                : "Instant Teleconsultation Matching"
+            }
+            description="Connect with online physicians via encrypted end-to-end HD video call. Seek instant medical advice or consult with your care team."
+            icon={Video}
+            rightContent={
+              <div className="relative group flex items-center justify-center p-3 sm:p-4 bg-[#f8fafc] rounded-[32px] border border-slate-100/90 shadow-sm">
+                <img
+                  src="/teleconsult_hero_3d.jpg"
+                  alt="Teleconsultation Doctor Illustration"
+                  className="h-56 sm:h-64 lg:h-72 w-auto object-contain rounded-2xl transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+            }
+            actions={
+              <Button
+                variant="outline"
+                className={portalSecondaryButtonClass}
+                onClick={() => navigate("/patient/appointments")}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Appointments
+              </Button>
+            }
+            meta={[
+              { label: "Provider", value: mode === "connected" ? activeDoctorName : "Searching Queue" },
+              { label: "Specialty", value: mode === "connected" ? activeSpecialty : "On-Demand Care" },
+              {
+                label: "Status",
+                value: (
+                  <StatusPill
+                    status={
+                      mode === "searching"
+                        ? "Searching"
+                        : mode === "connected"
+                        ? "In-Progress"
+                        : mode === "completed"
+                        ? "Completed"
+                        : "Idle"
+                    }
+                  />
+                ),
+              },
+              {
+                label: "Security",
+                value: (
+                  <span className="flex items-center gap-1.5 text-emerald-600 font-semibold">
+                    <ShieldCheck className="h-4 w-4" /> Peer-to-Peer Encrypted
+                  </span>
+                ),
+              },
+            ]}
+          />
 
       {/* Active Doctor Room Notification Banner */}
       {mode === "idle" && waitingDoctor && (
@@ -775,6 +843,8 @@ export default function PatientTeleconsult() {
           </div>
         </section>
       )}
-    </PatientPortalPage>
-  );
+    </div>
+  )}
+</PatientPortalPage>
+);
 }

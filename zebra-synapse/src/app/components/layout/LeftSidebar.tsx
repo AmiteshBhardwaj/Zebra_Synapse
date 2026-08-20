@@ -61,8 +61,9 @@ export const PATIENT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   },
   {
     path: "/patient/teleconsult",
-    label: "Teleconsult",
+    label: "Teleconsultation",
     icon: Video,
+    altPaths: ["/patient/messages", "/patient/chat"],
   },
   {
     path: "/patient/clinical-trials",

@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  Trash2,
   User,
   UserCheck,
   UserPlus,
@@ -61,7 +62,11 @@ const SEED_DOCTORS: DoctorMeta[] = [
   { id: "doc_julia_nguyen", name: "Dr. Julia Nguyen", specialty: "General Practice & Telehealth", relationshipType: "unlinked" },
 ];
 
-export default function PatientDoctorChat() {
+interface PatientDoctorChatProps {
+  embedded?: boolean;
+}
+
+export default function PatientDoctorChat({ embedded = false }: PatientDoctorChatProps = {}) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, profile } = useAuth();
@@ -220,12 +225,29 @@ export default function PatientDoctorChat() {
     );
   }, [activeDoctor, user?.id, profile?.full_name, requestTick]);
 
-  const { messages, loading, sending, sendMessage } = useDoctorPatientChat(
+  const { messages, loading, sending, sendMessage, deleteConversation } = useDoctorPatientChat(
     selectedDoctorId,
     user?.id,
     activeDoctor?.name,
     profile?.full_name || "Patient"
   );
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteConversation = async () => {
+    if (!activeDoctor) return;
+    setDeleting(true);
+    try {
+      await deleteConversation();
+      toast.success(`Deleted chat conversation with ${activeDoctor.name}`);
+      setShowDeleteModal(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete chat conversation");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -279,10 +301,11 @@ export default function PatientDoctorChat() {
       currentReqStatus === "accepted" ||
       messages.length > 0);
 
-  return (
-    <PatientPortalPage>
-      {/* Executive Header Bar matching Teleconsult Hub Theme */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 mb-6">
+  const bodyContent = (
+    <div className="w-full">
+      {/* Executive Header Bar matching Teleconsult Hub Theme (Omitted if embedded) */}
+      {!embedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 mb-6">
         <div className="flex items-center gap-3.5">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#eef8e8] text-[#4d8629] border border-[#d2ecb8] shadow-sm">
             <MessageSquare className="h-6 w-6 stroke-[2.2]" />
@@ -312,6 +335,7 @@ export default function PatientDoctorChat() {
           </Button>
         </div>
       </div>
+    )}
 
       {/* Main Chat Layout Container */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-210px)] min-h-[560px]">
@@ -564,6 +588,16 @@ export default function PatientDoctorChat() {
                     <Calendar className="h-3.5 w-3.5 text-[#84cc16] mr-1" />
                     Book Appt
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowDeleteModal(true)}
+                    className="h-8 rounded-xl border-rose-200 bg-rose-50/70 hover:bg-rose-100 text-rose-700 text-xs font-semibold cursor-pointer flex items-center gap-1 transition-colors"
+                    title="Delete Selected Chat"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                    <span>Delete Chat</span>
+                  </Button>
                 </div>
               </div>
 
@@ -730,6 +764,53 @@ export default function PatientDoctorChat() {
           )}
         </div>
       </div>
-    </PatientPortalPage>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && activeDoctor && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                <Trash2 className="h-6 w-6 stroke-[2]" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 font-['Manrope']">Delete Chat Conversation?</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  This will permanently remove all messages with <span className="font-semibold text-slate-800">{activeDoctor.name}</span>.
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-amber-800 bg-amber-50 p-3 rounded-2xl border border-amber-200/80 leading-relaxed font-medium">
+              ⚠️ Warning: This action cannot be undone. Message history will be cleared across all devices and database records.
+            </p>
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deleting}
+                className="h-9 px-4 rounded-xl text-slate-600 font-semibold cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => void handleDeleteConversation()}
+                disabled={deleting}
+                className="h-9 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer shadow-md shadow-rose-600/20"
+              >
+                {deleting ? "Deleting…" : "Yes, Delete Chat"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
+
+  if (embedded) {
+    return bodyContent;
+  }
+
+  return <PatientPortalPage>{bodyContent}</PatientPortalPage>;
 }

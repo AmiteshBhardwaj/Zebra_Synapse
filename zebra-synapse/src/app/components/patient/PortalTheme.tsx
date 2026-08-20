@@ -4,7 +4,7 @@ import { Badge } from "../ui/badge";
 import { cn } from "../ui/utils";
 
 export const portalShellClass =
-  "min-h-full text-slate-800 p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto font-sans selection:bg-lime-500/20 selection:text-lime-900 bg-[#f6f8f5]";
+  "min-h-full text-slate-800 pt-3 sm:pt-4 lg:pt-5 pb-6 sm:pb-8 lg:pb-10 px-4 sm:px-6 lg:px-8 max-w-[1600px] mx-auto font-sans selection:bg-lime-500/20 selection:text-lime-900 bg-[#f6f8f5]";
 
 export const portalContentClass = "flex flex-col gap-6 lg:gap-8 relative z-10";
 
@@ -113,6 +113,7 @@ export function PatientPageHero({
   actions,
   action,
   meta,
+  rightContent,
 }: {
   eyebrow?: string;
   badge?: string;
@@ -122,14 +123,15 @@ export function PatientPageHero({
   actions?: ReactNode;
   action?: ReactNode;
   meta?: Array<{ label: string; value: ReactNode }>;
+  rightContent?: ReactNode;
 }) {
   const eyebrowText = eyebrow || badge || "OVERVIEW";
   const actionContent = actions || action;
 
   return (
     <section className={cn(portalPanelClass, "relative overflow-hidden px-6 py-7 sm:px-8 lg:px-10 lg:py-8")}>
-      <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl">
+      <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="max-w-3xl flex-1">
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <span className="rounded-full border border-lime-200 bg-lime-50 px-3.5 py-1 text-[11px] font-mono font-semibold uppercase tracking-[0.2em] text-lime-800">
               {eyebrowText}
@@ -155,7 +157,14 @@ export function PatientPageHero({
             </div>
           ) : null}
         </div>
-        {actionContent ? <div className="flex shrink-0 items-center gap-3">{actionContent}</div> : null}
+        {rightContent ? (
+          <div className="shrink-0 lg:max-w-md xl:max-w-lg flex flex-col items-center lg:items-end justify-center gap-4">
+            {rightContent}
+            {actionContent ? <div className="flex shrink-0 items-center gap-3">{actionContent}</div> : null}
+          </div>
+        ) : actionContent ? (
+          <div className="flex shrink-0 items-center gap-3">{actionContent}</div>
+        ) : null}
       </div>
     </section>
   );

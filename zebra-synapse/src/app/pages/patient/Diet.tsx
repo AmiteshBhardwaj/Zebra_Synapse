@@ -694,7 +694,7 @@ export default function Diet() {
 
   // Render sub-views or main Zebra Synapse dashboard with dedicated Left Sidebar
   return (
-    <div className="min-h-screen bg-[#f8faf6] text-slate-800 font-sans selection:bg-lime-200 selection:text-slate-900 p-2 sm:p-4 lg:p-6">
+    <div className="min-h-screen bg-[#f8faf6] text-slate-800 font-sans selection:bg-lime-200 selection:text-slate-900 pt-2 sm:pt-3 lg:pt-4 pb-4 sm:pb-6 lg:pb-8 px-2 sm:px-4 lg:px-6">
       <div className="max-w-[1680px] mx-auto flex flex-col lg:flex-row gap-5 lg:gap-6 items-start w-full">
         
         {/* ========================================================================= */}
