@@ -18,6 +18,7 @@ import {
   Sparkles,
   TrendingUp,
   Utensils,
+  UtensilsCrossed,
   Video,
 } from "lucide-react";
 
@@ -43,7 +44,7 @@ export default function PatientDashboard() {
     { path: "/patient/teleconsult", icon: Video, label: "Teleconsultation", altPaths: ["/patient/messages", "/patient/chat"] },
     { path: "/patient/prescription", icon: Pill, label: "Prescription" },
     { path: "/patient/disease-prediction", icon: TrendingUp, label: "Disease Prediction" },
-    { path: "/patient/lifestyle", icon: Flame, label: "Lifestyle Plan", altPaths: ["/patient/diet", "/patient/nutrition", "/patient/exercise", "/patient/diet-chat", "/patient/dietitian"] },
+    { path: "/patient/diet-fitness", icon: UtensilsCrossed, label: "Diet & Fitness", altPaths: ["/patient/lifestyle", "/patient/diet", "/patient/nutrition", "/patient/exercise", "/patient/workout", "/patient/diet-chat"] },
     { path: "/patient/clinical-trials", icon: FlaskConical, label: "Clinical Trials" },
     { path: "/patient/wellness-tips", icon: Sparkles, label: "Wellness Tips" },
   ];

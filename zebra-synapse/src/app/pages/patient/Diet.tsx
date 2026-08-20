@@ -47,8 +47,10 @@ import {
   LogOut,
   Bot,
   Send,
+  Settings,
+  ShieldAlert,
 } from "lucide-react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import PatientDietChat from "./PatientDietChat";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
@@ -110,7 +112,23 @@ import {
 } from "../../../lib/dietEngine";
 import { toast } from "sonner";
 
-export default function Diet() {
+export interface DietProps {
+  embedded?: boolean;
+  selectedDate?: string;
+  onDateChange?: (dateStr: string) => void;
+  loggedFoods?: LoggedMealItem[];
+  onLoggedFoodsChange?: (logs: LoggedMealItem[]) => void;
+  onAskAiCoach?: (prompt: string) => void;
+}
+
+export default function Diet({
+  embedded = false,
+  selectedDate: externalDate,
+  onDateChange,
+  loggedFoods: externalLoggedFoods,
+  onLoggedFoodsChange,
+  onAskAiCoach,
+}: DietProps = {}) {
   const { profile, updateProfile } = useAuth();
   const { hasLabReports, uploads, loading: reportsLoading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
@@ -124,6 +142,7 @@ export default function Diet() {
   } = useActiveReport(panels);
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Active Navigation Mode for Zebra Synapse Sidebar
   type DietNavTab = "dashboard" | "weekly_plan" | "biomarker_rx" | "messages";
@@ -135,7 +154,7 @@ export default function Diet() {
       if (tab === "weekly_plan" || tab === "meal_plan") return "weekly_plan";
       if (tab === "biomarker_rx") return "biomarker_rx";
     } catch {}
-    return "dashboard";
+    return embedded ? "weekly_plan" : "dashboard";
   });
 
   // Sync activeTab if location search changes
@@ -230,10 +249,7 @@ export default function Diet() {
   const currentHeight = profile?.height_cm || 175;
   const bmr = useMemo(() => calculateBMR(currentWeight, currentHeight, 34, "male"), [currentWeight, currentHeight]);
   const tdee = useMemo(() => calculateTDEE(bmr, settings.activityLevel), [bmr, settings.activityLevel]);
-  const calorieTarget = useMemo(
-    () => settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg),
-    [tdee, settings.goal, settings.weeklyPaceKg, settings.customCalorieTarget]
-  );
+  const calorieTarget = 2100;
   const macroTargets = useMemo(
     () => calculateMacroTargets(calorieTarget, settings.goal, currentWeight, settings.customMacroSplit),
     [calorieTarget, settings.goal, currentWeight, settings.customMacroSplit]
@@ -244,89 +260,305 @@ export default function Diet() {
   );
 
   // ==========================================
-  // FOOD TRACKING STATE (Today's Logs)
+  // FOOD TRACKING STATE (Per Selected Date)
   // ==========================================
-  const todayKey = new Date().toISOString().split("T")[0];
-  const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${todayKey}`;
-  const [loggedFoods, setLoggedFoods] = useState<LoggedMealItem[]>(() => {
+  const activeDateKey = externalDate || new Date().toISOString().split("T")[0];
+  const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${activeDateKey}`;
+
+function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
+  const norm = (pref || "omnivore").toLowerCase();
+  const now = new Date().toISOString();
+
+  if (norm === "jain") {
+    return [
+      {
+        id: "log_1",
+        name: "Turmeric Tofu & Bell Pepper Stir-Fry",
+        meal: "breakfast",
+        servings: 1,
+        servingSize: "1 plate",
+        calories: 320,
+        protein: 24,
+        carbs: 18,
+        fat: 14,
+        fiber: 6,
+        sodium: 180,
+        loggedAt: now,
+      },
+      {
+        id: "log_2",
+        name: "Moong Dal & Tri-Color Quinoa Nourish Bowl",
+        meal: "lunch",
+        servings: 1,
+        servingSize: "1 bowl",
+        calories: 420,
+        protein: 28,
+        carbs: 48,
+        fat: 12,
+        fiber: 10,
+        sodium: 290,
+        loggedAt: now,
+      },
+      {
+        id: "log_3",
+        name: "Roasted Almonds & Dried Figs",
+        meal: "snack",
+        servings: 1,
+        servingSize: "1 bowl",
+        calories: 190,
+        protein: 8,
+        carbs: 15,
+        fat: 12,
+        fiber: 4,
+        sodium: 20,
+        loggedAt: now,
+      },
+      {
+        id: "log_4",
+        name: "Grilled Paneer with Steamed Zucchini & Green Beans",
+        meal: "dinner",
+        servings: 1,
+        servingSize: "1 plate",
+        calories: 480,
+        protein: 30,
+        carbs: 35,
+        fat: 20,
+        fiber: 8,
+        sodium: 310,
+        loggedAt: now,
+      },
+    ];
+  }
+
+  if (norm === "vegetarian" || norm === "vegan") {
+    return [
+      {
+        id: "log_1",
+        name: "Turmeric Tofu & Baby Spinach Scramble",
+        meal: "breakfast",
+        servings: 1,
+        servingSize: "1 plate",
+        calories: 340,
+        protein: 26,
+        carbs: 18,
+        fat: 16,
+        fiber: 6,
+        sodium: 210,
+        loggedAt: now,
+      },
+      {
+        id: "log_2",
+        name: "Fresh Paneer Avocado & Quinoa Salad",
+        meal: "lunch",
+        servings: 1,
+        servingSize: "1 bowl",
+        calories: 440,
+        protein: 32,
+        carbs: 42,
+        fat: 18,
+        fiber: 8,
+        sodium: 310,
+        loggedAt: now,
+      },
+      {
+        id: "log_3",
+        name: "Greek Yogurt with Mixed Berries & Almonds",
+        meal: "snack",
+        servings: 1,
+        servingSize: "1 bowl",
+        calories: 220,
+        protein: 14,
+        carbs: 20,
+        fat: 10,
+        fiber: 4,
+        sodium: 60,
+        loggedAt: now,
+      },
+      {
+        id: "log_4",
+        name: "Lentil Dal with Brown Rice & Steamed Broccoli",
+        meal: "dinner",
+        servings: 1,
+        servingSize: "1 plate",
+        calories: 480,
+        protein: 30,
+        carbs: 52,
+        fat: 14,
+        fiber: 12,
+        sodium: 340,
+        loggedAt: now,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "log_1",
+      name: "Scrambled Eggs with Spinach & Whole Grain Toast",
+      meal: "breakfast",
+      servings: 1,
+      servingSize: "1 plate",
+      calories: 300,
+      protein: 20,
+      carbs: 25,
+      fat: 12,
+      fiber: 6,
+      sodium: 240,
+      loggedAt: now,
+    },
+    {
+      id: "log_2",
+      name: "Grilled Chicken Salad with Avocado and Quinoa",
+      meal: "lunch",
+      servings: 1,
+      servingSize: "1 bowl",
+      calories: 450,
+      protein: 36,
+      carbs: 40,
+      fat: 20,
+      fiber: 8,
+      sodium: 320,
+      loggedAt: now,
+    },
+    {
+      id: "log_3",
+      name: "Greek Yogurt with Mixed Berries and Almonds",
+      meal: "snack",
+      servings: 1,
+      servingSize: "1 bowl",
+      calories: 200,
+      protein: 12,
+      carbs: 18,
+      fat: 10,
+      fiber: 4,
+      sodium: 60,
+      loggedAt: now,
+    },
+    {
+      id: "log_4",
+      name: "Grilled Chicken with Sweet Potato and Green Beans",
+      meal: "dinner",
+      servings: 1,
+      servingSize: "1 plate",
+      calories: 500,
+      protein: 35,
+      carbs: 45,
+      fat: 20,
+      fiber: 9,
+      sodium: 350,
+      loggedAt: now,
+    },
+  ];
+}
+
+  const [internalLoggedFoods, setInternalLoggedFoods] = useState<LoggedMealItem[]>(() => {
     try {
       const saved = localStorage.getItem(logsStorageKey);
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    // Default demonstration logs matching Zebra Synapse Clinical Nutrition design
-    return [
-      {
-        id: "log_1",
-        name: "Scrambled Eggs with Spinach & Whole Grain Toast",
-        meal: "breakfast",
-        servings: 1,
-        servingSize: "1 plate",
-        calories: 300,
-        protein: 20,
-        carbs: 25,
-        fat: 12,
-        fiber: 6,
-        sodium: 240,
-        loggedAt: new Date().toISOString(),
-      },
-      {
-        id: "log_2",
-        name: "Grilled Chicken Salad with Avocado and Quinoa",
-        meal: "lunch",
-        servings: 1,
-        servingSize: "1 bowl",
-        calories: 450,
-        protein: 36,
-        carbs: 40,
-        fat: 20,
-        fiber: 8,
-        sodium: 320,
-        loggedAt: new Date().toISOString(),
-      },
-      {
-        id: "log_3",
-        name: "Greek Yogurt with Mixed Berries and Almonds",
-        meal: "snack",
-        servings: 1,
-        servingSize: "1 bowl",
-        calories: 200,
-        protein: 12,
-        carbs: 18,
-        fat: 10,
-        fiber: 4,
-        sodium: 60,
-        loggedAt: new Date().toISOString(),
-      },
-      {
-        id: "log_4",
-        name: "Grilled Chicken with Sweet Potato and Green Beans",
-        meal: "dinner",
-        servings: 1,
-        servingSize: "1 plate",
-        calories: 500,
-        protein: 35,
-        carbs: 45,
-        fat: 20,
-        fiber: 9,
-        sodium: 380,
-        loggedAt: new Date().toISOString(),
-      },
-    ];
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (activeDateKey === todayStr) {
+      return getInitialDietDemoMeals(profile?.dietary_preference);
+    }
+    return [];
   });
 
-  // Persist logged foods
+  // Keep internal state updated if activeDateKey changes
   useEffect(() => {
     try {
-      localStorage.setItem(logsStorageKey, JSON.stringify(loggedFoods));
+      const saved = localStorage.getItem(logsStorageKey);
+      if (saved) {
+        setInternalLoggedFoods(JSON.parse(saved));
+        return;
+      }
     } catch (e) {
       console.error(e);
     }
-  }, [loggedFoods, logsStorageKey]);
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (activeDateKey === todayStr) {
+      setInternalLoggedFoods([
+        {
+          id: "log_1",
+          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
+          meal: "breakfast",
+          servings: 1,
+          servingSize: "1 plate",
+          calories: 300,
+          protein: 20,
+          carbs: 25,
+          fat: 12,
+          fiber: 6,
+          sodium: 240,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_2",
+          name: "Grilled Chicken Salad with Avocado and Quinoa",
+          meal: "lunch",
+          servings: 1,
+          servingSize: "1 bowl",
+          calories: 450,
+          protein: 36,
+          carbs: 40,
+          fat: 20,
+          fiber: 8,
+          sodium: 320,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_3",
+          name: "Greek Yogurt with Mixed Berries and Almonds",
+          meal: "snack",
+          servings: 1,
+          servingSize: "1 bowl",
+          calories: 200,
+          protein: 12,
+          carbs: 18,
+          fat: 10,
+          fiber: 4,
+          sodium: 60,
+          loggedAt: new Date().toISOString(),
+        },
+        {
+          id: "log_4",
+          name: "Grilled Chicken with Sweet Potato and Green Beans",
+          meal: "dinner",
+          servings: 1,
+          servingSize: "1 plate",
+          calories: 500,
+          protein: 35,
+          carbs: 45,
+          fat: 20,
+          fiber: 9,
+          sodium: 380,
+          loggedAt: new Date().toISOString(),
+        },
+      ]);
+    } else {
+      setInternalLoggedFoods([]);
+    }
+  }, [activeDateKey, logsStorageKey]);
+
+  const loggedFoods = externalLoggedFoods ?? internalLoggedFoods;
+
+  const updateLoggedFoods = (updater: (prev: LoggedMealItem[]) => LoggedMealItem[]) => {
+    const next = updater(loggedFoods);
+    if (onLoggedFoodsChange) {
+      onLoggedFoodsChange(next);
+    } else {
+      setInternalLoggedFoods(next);
+      try {
+        localStorage.setItem(logsStorageKey, JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
 
   // Water Intake State (Nutrigo widget)
-  const waterStorageKey = `zebra_water_logs_${profile?.id || "default"}_${todayKey}`;
+  const waterStorageKey = `zebra_water_logs_${profile?.id || "default"}_${activeDateKey}`;
   const [waterConsumedMl, setWaterConsumedMl] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(waterStorageKey);
@@ -481,7 +713,7 @@ export default function Diet() {
       sodium: Math.round(food.sodium * customServings),
       loggedAt: new Date().toISOString(),
     };
-    setLoggedFoods((prev) => [...prev, newEntry]);
+    updateLoggedFoods((prev) => [...prev, newEntry]);
     addActivity(`Logged ${food.name} (${newEntry.calories} kcal) to ${selectedMealForAdd.toUpperCase()}`, "food");
     toast.success(`Logged ${food.name} to ${selectedMealForAdd.toUpperCase()}`);
     setIsAddFoodOpen(false);
@@ -513,7 +745,7 @@ export default function Diet() {
       sodium: 0,
       loggedAt: new Date().toISOString(),
     };
-    setLoggedFoods((prev) => [...prev, newEntry]);
+    updateLoggedFoods((prev) => [...prev, newEntry]);
     addActivity(`Logged ${customFoodName} (${cal} kcal) to ${selectedMealForAdd.toUpperCase()}`, "food");
     toast.success(`Logged ${customFoodName} to ${selectedMealForAdd.toUpperCase()}`);
     setIsAddFoodOpen(false);
@@ -527,7 +759,7 @@ export default function Diet() {
 
   const handleDeleteLoggedFood = (id: string) => {
     const item = loggedFoods.find((f) => f.id === id);
-    setLoggedFoods((prev) => prev.filter((i) => i.id !== id));
+    updateLoggedFoods((prev) => prev.filter((i) => i.id !== id));
     if (item) {
       toast.info(`Removed ${item.name}`);
     }
@@ -600,7 +832,7 @@ export default function Diet() {
       sodium: 350,
       loggedAt: new Date().toISOString(),
     };
-    setLoggedFoods((prev) => [...prev, newEntry]);
+    updateLoggedFoods((prev) => [...prev, newEntry]);
     addActivity(`Logged ${recipe.title} (${recipe.calories} kcal) to ${recipe.mealType.toUpperCase()}`, "food");
     toast.success(`Logged "${recipe.title}" to Today's ${recipe.mealType.toUpperCase()}!`);
   };
@@ -694,30 +926,31 @@ export default function Diet() {
 
   // Render sub-views or main Zebra Synapse dashboard with dedicated Left Sidebar
   return (
-    <div className="min-h-screen bg-[#f8faf6] text-slate-800 font-sans selection:bg-lime-200 selection:text-slate-900 pt-2 sm:pt-3 lg:pt-4 pb-4 sm:pb-6 lg:pb-8 px-2 sm:px-4 lg:px-6">
-      <div className="max-w-[1680px] mx-auto flex flex-col lg:flex-row gap-5 lg:gap-6 items-start w-full">
+    <div className={embedded ? "w-full" : "min-h-screen bg-[#f8faf6] text-slate-800 font-sans selection:bg-lime-200 selection:text-slate-900 pt-2 sm:pt-3 lg:pt-4 pb-4 sm:pb-6 lg:pb-8 px-2 sm:px-4 lg:px-6"}>
+      <div className={embedded ? "w-full flex flex-col gap-6" : "max-w-[1680px] mx-auto flex flex-col lg:flex-row gap-5 lg:gap-6 items-start w-full"}>
         
         {/* ========================================================================= */}
         {/* 1. ZEBRA SYNAPSE LEFT SIDEBAR (DEDICATED TO DIET SECTION) */}
         {/* ========================================================================= */}
-        <aside className="w-full lg:w-[245px] xl:w-[255px] shrink-0 lg:sticky lg:top-4 bg-white rounded-[28px] p-4 sm:p-5 border border-slate-100/90 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between self-stretch lg:self-auto min-h-fit lg:min-h-[calc(100vh-3rem)] select-none">
-          {/* Brand Header */}
-          <div
-            onClick={() => setActiveTab("dashboard")}
-            className="flex items-center gap-3 pb-4 pt-1 px-1 border-b border-slate-100/70 cursor-pointer group"
-          >
-            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-lime-400 border border-slate-700/40 shadow-sm transition-transform group-hover:scale-105">
-              <Activity className="h-5 w-5 stroke-[2.3]" />
+        {!embedded && (
+          <aside className="w-full lg:w-[245px] xl:w-[255px] shrink-0 lg:sticky lg:top-4 bg-white rounded-[28px] p-4 sm:p-5 border border-slate-100/90 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between self-stretch lg:self-auto min-h-fit lg:min-h-[calc(100vh-3rem)] select-none">
+            {/* Brand Header */}
+            <div
+              onClick={() => setActiveTab("dashboard")}
+              className="flex items-center gap-3 pb-4 pt-1 px-1 border-b border-slate-100/70 cursor-pointer group"
+            >
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-lime-400 border border-slate-700/40 shadow-sm transition-transform group-hover:scale-105">
+                <Activity className="h-5 w-5 stroke-[2.3]" />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
+                  Zebra Synapse
+                </span>
+                <span className="text-[10px] font-semibold text-slate-400 tracking-wider">
+                  Clinical Nutrition & Diet
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight text-slate-900 font-['Manrope']">
-                Zebra Synapse
-              </span>
-              <span className="text-[10px] font-semibold text-slate-400 tracking-wider">
-                Clinical Nutrition & Diet
-              </span>
-            </div>
-          </div>
 
           {/* Navigation Links */}
           <nav className="my-3 space-y-1 flex-1 overflow-y-auto [scrollbar-width:none]">
@@ -789,6 +1022,7 @@ export default function Diet() {
             <span>Exit to Portal</span>
           </Link>
         </aside>
+        )}
 
         {/* ========================================================================= */}
         {/* 2. MAIN DIET CONTENT AREA */}
@@ -858,221 +1092,8 @@ export default function Diet() {
             {/* LEFT 8 COLUMNS: Top Stats, Radial Gauges, Workout Banner, Recommended Menus & Exercises */}
             <div className="xl:col-span-8 space-y-6">
               
-              {/* --- ROW OF 4 QUICK METRICS (Weight, Steps, Sleep, Water) --- */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
-                {/* 1. Weight Ruler Card */}
-                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Weight</span>
-                    <span className="p-1.5 rounded-xl bg-lime-50 text-lime-600">
-                      <Scale className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="my-2">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">{currentWeight}</span>
-                      <span className="text-xs font-semibold text-slate-400">kg</span>
-                    </div>
-                  </div>
-                  {/* Interactive Ruler scale slider */}
-                  <div className="relative pt-1">
-                    <div className="flex justify-between items-center text-[10px] font-mono text-slate-400 pb-1">
-                      <span>85</span>
-                      <span>80</span>
-                      <span className="text-lime-600 font-bold">{currentWeight}</span>
-                      <span>70</span>
-                      <span>65</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
-                      <div
-                        className="h-full bg-lime-500 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.min(100, Math.max(10, ((85 - currentWeight) / 20) * 100))}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Steps Card */}
-                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Steps</span>
-                    <span className="p-1.5 rounded-xl bg-lime-50 text-lime-600">
-                      <Footprints className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="my-2">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">
-                        {stepsCount.toLocaleString()}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-400">steps</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 mb-1">
-                      <span className="text-lime-600 font-bold">{stepsPct}%</span>
-                      <span className="text-slate-400">{stepsLeft} steps left</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-lime-500 rounded-full transition-all duration-300"
-                        style={{ width: `${stepsPct}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Sleep Card */}
-                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sleep</span>
-                    <span className="p-1.5 rounded-xl bg-amber-50 text-amber-500">
-                      <Moon className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <div className="my-2">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">{sleepHours}</span>
-                      <span className="text-xs font-semibold text-slate-400">hours</span>
-                    </div>
-                  </div>
-                  {/* Vertical mini-bar chart */}
-                  <div className="flex items-end justify-between h-5 gap-1 pt-1">
-                    {[6, 7, 5.5, 8, 6.5, 7.5, 6.5].map((h, i) => (
-                      <div
-                        key={i}
-                        className={`w-full rounded-sm transition-all ${
-                          i === 4 ? "bg-orange-500" : "bg-orange-200"
-                        }`}
-                        style={{ height: `${(h / 8) * 100}%` }}
-                        title={`${h} hours`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {/* 4. Water Intake Card */}
-                <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Water Intake</span>
-                    <button
-                      onClick={() => handleAddWater(250)}
-                      title="Drink 250ml"
-                      className="p-1.5 rounded-xl bg-lime-50 hover:bg-lime-100 text-lime-600 transition-colors"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div className="my-2">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-2xl font-black text-slate-900 tracking-tight">
-                        {Math.max(0, (settings.dailyWaterTargetMl - waterConsumedMl) / 1000).toFixed(1)}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-400">litre left</span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center text-[11px] font-semibold text-slate-500 mb-1">
-                      <span className="text-amber-500 font-bold">
-                        {(waterConsumedMl / 1000).toFixed(1)}/{(settings.dailyWaterTargetMl / 1000).toFixed(1)} litre
-                      </span>
-                      <button
-                        onClick={() => handleAddWater(250)}
-                        className="text-[10px] text-lime-700 font-bold hover:underline"
-                      >
-                        + 250ml
-                      </button>
-                    </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${Math.min(100, Math.round((waterConsumedMl / settings.dailyWaterTargetMl) * 100))}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* --- HERO ROW: 2 GAUGE CARDS (Weight Semi-Circle & Calories Circular Ring) --- */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
-                {/* 1. Weight Data Semi-Circle Gauge Card */}
-                <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between">
-                  <div className="flex items-center justify-between pb-2">
-                    <h3 className="font-bold text-slate-900 text-base">Weight Data</h3>
-                    <button
-                      onClick={() => setIsCustomizeOpen(true)}
-                      className="text-slate-400 hover:text-slate-600 text-xs font-semibold"
-                    >
-                      •••
-                    </button>
-                  </div>
-
-                  {/* Semi-Circular Radial Gauge */}
-                  <div className="relative flex flex-col items-center justify-center my-2 py-4">
-                    <svg className="w-56 h-32" viewBox="0 0 200 110">
-                      {/* Background arc */}
-                      <path
-                        d="M 20 100 A 80 80 0 0 1 180 100"
-                        fill="none"
-                        stroke="#f1f5f9"
-                        strokeWidth="16"
-                        strokeLinecap="round"
-                      />
-                      {/* Colored active gradient arc */}
-                      <defs>
-                        <linearGradient id="weightGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#f97316" />
-                          <stop offset="50%" stopColor="#facc15" />
-                          <stop offset="100%" stopColor="#84cc16" />
-                        </linearGradient>
-                      </defs>
-                      <path
-                        d="M 20 100 A 80 80 0 0 1 180 100"
-                        fill="none"
-                        stroke="url(#weightGrad)"
-                        strokeWidth="16"
-                        strokeLinecap="round"
-                        strokeDasharray="251.2"
-                        strokeDashoffset={`${251.2 * (1 - Math.min(1, Math.max(0.15, (85 - currentWeight) / 20)))}`}
-                        className="transition-all duration-700 ease-out"
-                      />
-                    </svg>
-
-                    {/* Central Weight Display inside the arc */}
-                    <div className="absolute bottom-2 text-center">
-                      <div className="text-3xl font-black text-slate-900 tracking-tight">
-                        {currentWeight} <span className="text-base font-semibold text-slate-500">kg</span>
-                      </div>
-                      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Current Weight</p>
-                      <p className="text-xs font-bold text-orange-500 mt-0.5">
-                        {Math.abs(currentWeight - settings.targetWeightKg).toFixed(1)} kg {currentWeight > settings.targetWeightKg ? "left to goal" : "gained"}
-                      </p>
-                    </div>
-
-                    {/* Scale tick numbers */}
-                    <div className="w-56 flex justify-between text-[11px] font-bold text-slate-400 px-2 mt-1">
-                      <span>85</span>
-                      <span>65</span>
-                    </div>
-                  </div>
-
-                  {/* Motivational / Biomarker Insight Note */}
-                  <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 mt-3 text-xs text-slate-600 leading-relaxed">
-                    <p className="font-medium text-slate-700">
-                      "Progress is progress, no matter how slow. Keep going, you're getting closer to your goal every day!"
-                    </p>
-                    {activePanel?.recorded_at && (
-                      <div className="flex items-center gap-1.5 text-[11px] text-lime-700 font-semibold mt-1.5 pt-1.5 border-t border-slate-200/60">
-                        <ShieldCheck className="h-3.5 w-3.5 text-lime-600" />
-                        <span>Biomarker adjusted for active lab panel ({formatLabDate(activePanel.recorded_at)})</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+              {/* --- HERO ROW: Calories Circular Ring & Macro Targets --- */}
+              <div className="grid grid-cols-1 gap-6">
 
                 {/* 2. Calories Intake Circular Ring Gauge Card */}
                 <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between">
@@ -1399,43 +1420,7 @@ export default function Diet() {
                 </div>
               </div>
 
-              {/* 2. Mini Calendar Day-Strip (Nutrigo Month Header + Days) */}
-              <div className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-slate-900 text-sm">September 2028</h4>
-                  <div className="flex items-center gap-1 text-slate-400">
-                    <button className="h-7 w-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button className="h-7 w-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
 
-                {/* Weekday Pills */}
-                <div className="grid grid-cols-6 gap-1.5">
-                  {weekDays.map((d, idx) => {
-                    const isActive = idx === selectedDayIdx;
-                    return (
-                      <button
-                        key={d.dayName}
-                        onClick={() => setSelectedDayIdx(idx)}
-                        className={`flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all duration-150 ${
-                          isActive
-                            ? "bg-lime-500 text-white font-bold shadow-md shadow-lime-500/25 scale-[1.03]"
-                            : "bg-slate-50 hover:bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        <span className={`text-[10px] ${isActive ? "text-lime-100" : "text-slate-400"}`}>
-                          {d.dayName}
-                        </span>
-                        <span className="text-sm font-black mt-0.5">{d.dateNum}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
 
               {/* 3. Daily Meal Timeline Accordions (Breakfast, Lunch, Snack, Dinner) */}
               <div className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-3">
@@ -1645,6 +1630,83 @@ export default function Diet() {
         {/* ========================================================================= */}
         {activeTab === "weekly_plan" && (
           <div className="space-y-6">
+            {/* Personalization Badge Banner */}
+            <div className="rounded-2xl border border-lime-200 bg-gradient-to-r from-lime-50 via-emerald-50 to-teal-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500 text-white font-bold shadow-sm">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 font-['Manrope']">
+                      Biomarker & Settings Calibrated
+                    </span>
+                    <Badge className="bg-lime-500 text-white text-[9px] font-bold px-2 py-0.5">
+                      Active
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-600 mt-0.5">
+                    {activePanel?.recorded_at ? (
+                      <>
+                        Personalized using your <strong className="text-slate-900">{formatLabDate(activePanel.recorded_at)}</strong> lab panel + Account Settings dietary preferences.
+                      </>
+                    ) : (
+                      <>
+                        Personalized using Account Settings preferences. <Link to="/patient/records" className="font-bold text-lime-700 underline hover:text-lime-800">Upload a lab report</Link> for biomarker-tailored recommendations.
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate("/patient/settings")}
+                className="inline-flex items-center gap-1 text-xs font-bold text-lime-800 hover:text-lime-900 bg-white/80 border border-lime-200 rounded-xl px-3 py-1.5 shadow-xs shrink-0 self-start sm:self-auto cursor-pointer"
+              >
+                <Settings className="h-3.5 w-3.5" /> Edit Preferences
+              </button>
+            </div>
+
+            {/* Dietary Preferences Summary Panel */}
+            <div className="bg-white rounded-[24px] p-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.02)] grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-lime-100 text-lime-700">
+                  <Utensils className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Dietary Preference</span>
+                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
+                    {profile?.dietary_preference || settings.dietaryPreference || "Omnivore"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-orange-100 text-orange-700">
+                  <ShieldAlert className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Allergies & Exclusions</span>
+                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
+                    {profile?.food_allergies?.length ? profile.food_allergies.join(", ") : "None Specified"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50/80 rounded-2xl p-3.5 border border-slate-100 flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-cyan-100 text-cyan-700">
+                  <HeartPulse className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Metabolic Conditions</span>
+                  <p className="text-xs font-bold text-slate-900 mt-0.5 capitalize">
+                    {profile?.dietary_conditions?.length ? profile.dietary_conditions.join(", ") : "General Health"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">7-Day Biomarker-Guided Meal Plan</h2>
@@ -1652,83 +1714,10 @@ export default function Diet() {
                   Clinically calibrated meals matching your metabolic target of {calorieTarget} kcal/day
                 </p>
               </div>
-
-              <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => setGrocerySubTab(!grocerySubTab)}
-                  className={`h-10 px-4 rounded-xl text-xs font-semibold transition-all ${
-                    grocerySubTab
-                      ? "bg-lime-500 text-white shadow-md shadow-lime-500/20"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                  }`}
-                >
-                  <ShoppingCart className="h-4 w-4 mr-2" />
-                  {grocerySubTab ? "View Recipes" : "Grocery List"}
-                </Button>
-              </div>
             </div>
 
-            {grocerySubTab ? (
-              /* Grocery List View */
-              <div className="bg-white rounded-[28px] p-6 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                    <ShoppingCart className="h-5 w-5 text-lime-600" />
-                    Interactive Smart Grocery List
-                  </h3>
-                  <Button
-                    onClick={() => {
-                      navigator.clipboard.writeText(
-                        Object.entries(groceryList)
-                          .map(([cat, items]) => `${cat.toUpperCase()}:\n${items.map((i) => `- ${i.name} (${i.amount})`).join("\n")}`)
-                          .join("\n\n")
-                      );
-                      toast.success("Grocery list copied to clipboard!");
-                    }}
-                    className="h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold"
-                  >
-                    Copy List
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {Object.entries(groceryList).map(([category, items]) => (
-                    <div key={category} className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100">
-                      <h4 className="font-bold text-xs text-slate-900 uppercase tracking-wider mb-3 flex items-center justify-between">
-                        <span>{category.replace("_", " ")}</span>
-                        <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border">
-                          {items.length}
-                        </span>
-                      </h4>
-                      <div className="space-y-2">
-                        {items.map((item) => {
-                          const isChecked = !!checkedGroceryItems[item.name];
-                          return (
-                            <label
-                              key={item.name}
-                              onClick={() => toggleGroceryItem(item.name)}
-                              className="flex items-start gap-2.5 text-xs text-slate-700 cursor-pointer p-1.5 rounded-lg hover:bg-white transition-colors"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={() => {}}
-                                className="mt-0.5 rounded text-lime-600 focus:ring-lime-500"
-                              />
-                              <span className={isChecked ? "line-through text-slate-400" : ""}>
-                                {item.name} <span className="text-[10px] text-slate-400">({item.amount})</span>
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* Weekly Recipes Plan View */
-              <div className="space-y-6">
+            {/* Weekly Recipes Plan View */}
+            <div className="space-y-6">
                 {/* Day selector tabs */}
                 <div className="flex items-center gap-2 overflow-x-auto pb-2 [scrollbar-width:none]">
                   {weeklyPlan.map((day) => (
@@ -1823,7 +1812,6 @@ export default function Diet() {
                   );
                 })()}
               </div>
-            )}
           </div>
         )}
 

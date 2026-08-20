@@ -971,7 +971,7 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
       "Gently scramble in olive oil over low heat with fresh baby spinach until soft.",
       "Serve warm over crispy whole grain toast.",
     ],
-    dietaryTags: ["omnivore", "eggetarian", "vegetarian", "heart_healthy", "high_protein"],
+    dietaryTags: ["omnivore", "eggetarian", "heart_healthy", "high_protein"],
   },
   {
     id: "bf_tofu_spinach_scramble",
@@ -1425,29 +1425,120 @@ export function filterSafeRecipes(
   allergies: string[] = [],
   conditions: string[] = []
 ): MealRecipe[] {
-  return recipes.filter((r) => {
-    // Diet preference filter
-    if (dietPref === "vegan" && !r.dietaryTags.includes("vegan")) return false;
-    if (dietPref === "vegetarian" && !r.dietaryTags.includes("vegetarian") && !r.dietaryTags.includes("vegan")) return false;
-    if (dietPref === "jain" && !r.dietaryTags.includes("jain")) return false;
-    if (dietPref === "pescatarian" && !r.dietaryTags.includes("pescatarian") && !r.dietaryTags.includes("vegetarian") && !r.dietaryTags.includes("vegan")) return false;
-    if (dietPref === "eggetarian" && !r.dietaryTags.includes("eggetarian") && !r.dietaryTags.includes("vegetarian") && !r.dietaryTags.includes("vegan")) return false;
-    if (dietPref === "keto" && !r.dietaryTags.includes("keto") && !r.dietaryTags.includes("low_carb")) return false;
+  const normPref = (dietPref || "omnivore").toLowerCase().trim();
 
-    // Food allergy filter
-    for (const ing of r.ingredients) {
-      const lower = ing.name.toLowerCase();
-      if (allergies.includes("lactose") && (lower.includes("yogurt") || lower.includes("paneer") || lower.includes("milk") || lower.includes("whey")) && !lower.includes("almond") && !lower.includes("soy") && !lower.includes("plant")) {
-        return false;
-      }
-      if (allergies.includes("gluten") && (lower.includes("wheat") || lower.includes("sourdough") || lower.includes("pita") || lower.includes("bread"))) {
-        return false;
-      }
-      if (allergies.includes("peanuts") && lower.includes("peanut")) return false;
-      if (allergies.includes("tree_nuts") && (lower.includes("almond") || lower.includes("walnut") || lower.includes("cashew"))) return false;
-      if (allergies.includes("eggs") && lower.includes("egg")) return false;
-      if (allergies.includes("soy") && (lower.includes("tofu") || lower.includes("edamame") || lower.includes("tempeh") || lower.includes("soy"))) return false;
-      if (allergies.includes("shellfish") && (lower.includes("shrimp") || lower.includes("crab") || lower.includes("shellfish"))) return false;
+  return recipes.filter((r) => {
+    const tags = r.dietaryTags || [];
+    const ingNames = r.ingredients.map((i) => i.name.toLowerCase());
+    const titleLower = r.title.toLowerCase();
+
+    const isMeatOrFishOrPoultry =
+      tags.includes("omnivore") ||
+      tags.includes("pescatarian") ||
+      titleLower.includes("chicken") ||
+      titleLower.includes("salmon") ||
+      titleLower.includes("turkey") ||
+      titleLower.includes("fish") ||
+      titleLower.includes("beef") ||
+      titleLower.includes("shrimp") ||
+      titleLower.includes("tuna") ||
+      titleLower.includes("pork") ||
+      titleLower.includes("cod") ||
+      ingNames.some((i) =>
+        i.includes("chicken") ||
+        i.includes("salmon") ||
+        i.includes("turkey") ||
+        i.includes("fish") ||
+        i.includes("beef") ||
+        i.includes("shrimp") ||
+        i.includes("tuna") ||
+        i.includes("pork") ||
+        i.includes("bacon") ||
+        i.includes("cod")
+      );
+
+    const isEgg =
+      tags.includes("eggetarian") ||
+      titleLower.includes("egg") ||
+      titleLower.includes("omelette") ||
+      (titleLower.includes("scramble") && !titleLower.includes("tofu")) ||
+      ingNames.some((i) => i.includes("egg"));
+
+    const isDairy = ingNames.some((i) =>
+      i.includes("yogurt") ||
+      i.includes("paneer") ||
+      i.includes("cheese") ||
+      i.includes("milk") ||
+      i.includes("whey") ||
+      i.includes("butter") ||
+      i.includes("ghee")
+    );
+
+    const isRootVeg =
+      titleLower.includes("onion") ||
+      titleLower.includes("garlic") ||
+      titleLower.includes("potato") ||
+      ingNames.some((i) =>
+        i.includes("onion") ||
+        i.includes("garlic") ||
+        i.includes("potato") ||
+        i.includes("radish") ||
+        i.includes("beet") ||
+        i.includes("carrot") ||
+        i.includes("turnip")
+      );
+
+    // 1. JAIN PREFERENCE:
+    // Strictly NO Meat, NO Poultry, NO Fish, NO Seafood, NO Eggs, AND NO Root Vegetables (Onion, Garlic, Potato, Beet, Radish, Carrot)!
+    if (normPref === "jain") {
+      if (isMeatOrFishOrPoultry || isEgg || isRootVeg) return false;
+      if (!tags.includes("jain") && !tags.includes("vegan") && !tags.includes("vegetarian")) return false;
+    }
+
+    // 2. VEGAN PREFERENCE:
+    // Strictly NO Meat, NO Poultry, NO Fish, NO Seafood, NO Eggs, AND NO Dairy!
+    else if (normPref === "vegan") {
+      if (isMeatOrFishOrPoultry || isEgg || isDairy) return false;
+      if (!tags.includes("vegan")) return false;
+    }
+
+    // 3. VEGETARIAN PREFERENCE:
+    // Strictly NO Meat, NO Poultry, NO Fish, NO Seafood, AND NO Eggs!
+    else if (normPref === "vegetarian") {
+      if (isMeatOrFishOrPoultry || isEgg) return false;
+      if (!tags.includes("vegetarian") && !tags.includes("vegan") && !tags.includes("jain")) return false;
+    }
+
+    // 4. EGGETARIAN PREFERENCE:
+    // Strictly NO Meat, NO Poultry, NO Fish, NO Seafood! (Eggs & Vegetarian allowed)
+    else if (normPref === "eggetarian") {
+      if (isMeatOrFishOrPoultry) return false;
+    }
+
+    // 5. PESCATARIAN PREFERENCE:
+    // Strictly NO Poultry, Red Meat, Beef, Pork! (Fish & Vegetarian allowed)
+    else if (normPref === "pescatarian") {
+      const isPoultryOrRedMeat = ingNames.some((i) =>
+        i.includes("chicken") || i.includes("turkey") || i.includes("beef") || i.includes("pork") || i.includes("bacon")
+      );
+      if (isPoultryOrRedMeat) return false;
+    }
+
+    // 6. KETO PREFERENCE:
+    else if (normPref === "keto") {
+      if (!tags.includes("keto") && !tags.includes("low_carb")) return false;
+    }
+
+    // Food Allergy Filters:
+    for (const allergy of allergies) {
+      const a = allergy.toLowerCase();
+      if (a === "lactose" && isDairy) return false;
+      if (a === "gluten" && ingNames.some((i) => i.includes("wheat") || i.includes("bread") || i.includes("sourdough") || i.includes("tortilla") || i.includes("pasta"))) return false;
+      if (a === "peanuts" && ingNames.some((i) => i.includes("peanut"))) return false;
+      if (a === "tree_nuts" && ingNames.some((i) => i.includes("almond") || i.includes("walnut") || i.includes("cashew"))) return false;
+      if (a === "eggs" && isEgg) return false;
+      if (a === "soy" && ingNames.some((i) => i.includes("tofu") || i.includes("tempeh") || i.includes("edamame") || i.includes("soy"))) return false;
+      if (a === "shellfish" && ingNames.some((i) => i.includes("shrimp") || i.includes("crab") || i.includes("shellfish"))) return false;
     }
 
     return true;
@@ -1475,11 +1566,30 @@ export function generateWeeklyDietPlan(
   const dinners = safeRecipes.filter((r) => r.mealType === "dinner");
   const snacks = safeRecipes.filter((r) => r.mealType === "snack");
 
-  // Fallbacks if filtered pool is small
-  const getBf = (idx: number) => breakfasts[idx % (breakfasts.length || 1)] || MEAL_RECIPES_BANK[0];
-  const getLu = (idx: number) => lunches[idx % (lunches.length || 1)] || MEAL_RECIPES_BANK[4];
-  const getDi = (idx: number) => dinners[idx % (dinners.length || 1)] || MEAL_RECIPES_BANK[8];
-  const getSn = (idx: number) => snacks[idx % (snacks.length || 1)] || MEAL_RECIPES_BANK[11];
+  // Guaranteed safe fallback dishes (NEVER non-veg or eggs for vegetarian/jain)
+  const getBf = (idx: number) => {
+    if (breakfasts.length > 0) return breakfasts[idx % breakfasts.length];
+    if (safeRecipes.length > 0) return safeRecipes[idx % safeRecipes.length];
+    return MEAL_RECIPES_BANK.find((r) => r.id === "bf_overnight_chia_oat_parfait") || MEAL_RECIPES_BANK[0];
+  };
+
+  const getLu = (idx: number) => {
+    if (lunches.length > 0) return lunches[idx % lunches.length];
+    if (safeRecipes.length > 0) return safeRecipes[idx % safeRecipes.length];
+    return MEAL_RECIPES_BANK.find((r) => r.id === "lu_lentil_dal_spinach_brown_rice") || MEAL_RECIPES_BANK[0];
+  };
+
+  const getDi = (idx: number) => {
+    if (dinners.length > 0) return dinners[idx % dinners.length];
+    if (safeRecipes.length > 0) return safeRecipes[idx % safeRecipes.length];
+    return MEAL_RECIPES_BANK.find((r) => r.id === "di_paneer_tofu_stirfry_quinoa") || MEAL_RECIPES_BANK[0];
+  };
+
+  const getSn = (idx: number) => {
+    if (snacks.length > 0) return snacks[idx % snacks.length];
+    if (safeRecipes.length > 0) return safeRecipes[idx % safeRecipes.length];
+    return MEAL_RECIPES_BANK.find((r) => r.id === "sn_apple_almond_butter") || MEAL_RECIPES_BANK[0];
+  };
 
   const bmr = calculateBMR(settings.targetWeightKg || 72, 175, 36, "male");
   const tdee = calculateTDEE(bmr, settings.activityLevel);
