@@ -202,15 +202,15 @@ export default function MedicalRecords() {
       {/* 1. EMPTY STATE UNTIL A MEDICAL REPORT IS SELECTED */}
       {selectedReportId === "none" || !availableReports.some((r) => r.id === selectedReportId) ? (
         <div className="flex min-h-[70vh] flex-col items-center justify-center text-center px-4 py-12">
-          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-[#ff8a3d]/25 to-[#f05a28]/15 border border-[#ff8a3d]/35 shadow-[0_20px_50px_rgba(255,122,51,0.22)]">
-            <FileText className="h-9 w-9 text-[#ff9b61]" />
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-[28px] bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/40 shadow-[0_20px_50px_rgba(6,182,212,0.2)]">
+            <FileText className="h-9 w-9 text-cyan-400" />
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3">
             {availableReports.length > 0 ? "Please choose a medical report" : "No medical reports uploaded yet"}
           </h1>
 
-          <p className="max-w-md text-sm text-[#92a8c7] leading-relaxed mb-8">
+          <p className="max-w-md text-sm text-slate-400 leading-relaxed mb-8">
             {availableReports.length > 0
               ? "Select a medical report from your records below to view extraction details, low-confidence fields, and published biomarker panels."
               : "You do not have any uploaded medical records. Upload a lab report on the Home page to view extraction details and published biomarker panels."}
@@ -219,18 +219,18 @@ export default function MedicalRecords() {
           {availableReports.length > 0 ? (
             <div className="w-full max-w-sm sm:max-w-md">
               <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="h-12 w-full rounded-2xl border-[#ff9b61]/40 bg-[#0d1829]/95 px-5 text-sm font-medium text-white shadow-[0_16px_40px_rgba(0,0,0,0.5)] hover:border-[#ff9b61] focus:ring-2 focus:ring-[#ff7a33]/50 transition-all cursor-pointer">
+                <SelectTrigger className="h-12 w-full rounded-2xl border-cyan-500/40 bg-slate-900/90 px-5 text-sm font-medium text-white shadow-2xl hover:border-cyan-400 focus:ring-2 focus:ring-cyan-500/50 transition-all cursor-pointer">
                   <SelectValue placeholder="Select a medical report..." />
                 </SelectTrigger>
-                <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-2xl p-1.5">
-                  <SelectItem value="none" className="py-3 text-white/40 cursor-pointer">
+                <SelectContent className="border-blue-900/50 bg-[#0a0f1d] text-white shadow-2xl rounded-2xl p-1.5 backdrop-blur-xl">
+                  <SelectItem value="none" className="py-3 text-slate-500 cursor-pointer">
                     -- Select a Medical Report --
                   </SelectItem>
                   {availableReports.map((report) => (
                     <SelectItem
                       key={report.id}
                       value={report.id}
-                      className="py-3 px-3 text-white font-medium hover:bg-white/10 cursor-pointer rounded-xl"
+                      className="py-3 px-3 text-white font-medium hover:bg-slate-800/80 cursor-pointer rounded-xl"
                     >
                       📄 {report.name} ({report.date})
                     </SelectItem>
@@ -244,13 +244,13 @@ export default function MedicalRecords() {
         /* 2. FULL MEDICAL RECORDS WORKSPACE WHEN A REPORT IS SELECTED */
         <>
           {/* Top Report Selection Switcher Bar */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 backdrop-blur-xl mb-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-blue-900/40 bg-slate-900/70 p-4 backdrop-blur-xl mb-4 shadow-xl">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#ff9c61]/15 border border-[#ff9c61]/30">
-                <FileText className="h-4.5 w-4.5 text-[#ff9c61]" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/15 border border-cyan-500/30">
+                <FileText className="h-4.5 w-4.5 text-cyan-400" />
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-widest text-white/45">Active Medical Record</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400">Active Medical Record</p>
                 <p className="text-xs font-semibold text-white">
                   {availableReports.find((r) => r.id === selectedReportId)?.name ?? "Selected Record"}
                 </p>
@@ -259,15 +259,15 @@ export default function MedicalRecords() {
 
             <div className="w-full sm:w-auto min-w-[260px]">
               <Select value={selectedReportId} onValueChange={setSelectedReportId}>
-                <SelectTrigger className="h-10 w-full rounded-xl border-white/14 bg-[#0d1829]/90 text-xs font-medium text-white shadow-sm hover:border-[#ff9b61] transition-all cursor-pointer">
+                <SelectTrigger className="h-10 w-full rounded-xl border-blue-900/50 bg-slate-950/80 text-xs font-medium text-white shadow-sm hover:border-cyan-400 transition-all cursor-pointer">
                   <SelectValue placeholder="Change medical report..." />
                 </SelectTrigger>
-                <SelectContent className="border-white/14 bg-[#0a1323] text-white shadow-2xl rounded-xl p-1">
-                  <SelectItem value="none" className="py-2 text-white/40 cursor-pointer">
+                <SelectContent className="border-blue-900/50 bg-[#0a0f1d] text-white shadow-2xl rounded-xl p-1 backdrop-blur-xl">
+                  <SelectItem value="none" className="py-2 text-slate-500 cursor-pointer">
                     -- Clear Selection --
                   </SelectItem>
                   {availableReports.map((report) => (
-                    <SelectItem key={report.id} value={report.id} className="py-2 text-white text-xs cursor-pointer">
+                    <SelectItem key={report.id} value={report.id} className="py-2 text-white text-xs cursor-pointer hover:bg-slate-800/80">
                       📄 {report.name} ({report.date})
                     </SelectItem>
                   ))}

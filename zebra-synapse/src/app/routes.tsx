@@ -13,6 +13,7 @@ import DiseasePrediction from "./pages/patient/DiseasePredictionInsights";
 import Diet from "./pages/patient/DietInsights";
 import Nutrition from "./pages/patient/NutritionInsights";
 import ExercisePlan from "./pages/patient/ExercisePlanInsights";
+import LifestylePlan from "./pages/patient/LifestyleInsights";
 import ClinicalTrials from "./pages/patient/ClinicalTrialsInsights";
 import WellnessTips from "./pages/patient/WellnessTipsInsights";
 import ProfileSettings from "./pages/ProfileSettings";
@@ -77,9 +78,10 @@ export const router = createBrowserRouter([
       { path: "prescription", Component: Prescription },
       { path: "predictions", Component: DiseasePrediction },
       { path: "disease-prediction", Component: DiseasePrediction },
-      { path: "diet", Component: Diet },
-      { path: "nutrition", Component: Nutrition },
-      { path: "exercise", Component: ExercisePlan },
+      { path: "lifestyle", Component: LifestylePlan },
+      { path: "diet", Component: LifestylePlan },
+      { path: "nutrition", Component: LifestylePlan },
+      { path: "exercise", Component: LifestylePlan },
       { path: "clinical-trials", Component: ClinicalTrials },
       { path: "wellness-tips", Component: WellnessTips },
       { path: "settings", Component: ProfileSettings },

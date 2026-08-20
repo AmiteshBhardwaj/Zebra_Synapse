@@ -57,6 +57,7 @@
     "@radix-ui/react-toggle-group": "1.1.2",
     "@radix-ui/react-tooltip": "1.1.8",
     "@supabase/supabase-js": "^2.103.3",
+    "@tanstack/react-query": "^5.101.4",
     "@types/three": "^0.185.4",
     "canvas-confetti": "1.9.4",
     "class-variance-authority": "0.7.1",
@@ -88,7 +89,9 @@
     "tesseract.js": "^7.0.0",
     "three": "^0.185.1",
     "tw-animate-css": "1.3.8",
-    "vaul": "1.1.2"
+    "vaul": "1.1.2",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
