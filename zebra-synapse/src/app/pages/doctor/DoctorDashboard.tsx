@@ -8,20 +8,15 @@ import {
   Video,
   Settings,
   LogOut,
-  Search,
-  Bell,
   MessageSquare,
-  Stethoscope,
-  ChevronDown,
   Sparkles,
 } from "lucide-react";
 
 export default function DoctorDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signOut, profile } = useAuth();
+  const { signOut } = useAuth();
   const mainRef = useRef<HTMLDivElement>(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 
   // Auto-expand sidebar when cursor moves to the extreme left edge of the screen
@@ -99,9 +94,6 @@ export default function DoctorDashboard() {
       active: location.pathname === "/doctor/settings",
     },
   ];
-
-  const doctorName = profile?.full_name || "Doctor";
-  const doctorInitial = doctorName.replace(/^Dr\.?\s*/i, "").charAt(0).toUpperCase() || "D";
 
   return (
     <div className="flex h-screen w-screen bg-[#E5ECF9] font-poppins text-[#111111] overflow-hidden p-2.5 md:p-3.5 gap-2.5 md:gap-3.5">
@@ -202,63 +194,8 @@ export default function DoctorDashboard() {
 
       {/* Main Content Area in Crisp Rounded White Canvas */}
       <div className="flex-1 min-w-0 bg-[#F4F6FC] rounded-[24px] flex flex-col overflow-hidden shadow-2xl border border-white/60">
-        {/* Top Header Bar */}
-        <header className="h-16 shrink-0 px-6 flex items-center justify-between border-b border-[#E8EEF8] bg-white/80 backdrop-blur-md z-10">
-          {/* Universal Search Input */}
-          <div className="relative w-72 md:w-96">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search patients, vitals, reports..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                // Dispatch custom search event for active subviews if needed
-                window.dispatchEvent(new CustomEvent("doc-search", { detail: e.target.value }));
-              }}
-              className="w-full h-10 pl-10 pr-4 rounded-full bg-[#F4F6FC] border border-transparent focus:border-[#3E36B0]/30 focus:bg-white text-xs md:text-sm text-[#111111] placeholder:text-slate-400 focus:outline-none transition-all"
-            />
-          </div>
-
-          {/* Right Header Controls (Chat, Bell, Doctor Pill) */}
-          <div className="flex items-center gap-3 md:gap-4">
-            <button
-              onClick={() => navigate("/doctor/teleconsult")}
-              className="w-9 h-9 rounded-full bg-[#F4F6FC] hover:bg-[#E8EEF8] flex items-center justify-center text-slate-600 hover:text-[#3E36B0] transition-colors relative"
-              title="Teleconsultations"
-            >
-              <MessageSquare className="w-4 h-4" />
-            </button>
-
-            <button
-              className="w-9 h-9 rounded-full bg-[#F4F6FC] hover:bg-[#E8EEF8] flex items-center justify-center text-slate-600 hover:text-[#3E36B0] transition-colors relative"
-              title="Notifications"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#F62088] ring-2 ring-white" />
-            </button>
-
-            {/* Doctor Profile Badge matching mockup */}
-            <div
-              onClick={() => navigate("/doctor/settings")}
-              className="flex items-center gap-2.5 pl-2 pr-3.5 py-1.5 rounded-full bg-[#F4F6FC] hover:bg-[#E8EEF8] border border-slate-200/60 cursor-pointer transition-all"
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#3E36B0] to-[#8075FF] text-white flex items-center justify-center text-xs font-semibold shadow-inner">
-                {doctorInitial}
-              </div>
-              <div className="text-left hidden sm:block">
-                <p className="text-xs font-semibold text-[#111111] leading-tight">
-                  {profile?.full_name ? (profile.full_name.startsWith("Dr.") ? profile.full_name : `Dr. ${profile.full_name}`) : "Dr. Kim"}
-                </p>
-                <p className="text-[10px] text-slate-500 font-medium">Physician</p>
-              </div>
-              <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
-            </div>
-          </div>
-        </header>
-
         {/* Scrollable View Container */}
-        <main ref={mainRef} className="flex-1 overflow-y-auto bg-[#F4F6FC] p-3 md:p-4 lg:p-5 [scrollbar-width:thin]">
+        <main ref={mainRef} className="flex-1 overflow-y-auto bg-[#F4F6FC] p-2.5 md:p-3.5 lg:p-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <Outlet />
         </main>
       </div>

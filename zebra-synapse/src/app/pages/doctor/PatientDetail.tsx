@@ -1074,7 +1074,7 @@ export default function PatientDetail() {
     (r) => r.status === "completed",
   );
   const detailPageClass =
-    "min-h-full bg-[#f6f8f5] px-4 py-5 text-slate-900 sm:px-6 sm:py-6 lg:px-8 lg:py-8 max-w-[1600px] mx-auto font-sans [&_[data-slot=card]]:rounded-[24px] [&_[data-slot=card]]:border [&_[data-slot=card]]:border-slate-100 [&_[data-slot=card]]:bg-white [&_[data-slot=card]]:text-slate-900 [&_[data-slot=card]]:shadow-sm [&_[data-slot=card-title]]:text-slate-900 [&_[data-slot=card-description]]:text-slate-500 [&_[data-slot=tabs-list]]:h-auto [&_[data-slot=tabs-list]]:w-full [&_[data-slot=tabs-list]]:rounded-2xl [&_[data-slot=tabs-list]]:border [&_[data-slot=tabs-list]]:border-slate-200 [&_[data-slot=tabs-list]]:bg-white [&_[data-slot=tabs-list]]:p-1.5 [&_[data-slot=tabs-trigger]]:rounded-xl [&_[data-slot=tabs-trigger]]:px-4 [&_[data-slot=tabs-trigger]]:py-2.5 [&_[data-slot=tabs-trigger]]:text-slate-600 [&_[data-slot=tabs-trigger][data-state=active]]:border-transparent [&_[data-slot=tabs-trigger][data-state=active]]:bg-lime-500 [&_[data-slot=tabs-trigger][data-state=active]]:text-slate-950 [&_[data-slot=tabs-trigger][data-state=active]]:font-bold [&_[data-slot=tabs-trigger][data-state=active]]:shadow-sm [&_label]:text-slate-700 [&_input]:text-slate-900 [&_input]:placeholder:text-slate-400 [&_textarea]:border-slate-200 [&_textarea]:bg-white [&_textarea]:text-slate-900 [&_textarea]:placeholder:text-slate-400 [&_textarea]:focus-visible:border-lime-500 [&_textarea]:focus-visible:ring-lime-500/30";
+    "min-h-full bg-[#f6f8f5] px-3 py-3 sm:px-4 sm:py-3.5 lg:px-6 lg:py-4 text-slate-900 max-w-[1600px] mx-auto font-sans [&_[data-slot=card]]:rounded-[20px] [&_[data-slot=card]]:border [&_[data-slot=card]]:border-slate-100 [&_[data-slot=card]]:bg-white [&_[data-slot=card]]:text-slate-900 [&_[data-slot=card]]:shadow-xs [&_[data-slot=card-title]]:text-slate-900 [&_[data-slot=card-title]]:text-base [&_[data-slot=card-description]]:text-slate-500 [&_[data-slot=card-description]]:text-xs [&_[data-slot=tabs-list]]:h-auto [&_[data-slot=tabs-list]]:w-full [&_[data-slot=tabs-list]]:rounded-xl [&_[data-slot=tabs-list]]:border [&_[data-slot=tabs-list]]:border-slate-200 [&_[data-slot=tabs-list]]:bg-white [&_[data-slot=tabs-list]]:p-1 [&_[data-slot=tabs-trigger]]:rounded-lg [&_[data-slot=tabs-trigger]]:px-3.5 [&_[data-slot=tabs-trigger]]:py-1.5 [&_[data-slot=tabs-trigger]]:text-xs [&_[data-slot=tabs-trigger]]:sm:text-sm [&_[data-slot=tabs-trigger]]:text-slate-600 [&_[data-slot=tabs-trigger][data-state=active]]:border-transparent [&_[data-slot=tabs-trigger][data-state=active]]:bg-lime-500 [&_[data-slot=tabs-trigger][data-state=active]]:text-slate-950 [&_[data-slot=tabs-trigger][data-state=active]]:font-bold [&_[data-slot=tabs-trigger][data-state=active]]:shadow-xs [&_label]:text-slate-700 [&_input]:text-slate-900 [&_input]:placeholder:text-slate-400 [&_textarea]:border-slate-200 [&_textarea]:bg-white [&_textarea]:text-slate-900 [&_textarea]:placeholder:text-slate-400 [&_textarea]:focus-visible:border-lime-500 [&_textarea]:focus-visible:ring-lime-500/30";
 
   if (loading) {
     return (
@@ -1328,181 +1328,198 @@ export default function PatientDetail() {
     </Dialog>
 
     <div className={detailPageClass}>
-      <Button variant="outline" className={`mb-6 ${portalSecondaryButtonClass}`} onClick={() => navigate("/doctor")}>
-        <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Patients
-      </Button>
+      <Tabs defaultValue="overview" className="space-y-3">
+        {/* Top Header Bar with Back Button & Tabs at the top */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-2">
+          <button
+            onClick={() => navigate("/doctor")}
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer py-1.5 px-2.5 -ml-1 rounded-xl hover:bg-slate-200/60 shrink-0 w-fit"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back to Patients</span>
+          </button>
 
-      <div className="mb-8 rounded-[24px] border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            {patient.avatarUrl ? (
-              <img
-                src={patient.avatarUrl}
-                alt={patient.name}
-                className="h-16 w-16 rounded-2xl object-cover border-2 border-[#0099ff]/30 shadow-sm shrink-0"
-              />
-            ) : (
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-[#0099ff]/20 bg-gradient-to-br from-[#0099ff]/10 to-[#0077ff]/20 text-[#0088ee] font-bold text-xl shrink-0 font-['Manrope'] shadow-xs">
-                <span>{initials(patient.name)}</span>
+          <TabsList className="w-full sm:w-auto overflow-x-auto justify-start sm:justify-end">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="labs">Lab Results</TabsTrigger>
+            <TabsTrigger value="queries" className="relative">
+              <span className="flex items-center gap-1.5">
+                <Bot className="w-3.5 h-3.5 text-cyan-400" />
+                AI Chat Reviews
+                {queries.filter((q) => q.status === "pending_review").length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px]">
+                    {queries.filter((q) => q.status === "pending_review").length}
+                  </span>
+                )}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="medications">Medications</TabsTrigger>
+            <TabsTrigger value="insights">Insights</TabsTrigger>
+            <TabsTrigger value="actions">Actions</TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* Compact Patient Profile Card */}
+        <div className="mb-3 rounded-[20px] border border-slate-100 bg-white p-3.5 sm:p-4 shadow-xs">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3.5">
+              {patient.avatarUrl ? (
+                <img
+                  src={patient.avatarUrl}
+                  alt={patient.name}
+                  className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl object-cover border-2 border-[#0099ff]/30 shadow-xs shrink-0"
+                />
+              ) : (
+                <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl border-2 border-[#0099ff]/20 bg-gradient-to-br from-[#0099ff]/10 to-[#0077ff]/20 text-[#0088ee] font-bold text-lg sm:text-xl shrink-0 font-['Manrope'] shadow-xs">
+                  <span>{initials(patient.name)}</span>
+                </div>
+              )}
+              <div className="min-w-0">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="break-words text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">{patient.name}</h1>
+                  <Badge className={`w-fit font-bold text-[10px] px-2 py-0.5 ${
+                    patient.status === "normal" ? "border border-lime-200 bg-lime-50 text-lime-800" :
+                    patient.status === "elevated" ? "border border-amber-200 bg-amber-50 text-amber-800" :
+                    "border border-rose-200 bg-rose-50 text-rose-800"
+                  }`}>
+                    {patient.status.toUpperCase()}
+                  </Badge>
+                </div>
+
+                <p className="mt-0.5 text-xs text-slate-600 font-medium flex items-center gap-2 flex-wrap">
+                  <span>{patientIdentityLine}</span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-slate-500 font-normal">Condition: <strong className="text-slate-900">{patient.condition}</strong></span>
+                </p>
               </div>
-            )}
-            <div className="min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="break-words text-2xl sm:text-3xl font-bold text-slate-900 font-['Manrope']">{patient.name}</h1>
-                <Badge className={`w-fit font-bold text-xs ${
-                  patient.status === "normal" ? "border border-lime-200 bg-lime-50 text-lime-800" :
-                  patient.status === "elevated" ? "border border-amber-200 bg-amber-50 text-amber-800" :
-                  "border border-rose-200 bg-rose-50 text-rose-800"
-                }`}>
-                  {patient.status.toUpperCase()}
-                </Badge>
-              </div>
+            </div>
 
-              <p className="mt-1 text-xs sm:text-sm text-slate-600 font-medium flex items-center gap-2 flex-wrap">
-                <span>{patientIdentityLine}</span>
-                <span className="text-slate-300">•</span>
-                <span className="text-slate-500 font-normal">Condition: <strong className="text-slate-900">{patient.condition}</strong></span>
-              </p>
-
-              {/* Contact Info Line */}
-              <div className="mt-2.5 flex items-center gap-3 flex-wrap text-xs text-slate-600">
-                <a href={`tel:${patient.phone}`} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#0099ff]/10 text-[#0088ee] border border-[#0099ff]/20 font-semibold hover:bg-[#0099ff] hover:text-white transition-all cursor-pointer">
-                  <Phone className="w-3.5 h-3.5" />
+            {/* Quick Contact & Action Buttons */}
+            <div className="flex items-center gap-2 flex-wrap text-xs shrink-0">
+              {patient.phone && (
+                <a
+                  href={`tel:${patient.phone}`}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#0099ff]/10 text-[#0088ee] border border-[#0099ff]/20 font-semibold hover:bg-[#0099ff] hover:text-white transition-all cursor-pointer text-xs"
+                  title={`Call ${patient.phone}`}
+                >
+                  <Phone className="w-3 h-3" />
                   <span>{patient.phone}</span>
                 </a>
+              )}
 
-                <a href={`mailto:${patient.email}`} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 font-semibold hover:bg-slate-200 transition-all cursor-pointer">
-                  <Mail className="w-3.5 h-3.5" />
-                  <span>{patient.email}</span>
-                </a>
-
-                <button
-                  onClick={() => navigate("/doctor/teleconsult")}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold hover:bg-emerald-600 hover:text-white transition-all cursor-pointer"
+              {patient.email && (
+                <a
+                  href={`mailto:${patient.email}`}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 font-semibold hover:bg-slate-200 transition-all cursor-pointer text-xs"
+                  title={`Email ${patient.email}`}
                 >
-                  <Video className="w-3.5 h-3.5" />
-                  <span>Start Teleconsult</span>
-                </button>
-              </div>
+                  <Mail className="w-3 h-3" />
+                  <span className="max-w-[120px] truncate">{patient.email}</span>
+                </a>
+              )}
+
+              <button
+                onClick={() => navigate("/doctor/teleconsult")}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold hover:bg-emerald-600 hover:text-white transition-all cursor-pointer text-xs shadow-xs"
+              >
+                <Video className="w-3.5 h-3.5" />
+                <span>Start Teleconsult</span>
+              </button>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5 mb-8">
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Ruler className="w-4 h-4 text-purple-600" />
-              <p className="text-xs text-slate-400 font-medium">Height</p>
+        {/* Compact 6-Card Metric Ribbon */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-3.5">
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Ruler className="w-3.5 h-3.5 text-purple-600" />
+              <p className="text-[11px] text-slate-400 font-medium">Height</p>
             </div>
-            <p className="text-xl font-bold text-slate-900 truncate" title={formatHeight(vitalsSummary.height)}>
-              {vitalsSummary.height ? `${vitalsSummary.height} cm` : "—"}
-            </p>
-            {vitalsSummary.height && (
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-                {formatHeight(vitalsSummary.height).split("(")[1]?.replace(")", "") || ""}
+            <div className="flex items-baseline gap-1.5">
+              <p className="text-base font-bold text-slate-900 truncate" title={formatHeight(vitalsSummary.height)}>
+                {vitalsSummary.height ? `${vitalsSummary.height} cm` : "—"}
               </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Scale className="w-4 h-4 text-emerald-600" />
-              <p className="text-xs text-slate-400 font-medium">Weight</p>
+              {vitalsSummary.height && (
+                <span className="text-[10px] text-slate-400 font-medium truncate">
+                  {formatHeight(vitalsSummary.height).split("(")[1]?.replace(")", "") || ""}
+                </span>
+              )}
             </div>
-            <p className="text-xl font-bold text-slate-900 truncate" title={formatWeight(vitalsSummary.weight)}>
-              {vitalsSummary.weight ? `${vitalsSummary.weight} kg` : "—"}
-            </p>
-            {vitalsSummary.weight && (
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
-                {formatWeight(vitalsSummary.weight).split("(")[1]?.replace(")", "") || ""}
+          </div>
+
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Scale className="w-3.5 h-3.5 text-emerald-600" />
+              <p className="text-[11px] text-slate-400 font-medium">Weight</p>
+            </div>
+            <div className="flex items-baseline gap-1.5">
+              <p className="text-base font-bold text-slate-900 truncate" title={formatWeight(vitalsSummary.weight)}>
+                {vitalsSummary.weight ? `${vitalsSummary.weight} kg` : "—"}
               </p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between gap-1 mb-1.5">
+              {vitalsSummary.weight && (
+                <span className="text-[10px] text-slate-400 font-medium truncate">
+                  {formatWeight(vitalsSummary.weight).split("(")[1]?.replace(")", "") || ""}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+            <div className="flex items-center justify-between gap-1 mb-0.5">
               <div className="flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-lime-600" />
-                <p className="text-xs text-slate-400 font-medium">BMI</p>
+                <Activity className="w-3.5 h-3.5 text-lime-600" />
+                <p className="text-[11px] text-slate-400 font-medium">BMI</p>
               </div>
               {vitalsSummary.bmi != null && (
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${vitalsSummary.bmiCategory.badgeClass}`}>
+                <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${vitalsSummary.bmiCategory.badgeClass}`}>
                   {vitalsSummary.bmiCategory.label}
                 </span>
               )}
             </div>
-            <p className="text-xl font-bold text-slate-900">
+            <p className="text-base font-bold text-slate-900">
               {vitalsSummary.bmi != null ? vitalsSummary.bmi : "—"}
             </p>
-          </CardContent>
-        </Card>
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Clock className="w-4 h-4 text-blue-600" />
-              <p className="text-xs text-slate-400 font-medium">Age</p>
+          </div>
+
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Clock className="w-3.5 h-3.5 text-blue-600" />
+              <p className="text-[11px] text-slate-400 font-medium">Age</p>
             </div>
-            <p className="text-xl font-bold text-slate-900">
+            <p className="text-base font-bold text-slate-900">
               {vitalsSummary.age ? `${vitalsSummary.age} yrs` : "—"}
             </p>
-          </CardContent>
-        </Card>
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <User className="w-4 h-4 text-indigo-600" />
-              <p className="text-xs text-slate-400 font-medium">Gender</p>
+          </div>
+
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <User className="w-3.5 h-3.5 text-indigo-600" />
+              <p className="text-[11px] text-slate-400 font-medium">Gender</p>
             </div>
-            <p className="text-xl font-bold text-slate-900 capitalize">
+            <p className="text-base font-bold text-slate-900 capitalize">
               {vitalsSummary.gender || "—"}
             </p>
-          </CardContent>
-        </Card>
-        <Card className={portalPanelClass}>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-1.5">
-              <FlaskConical className="w-4 h-4 text-rose-600" />
-              <p className="text-xs text-slate-400 font-medium">Blood Type</p>
+          </div>
+
+          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <FlaskConical className="w-3.5 h-3.5 text-rose-600" />
+              <p className="text-[11px] text-slate-400 font-medium">Blood Type</p>
             </div>
-            <p className="text-xl font-bold text-slate-900">
+            <p className="text-base font-bold text-slate-900">
               {vitalsSummary.bloodType || "—"}
             </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="labs">Lab Results</TabsTrigger>
-          <TabsTrigger value="queries" className="relative">
-            <span className="flex items-center gap-1.5">
-              <Bot className="w-3.5 h-3.5 text-cyan-400" />
-              AI Chat Reviews
-              {queries.filter((q) => q.status === "pending_review").length > 0 && (
-                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px]">
-                  {queries.filter((q) => q.status === "pending_review").length}
-                </span>
-              )}
-            </span>
-          </TabsTrigger>
-          <TabsTrigger value="medications">Medications</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
-          <TabsTrigger value="actions">Actions</TabsTrigger>
-        </TabsList>
+          </div>
+        </div>
 
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
             <Card className={portalPanelClass}>
-              <CardHeader>
-                <CardTitle>Patient Information</CardTitle>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base">Patient Information</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="p-4 pt-2 space-y-2.5">
                 <div>
                   <p className="text-sm text-slate-500 font-medium">Primary Condition</p>
                   <p className="font-semibold text-slate-900">{patient.condition}</p>
@@ -1595,11 +1612,11 @@ export default function PatientDetail() {
             </Card>
 
             <Card className={portalPanelClass}>
-              <CardHeader>
-                <CardTitle>Current Medications</CardTitle>
-                <CardDescription>Active prescriptions on file</CardDescription>
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-base">Current Medications</CardTitle>
+                <CardDescription className="text-xs">Active prescriptions on file</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-4 pt-2">
                 {prescLoading ? (
                   <p className="text-sm text-slate-500">Loading prescriptions...</p>
                 ) : activePrescriptionsList.length === 0 ? (

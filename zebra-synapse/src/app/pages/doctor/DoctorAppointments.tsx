@@ -4,7 +4,6 @@ import {
   Calendar,
   Clock,
   Plus,
-  Search,
   Users,
   Video,
   CheckCircle2,
@@ -89,7 +88,6 @@ export default function DoctorAppointments() {
 
   // Filters & Views
   const [tabFilter, setTabFilter] = useState<"all" | "today" | "upcoming" | "completed" | "teleconsult">("today");
-  const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date(2026, 7, 15)); // August 2026
   const [selectedDay, setSelectedDay] = useState<number | null>(15);
@@ -276,25 +274,13 @@ export default function DoctorAppointments() {
       list = list.filter((a) => a.type === typeFilter);
     }
 
-    // Search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (a) =>
-          a.patientName.toLowerCase().includes(q) ||
-          a.condition.toLowerCase().includes(q) ||
-          (a.notes && a.notes.toLowerCase().includes(q)) ||
-          a.status.toLowerCase().includes(q)
-      );
-    }
-
     // Sort by date then time
     return list.sort((a, b) => {
       const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
       if (dateDiff !== 0) return dateDiff;
       return a.time.localeCompare(b.time);
     });
-  }, [appointments, selectedCalendarDate, tabFilter, typeFilter, searchQuery]);
+  }, [appointments, selectedCalendarDate, tabFilter, typeFilter]);
 
   // Schedule Appointment Handler
   const handleCreateAppointment = (e: React.FormEvent) => {
@@ -616,19 +602,8 @@ export default function DoctorAppointments() {
                 ))}
               </div>
 
-              {/* Search & Type Filter */}
+              {/* Type Filter */}
               <div className="flex items-center gap-2">
-                <div className="relative w-full sm:w-44 md:w-48">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search patient, disease..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-8 pl-8 pr-2.5 rounded-lg bg-[#F4F6FC] border border-transparent focus:border-[#3E36B0]/30 text-xs text-[#111111] placeholder:text-slate-400 outline-none transition-all"
-                  />
-                </div>
-
                 <select
                   value={typeFilter}
                   onChange={(e) => setTypeFilter(e.target.value)}
@@ -660,7 +635,6 @@ export default function DoctorAppointments() {
                       setSelectedCalendarDate(null);
                       setSelectedDay(null);
                       setTabFilter("all");
-                      setSearchQuery("");
                       setTypeFilter("all");
                     }}
                     className="mt-1 text-xs font-bold text-[#3E36B0] hover:underline cursor-pointer"

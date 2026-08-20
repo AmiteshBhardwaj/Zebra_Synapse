@@ -17,8 +17,6 @@ import {
   Search,
   Stethoscope,
   Thermometer,
-  TrendingDown,
-  TrendingUp,
   UserCheck,
   UserPlus,
   Users,
@@ -54,22 +52,10 @@ export default function PatientsList() {
 
   // Tabs for right-hand list panel: "appointments" (Today/Upcoming schedule) vs "roster" (Linked patient roster)
   const [activeTab, setActiveTab] = useState<"appointments" | "roster">("appointments");
-  const [rosterFilter, setRosterFilter] = useState<"today" | "all" | "risk">("today");
+  const [rosterFilter, setRosterFilter] = useState<"today" | "all">("today");
   const [appointmentFilter, setAppointmentFilter] = useState<"today" | "all" | "teleconsult" | "upcoming">("today");
 
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-
-  // Sync with global header search if triggered
-  useEffect(() => {
-    const handleGlobalSearch = (e: Event) => {
-      const customEvent = e as CustomEvent<string>;
-      if (typeof customEvent.detail === "string") {
-        setSearch(customEvent.detail);
-      }
-    };
-    window.addEventListener("doc-search", handleGlobalSearch);
-    return () => window.removeEventListener("doc-search", handleGlobalSearch);
-  }, []);
 
   // Listen to cross-component appointment updates
   useEffect(() => {
@@ -156,18 +142,15 @@ export default function PatientsList() {
   // Filtered roster list
   const filteredRoster = useMemo(() => {
     let list = patients;
-    if (rosterFilter === "risk") {
-      list = list.filter((p) => p.vitals.status === "risk" || p.vitals.status === "elevated");
-    }
     const q = search.trim().toLowerCase();
     if (!q) return list;
     return list.filter((patient) =>
-      [patient.name, patient.condition, patient.vitals.status, patient.riskFlags.join(" ")]
+      [patient.name, patient.condition, patient.riskFlags.join(" ")]
         .join(" ")
         .toLowerCase()
         .includes(q)
     );
-  }, [patients, search, rosterFilter]);
+  }, [patients, search]);
 
   // Today reference (August 15, 2026 default baseline in demo)
   const todayDateStr = "2026-08-15";
@@ -214,17 +197,6 @@ export default function PatientsList() {
   }, [selectedPatientId, patients, filteredRoster]);
 
   // Selected patient's upcoming appointment if any
-  const selectedPatientAppointment = useMemo(() => {
-    if (!selectedPatient) return null;
-    return (
-      appointments.find(
-        (a) =>
-          (a.patientId === selectedPatient.patientId ||
-            a.patientName.toLowerCase() === selectedPatient.name.toLowerCase()) &&
-          a.status !== "Cancelled"
-      ) || null
-    );
-  }, [selectedPatient, appointments]);
 
   const initials = (name: string) => {
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -308,36 +280,8 @@ export default function PatientsList() {
 
           {/* Sub-Metrics Pill Cards & Doctor Cutout Graphic */}
           <div className="relative z-10 mt-3 sm:mt-4 flex flex-wrap items-center justify-between gap-2.5">
-            {/* New Patients vs Returning Patients Cards & Quick Schedule Action */}
+            {/* Actions & Dialogs */}
             <div className="flex flex-wrap items-center gap-2.5">
-              {/* New Patients */}
-              <div className="bg-white/85 backdrop-blur-md rounded-2xl py-2 px-3 shadow-sm border border-white min-w-[115px]">
-                <p className="text-[10px] font-semibold text-slate-500">New Patients</p>
-                <div className="flex items-center justify-between gap-2 mt-0.5">
-                  <span className="text-lg font-bold text-[#111111]">
-                    {Math.max(1, Math.floor(patients.length * 0.4))}
-                  </span>
-                  <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700">
-                    <TrendingUp className="w-2.5 h-2.5 mr-0.5" />
-                    51%
-                  </span>
-                </div>
-              </div>
-
-              {/* Old Patients */}
-              <div className="bg-white/85 backdrop-blur-md rounded-2xl py-2 px-3 shadow-sm border border-white min-w-[115px]">
-                <p className="text-[10px] font-semibold text-slate-500">Old Patients</p>
-                <div className="flex items-center justify-between gap-2 mt-0.5">
-                  <span className="text-lg font-bold text-[#111111]">
-                    {Math.max(2, Math.ceil(patients.length * 0.6))}
-                  </span>
-                  <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
-                    <TrendingDown className="w-2.5 h-2.5 mr-0.5" />
-                    26%
-                  </span>
-                </div>
-              </div>
-
               {/* Link Patient Dialog Trigger */}
               <div className="self-center">
                 <LinkPatientDialog onLinked={() => void load()} />
@@ -454,97 +398,6 @@ export default function PatientsList() {
                 </p>
               </div>
 
-              {/* APPOINTMENT SECTION FOR SELECTED PATIENT */}
-              <div className="bg-[#F8F9FE] rounded-2xl p-3 border border-[#E0E7FF] flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5 text-[#3E36B0]" />
-                    <p className="text-[11px] font-bold text-[#111111]">
-                      Scheduled Appointment & Consultation
-                    </p>
-                  </div>
-                  {selectedPatientAppointment && (
-                    <span
-                      className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                        selectedPatientAppointment.type === "teleconsult"
-                          ? "bg-purple-100 text-purple-700"
-                          : selectedPatientAppointment.type === "lab-review"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-blue-100 text-blue-700"
-                      }`}
-                    >
-                      {selectedPatientAppointment.type === "teleconsult"
-                        ? "📹 Teleconsult"
-                        : selectedPatientAppointment.type === "lab-review"
-                        ? "🔬 Lab Review"
-                        : "🏥 In-Person"}
-                    </span>
-                  )}
-                </div>
-
-                {selectedPatientAppointment ? (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white rounded-xl p-2.5 border border-slate-200/80 shadow-xs">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5 text-[#3E36B0] shrink-0" />
-                        <span className="text-xs font-bold text-[#111111]">
-                          {selectedPatientAppointment.date === todayDateStr
-                            ? "Today"
-                            : selectedPatientAppointment.date}{" "}
-                          at {selectedPatientAppointment.time}
-                        </span>
-                        <span className="text-[9px] font-semibold text-slate-500">
-                          ({selectedPatientAppointment.durationMinutes} min)
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 font-medium truncate mt-0.5">
-                        📍 {selectedPatientAppointment.location || "Synapse Clinical Suite 402"}
-                        {selectedPatientAppointment.notes ? ` · ${selectedPatientAppointment.notes}` : ""}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                      {selectedPatientAppointment.type === "teleconsult" && (
-                        <button
-                          type="button"
-                          onClick={() => navigate("/doctor/teleconsult")}
-                          className="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
-                        >
-                          <Video className="w-3 h-3" />
-                          <span>Join Room</span>
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => navigate("/doctor/appointments")}
-                        className="px-2.5 py-1 rounded-lg bg-[#F4F6FC] hover:bg-slate-200 text-slate-700 text-[10px] font-bold transition-colors cursor-pointer"
-                      >
-                        Details
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between bg-white rounded-xl p-2.5 border border-dashed border-slate-200">
-                    <span className="text-[11px] text-slate-500 font-medium">
-                      No active consultation scheduled for this patient.
-                    </span>
-                    <QuickScheduleAppointmentDialog
-                      patients={patients}
-                      defaultPatientId={selectedPatient.patientId}
-                      onScheduled={() => setAppointments(loadDoctorAppointments())}
-                      trigger={
-                        <button
-                          type="button"
-                          className="text-[10px] font-bold text-[#3E36B0] hover:text-[#312B91] underline underline-offset-2 flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>Book Consult</span>
-                        </button>
-                      }
-                    />
-                  </div>
-                )}
-              </div>
 
               {/* Prescription / Therapy Active */}
               <div>
@@ -695,7 +548,6 @@ export default function PatientsList() {
               >
                 <option value="today">Today</option>
                 <option value="all">All Patients</option>
-                <option value="risk">High Risk</option>
               </select>
             )}
           </div>

@@ -36,16 +36,6 @@ export default function LinkPatientDialog({ onLinked }: Props) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [patientId, setPatientId] = useState("");
-  const [lastVisit, setLastVisit] = useState("");
-  const [primaryCondition, setPrimaryCondition] = useState("");
-  const [heartRate, setHeartRate] = useState("");
-  const [bpSys, setBpSys] = useState("");
-  const [bpDia, setBpDia] = useState("");
-  const [glucose, setGlucose] = useState("");
-  const [healthStatus, setHealthStatus] = useState<"normal" | "elevated" | "risk">(
-    "normal",
-  );
-  const [riskFlags, setRiskFlags] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const [availablePatients, setAvailablePatients] = useState<Array<{ id: string; name: string }>>([]);
@@ -82,19 +72,6 @@ export default function LinkPatientDialog({ onLinked }: Props) {
 
   const resetForm = () => {
     setPatientId("");
-    setLastVisit("");
-    setPrimaryCondition("");
-    setHeartRate("");
-    setBpSys("");
-    setBpDia("");
-    setGlucose("");
-    setHealthStatus("normal");
-    setRiskFlags("");
-  };
-
-  const parseIntOrNull = (v: string): number | null => {
-    const n = parseInt(v.trim(), 10);
-    return Number.isFinite(n) ? n : null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -115,23 +92,12 @@ export default function LinkPatientDialog({ onLinked }: Props) {
       return;
     }
 
-    const flags = riskFlags
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     setSubmitting(true);
     const { error } = await sb.from("care_relationships").insert({
       doctor_id: doctorId,
       patient_id: pid,
-      last_visit: lastVisit.trim() || null,
-      primary_condition: primaryCondition.trim() || null,
-      heart_rate: parseIntOrNull(heartRate),
-      blood_pressure_systolic: parseIntOrNull(bpSys),
-      blood_pressure_diastolic: parseIntOrNull(bpDia),
-      glucose: parseIntOrNull(glucose),
-      health_status: healthStatus,
-      risk_flags: flags.length ? flags : [],
+      health_status: "normal",
+      risk_flags: [],
     });
     setSubmitting(false);
 
@@ -160,7 +126,7 @@ export default function LinkPatientDialog({ onLinked }: Props) {
           Link Patient
         </Button>
       </DialogTrigger>
-      <DialogContent className={`${portalDialogClass} max-h-[90vh] overflow-y-auto sm:max-w-md`}>
+      <DialogContent className={`${portalDialogClass} sm:max-w-md`}>
         <form onSubmit={(e) => void handleSubmit(e)}>
           <DialogHeader>
             <DialogTitle className="text-slate-900 font-bold font-['Manrope']">Link a Patient</DialogTitle>
@@ -205,97 +171,6 @@ export default function LinkPatientDialog({ onLinked }: Props) {
                 placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 autoComplete="off"
                 required
-                className={portalInputClass}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="link_last_visit" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Last Visit (Optional)</Label>
-              <Input
-                id="link_last_visit"
-                type="date"
-                value={lastVisit}
-                onChange={(e) => setLastVisit(e.target.value)}
-                className={portalInputClass}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="link_condition" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Primary Condition (Optional)</Label>
-              <Input
-                id="link_condition"
-                value={primaryCondition}
-                onChange={(e) => setPrimaryCondition(e.target.value)}
-                placeholder="e.g. Type 2 Diabetes"
-                className={portalInputClass}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="link_hr" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Heart Rate</Label>
-                <Input
-                  id="link_hr"
-                  inputMode="numeric"
-                  value={heartRate}
-                  onChange={(e) => setHeartRate(e.target.value)}
-                  placeholder="bpm"
-                  className={portalInputClass}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="link_glucose" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Glucose</Label>
-                <Input
-                  id="link_glucose"
-                  inputMode="numeric"
-                  value={glucose}
-                  onChange={(e) => setGlucose(e.target.value)}
-                  placeholder="mg/dL"
-                  className={portalInputClass}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="link_bps" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">BP Systolic</Label>
-                <Input
-                  id="link_bps"
-                  inputMode="numeric"
-                  value={bpSys}
-                  onChange={(e) => setBpSys(e.target.value)}
-                  className={portalInputClass}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="link_bpd" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">BP Diastolic</Label>
-                <Input
-                  id="link_bpd"
-                  inputMode="numeric"
-                  value={bpDia}
-                  onChange={(e) => setBpDia(e.target.value)}
-                  className={portalInputClass}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="link_status" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Health Status</Label>
-              <select
-                id="link_status"
-                className={`${portalSelectTriggerClass} flex h-11 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-800 focus-visible:outline-none`}
-                value={healthStatus}
-                onChange={(e) =>
-                  setHealthStatus(e.target.value as "normal" | "elevated" | "risk")
-                }
-              >
-                <option value="normal" className={portalSelectItemClass}>Normal</option>
-                <option value="elevated" className={portalSelectItemClass}>Elevated</option>
-                <option value="risk" className={portalSelectItemClass}>Risk</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="link_flags" className="text-slate-700 font-semibold text-xs uppercase tracking-wider">Risk Flags (Optional)</Label>
-              <Input
-                id="link_flags"
-                value={riskFlags}
-                onChange={(e) => setRiskFlags(e.target.value)}
-                placeholder="Comma-separated, e.g. High glucose, Elevated BP"
                 className={portalInputClass}
               />
             </div>
