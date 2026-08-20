@@ -34,9 +34,8 @@ import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import Diet from "./Diet";
 import ExercisePlan from "./ExercisePlan";
-import PatientDietChat from "./PatientDietChat";
 
-export type DietFitnessTab = "overview" | "meals" | "exercise" | "aicoach";
+export type DietFitnessTab = "overview" | "meals" | "exercise";
 
 export default function PatientDietFitness() {
   const navigate = useNavigate();
@@ -59,8 +58,6 @@ export default function PatientDietFitness() {
       setActiveTab("meals");
     } else if (tabParam === "exercise" || tabParam === "workout" || tabParam === "fitness") {
       setActiveTab("exercise");
-    } else if (tabParam === "aicoach" || tabParam === "diet-chat" || tabParam === "coach") {
-      setActiveTab("aicoach");
     } else if (tabParam === "overview") {
       setActiveTab("overview");
     }
@@ -184,15 +181,6 @@ export default function PatientDietFitness() {
             <Plus className="h-3.5 w-3.5 text-lime-700" />
             Log Meal
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleTabChange("aicoach")}
-            className="h-9 border-lime-300 bg-lime-50 text-lime-900 hover:bg-lime-100 rounded-2xl text-xs gap-1.5 font-bold shadow-sm"
-          >
-            <Bot className="h-3.5 w-3.5 text-lime-700" />
-            Ask AI Coach
-          </Button>
         </div>
       </div>
 
@@ -236,19 +224,6 @@ export default function PatientDietFitness() {
           >
             <Dumbbell className="h-4 w-4" />
             <span>Exercise Plan</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange("aicoach")}
-            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all duration-150 cursor-pointer ${
-              activeTab === "aicoach"
-                ? "bg-[#84cc16] text-slate-950 shadow-md shadow-lime-500/20"
-                : "text-slate-600 hover:text-slate-900 hover:bg-white/60"
-            }`}
-          >
-            <Bot className="h-4 w-4" />
-            <span>AI Coach</span>
           </button>
         </div>
       </div>
@@ -531,28 +506,6 @@ export default function PatientDietFitness() {
       {activeTab === "exercise" && (
         <div className="animate-in fade-in duration-200">
           <ExercisePlan embedded={true} initialDay={selectedExerciseDay} />
-        </div>
-      )}
-
-      {/* Tab 4: AI COACH */}
-      {activeTab === "aicoach" && (
-        <div className="animate-in fade-in duration-200 space-y-4">
-          <div className="rounded-2xl border border-lime-200 bg-lime-50/80 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-lime-500 text-slate-950 font-bold shadow-sm">
-                <Bot className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 font-['Manrope']">Integrated AI Diet & Exercise Coach</h3>
-                <p className="text-xs text-slate-600">Context-aware of your blood panels, macro goals, and 7-day workout schedule</p>
-              </div>
-            </div>
-            <Badge className="border-lime-300 bg-white text-lime-900 text-[11px] font-bold">
-              24/7 Precision Guidance
-            </Badge>
-          </div>
-
-          <PatientDietChat embedded={true} />
         </div>
       )}
     </PatientPortalPage>
