@@ -10,6 +10,7 @@ import {
   Sparkles,
   Info,
   ShieldCheck,
+  ShieldAlert,
   RotateCcw,
   SlidersHorizontal,
   ChevronRight,
@@ -47,6 +48,14 @@ import {
 } from "../../../lib/exercisePlan";
 import { toast } from "sonner";
 
+const PHYSICAL_LIMITATIONS = [
+  { id: "knee_pain", label: "Knee Joint Sensitivity", desc: "Favor low-impact movements, avoid deep plyometrics" },
+  { id: "lower_back", label: "Lower Back / Spinal Strain", desc: "Avoid heavy spinal loading; prioritize core bracing" },
+  { id: "shoulder", label: "Shoulder / Rotator Cuff", desc: "Limit heavy overhead pressing; prioritize neutral grip" },
+  { id: "neck_strain", label: "Neck Tension", desc: "Avoid compressive cervical spine loading" },
+  { id: "asthma", label: "Exercise-Induced Asthma", desc: "Extended warm-ups, steady aerobic pacing with inhaler available" },
+];
+
 export interface ExercisePlanProps {
   embedded?: boolean;
   initialDay?: number;
@@ -74,12 +83,55 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     }
   }, [initialDay]);
 
-  // Customization dialog state
+  // Customization dialog state with localStorage persistence
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
-  const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel>("beginner");
-  const [equipment, setEquipment] = useState<EquipmentAccess>("home_minimal");
-  const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>("general_health");
-  const [durationMin, setDurationMin] = useState<number>(30);
+  const fitnessStorageKey = `zebra_fitness_prefs_${profile?.id || "default"}`;
+  const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel>(() => {
+    try {
+      const saved = localStorage.getItem(fitnessStorageKey);
+      return saved ? JSON.parse(saved).fitnessLevel || "beginner" : "beginner";
+    } catch {
+      return "beginner";
+    }
+  });
+  const [equipment, setEquipment] = useState<EquipmentAccess>(() => {
+    try {
+      const saved = localStorage.getItem(fitnessStorageKey);
+      return saved ? JSON.parse(saved).workoutEnv || JSON.parse(saved).equipment || "home_minimal" : "home_minimal";
+    } catch {
+      return "home_minimal";
+    }
+  });
+  const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>(() => {
+    try {
+      const saved = localStorage.getItem(fitnessStorageKey);
+      return saved ? JSON.parse(saved).primaryGoal || "general_health" : "general_health";
+    } catch {
+      return "general_health";
+    }
+  });
+  const [durationMin, setDurationMin] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(fitnessStorageKey);
+      return saved ? Number(JSON.parse(saved).durationMin) || 30 : 30;
+    } catch {
+      return 30;
+    }
+  });
+  const [physicalLimitations, setPhysicalLimitations] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(fitnessStorageKey);
+      return saved ? JSON.parse(saved).physicalLimitations || [] : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const toggleLimitation = (id: string) => {
+    setPhysicalLimitations((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
 
   // Calculate BMI
   const heightCm = profile?.height_cm;
@@ -88,7 +140,7 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
   // Instant plan calculation (0ms wait time)
   const [plan, setPlan] = useState<WeeklyExercisePlan | null>(() => {
     try {
-      const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}`;
+      const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}_${physicalLimitations.join("_")}`;
       const cached = localStorage.getItem(cacheKey);
       if (cached) return JSON.parse(cached);
     } catch {
@@ -99,6 +151,7 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
       equipment,
       goal: primaryGoal,
       targetDurationMin: durationMin,
+      physicalLimitations,
       heightCm,
       weightKg,
       age: 38,
@@ -137,6 +190,7 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
       equipment,
       goal: primaryGoal,
       targetDurationMin: durationMin,
+      physicalLimitations,
       heightCm: heightCm ?? null,
       weightKg: weightKg ?? null,
       dietaryConditions: profile?.dietary_conditions,
@@ -146,7 +200,7 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
       heartRate: (profile as any)?.heart_rate ?? null,
     } as any;
 
-    const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}`;
+    const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}_${physicalLimitations.join("_")}`;
     const cached = localStorage.getItem(cacheKey);
 
     if (cached) {
@@ -178,7 +232,7 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     return () => {
       cancelled = true;
     };
-  }, [activePanel, panels.length, fitnessLevel, equipment, primaryGoal, durationMin, heightCm, weightKg]);
+  }, [activePanel, panels.length, fitnessLevel, equipment, primaryGoal, durationMin, physicalLimitations, heightCm, weightKg]);
 
   // Persist completed items
   const toggleItemCompletion = (id: string) => {
@@ -521,13 +575,13 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
 
       {/* Customize & Regenerate Modal */}
       <Dialog open={isCustomizeOpen} onOpenChange={setIsCustomizeOpen}>
-        <DialogContent className="sm:max-w-md bg-white border-slate-100 text-slate-800 rounded-[24px] shadow-lg">
+        <DialogContent className="sm:max-w-lg max-h-[88vh] overflow-y-auto bg-white border-slate-100 text-slate-800 rounded-[24px] shadow-xl p-6">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
               <SlidersHorizontal className="h-4 w-4 text-lime-600" /> Customize Exercise Prescription
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              Adjust your training parameters. The AI will recalculate the weekly routine while strictly adhering to your lab safety guidelines.
+              Adjust your training parameters and physical considerations. The AI will recalculate your 7-day routine while strictly adhering to your clinical profile.
             </DialogDescription>
           </DialogHeader>
 
@@ -594,9 +648,49 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Joint Sensitivity & Physical Limitations */}
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-slate-700 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
+                  Joint Sensitivity & Physical Limitations
+                </Label>
+                <span className="text-[11px] text-slate-400">
+                  {physicalLimitations.length > 0 ? `${physicalLimitations.length} selected` : "None"}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {PHYSICAL_LIMITATIONS.map((lim) => {
+                  const isSelected = physicalLimitations.includes(lim.id);
+                  return (
+                    <button
+                      key={lim.id}
+                      type="button"
+                      onClick={() => toggleLimitation(lim.id)}
+                      className={`p-2.5 rounded-xl border text-left transition-all text-xs ${
+                        isSelected
+                          ? "bg-amber-50 border-amber-400 text-amber-950 font-semibold shadow-xs ring-1 ring-amber-400"
+                          : "bg-slate-50/70 border-slate-200 hover:bg-white text-slate-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className={`text-[11px] font-bold ${isSelected ? "text-amber-900" : "text-slate-900"}`}>
+                          {lim.label}
+                        </span>
+                        {isSelected && <Check className="w-3 h-3 text-amber-600 shrink-0" />}
+                      </div>
+                      <p className="mt-0.5 text-[10px] text-slate-500 leading-tight">
+                        {lim.desc}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-0 pt-2 border-t border-slate-100">
             <Button
               variant="outline"
               size="sm"
@@ -608,6 +702,21 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
             <Button
               size="sm"
               onClick={() => {
+                try {
+                  localStorage.setItem(
+                    fitnessStorageKey,
+                    JSON.stringify({
+                      fitnessLevel,
+                      equipment,
+                      workoutEnv: equipment,
+                      primaryGoal,
+                      durationMin,
+                      physicalLimitations,
+                    })
+                  );
+                } catch {
+                  // ignore
+                }
                 setIsCustomizeOpen(false);
                 toast.success("Regenerating tailored exercise plan...");
               }}

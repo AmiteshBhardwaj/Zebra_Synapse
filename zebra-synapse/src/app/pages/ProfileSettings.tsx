@@ -24,7 +24,6 @@ import {
   Flame,
   ShieldAlert,
   Apple,
-  Dumbbell,
   Timer,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -69,26 +68,6 @@ const DIETARY_CONDITIONS = [
   { id: "hypertension", label: "Hypertension / Low Sodium", desc: "DASH diet principles, strictly < 2,000mg sodium daily" },
   { id: "gout", label: "Gout / Low Purine", desc: "Limit red meat, organ meats, shellfish, alcohol" },
   { id: "kidney_disease", label: "Renal / Kidney Support", desc: "Monitored potassium, phosphorus & balanced protein" },
-];
-
-const FITNESS_LEVELS = [
-  { id: "beginner", label: "Beginner", desc: "Starting out, focus on joint safety, basic mobility & form" },
-  { id: "intermediate", label: "Intermediate", desc: "Consistent routine, progressive resistance & aerobic conditioning" },
-  { id: "advanced", label: "Advanced", desc: "High exercise tolerance, higher volume circuits & compound training" },
-];
-
-const WORKOUT_ENVIRONMENTS = [
-  { id: "home_minimal", label: "Home Fitness", desc: "Bodyweight, dumbbells, resistance bands, yoga mat" },
-  { id: "bodyweight", label: "Bodyweight Only", desc: "No equipment, floor & standing movements only" },
-  { id: "gym", label: "Gym & Fitness Club", desc: "Full access to machines, cables, barbells & cardio treadmills" },
-];
-
-const PHYSICAL_LIMITATIONS = [
-  { id: "knee_pain", label: "Knee Joint Sensitivity", desc: "Favor low-impact movements, avoid deep plyometrics" },
-  { id: "lower_back", label: "Lower Back / Spinal Strain", desc: "Avoid heavy spinal loading; prioritize core bracing" },
-  { id: "shoulder", label: "Shoulder / Rotator Cuff", desc: "Limit heavy overhead pressing; prioritize neutral grip" },
-  { id: "neck_strain", label: "Neck Tension", desc: "Avoid compressive cervical spine loading" },
-  { id: "asthma", label: "Exercise-Induced Asthma", desc: "Extended warm-ups, steady aerobic pacing with inhaler available" },
 ];
 
 export default function ProfileSettings() {
@@ -160,33 +139,6 @@ export default function ProfileSettings() {
     }
   });
 
-  // Fitness preferences states (persisted in localStorage + sync)
-  const fitnessStorageKey = `zebra_fitness_prefs_${user?.id || "default"}`;
-  const [fitnessLevel, setFitnessLevel] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem(`zebra_fitness_prefs_${user?.id || "default"}`);
-      return saved ? JSON.parse(saved).fitnessLevel || "beginner" : "beginner";
-    } catch {
-      return "beginner";
-    }
-  });
-  const [workoutEnv, setWorkoutEnv] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem(`zebra_fitness_prefs_${user?.id || "default"}`);
-      return saved ? JSON.parse(saved).workoutEnv || "home_minimal" : "home_minimal";
-    } catch {
-      return "home_minimal";
-    }
-  });
-  const [physicalLimitations, setPhysicalLimitations] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(`zebra_fitness_prefs_${user?.id || "default"}`);
-      return saved ? JSON.parse(saved).physicalLimitations || [] : [];
-    } catch {
-      return [];
-    }
-  });
-
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -247,12 +199,6 @@ export default function ProfileSettings() {
 
   const toggleCondition = (id: string) => {
     setDietaryConditions((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
-  };
-
-  const toggleLimitation = (id: string) => {
-    setPhysicalLimitations((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
@@ -391,20 +337,6 @@ export default function ProfileSettings() {
         );
       } catch (e) {
         console.warn("[settings] local profile backup error:", e);
-      }
-
-      // Save fitness preferences to localStorage
-      try {
-        localStorage.setItem(
-          fitnessStorageKey,
-          JSON.stringify({
-            fitnessLevel,
-            workoutEnv,
-            physicalLimitations,
-          })
-        );
-      } catch {
-        // ignore
       }
 
       // Save diet & metabolic settings to localStorage
@@ -1040,132 +972,6 @@ export default function ProfileSettings() {
                   <p className="text-[11px] text-slate-400">
                     These personal restrictions will guide your AI nutrition suggestions and be visible to your physician.
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Physical Activity & Fitness Preferences Card (Patients Only) */}
-          {profile.role === "patient" && (
-            <Card className={`${portalPanelClass} p-2`}>
-              <CardHeader>
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-lime-500/15 text-lime-700">
-                    <Dumbbell className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-base font-bold text-slate-900">Physical Activity & Fitness Preferences</CardTitle>
-                    <CardDescription className="text-xs text-slate-500">
-                      Customize your weekly training intensity, available equipment, and orthopedic considerations for AI exercise prescriptions.
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-6">
-                {/* 1. Fitness Level */}
-                <div className="space-y-3">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-lime-600" />
-                    Training Experience Level
-                  </Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    {FITNESS_LEVELS.map((lvl) => {
-                      const isSelected = fitnessLevel === lvl.id;
-                      return (
-                        <button
-                          key={lvl.id}
-                          type="button"
-                          onClick={() => setFitnessLevel(lvl.id)}
-                          className={`p-3 rounded-2xl border text-left transition-all ${
-                            isSelected
-                              ? "bg-lime-50 border-lime-400 text-lime-950 font-semibold shadow-sm ring-1 ring-lime-400"
-                              : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold ${isSelected ? "text-lime-900" : "text-slate-900"}`}>
-                              {lvl.label}
-                            </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-lime-600 shrink-0" />}
-                          </div>
-                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
-                            {lvl.desc}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 2. Workout Environment */}
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                    <Dumbbell className="w-3.5 h-3.5 text-emerald-600" />
-                    Workout Environment & Equipment
-                  </Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                    {WORKOUT_ENVIRONMENTS.map((env) => {
-                      const isSelected = workoutEnv === env.id;
-                      return (
-                        <button
-                          key={env.id}
-                          type="button"
-                          onClick={() => setWorkoutEnv(env.id)}
-                          className={`p-3 rounded-2xl border text-left transition-all ${
-                            isSelected
-                              ? "bg-emerald-50 border-emerald-400 text-emerald-950 font-semibold shadow-sm ring-1 ring-emerald-400"
-                              : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold ${isSelected ? "text-emerald-900" : "text-slate-900"}`}>
-                              {env.label}
-                            </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
-                          </div>
-                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
-                            {env.desc}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 3. Physical Limitations */}
-                <div className="space-y-3 pt-4 border-t border-slate-100">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
-                    <ShieldAlert className="w-3.5 h-3.5 text-amber-500" />
-                    Joint Sensitivity & Physical Limitations
-                  </Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                    {PHYSICAL_LIMITATIONS.map((lim) => {
-                      const isSelected = physicalLimitations.includes(lim.id);
-                      return (
-                        <button
-                          key={lim.id}
-                          type="button"
-                          onClick={() => toggleLimitation(lim.id)}
-                          className={`p-3 rounded-2xl border text-left transition-all ${
-                            isSelected
-                              ? "bg-amber-50 border-amber-400 text-amber-950 font-semibold shadow-sm ring-1 ring-amber-400"
-                              : "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className={`text-xs font-bold ${isSelected ? "text-amber-900" : "text-slate-900"}`}>
-                              {lim.label}
-                            </span>
-                            {isSelected && <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
-                          </div>
-                          <p className="mt-1 text-[11px] text-slate-500 leading-relaxed">
-                            {lim.desc}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
               </CardContent>
             </Card>
