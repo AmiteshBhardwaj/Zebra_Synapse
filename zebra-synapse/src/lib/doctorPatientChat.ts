@@ -39,59 +39,95 @@ const CHAT_BROADCAST_CHANNEL = "zebra_doctor_patient_chat";
 export function getDeletedConversations(): Record<string, number> {
   try {
     const raw = localStorage.getItem(DELETED_CONVERSATIONS_KEY);
-    return raw ? JSON.parse(raw) : {};
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    const sanitized: Record<string, number> = {};
+    if (parsed && typeof parsed === "object") {
+      for (const [k, v] of Object.entries(parsed)) {
+        if (typeof k === "string" && k.includes("_") && typeof v === "number") {
+          sanitized[k] = v;
+        }
+      }
+    }
+    return sanitized;
   } catch {
     return {};
   }
 }
 
-export function isConversationDeletedLocally(doctorId?: string | null, patientId?: string | null, doctorName?: string | null, patientName?: string | null): boolean {
-  if (!doctorId && !patientId) return false;
-  const deletedMap = getDeletedConversations();
-  const doc = doctorId || "";
-  const pat = patientId || "";
+function getConversationPairKeys(
+  doctorId?: string | null,
+  patientId?: string | null,
+  doctorName?: string | null,
+  patientName?: string | null
+): string[] {
+  const keys: string[] = [];
+  const doc = (doctorId || "").trim();
+  const pat = (patientId || "").trim();
   const normDoc = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
   const normPat = (patientName || "").toLowerCase().trim();
 
-  for (const k of Object.keys(deletedMap)) {
-    if (k.includes(doc) && k.includes(pat)) return true;
-    if (doc && k.includes(doc)) return true;
-    if (pat && k.includes(pat)) return true;
-    if (normDoc && k.toLowerCase().includes(normDoc)) return true;
-    if (normPat && k.toLowerCase().includes(normPat)) return true;
+  if (doc && pat) {
+    keys.push(`${doc}_${pat}`);
+    keys.push(`${pat}_${doc}`);
   }
-  return false;
+  if (normDoc && normPat) {
+    keys.push(`${normDoc}_${normPat}`);
+    keys.push(`${normPat}_${normDoc}`);
+  }
+  return keys;
 }
 
-export function trackDeletedConversationLocally(doctorId: string, patientId: string, doctorName?: string | null, patientName?: string | null) {
+export function isConversationDeletedLocally(
+  doctorId?: string | null,
+  patientId?: string | null,
+  doctorName?: string | null,
+  patientName?: string | null
+): boolean {
+  if (!doctorId && !patientId && !doctorName && !patientName) return false;
+  const deletedMap = getDeletedConversations();
+  const keys = getConversationPairKeys(doctorId, patientId, doctorName, patientName);
+  return keys.some((k) => Boolean(deletedMap[k]));
+}
+
+export function trackDeletedConversationLocally(
+  doctorId: string,
+  patientId: string,
+  doctorName?: string | null,
+  patientName?: string | null
+) {
   try {
     const deletedMap = getDeletedConversations();
-    const key1 = `${doctorId}_${patientId}`;
-    const key2 = `${patientId}_${doctorId}`;
-    const normDoc = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
-    const normPat = (patientName || "").toLowerCase().trim();
-
-    deletedMap[key1] = Date.now();
-    deletedMap[key2] = Date.now();
-    if (normDoc && normPat) {
-      deletedMap[`${normDoc}_${normPat}`] = Date.now();
-    }
+    const keys = getConversationPairKeys(doctorId, patientId, doctorName, patientName);
+    const now = Date.now();
+    keys.forEach((k) => {
+      deletedMap[k] = now;
+    });
     localStorage.setItem(DELETED_CONVERSATIONS_KEY, JSON.stringify(deletedMap));
   } catch {
     // ignore
   }
 }
 
-export function untrackDeletedConversationLocally(doctorId: string, patientId: string) {
+export function untrackDeletedConversationLocally(
+  doctorId: string,
+  patientId: string,
+  doctorName?: string | null,
+  patientName?: string | null
+) {
   try {
     const deletedMap = getDeletedConversations();
-    const keys = Object.keys(deletedMap);
+    const keys = getConversationPairKeys(doctorId, patientId, doctorName, patientName);
+    let changed = false;
     keys.forEach((k) => {
-      if (k.includes(doctorId) || k.includes(patientId)) {
+      if (deletedMap[k]) {
         delete deletedMap[k];
+        changed = true;
       }
     });
-    localStorage.setItem(DELETED_CONVERSATIONS_KEY, JSON.stringify(deletedMap));
+    if (changed) {
+      localStorage.setItem(DELETED_CONVERSATIONS_KEY, JSON.stringify(deletedMap));
+    }
   } catch {
     // ignore
   }
@@ -405,7 +441,7 @@ export async function sendDoctorPatientMessage(
   patientName?: string | null
 ): Promise<DoctorPatientMessage> {
   // Untrack deleted conversation if a new message is sent
-  untrackDeletedConversationLocally(doctorId, patientId);
+  untrackDeletedConversationLocally(doctorId, patientId, doctorName, patientName);
 
   const newMessage: DoctorPatientMessage = {
     id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
