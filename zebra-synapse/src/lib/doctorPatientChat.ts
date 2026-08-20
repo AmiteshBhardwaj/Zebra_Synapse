@@ -33,7 +33,69 @@ export interface ChatAccessRequest {
 
 const GLOBAL_STORAGE_KEY = "zebra_global_doctor_patient_messages";
 const REQUESTS_STORAGE_KEY = "zebra_chat_access_requests";
+const DELETED_CONVERSATIONS_KEY = "zebra_deleted_conversations";
 const CHAT_BROADCAST_CHANNEL = "zebra_doctor_patient_chat";
+
+export function getDeletedConversations(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(DELETED_CONVERSATIONS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function isConversationDeletedLocally(doctorId?: string | null, patientId?: string | null, doctorName?: string | null, patientName?: string | null): boolean {
+  if (!doctorId && !patientId) return false;
+  const deletedMap = getDeletedConversations();
+  const doc = doctorId || "";
+  const pat = patientId || "";
+  const normDoc = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
+  const normPat = (patientName || "").toLowerCase().trim();
+
+  for (const k of Object.keys(deletedMap)) {
+    if (k.includes(doc) && k.includes(pat)) return true;
+    if (doc && k.includes(doc)) return true;
+    if (pat && k.includes(pat)) return true;
+    if (normDoc && k.toLowerCase().includes(normDoc)) return true;
+    if (normPat && k.toLowerCase().includes(normPat)) return true;
+  }
+  return false;
+}
+
+export function trackDeletedConversationLocally(doctorId: string, patientId: string, doctorName?: string | null, patientName?: string | null) {
+  try {
+    const deletedMap = getDeletedConversations();
+    const key1 = `${doctorId}_${patientId}`;
+    const key2 = `${patientId}_${doctorId}`;
+    const normDoc = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
+    const normPat = (patientName || "").toLowerCase().trim();
+
+    deletedMap[key1] = Date.now();
+    deletedMap[key2] = Date.now();
+    if (normDoc && normPat) {
+      deletedMap[`${normDoc}_${normPat}`] = Date.now();
+    }
+    localStorage.setItem(DELETED_CONVERSATIONS_KEY, JSON.stringify(deletedMap));
+  } catch {
+    // ignore
+  }
+}
+
+export function untrackDeletedConversationLocally(doctorId: string, patientId: string) {
+  try {
+    const deletedMap = getDeletedConversations();
+    const keys = Object.keys(deletedMap);
+    keys.forEach((k) => {
+      if (k.includes(doctorId) || k.includes(patientId)) {
+        delete deletedMap[k];
+      }
+    });
+    localStorage.setItem(DELETED_CONVERSATIONS_KEY, JSON.stringify(deletedMap));
+  } catch {
+    // ignore
+  }
+}
 
 // Helper to broadcast changes across all browser tabs and windows
 function broadcastChatEvent(type: "message" | "request" | "read" | "delete", data: any) {
@@ -123,43 +185,33 @@ export function sendChatAccessRequest(
 
   const updated = [...current, newReq];
   saveChatRequests(updated);
+
+  // Broadcast to other windows
   broadcastChatEvent("request", newReq);
-
-  // Sync to Supabase as system message if configured
-  if (isSupabaseConfigured()) {
-    const sb = getSupabase();
-    if (sb) {
-      void sb.from("doctor_patient_messages").insert({
-        id: `reqmsg_${newReq.id}`,
-        doctor_id: doctorId,
-        patient_id: patientId,
-        doctor_name: doctorName,
-        patient_name: patientName,
-        sender_id: patientId,
-        sender_role: "patient",
-        content: `[Chat Access Request] ${patientName || "Patient"} requested direct 2-way clinical chat access.`,
-        is_read: false,
-        created_at: newReq.created_at,
-      });
-    }
-  }
-
   return newReq;
 }
 
 export function updateChatAccessRequestStatus(
   requestId: string,
   status: "accepted" | "declined"
-) {
+): ChatAccessRequest | null {
   const current = getAllChatRequests();
+  let updatedReq: ChatAccessRequest | null = null;
+
   const updated = current.map((r) => {
     if (r.id === requestId) {
-      return { ...r, status };
+      updatedReq = { ...r, status };
+      return updatedReq;
     }
     return r;
   });
-  saveChatRequests(updated);
-  broadcastChatEvent("request", { requestId, status });
+
+  if (updatedReq) {
+    saveChatRequests(updated);
+    broadcastChatEvent("request", updatedReq);
+  }
+
+  return updatedReq;
 }
 
 export function getRequestStatus(
@@ -194,25 +246,20 @@ export function getRequestStatus(
   return found ? found.status : "none";
 }
 
-/**
- * Filter messages matching a doctor and patient pair by ID or Name universally.
- */
 export function filterConversationMessages(
-  allMsgs: DoctorPatientMessage[],
+  messages: DoctorPatientMessage[],
   doctorId: string,
   patientId: string,
   doctorName?: string | null,
   patientName?: string | null
 ): DoctorPatientMessage[] {
-  const normDocId = (doctorId || "").toLowerCase().trim();
-  const normPatId = (patientId || "").toLowerCase().trim();
   const normDocName = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
   const normPatName = (patientName || "").toLowerCase().trim();
 
-  // Determine if patient search refers to default demo / seed patient aliases
+  // Match flags
   const isDefaultPatientSearch =
-    normPatId === "pat_maya_thompson" ||
-    normPatId === "patient" ||
+    patientId === "pat_maya_thompson" ||
+    patientId === "patient" ||
     normPatName.includes("maya") ||
     normPatName.includes("thompson") ||
     normPatName.includes("patient user") ||
@@ -220,32 +267,42 @@ export function filterConversationMessages(
     normPatName === "user";
 
   const isDefaultDoctorSearch =
-    normDocId === "doc_amelia_hart" ||
-    normDocId === "doctor" ||
+    doctorId === "doc_amelia_hart" ||
+    doctorId === "doctor" ||
     normDocName.includes("amelia") ||
     normDocName.includes("hart") ||
-    normDocName.includes("smith");
+    normDocName.includes("dr. alex smith") ||
+    normDocName === "doctor" ||
+    normDocName === "alex smith";
 
-  return allMsgs.filter((m) => {
-    const mDocId = (m.doctor_id || "").toLowerCase().trim();
-    const mPatId = (m.patient_id || "").toLowerCase().trim();
+  return messages.filter((m) => {
+    // 0. Filter out deleted conversations
+    if (isConversationDeletedLocally(m.doctor_id, m.patient_id, m.doctor_name, m.patient_name)) {
+      return false;
+    }
+
+    const mDocId = m.doctor_id || "";
+    const mPatId = m.patient_id || "";
     const mDocName = (m.doctor_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
     const mPatName = (m.patient_name || "").toLowerCase().trim();
 
-    // 1. Match Doctor participant
-    const matchesDoc =
-      (normDocId && (mDocId === normDocId || mPatId === normDocId)) ||
-      (normDocName && mDocName && (mDocName.includes(normDocName) || normDocName.includes(mDocName))) ||
-      (isDefaultDoctorSearch && (mDocId.includes("amelia") || mDocName.includes("amelia") || mDocName.includes("hart")));
+    // 1. Direct ID match
+    if (
+      (mDocId === doctorId && mPatId === patientId) ||
+      (mDocId === patientId && mPatId === doctorId)
+    ) {
+      return true;
+    }
 
-    if (!matchesDoc) return false;
-
-    // 2. Match Patient participant
-    const matchesPatDirect =
-      (normPatId && (mPatId === normPatId || mDocId === normPatId)) ||
-      (normPatName && mPatName && (mPatName.includes(normPatName) || normPatName.includes(mPatName)));
-
-    if (matchesPatDirect) return true;
+    // 2. Name-based match
+    if (
+      normDocName &&
+      normPatName &&
+      (mDocName.includes(normDocName) || normDocName.includes(mDocName)) &&
+      (mPatName.includes(normPatName) || normPatName.includes(mPatName))
+    ) {
+      return true;
+    }
 
     // 3. Match Patient default/demo cross-link
     const isMessageDefaultPat =
@@ -258,6 +315,18 @@ export function filterConversationMessages(
       mPatName === "user";
 
     if (isDefaultPatientSearch && isMessageDefaultPat) {
+      return true;
+    }
+
+    // 4. Match Doctor default/demo cross-link
+    const isMessageDefaultDoc =
+      mDocId === "doc_amelia_hart" ||
+      mDocId === "doctor" ||
+      mDocName.includes("amelia") ||
+      mDocName.includes("hart") ||
+      mDocName.includes("dr. alex smith");
+
+    if (isDefaultDoctorSearch && isMessageDefaultDoc) {
       return true;
     }
 
@@ -277,6 +346,10 @@ export async function fetchDoctorPatientMessages(
   const globalLocal = getAllGlobalMessages();
   let filtered = filterConversationMessages(globalLocal, doctorId, patientId, doctorName, patientName);
 
+  if (isConversationDeletedLocally(doctorId, patientId, doctorName, patientName)) {
+    return [];
+  }
+
   if (!isSupabaseConfigured()) {
     return filtered;
   }
@@ -295,10 +368,18 @@ export async function fetchDoctorPatientMessages(
     }
 
     const fetched = (data as DoctorPatientMessage[]) || [];
+    const activeFetched = fetched.filter(
+      (m) => !isConversationDeletedLocally(m.doctor_id, m.patient_id, m.doctor_name, m.patient_name)
+    );
+
     const mergedMap = new Map<string, DoctorPatientMessage>();
 
-    globalLocal.forEach((m) => mergedMap.set(m.id, m));
-    fetched.forEach((m) => mergedMap.set(m.id, m));
+    globalLocal.forEach((m) => {
+      if (!isConversationDeletedLocally(m.doctor_id, m.patient_id, m.doctor_name, m.patient_name)) {
+        mergedMap.set(m.id, m);
+      }
+    });
+    activeFetched.forEach((m) => mergedMap.set(m.id, m));
 
     const updatedGlobal = Array.from(mergedMap.values());
     saveGlobalMessages(updatedGlobal);
@@ -323,6 +404,9 @@ export async function sendDoctorPatientMessage(
   doctorName?: string | null,
   patientName?: string | null
 ): Promise<DoctorPatientMessage> {
+  // Untrack deleted conversation if a new message is sent
+  untrackDeletedConversationLocally(doctorId, patientId);
+
   const newMessage: DoctorPatientMessage = {
     id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `msg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     doctor_id: doctorId,
@@ -443,28 +527,50 @@ export async function deleteConversationMessages(
   const targetIds = new Set(targetConvMsgs.map((m) => m.id));
 
   // 1. Instantly clear from local universal storage
-  if (targetIds.size > 0 || currentGlobal.length > 0) {
-    const updatedGlobal = currentGlobal.filter((m) => !targetIds.has(m.id));
-    saveGlobalMessages(updatedGlobal);
-  }
+  const updatedGlobal = currentGlobal.filter((m) => {
+    const isTargetConv = filterConversationMessages([m], doctorId, patientId, doctorName, patientName).length > 0;
+    return !isTargetConv && !targetIds.has(m.id);
+  });
+  saveGlobalMessages(updatedGlobal);
 
-  // 2. Broadcast deletion event across tabs & windows
+  // 2. Track deleted conversation locally so remote fetch won't re-add old messages
+  trackDeletedConversationLocally(doctorId, patientId, doctorName, patientName);
+
+  // 3. Broadcast deletion event across tabs & windows
   broadcastChatEvent("delete", { doctorId, patientId });
 
-  // 3. Persist deletion in Supabase database
+  // 4. Persist deletion in Supabase database
   if (!isSupabaseConfigured()) return;
   const sb = getSupabase();
   if (!sb) return;
 
   try {
-    // Delete by participant IDs
-    const { error } = await sb
+    // Perform clean, robust individual delete queries
+    await sb
       .from("doctor_patient_messages")
       .delete()
-      .or(`and(doctor_id.eq.${doctorId},patient_id.eq.${patientId}),and(doctor_id.eq.${patientId},patient_id.eq.${doctorId})`);
+      .eq("doctor_id", doctorId)
+      .eq("patient_id", patientId);
 
-    if (error && targetIds.size > 0) {
-      // Fallback: Delete by target message IDs array
+    await sb
+      .from("doctor_patient_messages")
+      .delete()
+      .eq("doctor_id", patientId)
+      .eq("patient_id", doctorId);
+
+    if (doctorName || patientName) {
+      const normDocName = (doctorName || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
+      const normPatName = (patientName || "").toLowerCase().trim();
+
+      if (normDocName) {
+        await sb.from("doctor_patient_messages").delete().ilike("doctor_name", `%${normDocName}%`);
+      }
+      if (normPatName) {
+        await sb.from("doctor_patient_messages").delete().ilike("patient_name", `%${normPatName}%`);
+      }
+    }
+
+    if (targetIds.size > 0) {
       await sb.from("doctor_patient_messages").delete().in("id", Array.from(targetIds));
     }
   } catch (err) {
