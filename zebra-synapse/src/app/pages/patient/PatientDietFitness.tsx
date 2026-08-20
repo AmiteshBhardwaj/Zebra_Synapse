@@ -118,6 +118,131 @@ export default function PatientDietFitness() {
     setSelectedDate((prev) => addDaysToDateStr(prev, 1));
   };
 
+function getInitialDemoMeals(pref?: string | null) {
+  const norm = (pref || "omnivore").toLowerCase();
+
+  if (norm === "jain") {
+    return [
+      {
+        id: "log_1",
+        name: "Turmeric Tofu & Bell Pepper Stir-Fry",
+        meal: "breakfast",
+        calories: 320,
+        protein: 24,
+        carbs: 18,
+        fat: 14,
+      },
+      {
+        id: "log_2",
+        name: "Moong Dal & Tri-Color Quinoa Nourish Bowl",
+        meal: "lunch",
+        calories: 420,
+        protein: 28,
+        carbs: 48,
+        fat: 12,
+      },
+      {
+        id: "log_3",
+        name: "Roasted Almonds & Dried Figs",
+        meal: "snack",
+        calories: 190,
+        protein: 8,
+        carbs: 15,
+        fat: 12,
+      },
+      {
+        id: "log_4",
+        name: "Grilled Paneer with Steamed Zucchini & Green Beans",
+        meal: "dinner",
+        calories: 480,
+        protein: 30,
+        carbs: 35,
+        fat: 20,
+      },
+    ];
+  }
+
+  if (norm === "vegetarian" || norm === "vegan") {
+    return [
+      {
+        id: "log_1",
+        name: "Turmeric Tofu & Baby Spinach Scramble",
+        meal: "breakfast",
+        calories: 340,
+        protein: 26,
+        carbs: 18,
+        fat: 16,
+      },
+      {
+        id: "log_2",
+        name: "Fresh Paneer Avocado & Quinoa Salad",
+        meal: "lunch",
+        calories: 440,
+        protein: 32,
+        carbs: 42,
+        fat: 18,
+      },
+      {
+        id: "log_3",
+        name: "Greek Yogurt with Mixed Berries & Almonds",
+        meal: "snack",
+        calories: 220,
+        protein: 14,
+        carbs: 20,
+        fat: 10,
+      },
+      {
+        id: "log_4",
+        name: "Lentil Dal with Brown Rice & Steamed Broccoli",
+        meal: "dinner",
+        calories: 480,
+        protein: 30,
+        carbs: 52,
+        fat: 14,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "log_1",
+      name: "Scrambled Eggs with Spinach & Whole Grain Toast",
+      meal: "breakfast",
+      calories: 300,
+      protein: 20,
+      carbs: 25,
+      fat: 12,
+    },
+    {
+      id: "log_2",
+      name: "Grilled Chicken Salad with Avocado and Quinoa",
+      meal: "lunch",
+      calories: 450,
+      protein: 36,
+      carbs: 40,
+      fat: 20,
+    },
+    {
+      id: "log_3",
+      name: "Greek Yogurt with Mixed Berries and Almonds",
+      meal: "snack",
+      calories: 200,
+      protein: 12,
+      carbs: 18,
+      fat: 10,
+    },
+    {
+      id: "log_4",
+      name: "Grilled Chicken with Sweet Potato and Green Beans",
+      meal: "dinner",
+      calories: 500,
+      protein: 35,
+      carbs: 45,
+      fat: 20,
+    },
+  ];
+}
+
   // Synchronized Food Logs State for Selected Date
   const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${selectedDate}`;
   const [loggedMeals, setLoggedMeals] = useState<any[]>(() => {
@@ -128,44 +253,7 @@ export default function PatientDietFitness() {
       console.error(e);
     }
     if (selectedDate === todayStr) {
-      return [
-        {
-          id: "log_1",
-          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
-          meal: "breakfast",
-          calories: 300,
-          protein: 20,
-          carbs: 25,
-          fat: 12,
-        },
-        {
-          id: "log_2",
-          name: "Grilled Chicken Salad with Avocado and Quinoa",
-          meal: "lunch",
-          calories: 450,
-          protein: 36,
-          carbs: 40,
-          fat: 20,
-        },
-        {
-          id: "log_3",
-          name: "Greek Yogurt with Mixed Berries and Almonds",
-          meal: "snack",
-          calories: 200,
-          protein: 12,
-          carbs: 18,
-          fat: 10,
-        },
-        {
-          id: "log_4",
-          name: "Grilled Chicken with Sweet Potato and Green Beans",
-          meal: "dinner",
-          calories: 500,
-          protein: 35,
-          carbs: 45,
-          fat: 20,
-        },
-      ];
+      return getInitialDemoMeals(profile?.dietary_preference);
     }
     return [];
   });
@@ -182,48 +270,11 @@ export default function PatientDietFitness() {
       console.error(e);
     }
     if (selectedDate === todayStr) {
-      setLoggedMeals([
-        {
-          id: "log_1",
-          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
-          meal: "breakfast",
-          calories: 300,
-          protein: 20,
-          carbs: 25,
-          fat: 12,
-        },
-        {
-          id: "log_2",
-          name: "Grilled Chicken Salad with Avocado and Quinoa",
-          meal: "lunch",
-          calories: 450,
-          protein: 36,
-          carbs: 40,
-          fat: 20,
-        },
-        {
-          id: "log_3",
-          name: "Greek Yogurt with Mixed Berries and Almonds",
-          meal: "snack",
-          calories: 200,
-          protein: 12,
-          carbs: 18,
-          fat: 10,
-        },
-        {
-          id: "log_4",
-          name: "Grilled Chicken with Sweet Potato and Green Beans",
-          meal: "dinner",
-          calories: 500,
-          protein: 35,
-          carbs: 45,
-          fat: 20,
-        },
-      ]);
+      setLoggedMeals(getInitialDemoMeals(profile?.dietary_preference));
     } else {
       setLoggedMeals([]);
     }
-  }, [selectedDate, logsStorageKey, todayStr]);
+  }, [selectedDate, logsStorageKey, todayStr, profile?.dietary_preference]);
 
   const handleLoggedMealsChange = (nextMeals: any[]) => {
     setLoggedMeals(nextMeals);

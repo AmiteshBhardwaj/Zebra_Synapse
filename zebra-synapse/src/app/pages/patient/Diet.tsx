@@ -265,6 +265,192 @@ export default function Diet({
   const activeDateKey = externalDate || new Date().toISOString().split("T")[0];
   const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${activeDateKey}`;
 
+function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
+  const norm = (pref || "omnivore").toLowerCase();
+  const now = new Date().toISOString();
+
+  if (norm === "jain") {
+    return [
+      {
+        id: "log_1",
+        name: "Turmeric Tofu & Bell Pepper Stir-Fry",
+        meal: "breakfast",
+        servings: 1,
+        servingSize: "1 plate",
+        calories: 320,
+        protein: 24,
+        carbs: 18,
+        fat: 14,
+        fiber: 6,
+        sodium: 180,
+        loggedAt: now,
+      },
+      {
+        id: "log_2",
+        name: "Moong Dal & Tri-Color Quinoa Nourish Bowl",
+        meal: "lunch",
+        servings: 1,
+        servingSize: "1 bowl",
+        calories: 420,
+        protein: 28,
+        carbs: 48,
+        fat: 12,
+        fiber: 10,
+        sodium: 290,
+        loggedAt: now,
+      },
+      {
+        id: "log_3",
+        name: "Roasted Almonds & Dried Figs",
+        meal: "snack",
+        servings: 1,
+        servingSize: "1 bowl",
+        calories: 190,
+        protein: 8,
+        carbs: 15,
+        fat: 12,
+        fiber: 4,
+        sodium: 20,
+        loggedAt: now,
+      },
+      {
+        id: "log_4",
+        name: "Grilled Paneer with Steamed Zucchini & Green Beans",
+        meal: "dinner",
+        servings: 1,
+        servingSize: "1 plate",
+        calories: 480,
+        protein: 30,
+        carbs: 35,
+        fat: 20,
+        fiber: 8,
+        sodium: 310,
+        loggedAt: now,
+      },
+    ];
+  }
+
+  if (norm === "vegetarian" || norm === "vegan") {
+    return [
+      {
+        id: "log_1",
+        name: "Turmeric Tofu & Baby Spinach Scramble",
+        meal: "breakfast",
+        servings: 1,
+        servingSize: "1 plate",
+        calories: 340,
+        protein: 26,
+        carbs: 18,
+        fat: 16,
+        fiber: 6,
+        sodium: 210,
+        loggedAt: now,
+      },
+      {
+        id: "log_2",
+        name: "Fresh Paneer Avocado & Quinoa Salad",
+        meal: "lunch",
+        servings: 1,
+        servingSize: "1 bowl",
+        calories: 440,
+        protein: 32,
+        carbs: 42,
+        fat: 18,
+        fiber: 8,
+        sodium: 310,
+        loggedAt: now,
+      },
+      {
+        id: "log_3",
+        name: "Greek Yogurt with Mixed Berries & Almonds",
+        meal: "snack",
+        servings: 1,
+        servingSize: "1 bowl",
+        calories: 220,
+        protein: 14,
+        carbs: 20,
+        fat: 10,
+        fiber: 4,
+        sodium: 60,
+        loggedAt: now,
+      },
+      {
+        id: "log_4",
+        name: "Lentil Dal with Brown Rice & Steamed Broccoli",
+        meal: "dinner",
+        servings: 1,
+        servingSize: "1 plate",
+        calories: 480,
+        protein: 30,
+        carbs: 52,
+        fat: 14,
+        fiber: 12,
+        sodium: 340,
+        loggedAt: now,
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "log_1",
+      name: "Scrambled Eggs with Spinach & Whole Grain Toast",
+      meal: "breakfast",
+      servings: 1,
+      servingSize: "1 plate",
+      calories: 300,
+      protein: 20,
+      carbs: 25,
+      fat: 12,
+      fiber: 6,
+      sodium: 240,
+      loggedAt: now,
+    },
+    {
+      id: "log_2",
+      name: "Grilled Chicken Salad with Avocado and Quinoa",
+      meal: "lunch",
+      servings: 1,
+      servingSize: "1 bowl",
+      calories: 450,
+      protein: 36,
+      carbs: 40,
+      fat: 20,
+      fiber: 8,
+      sodium: 320,
+      loggedAt: now,
+    },
+    {
+      id: "log_3",
+      name: "Greek Yogurt with Mixed Berries and Almonds",
+      meal: "snack",
+      servings: 1,
+      servingSize: "1 bowl",
+      calories: 200,
+      protein: 12,
+      carbs: 18,
+      fat: 10,
+      fiber: 4,
+      sodium: 60,
+      loggedAt: now,
+    },
+    {
+      id: "log_4",
+      name: "Grilled Chicken with Sweet Potato and Green Beans",
+      meal: "dinner",
+      servings: 1,
+      servingSize: "1 plate",
+      calories: 500,
+      protein: 35,
+      carbs: 45,
+      fat: 20,
+      fiber: 9,
+      sodium: 350,
+      loggedAt: now,
+    },
+  ];
+}
+
   const [internalLoggedFoods, setInternalLoggedFoods] = useState<LoggedMealItem[]>(() => {
     try {
       const saved = localStorage.getItem(logsStorageKey);
@@ -274,64 +460,7 @@ export default function Diet({
     }
     const todayStr = new Date().toISOString().split("T")[0];
     if (activeDateKey === todayStr) {
-      return [
-        {
-          id: "log_1",
-          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
-          meal: "breakfast",
-          servings: 1,
-          servingSize: "1 plate",
-          calories: 300,
-          protein: 20,
-          carbs: 25,
-          fat: 12,
-          fiber: 6,
-          sodium: 240,
-          loggedAt: new Date().toISOString(),
-        },
-        {
-          id: "log_2",
-          name: "Grilled Chicken Salad with Avocado and Quinoa",
-          meal: "lunch",
-          servings: 1,
-          servingSize: "1 bowl",
-          calories: 450,
-          protein: 36,
-          carbs: 40,
-          fat: 20,
-          fiber: 8,
-          sodium: 320,
-          loggedAt: new Date().toISOString(),
-        },
-        {
-          id: "log_3",
-          name: "Greek Yogurt with Mixed Berries and Almonds",
-          meal: "snack",
-          servings: 1,
-          servingSize: "1 bowl",
-          calories: 200,
-          protein: 12,
-          carbs: 18,
-          fat: 10,
-          fiber: 4,
-          sodium: 60,
-          loggedAt: new Date().toISOString(),
-        },
-        {
-          id: "log_4",
-          name: "Grilled Chicken with Sweet Potato and Green Beans",
-          meal: "dinner",
-          servings: 1,
-          servingSize: "1 plate",
-          calories: 500,
-          protein: 35,
-          carbs: 45,
-          fat: 20,
-          fiber: 9,
-          sodium: 380,
-          loggedAt: new Date().toISOString(),
-        },
-      ];
+      return getInitialDietDemoMeals(profile?.dietary_preference);
     }
     return [];
   });
