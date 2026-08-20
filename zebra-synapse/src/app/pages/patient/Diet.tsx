@@ -244,10 +244,7 @@ export default function Diet({
   const currentHeight = profile?.height_cm || 175;
   const bmr = useMemo(() => calculateBMR(currentWeight, currentHeight, 34, "male"), [currentWeight, currentHeight]);
   const tdee = useMemo(() => calculateTDEE(bmr, settings.activityLevel), [bmr, settings.activityLevel]);
-  const calorieTarget = useMemo(
-    () => settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg),
-    [tdee, settings.goal, settings.weeklyPaceKg, settings.customCalorieTarget]
-  );
+  const calorieTarget = 2100;
   const macroTargets = useMemo(
     () => calculateMacroTargets(calorieTarget, settings.goal, currentWeight, settings.customMacroSplit),
     [calorieTarget, settings.goal, currentWeight, settings.customMacroSplit]
@@ -1289,43 +1286,7 @@ export default function Diet({
                 </div>
               </div>
 
-              {/* 2. Mini Calendar Day-Strip (Nutrigo Month Header + Days) */}
-              <div className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-bold text-slate-900 text-sm">September 2028</h4>
-                  <div className="flex items-center gap-1 text-slate-400">
-                    <button className="h-7 w-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
-                      <ChevronLeft className="h-4 w-4" />
-                    </button>
-                    <button className="h-7 w-7 rounded-lg hover:bg-slate-100 flex items-center justify-center">
-                      <ChevronRight className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
 
-                {/* Weekday Pills */}
-                <div className="grid grid-cols-6 gap-1.5">
-                  {weekDays.map((d, idx) => {
-                    const isActive = idx === selectedDayIdx;
-                    return (
-                      <button
-                        key={d.dayName}
-                        onClick={() => setSelectedDayIdx(idx)}
-                        className={`flex flex-col items-center justify-center py-2.5 rounded-2xl transition-all duration-150 ${
-                          isActive
-                            ? "bg-lime-500 text-white font-bold shadow-md shadow-lime-500/25 scale-[1.03]"
-                            : "bg-slate-50 hover:bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        <span className={`text-[10px] ${isActive ? "text-lime-100" : "text-slate-400"}`}>
-                          {d.dayName}
-                        </span>
-                        <span className="text-sm font-black mt-0.5">{d.dateNum}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
 
               {/* 3. Daily Meal Timeline Accordions (Breakfast, Lunch, Snack, Dinner) */}
               <div className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] space-y-3">

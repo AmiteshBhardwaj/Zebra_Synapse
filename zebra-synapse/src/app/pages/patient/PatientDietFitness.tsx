@@ -16,7 +16,6 @@ import {
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
-import { useActiveReport } from "../../../hooks/useActiveReport";
 import {
   PatientPortalPage,
   portalPanelClass,
@@ -29,6 +28,42 @@ import Diet from "./Diet";
 import ExercisePlan from "./ExercisePlan";
 
 export type DietFitnessTab = "overview" | "meals" | "exercise";
+
+// Robust Local Date Parsing & Formatter (Prevents UTC Timezone Shift Bugs)
+function getTodayLocalDateStr(): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function parseLocalDate(dateStr: string): Date {
+  const parts = dateStr.split("-").map(Number);
+  if (parts.length === 3 && !parts.some(isNaN)) {
+    return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+  }
+  return new Date();
+}
+
+function formatLocalDateTitle(dateStr: string): string {
+  const d = parseLocalDate(dateStr);
+  return d.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function addDaysToDateStr(dateStr: string, days: number): string {
+  const d = parseLocalDate(dateStr);
+  d.setDate(d.getDate() + days);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 export default function PatientDietFitness() {
   const navigate = useNavigate();
@@ -62,35 +97,20 @@ export default function PatientDietFitness() {
     }
   }, [location.search]);
 
-  // Unified Date State Across Overview & Meal Plan
-  const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
+  // Unified Local Date State Across Overview & Meal Plan
+  const todayStr = useMemo(() => getTodayLocalDateStr(), []);
   const [selectedDate, setSelectedDate] = useState<string>(todayStr);
 
   const formattedDateTitle = useMemo(() => {
-    try {
-      const [year, month, day] = selectedDate.split("-").map(Number);
-      const d = new Date(year, month - 1, day);
-      return d.toLocaleDateString("en-US", {
-        weekday: "short",
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return selectedDate;
-    }
+    return formatLocalDateTitle(selectedDate);
   }, [selectedDate]);
 
   const handlePrevDay = () => {
-    const [year, month, day] = selectedDate.split("-").map(Number);
-    const d = new Date(year, month - 1, day - 1);
-    setSelectedDate(d.toISOString().split("T")[0]);
+    setSelectedDate((prev) => addDaysToDateStr(prev, -1));
   };
 
   const handleNextDay = () => {
-    const [year, month, day] = selectedDate.split("-").map(Number);
-    const d = new Date(year, month - 1, day + 1);
-    setSelectedDate(d.toISOString().split("T")[0]);
+    setSelectedDate((prev) => addDaysToDateStr(prev, 1));
   };
 
   // Synchronized Food Logs State for Selected Date
@@ -222,6 +242,7 @@ export default function PatientDietFitness() {
     );
   }, [loggedMeals]);
 
+  // UNIFIED DAILY CALORIE TARGET = 2,100 kcal
   const targetCal = 2100;
   const targetCarbs = 230;
   const targetProtein = 140;
@@ -234,9 +255,9 @@ export default function PatientDietFitness() {
 
   // Determine current day of week (1 = Mon ... 7 = Sun)
   const currentDayOfWeekNumber = useMemo(() => {
-    const jsDay = new Date().getDay();
+    const jsDay = parseLocalDate(selectedDate).getDay();
     return jsDay === 0 ? 7 : jsDay;
-  }, []);
+  }, [selectedDate]);
 
   // 7-day workout schedule snapshot
   const daysList = [
