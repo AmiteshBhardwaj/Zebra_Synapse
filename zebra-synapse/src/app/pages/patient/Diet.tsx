@@ -1280,27 +1280,21 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Breakfast Card */}
                   {recommendedMenuBreakfast && (
-                    <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
+                    <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
                       <div>
-                        {/* Image Thumbnail */}
-                        <div className="relative h-28 w-full rounded-xl overflow-hidden mb-3 bg-slate-200">
-                          <img
-                            src={recommendedMenuBreakfast.imageUrl || "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=400&q=80"}
-                            alt={recommendedMenuBreakfast.title}
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                            <span className="bg-lime-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                              Breakfast
-                            </span>
-                            <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                              {recommendedMenuBreakfast.calories} kcal
-                            </span>
-                          </div>
+                        {/* Header Badge Strip */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <span className="bg-amber-100 text-amber-900 border border-amber-200/60 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                            Breakfast
+                          </span>
+                          <span className="bg-slate-100 text-slate-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Flame className="h-3 w-3 text-amber-500" />
+                            {recommendedMenuBreakfast.calories} kcal
+                          </span>
                         </div>
 
                         {/* Macro Pills */}
-                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-1.5">
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-2">
                           <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recommendedMenuBreakfast.carbs}g</span>
                           <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recommendedMenuBreakfast.protein}g</span>
                           <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recommendedMenuBreakfast.fat}g</span>
@@ -1325,27 +1319,21 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
 
                   {/* Lunch Card */}
                   {recommendedMenuLunch && (
-                    <div className="bg-slate-50/70 rounded-2xl p-3.5 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
+                    <div className="bg-slate-50/70 rounded-2xl p-4 border border-slate-100/90 flex flex-col justify-between hover:shadow-md transition-all group">
                       <div>
-                        {/* Image Thumbnail */}
-                        <div className="relative h-28 w-full rounded-xl overflow-hidden mb-3 bg-slate-200">
-                          <img
-                            src={recommendedMenuLunch.imageUrl || "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=400&q=80"}
-                            alt={recommendedMenuLunch.title}
-                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                          <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                            <span className="bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                              Lunch
-                            </span>
-                            <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                              {recommendedMenuLunch.calories} kcal
-                            </span>
-                          </div>
+                        {/* Header Badge Strip */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <span className="bg-emerald-100 text-emerald-900 border border-emerald-200/60 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                            Lunch
+                          </span>
+                          <span className="bg-slate-100 text-slate-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Flame className="h-3 w-3 text-emerald-500" />
+                            {recommendedMenuLunch.calories} kcal
+                          </span>
                         </div>
 
                         {/* Macro Pills */}
-                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-1.5">
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-2">
                           <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">C {recommendedMenuLunch.carbs}g</span>
                           <span className="bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded">P {recommendedMenuLunch.protein}g</span>
                           <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded">F {recommendedMenuLunch.fat}g</span>
@@ -1653,20 +1641,19 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
                             className="bg-white rounded-[28px] p-5 border border-slate-100 shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col justify-between"
                           >
                             <div>
-                              <div className="relative h-36 w-full rounded-2xl overflow-hidden mb-3 bg-slate-200">
-                                <img
-                                  src={recipe.imageUrl || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80"}
-                                  alt={recipe.title}
-                                  className="h-full w-full object-cover"
-                                />
-                                <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                                  <span className="bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-                                    {mealType}
-                                  </span>
-                                  <span className="bg-white/90 backdrop-blur-sm text-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                    {recipe.calories} kcal
-                                  </span>
-                                </div>
+                              <div className="flex items-center justify-between mb-3.5">
+                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                                  mealType === "breakfast" ? "bg-amber-100 text-amber-900 border border-amber-200/60" :
+                                  mealType === "lunch" ? "bg-emerald-100 text-emerald-900 border border-emerald-200/60" :
+                                  mealType === "dinner" ? "bg-indigo-100 text-indigo-900 border border-indigo-200/60" :
+                                  "bg-purple-100 text-purple-900 border border-purple-200/60"
+                                }`}>
+                                  {mealType}
+                                </span>
+                                <span className="bg-slate-100 text-slate-800 font-bold text-xs px-2.5 py-1 rounded-full flex items-center gap-1">
+                                  <Flame className="h-3.5 w-3.5 text-amber-500" />
+                                  {recipe.calories} kcal
+                                </span>
                               </div>
 
                               <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-600 mb-2">

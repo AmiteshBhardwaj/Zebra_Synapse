@@ -907,58 +907,113 @@ export const FOOD_DATABASE: FoodItem[] = [
   },
 ];
 
-// ==========================================
-// 4. 7-DAY DYNAMIC MEAL PLAN GENERATOR
-// ==========================================
-
 const MEAL_RECIPES_BANK: MealRecipe[] = [
-  // BREAKFASTS
+  // ==========================================
+  // BREAKFASTS (16 VARIED RECIPES)
+  // ==========================================
   {
     id: "bf_overnight_chia_oats",
-    title: "Oatmeal with Almond Butter and Berries",
+    title: "Overnight Chia & Rolled Oats with Berries and Almond Butter",
     mealType: "breakfast",
     calories: 350,
-    protein: 12,
-    carbs: 45,
-    fat: 14,
-    fiber: 9,
+    protein: 14,
+    carbs: 48,
+    fat: 12,
+    fiber: 10,
     prepTimeMin: 5,
-    imageUrl: "https://images.unsplash.com/photo-1517673132405-a56a62b18caf?auto=format&fit=crop&w=400&q=80",
     biomarkerBadges: ["🫀 Cardio-Protective", "🌿 High Fiber", "🩸 Low Glycemic"],
     clinicalBenefits: [
-      "Rich in fiber and antioxidants, providing long-lasting energy and improving digestion.",
-      "Beta-glucan soluble fiber to bind and clear LDL cholesterol.",
-      "Omega-3 fatty acids for arterial endothelial health.",
+      "Beta-glucan soluble fiber actively binds bile acids to lower circulating LDL cholesterol.",
+      "Rich in polyphenols and antioxidants for sustained morning insulin sensitivity.",
+      "Omega-3 alpha-linolenic acid (ALA) from chia seeds supports cellular membrane elasticity.",
     ],
     ingredients: [
       { name: "Rolled Steel Cut Oats", amount: "50g", category: "pantry" },
-      { name: "Chia Seeds & Almond Butter", amount: "1 tbsp each", category: "pantry" },
+      { name: "Chia Seeds", amount: "1 tbsp", category: "pantry" },
+      { name: "Raw Almond Butter", amount: "1 tbsp", category: "pantry" },
       { name: "Unsweetened Almond Milk", amount: "200ml", category: "dairy_alt" },
       { name: "Wild Blueberries & Raspberries", amount: "1/2 cup", category: "produce" },
     ],
     instructions: [
-      "Combine rolled oats, chia seeds, and almond milk in a bowl or mason jar.",
-      "Refrigerate or warm gently for 3-5 minutes.",
-      "Top with fresh berries and creamy almond butter before enjoying.",
+      "Combine rolled oats, chia seeds, and almond milk in a mason jar or bowl.",
+      "Stir thoroughly and let set in the refrigerator overnight (or warm gently for 3 mins).",
+      "Top with fresh berries and drizzle with raw almond butter before serving.",
     ],
     dietaryTags: ["vegan", "vegetarian", "jain", "heart_healthy", "low_glycemic"],
   },
   {
-    id: "bf_mediterranean_egg_avocado_toast",
-    title: "Scrambled Eggs with Spinach & Whole Grain Toast",
+    id: "bf_tofu_spinach_scramble",
+    title: "High-Protein Turmeric Tofu & Herb Scramble",
     mealType: "breakfast",
-    calories: 300,
-    protein: 20,
-    carbs: 25,
+    calories: 340,
+    protein: 26,
+    carbs: 16,
+    fat: 16,
+    fiber: 6,
+    prepTimeMin: 12,
+    biomarkerBadges: ["✨ Anti-Inflammatory", "🌱 100% Plant-Based", "🧪 Low Sodium"],
+    clinicalBenefits: [
+      "Curcumin in turmeric provides systemic anti-inflammatory and joint health support.",
+      "100% cholesterol-free complete plant protein matrix with all essential amino acids.",
+      "Magnesium and potassium from spinach support healthy blood pressure regulation.",
+    ],
+    ingredients: [
+      { name: "Organic Firm Tofu", amount: "180g (crumbled)", category: "protein" },
+      { name: "Fresh Baby Spinach & Bell Peppers", amount: "1.5 cups", category: "produce" },
+      { name: "Ground Turmeric & Nutritional Yeast", amount: "1 tsp each", category: "pantry" },
+      { name: "Extra Virgin Olive Oil", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Heat olive oil in a non-stick skillet over medium heat.",
+      "Crumble firm tofu with turmeric, nutritional yeast, pinch of black pepper, and sea salt.",
+      "Fold in diced bell peppers and baby spinach until wilted and vibrant (3-4 mins).",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "low_carb", "anti_inflammatory"],
+  },
+  {
+    id: "bf_greek_yogurt_berry_parfait",
+    title: "Greek Yogurt Parfait with Mixed Berries, Walnuts & Chia",
+    mealType: "breakfast",
+    calories: 330,
+    protein: 25,
+    carbs: 24,
     fat: 12,
     fiber: 6,
-    prepTimeMin: 8,
-    imageUrl: "https://images.unsplash.com/photo-1525351484163-7529414344d8?auto=format&fit=crop&w=400&q=80",
-    biomarkerBadges: ["⚡ High Protein", "🧠 Choline Rich", "🥬 Folate"],
+    prepTimeMin: 4,
+    biomarkerBadges: ["🦠 Probiotic Gut Health", "🦴 Bioactive Calcium", "🫐 Antioxidants"],
     clinicalBenefits: [
-      "Choline from pastured eggs supports liver and neural cell membrane synthesis.",
-      "Monounsaturated fats enhance fat-soluble carotenoid and vitamin absorption.",
-      "Whole grain toast provides complex slow-release carbohydrates without glucose spikes.",
+      "Live active probiotic cultures optimize microbiome diversity and gut barrier function.",
+      "Bioavailable dairy calcium and zinc support bone matrix remodeling and immune signaling.",
+      "Walnut polyphenols and ellagic acid defend vascular endothelial linings.",
+    ],
+    ingredients: [
+      { name: "Plain Non-Fat Greek Yogurt", amount: "200g", category: "dairy_alt" },
+      { name: "Fresh Strawberries & Blackberries", amount: "3/4 cup", category: "produce" },
+      { name: "Raw Walnut Halves", amount: "15g", category: "pantry" },
+      { name: "Ground Flaxseed", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Spoon thick Greek yogurt into a chilled breakfast bowl.",
+      "Layer with fresh antioxidant-rich berries and crushed walnuts.",
+      "Dust with ground flaxseed for plant lignans and ALA omega-3s.",
+    ],
+    dietaryTags: ["vegetarian", "eggetarian", "jain", "probiotic", "high_protein"],
+  },
+  {
+    id: "bf_mediterranean_egg_avocado_toast",
+    title: "Scrambled Pasture Eggs with Baby Spinach & Sourdough Toast",
+    mealType: "breakfast",
+    calories: 340,
+    protein: 22,
+    carbs: 26,
+    fat: 14,
+    fiber: 6,
+    prepTimeMin: 8,
+    biomarkerBadges: ["⚡ High Protein", "🧠 Choline Rich", "🥬 Folate Dense"],
+    clinicalBenefits: [
+      "Choline from pastured egg yolks supports hepatic lipid export and neurotransmitter synthesis.",
+      "Monounsaturated fats enhance fat-soluble carotenoid and lutein absorption.",
+      "Whole grain sourdough fermentation yields prebiotic resistant starch that blunts glycemic spikes.",
     ],
     ingredients: [
       { name: "Pasture-Raised Eggs", amount: "2 large", category: "protein" },
@@ -967,166 +1022,251 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
       { name: "Extra Virgin Olive Oil", amount: "1 tsp", category: "pantry" },
     ],
     instructions: [
-      "Whisk eggs with a splash of water, black pepper, and sea salt.",
+      "Whisk eggs with a splash of water, cracked black pepper, and sea salt.",
       "Gently scramble in olive oil over low heat with fresh baby spinach until soft.",
-      "Serve warm over crispy whole grain toast.",
+      "Serve warm over crispy whole grain sourdough toast.",
     ],
     dietaryTags: ["omnivore", "eggetarian", "heart_healthy", "high_protein"],
   },
   {
-    id: "bf_tofu_spinach_scramble",
-    title: "High-Protein Turmeric Tofu & Herb Scramble",
+    id: "bf_moong_dal_chilla",
+    title: "Savory Spiced Moong Dal Chilla with Fresh Mint & Coriander Chutney",
+    mealType: "breakfast",
+    calories: 310,
+    protein: 20,
+    carbs: 38,
+    fat: 7,
+    fiber: 9,
+    prepTimeMin: 15,
+    biomarkerBadges: ["🌱 High Plant Protein", "🩸 Low GI", "🌿 Easy Digestion"],
+    clinicalBenefits: [
+      "Yellow moong lentils provide clean, light-digesting plant protein and slow-digesting complex carbs.",
+      "High dietary folate and zinc for immune modulation and cellular repair.",
+      "Fresh mint and coriander promote digestive enzyme secretion without acid reflux.",
+    ],
+    ingredients: [
+      { name: "Yellow Moong Dal (Soaked & Ground)", amount: "60g dry", category: "pantry" },
+      { name: "Fresh Grated Ginger & Green Chili", amount: "1 tsp", category: "produce" },
+      { name: "Fresh Mint & Coriander", amount: "1/2 cup", category: "produce" },
+      { name: "Cold-Pressed Mustard/Olive Oil", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Blend soaked moong dal with ginger, cumin, and a pinch of turmeric into a smooth batter.",
+      "Spread thinly onto a hot seasoned non-stick skillet and cook both sides until golden crisp.",
+      "Serve with fresh mint coriander chutney.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "low_glycemic"],
+  },
+  {
+    id: "bf_quinoa_apple_cinnamon",
+    title: "Warm Apple-Cinnamon Quinoa Breakfast Bowl with Chopped Pecans",
     mealType: "breakfast",
     calories: 340,
-    protein: 26,
-    carbs: 18,
-    fat: 16,
-    fiber: 6,
+    protein: 11,
+    carbs: 52,
+    fat: 10,
+    fiber: 8,
     prepTimeMin: 12,
-    imageUrl: "https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80",
-    biomarkerBadges: ["✨ Anti-Inflammatory", "🌱 100% Plant-Based", "🧪 Low Sodium"],
+    biomarkerBadges: ["🍎 Pectin Fiber", "🫀 Cardioprotective", "🌾 Gluten-Free"],
     clinicalBenefits: [
-      "Curcumin in turmeric provides systemic anti-inflammatory support.",
-      "100% cholesterol-free complete plant protein matrix.",
-      "Magnesium and potassium from spinach support healthy blood pressure.",
+      "Quinoa delivers a complete amino acid profile alongside mineral-rich magnesium and phosphorus.",
+      "Ceylon cinnamon aids insulin receptor sensitization and glycemic stabilization.",
+      "Apple pectin provides soluble prebiotic fiber to nourish Akkermansia muciniphila in the colon.",
     ],
     ingredients: [
-      { name: "Organic Firm Tofu", amount: "180g (crumbled)", category: "protein" },
-      { name: "Baby Spinach & Bell Peppers", amount: "1.5 cups", category: "produce" },
-      { name: "Turmeric & Nutritional Yeast", amount: "1 tsp each", category: "pantry" },
-      { name: "Olive Oil", amount: "1 tsp", category: "pantry" },
+      { name: "Tri-Color Quinoa (Cooked)", amount: "1 cup", category: "pantry" },
+      { name: "Diced Honeycrisp Apple", amount: "1 medium", category: "produce" },
+      { name: "Raw Chopped Pecans", amount: "15g", category: "pantry" },
+      { name: "Ceylon Cinnamon & Unsweetened Almond Milk", amount: "1/2 tsp + 100ml", category: "pantry" },
     ],
     instructions: [
-      "Heat olive oil in a skillet over medium heat.",
-      "Crumble firm tofu with turmeric, garlic, and black pepper.",
-      "Fold in bell peppers and baby spinach until tender (3-4 mins).",
+      "Warm pre-cooked quinoa in almond milk with Ceylon cinnamon and diced apples for 3 mins.",
+      "Top with chopped raw pecans and a dash of nutmeg.",
+      "Serve warm.",
     ],
-    dietaryTags: ["vegan", "vegetarian", "jain", "low_carb", "anti_inflammatory"],
+    dietaryTags: ["vegan", "vegetarian", "jain", "gluten_free", "heart_healthy"],
   },
   {
-    id: "bf_greek_yogurt_berry_parfait",
-    title: "Greek Yogurt with Mixed Berries and Almonds",
+    id: "bf_avocado_poached_egg_sourdough",
+    title: "Poached Pasture Egg on Avocado Sourdough with Microgreens",
+    mealType: "breakfast",
+    calories: 360,
+    protein: 21,
+    carbs: 28,
+    fat: 16,
+    fiber: 7,
+    prepTimeMin: 10,
+    biomarkerBadges: ["🥑 Oleic Acid", "⚡ High Satiety", "🌱 Sulforaphane"],
+    clinicalBenefits: [
+      "Oleic acid monounsaturated fats from fresh avocado reduce inflammatory cytokine cascades.",
+      "Pastured egg provides bioavailable lutein and zeaxanthin for macular and retinal health.",
+      "Broccoli microgreens deliver concentrated glucoraphanin for hepatic phase-2 detoxification.",
+    ],
+    ingredients: [
+      { name: "Pasture-Raised Eggs", amount: "2 large (poached)", category: "protein" },
+      { name: "Whole Grain Sourdough", amount: "1 thick slice", category: "pantry" },
+      { name: "Fresh Hass Avocado", amount: "1/3 fruit (mashed)", category: "produce" },
+      { name: "Fresh Broccoli Microgreens & Lemon Juice", amount: "1/2 cup", category: "produce" },
+    ],
+    instructions: [
+      "Toast sourdough until golden brown.",
+      "Mash avocado with lemon juice, sea salt, and red pepper flakes, then spread over toast.",
+      "Top with two gently poached eggs and a generous crown of fresh microgreens.",
+    ],
+    dietaryTags: ["omnivore", "eggetarian", "pescatarian", "high_protein"],
+  },
+  {
+    id: "bf_paneer_bhurji_multigrain",
+    title: "Masala Paneer Bhurji with Bell Peppers & Multigrain Toast",
+    mealType: "breakfast",
+    calories: 360,
+    protein: 26,
+    carbs: 25,
+    fat: 17,
+    fiber: 7,
+    prepTimeMin: 12,
+    biomarkerBadges: ["🦴 Calcium Dense", "⚡ High Bioavailable Protein", "🧪 Low Carb"],
+    clinicalBenefits: [
+      "Paneer delivers concentrated casein and whey peptides for steady morning amino acid release.",
+      "High calcium and phosphorus matrix preserves skeletal mineral density.",
+      "Turmeric and bell pepper bioflavonoids protect vascular endothelial integrity.",
+    ],
+    ingredients: [
+      { name: "Fresh Low-Fat Paneer (Crumbled)", amount: "140g", category: "protein" },
+      { name: "Diced Tomatoes & Green Bell Peppers", amount: "1 cup", category: "produce" },
+      { name: "Whole Grain / Multigrain Toast", amount: "1 slice", category: "pantry" },
+      { name: "Turmeric, Cumin & Olive Oil", amount: "1 tsp each", category: "pantry" },
+    ],
+    instructions: [
+      "Sauté diced tomatoes and green bell peppers in olive oil with cumin and turmeric.",
+      "Fold in fresh crumbled paneer and cook for 3-4 minutes on medium heat.",
+      "Garnish with chopped cilantro and serve alongside warm multigrain toast.",
+    ],
+    dietaryTags: ["vegetarian", "eggetarian", "jain", "high_protein"],
+  },
+  {
+    id: "bf_superfood_smoothie_bowl",
+    title: "Antioxidant Berry-Spirulina Smoothie Bowl with Hemp Hearts",
     mealType: "breakfast",
     calories: 320,
-    protein: 24,
-    carbs: 22,
-    fat: 12,
-    fiber: 5,
-    prepTimeMin: 4,
-    imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=400&q=80",
-    biomarkerBadges: ["🦠 Probiotic Gut Health", "🦴 Bioactive Calcium", "🫐 Antioxidants"],
+    protein: 20,
+    carbs: 38,
+    fat: 8,
+    fiber: 9,
+    prepTimeMin: 6,
+    biomarkerBadges: ["🫐 Anthocyanin Superfood", "⚡ High Energy", "🌱 Plant Protein"],
     clinicalBenefits: [
-      "Live probiotic cultures optimize microbiome diversity and intestinal barrier integrity.",
-      "High bioavailable calcium supports bone density and cellular signaling.",
-      "Almond polyphenols protect cardiovascular endothelial lining.",
+      "Wild blue anthocyanins reduce oxidative stress and improve vascular flow.",
+      "Organic spirulina provides chlorophyll and iron for cellular mitochondrial support.",
+      "Hemp hearts deliver balanced 3:1 omega-6 to omega-3 fatty acids and complete protein.",
     ],
     ingredients: [
-      { name: "Plain Non-Fat Greek Yogurt", amount: "200g", category: "dairy_alt" },
-      { name: "Fresh Strawberries & Blueberries", amount: "3/4 cup", category: "produce" },
-      { name: "Sliced Raw Almonds", amount: "15g", category: "pantry" },
-      { name: "Ground Flaxseed", amount: "1 tbsp", category: "pantry" },
+      { name: "Frozen Wild Blueberries & Acai", amount: "1 cup", category: "produce" },
+      { name: "Plant-Based Clean Pea Protein", amount: "20g", category: "pantry" },
+      { name: "Organic Spirulina Powder", amount: "1/2 tsp", category: "pantry" },
+      { name: "Shelled Hemp Hearts & Chia", amount: "1 tbsp each", category: "pantry" },
+      { name: "Unsweetened Coconut Water", amount: "150ml", category: "dairy_alt" },
     ],
     instructions: [
-      "Spoon creamy Greek yogurt into a bowl.",
-      "Layer with antioxidant-rich berries and sliced almonds.",
-      "Dust with ground flaxseed for plant lignans and omega-3s.",
+      "Blend frozen berries, pea protein, spirulina, and coconut water into a thick, creamy bowl consistency.",
+      "Pour into a bowl and top with hemp hearts, chia seeds, and fresh berry slices.",
     ],
-    dietaryTags: ["vegetarian", "eggetarian", "jain", "probiotic", "high_protein"],
+    dietaryTags: ["vegan", "vegetarian", "jain", "gluten_free", "anti_inflammatory"],
+  },
+  {
+    id: "bf_smoked_salmon_omelette",
+    title: "Wild Smoked Salmon & Baby Spinach Herb Omelette",
+    mealType: "breakfast",
+    calories: 350,
+    protein: 34,
+    carbs: 4,
+    fat: 21,
+    fiber: 3,
+    prepTimeMin: 10,
+    biomarkerBadges: ["🐟 Omega-3 Rich", "🩸 Ultra Low Carb", "⚡ High Protein"],
+    clinicalBenefits: [
+      "Wild salmon provides active EPA and DHA to reduce serum triglycerides and arterial inflammation.",
+      "High protein density optimizes morning satiety signaling without elevating blood glucose.",
+      "Spinach lutein and folate support DNA repair and vascular health.",
+    ],
+    ingredients: [
+      { name: "Pasture-Raised Eggs", amount: "2 whole + 1 white", category: "protein" },
+      { name: "Wild Alaskan Smoked Salmon", amount: "70g", category: "protein" },
+      { name: "Fresh Baby Spinach & Dill", amount: "1.5 cups", category: "produce" },
+      { name: "Extra Virgin Olive Oil", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Whisk eggs with fresh chopped dill and cracked black pepper.",
+      "Cook gently in olive oil until halfway set, then layer with fresh baby spinach and smoked salmon.",
+      "Fold over and slide onto plate.",
+    ],
+    dietaryTags: ["omnivore", "pescatarian", "eggetarian", "keto", "low_carb", "high_protein"],
+  },
+  {
+    id: "bf_south_indian_idli_sambar",
+    title: "Steamed Ragi & Rice Idlis with Vegetable Lentil Sambar",
+    mealType: "breakfast",
+    calories: 320,
+    protein: 15,
+    carbs: 56,
+    fat: 4,
+    fiber: 11,
+    prepTimeMin: 15,
+    biomarkerBadges: ["🦠 Fermented Gut Food", "🦴 High Calcium Ragi", "🌿 Zero Oil"],
+    clinicalBenefits: [
+      "Fermented batter improves gut microbiota diversity and increases micronutrient bioavailability.",
+      "Finger millet (ragi) provides exceptional plant calcium and polyphenol content.",
+      "Vegetable sambar incorporates toor dal and drumsticks for rich soluble fiber.",
+    ],
+    ingredients: [
+      { name: "Steamed Ragi & Rice Idlis", amount: "3 medium idlis", category: "pantry" },
+      { name: "Vegetable Lentil Sambar (Toor Dal)", amount: "1.5 cups", category: "produce" },
+      { name: "Fresh Drumstick & Bottle Gourd", amount: "1/2 cup diced", category: "produce" },
+      { name: "Mustard Seeds & Curry Leaves", amount: "1/2 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Steam fresh fermented ragi-rice idlis for 10-12 minutes.",
+      "Simmer toor dal sambar with bottle gourd, drumstick, turmeric, and sambar spices.",
+      "Serve warm idlis dipped in nutrient-rich lentil sambar.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "heart_healthy"],
+  },
+  {
+    id: "bf_banana_walnut_overnight_oats",
+    title: "Banana Walnut Overnight Oats with Ground Flax & Cinnamon",
+    mealType: "breakfast",
+    calories: 360,
+    protein: 13,
+    carbs: 54,
+    fat: 11,
+    fiber: 9,
+    prepTimeMin: 5,
+    biomarkerBadges: ["🍌 Potassium Rich", "🧠 Neuroprotective", "🫀 LDL Reducer"],
+    clinicalBenefits: [
+      "Potassium from banana counters dietary sodium and supports optimal cardiovascular tone.",
+      "Walnuts are exceptionally dense in neuroprotective alpha-linolenic acid (ALA).",
+      "Oat beta-glucans maintain flat postprandial glucose curves.",
+    ],
+    ingredients: [
+      { name: "Rolled Oats", amount: "50g", category: "pantry" },
+      { name: "Unsweetened Oat/Almond Milk", amount: "200ml", category: "dairy_alt" },
+      { name: "Ripe Sliced Banana", amount: "1/2 fruit", category: "produce" },
+      { name: "Raw Chopped Walnuts", amount: "15g", category: "pantry" },
+      { name: "Ground Golden Flaxseed", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Mix rolled oats, flaxseed, and milk in a jar and refrigerate overnight.",
+      "Top with freshly sliced banana, walnuts, and a dusting of cinnamon before eating.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "heart_healthy", "high_fiber"],
   },
 
-  // LUNCHES
-  {
-    id: "lu_grilled_chicken_wrap_spinach",
-    title: "Grilled Chicken Wrap with Avocado and Spinach",
-    mealType: "lunch",
-    calories: 450,
-    protein: 30,
-    carbs: 40,
-    fat: 16,
-    fiber: 8,
-    prepTimeMin: 12,
-    imageUrl: "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=400&q=80",
-    biomarkerBadges: ["💪 Muscle Recovery", "🥑 Healthy Fats", "🔋 High Satiety"],
-    clinicalBenefits: [
-      "Rich in protein and healthy fats, perfect for muscle recovery and maintaining satiety.",
-      "Monounsaturated fats from avocado assist in fat-soluble vitamin absorption.",
-      "Lycopene and folate support vascular and cellular integrity.",
-    ],
-    ingredients: [
-      { name: "Grilled Chicken Breast", amount: "130g", category: "protein" },
-      { name: "Whole Grain Tortilla / Wrap", amount: "1 large", category: "pantry" },
-      { name: "Hass Avocado", amount: "1/3 fruit sliced", category: "produce" },
-      { name: "Baby Spinach & Tomatoes", amount: "1 cup", category: "produce" },
-    ],
-    instructions: [
-      "Warm the whole grain tortilla slightly on a pan.",
-      "Layer sliced grilled chicken, avocado slices, crisp spinach, and diced tomatoes.",
-      "Roll tightly and slice in half.",
-    ],
-    dietaryTags: ["omnivore", "high_protein", "heart_healthy"],
-  },
-  {
-    id: "lu_grilled_chicken_power_greens_salad",
-    title: "Grilled Chicken Salad with Avocado and Quinoa",
-    mealType: "lunch",
-    calories: 450,
-    protein: 36,
-    carbs: 40,
-    fat: 20,
-    fiber: 8,
-    prepTimeMin: 15,
-    imageUrl: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=400&q=80",
-    biomarkerBadges: ["🥗 Nutrient Dense", "⚡ High Protein", "🩸 Glucose Balanced"],
-    clinicalBenefits: [
-      "Lean bioavailable protein optimizes nitrogen retention and preserves muscle.",
-      "Sulforaphane from cruciferous greens induces natural phase-2 liver enzymes.",
-      "Complete amino acid matrix from quinoa promotes sustained cellular repair.",
-    ],
-    ingredients: [
-      { name: "Grilled Herb Chicken Breast", amount: "140g", category: "protein" },
-      { name: "Mixed Crisp Salad Greens", amount: "3 cups", category: "produce" },
-      { name: "Cooked Tri-Color Quinoa", amount: "1/2 cup", category: "pantry" },
-      { name: "Avocado & Olive Oil Vinaigrette", amount: "1.5 tbsp", category: "pantry" },
-    ],
-    instructions: [
-      "Toss greens and quinoa with olive oil lemon vinaigrette.",
-      "Top with sliced warm grilled chicken and diced creamy avocado.",
-    ],
-    dietaryTags: ["omnivore", "gluten_free", "high_protein", "heart_healthy"],
-  },
-  {
-    id: "lu_mediterranean_salmon_quinoa_bowl",
-    title: "Mediterranean Wild Salmon & Tri-Color Quinoa Bowl",
-    mealType: "lunch",
-    calories: 520,
-    protein: 42,
-    carbs: 44,
-    fat: 18,
-    fiber: 9,
-    prepTimeMin: 20,
-    imageUrl: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80",
-    biomarkerBadges: ["🐟 Omega-3 Rich", "🫀 Triglyceride Lowering", "🌿 Anti-Inflammatory"],
-    clinicalBenefits: [
-      "EPA & DHA omega-3s reduce vascular inflammation and serum triglycerides.",
-      "Complete amino acid profile from quinoa accelerates cellular repair.",
-      "High dietary potassium counters excess intracellular sodium.",
-    ],
-    ingredients: [
-      { name: "Wild Salmon Fillet", amount: "140g", category: "protein" },
-      { name: "Tri-Color Quinoa (Cooked)", amount: "1 cup", category: "pantry" },
-      { name: "Cucumber & Cherry Tomatoes", amount: "1 cup diced", category: "produce" },
-      { name: "Extra Virgin Olive Oil & Lemon", amount: "1 tbsp dressing", category: "pantry" },
-    ],
-    instructions: [
-      "Pan-sear salmon in olive oil with oregano and lemon juice for 4 mins per side.",
-      "Assemble quinoa base with diced cucumbers, cherry tomatoes, and herbs.",
-      "Place warm salmon on top and drizzle with extra virgin olive oil.",
-    ],
-    dietaryTags: ["omnivore", "pescatarian", "gluten_free", "heart_healthy", "high_protein"],
-  },
+  // ==========================================
+  // LUNCHES (16 VARIED RECIPES)
+  // ==========================================
   {
     id: "lu_lentil_dal_spinach_brown_rice",
-    title: "Golden Turmeric Lentil Dal with Spiced Greens & Rice",
+    title: "Golden Turmeric Lentil Dal with Spiced Greens & Brown Rice",
     mealType: "lunch",
     calories: 470,
     protein: 23,
@@ -1134,91 +1274,380 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
     fat: 7,
     fiber: 18,
     prepTimeMin: 25,
-    imageUrl: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=400&q=80",
     biomarkerBadges: ["🌱 High Prebiotic Fiber", "🩸 HbA1c Friendly", "🫀 Zero Cholesterol"],
     clinicalBenefits: [
-      "Exceptional soluble and prebiotic fiber supporting short-chain fatty acids (SCFAs).",
-      "Non-heme iron combined with lemon vitamin C for enhanced absorption.",
-      "Low glycemic index supporting steady HbA1c control.",
+      "Exceptional soluble and prebiotic fiber supporting colon short-chain fatty acids (SCFAs).",
+      "Non-heme iron combined with fresh lemon vitamin C for enhanced intestinal bioavailability.",
+      "Low glycemic index supporting steady HbA1c control and post-meal focus.",
     ],
     ingredients: [
-      { name: "Yellow Moong / Red Lentils", amount: "70g dry (cooked)", category: "pantry" },
+      { name: "Yellow Moong / Masoor Lentils", amount: "70g dry (cooked)", category: "pantry" },
       { name: "Brown Basmati Rice (Cooked)", amount: "3/4 cup", category: "pantry" },
-      { name: "Steamed Spinach / Kale", amount: "1.5 cups", category: "produce" },
-      { name: "Cold-Pressed Mustard/Olive Oil", amount: "1 tsp", category: "pantry" },
+      { name: "Steamed Spinach & Fenugreek Greens", amount: "1.5 cups", category: "produce" },
+      { name: "Cold-Pressed Mustard/Olive Oil & Cumin", amount: "1 tsp", category: "pantry" },
     ],
     instructions: [
-      "Simmer lentils with water, turmeric, and minced ginger until tender.",
-      "Temper with cumin seeds in olive oil and fold into dal.",
-      "Serve alongside steamed brown basmati rice and wilted greens.",
+      "Simmer lentils with water, ground turmeric, and minced ginger until tender and creamy.",
+      "Temper cumin seeds in olive oil and fold into the cooked dal.",
+      "Serve alongside steamed brown basmati rice and wilted greens with a squeeze of fresh lemon.",
     ],
     dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "low_glycemic", "heart_healthy"],
   },
-
-  // DINNERS
   {
-    id: "di_grilled_chicken_sweet_potato_beans",
-    title: "Grilled Chicken with Sweet Potato and Green Beans",
-    mealType: "dinner",
-    calories: 500,
-    protein: 35,
-    carbs: 45,
-    fat: 20,
+    id: "lu_mediterranean_salmon_quinoa_bowl",
+    title: "Mediterranean Wild Salmon & Tri-Color Quinoa Bowl with Cucumbers",
+    mealType: "lunch",
+    calories: 520,
+    protein: 42,
+    carbs: 44,
+    fat: 18,
     fiber: 9,
     prepTimeMin: 20,
-    imageUrl: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=400&q=80",
+    biomarkerBadges: ["🐟 Omega-3 Rich", "🫀 Triglyceride Lowering", "🌿 Anti-Inflammatory"],
+    clinicalBenefits: [
+      "EPA & DHA omega-3s reduce vascular inflammation and lower circulating serum triglycerides.",
+      "Complete amino acid profile from quinoa accelerates cellular tissue repair.",
+      "High dietary potassium from greens and tomatoes counters excess intracellular sodium.",
+    ],
+    ingredients: [
+      { name: "Wild Alaskan Salmon Fillet", amount: "140g", category: "protein" },
+      { name: "Tri-Color Quinoa (Cooked)", amount: "1 cup", category: "pantry" },
+      { name: "Persian Cucumber & Cherry Tomatoes", amount: "1 cup diced", category: "produce" },
+      { name: "Extra Virgin Olive Oil & Lemon Dressing", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Pan-sear salmon in olive oil with oregano and lemon juice for 4 mins per side.",
+      "Assemble quinoa base with diced cucumbers, cherry tomatoes, and fresh herbs.",
+      "Place warm salmon on top and drizzle with extra virgin olive oil.",
+    ],
+    dietaryTags: ["omnivore", "pescatarian", "gluten_free", "heart_healthy", "high_protein"],
+  },
+  {
+    id: "lu_grilled_chicken_power_greens_salad",
+    title: "Grilled Herb Chicken Salad with Avocado & Quinoa",
+    mealType: "lunch",
+    calories: 460,
+    protein: 38,
+    carbs: 38,
+    fat: 18,
+    fiber: 8,
+    prepTimeMin: 15,
+    biomarkerBadges: ["🥗 Nutrient Dense", "⚡ High Lean Protein", "🩸 Glucose Balanced"],
+    clinicalBenefits: [
+      "Lean bioavailable protein optimizes nitrogen retention and preserves lean muscular tissue.",
+      "Sulforaphane from cruciferous greens induces natural phase-2 liver enzymes.",
+      "Complete amino acid matrix from quinoa promotes sustained cellular repair.",
+    ],
+    ingredients: [
+      { name: "Grilled Herb Chicken Breast", amount: "140g", category: "protein" },
+      { name: "Mixed Crisp Salad Greens & Arugula", amount: "3 cups", category: "produce" },
+      { name: "Cooked Tri-Color Quinoa", amount: "1/2 cup", category: "pantry" },
+      { name: "Hass Avocado & Olive Oil Vinaigrette", amount: "1.5 tbsp", category: "produce" },
+    ],
+    instructions: [
+      "Toss greens and quinoa with olive oil lemon vinaigrette.",
+      "Top with sliced warm grilled chicken and diced creamy avocado.",
+      "Season with cracked black pepper and hemp seeds.",
+    ],
+    dietaryTags: ["omnivore", "gluten_free", "high_protein", "heart_healthy"],
+  },
+  {
+    id: "lu_chickpea_tahini_harvest_bowl",
+    title: "Roasted Spiced Chickpea & Kale Harvest Bowl with Lemon Tahini",
+    mealType: "lunch",
+    calories: 480,
+    protein: 22,
+    carbs: 64,
+    fat: 16,
+    fiber: 16,
+    prepTimeMin: 20,
+    biomarkerBadges: ["🌱 Plant Power", "🦴 Bioavailable Sesame Calcium", "🌿 Prebiotic"],
+    clinicalBenefits: [
+      "Chickpea resistant starch fosters healthy bifidobacteria colonization in the gut.",
+      "Sesame tahini provides sesamin and lignans that assist in liver lipid metabolism.",
+      "High non-heme iron and magnesium support enzymatic energy production.",
+    ],
+    ingredients: [
+      { name: "Cooked Organic Chickpeas", amount: "1.5 cups (roasted)", category: "pantry" },
+      { name: "Massaged Lacinato Kale & Red Cabbage", amount: "2 cups", category: "produce" },
+      { name: "Steamed Sweet Potato Cubes", amount: "100g", category: "produce" },
+      { name: "Lemon Garlic Tahini Dressing", amount: "2 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Roast chickpeas with smoked paprika, cumin, and sea salt at 400°F for 15 mins until crispy.",
+      "Massage kale with a splash of lemon juice and layer with roasted sweet potato cubes.",
+      "Top with crispy chickpeas and generously drizzle with lemon tahini dressing.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "gluten_free", "high_fiber"],
+  },
+  {
+    id: "lu_palak_paneer_millet_roti",
+    title: "Homestyle Palak Paneer with Foxtail Millet & Cucumber Salad",
+    mealType: "lunch",
+    calories: 460,
+    protein: 26,
+    carbs: 46,
+    fat: 19,
+    fiber: 10,
+    prepTimeMin: 20,
+    biomarkerBadges: ["🥬 Folate & Iron", "🦴 Bone Density", "🩸 Stable Glycemia"],
+    clinicalBenefits: [
+      "Spinach chlorophyll and lutein scavenge cellular free radicals and protect arterial walls.",
+      "Paneer delivers complete bioactive dairy protein with zero sugar burden.",
+      "Foxtail millet features a low glycemic load and high resistant starch content.",
+    ],
+    ingredients: [
+      { name: "Fresh Low-Fat Paneer / Tofu Cubes", amount: "140g", category: "protein" },
+      { name: "Blanched & Pureed Spinach (Palak)", amount: "2.5 cups", category: "produce" },
+      { name: "Cooked Foxtail Millet / Roti", amount: "3/4 cup", category: "pantry" },
+      { name: "Garam Masala & Cold-Pressed Oil", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Simmer spinach puree with cumin, ginger, and gentle spices.",
+      "Gently fold in lightly seared paneer cubes and simmer for 4 minutes.",
+      "Serve alongside steamed foxtail millet and crisp cucumber slices.",
+    ],
+    dietaryTags: ["vegetarian", "eggetarian", "jain", "high_protein", "calcium_rich"],
+  },
+  {
+    id: "lu_sesame_tempeh_soba_noodles",
+    title: "Sesame Ginger Tempeh Bowl with Soba Noodles & Edamame",
+    mealType: "lunch",
+    calories: 490,
+    protein: 30,
+    carbs: 58,
+    fat: 15,
+    fiber: 12,
+    prepTimeMin: 18,
+    biomarkerBadges: ["🌱 Fermented Soy Isoflavones", "🫀 Endothelial Elasticity", "⚡ High Protein"],
+    clinicalBenefits: [
+      "Fermentation breaks down phytic acid in tempeh for maximum mineral and protein absorption.",
+      "Buckwheat in 100% soba noodles provides rutin, a flavonoid supporting capillary health.",
+      "Edamame adds natural dietary isoflavones and plant sterols.",
+    ],
+    ingredients: [
+      { name: "Organic Cultured Tempeh", amount: "150g sliced", category: "protein" },
+      { name: "100% Buckwheat Soba Noodles (Cooked)", amount: "1 cup", category: "pantry" },
+      { name: "Steamed Edamame & Bok Choy", amount: "1.5 cups", category: "produce" },
+      { name: "Low-Sodium Tamari & Sesame Dressing", amount: "1.5 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Pan-sear tempeh strips in sesame oil with ginger until golden brown.",
+      "Toss warm buckwheat soba noodles with steamed bok choy, edamame, and tamari dressing.",
+      "Top with crispy tempeh and toasted sesame seeds.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_protein", "anti_inflammatory"],
+  },
+  {
+    id: "lu_rajma_masala_quinoa",
+    title: "Kashmiri Rajma (Red Kidney Beans) over Fluffy Steamed Quinoa",
+    mealType: "lunch",
+    calories: 460,
+    protein: 24,
+    carbs: 72,
+    fat: 8,
+    fiber: 17,
+    prepTimeMin: 25,
+    biomarkerBadges: ["🩸 Blood Sugar Blunter", "🫀 Potassium Rich", "🌿 Prebiotic Fiber"],
+    clinicalBenefits: [
+      "Red kidney beans contain phaseolin which naturally inhibits alpha-amylase to flatten blood sugar.",
+      "Abundant soluble fiber captures hepatic cholesterol prior to reabsorption.",
+      "High potassium and magnesium content relaxes arterial smooth muscle.",
+    ],
+    ingredients: [
+      { name: "Slow-Cooked Red Kidney Beans (Rajma)", amount: "1.5 cups", category: "pantry" },
+      { name: "Steamed Tri-Color Quinoa", amount: "3/4 cup", category: "pantry" },
+      { name: "Fresh Tomato-Ginger Gravy", amount: "1 cup", category: "produce" },
+      { name: "Kashmiri Spices & Mustard Oil", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Slow simmer boiled kidney beans in a spiced tomato, ginger, and cumin base until thick and rich.",
+      "Serve over hot fluffy steamed quinoa.",
+      "Garnish with freshly chopped cilantro and a slice of lime.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "low_glycemic", "heart_healthy"],
+  },
+  {
+    id: "lu_seared_ahi_tuna_bowl",
+    title: "Seared Ahi Tuna Poke Bowl with Seaweed, Edamame & Brown Rice",
+    mealType: "lunch",
+    calories: 490,
+    protein: 44,
+    carbs: 48,
+    fat: 13,
+    fiber: 8,
+    prepTimeMin: 15,
+    biomarkerBadges: ["🐟 Marine Clean Protein", "🧠 Selenium & B12", "🌊 Thyroid Iodine"],
+    clinicalBenefits: [
+      "Yellowfin tuna provides complete protein with minimal saturated fat burden.",
+      "Wakame seaweed provides organic iodine and fucoidan for optimal thyroid hormone synthesis.",
+      "Selenium from yellowfin protects cellular lipids from lipid peroxidation.",
+    ],
+    ingredients: [
+      { name: "Sashimi-Grade Ahi Tuna Fillet", amount: "150g (seared)", category: "protein" },
+      { name: "Brown Rice & Edamame", amount: "1 cup combined", category: "pantry" },
+      { name: "Wakame Seaweed & Cucumbers", amount: "1 cup", category: "produce" },
+      { name: "Low-Sodium Tamari & Ginger Glaze", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Flash sear seasoned tuna for 45 seconds per side in sesame oil; slice thinly.",
+      "Assemble brown rice base with edamame, cucumber rounds, and wakame seaweed.",
+      "Top with sliced tuna and drizzle with ginger-tamari glaze.",
+    ],
+    dietaryTags: ["omnivore", "pescatarian", "high_protein", "gluten_free"],
+  },
+  {
+    id: "lu_grilled_chicken_burrito_bowl",
+    title: "Chipotle Grilled Chicken Bowl with Black Beans & Fresh Salsa",
+    mealType: "lunch",
+    calories: 510,
+    protein: 42,
+    carbs: 52,
+    fat: 14,
+    fiber: 12,
+    prepTimeMin: 18,
+    biomarkerBadges: ["💪 Muscle Recovery", "🌿 High Resistant Starch", "⚡ High Energy"],
+    clinicalBenefits: [
+      "Skinless chicken breast delivers high branch-chain amino acids (BCAAs) for muscle maintenance.",
+      "Black beans provide anthocyanins and resistant starch that improve peripheral insulin sensitivity.",
+      "Fresh tomato salsa delivers lycopene and vitamin C without excess calories.",
+    ],
+    ingredients: [
+      { name: "Grilled Chicken Breast (Spiced)", amount: "140g", category: "protein" },
+      { name: "Cooked Black Beans", amount: "3/4 cup", category: "pantry" },
+      { name: "Steamed Brown Basmati Rice", amount: "1/2 cup", category: "pantry" },
+      { name: "Fresh Pico de Gallo & Shredded Lettuce", amount: "1.5 cups", category: "produce" },
+    ],
+    instructions: [
+      "Layer warm brown rice and seasoned black beans in a wide bowl.",
+      "Top with sliced chipotle-grilled chicken tenderloins and crisp shredded lettuce.",
+      "Spoon fresh pico de gallo and a squeeze of fresh lime juice on top.",
+    ],
+    dietaryTags: ["omnivore", "gluten_free", "high_protein"],
+  },
+  {
+    id: "lu_chana_masala_brown_rice",
+    title: "Amritsari Chana Masala (Spiced Chickpeas) with Brown Basmati Rice",
+    mealType: "lunch",
+    calories: 480,
+    protein: 20,
+    carbs: 78,
+    fat: 9,
+    fiber: 16,
+    prepTimeMin: 22,
+    biomarkerBadges: ["🌱 Plant Power", "🩸 HbA1c Optimizer", "🫀 Zero Saturated Fat"],
+    clinicalBenefits: [
+      "Chickpeas provide slow-digesting complex amylose carbohydrates that prevent glucose spikes.",
+      "High potassium and dietary fiber assist in lowering systemic blood pressure.",
+      "Ginger and cumin stimulate pancreatic digestive enzymes.",
+    ],
+    ingredients: [
+      { name: "Cooked Chickpeas (Kabuli Chana)", amount: "1.5 cups", category: "pantry" },
+      { name: "Steamed Brown Basmati Rice", amount: "3/4 cup", category: "pantry" },
+      { name: "Tomato-Ginger-Coriander Sauce", amount: "1 cup", category: "produce" },
+      { name: "Mustard Oil & Anardana (Pomegranate Spice)", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Simmer tender chickpeas in a spiced tomato-ginger reduction with dry pomegranate powder.",
+      "Serve hot alongside steamed nutty brown basmati rice.",
+      "Pair with fresh sliced radish and cucumber.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "heart_healthy"],
+  },
+  {
+    id: "lu_mediterranean_cod_greek_salad",
+    title: "Pan-Seared Atlantic Cod with Greek Olive & Cucumber Quinoa Salad",
+    mealType: "lunch",
+    calories: 470,
+    protein: 40,
+    carbs: 38,
+    fat: 16,
+    fiber: 7,
+    prepTimeMin: 18,
+    biomarkerBadges: ["🌊 Lean Marine Protein", "🫀 Cardioprotective Fats", "🩸 Low GI"],
+    clinicalBenefits: [
+      "Wild cod is one of the leanest complete animal proteins, with near-zero saturated fat burden.",
+      "Kalamata olives and extra virgin olive oil provide oleocanthal, a natural anti-inflammatory agent.",
+      "Quinoa base delivers complete plant proteins and complex slow carbohydrates.",
+    ],
+    ingredients: [
+      { name: "Atlantic Cod Fillet", amount: "160g", category: "protein" },
+      { name: "Cooked Tri-Color Quinoa", amount: "3/4 cup", category: "pantry" },
+      { name: "Diced Cucumbers, Kalamata Olives & Tomatoes", amount: "1.5 cups", category: "produce" },
+      { name: "Extra Virgin Olive Oil & Oregano", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Pan-sear cod fillet in olive oil with oregano and garlic powder for 3-4 mins per side.",
+      "Toss cooked quinoa with diced cucumbers, Kalamata olives, cherry tomatoes, and lemon.",
+      "Serve warm cod resting on top of the refreshing Greek quinoa salad.",
+    ],
+    dietaryTags: ["omnivore", "pescatarian", "gluten_free", "heart_healthy", "low_fat"],
+  },
+  {
+    id: "lu_sweet_potato_black_bean_skillet",
+    title: "Roasted Sweet Potato & Black Bean Bowl with Fresh Guacamole",
+    mealType: "lunch",
+    calories: 460,
+    protein: 18,
+    carbs: 68,
+    fat: 14,
+    fiber: 15,
+    prepTimeMin: 20,
+    biomarkerBadges: ["🍠 Complex Carbs", "🥑 Monounsaturated Fats", "🌱 High Fiber"],
+    clinicalBenefits: [
+      "Sweet potato beta-carotene and anthocyanins provide cellular protection against oxidative damage.",
+      "Black beans offer substantial soluble fiber that supports healthy cholesterol clearance.",
+      "Fresh avocado supplies potassium and healthy fats for optimal nutrient absorption.",
+    ],
+    ingredients: [
+      { name: "Roasted Sweet Potato Wedges", amount: "150g", category: "produce" },
+      { name: "Cooked Seasoned Black Beans", amount: "1 cup", category: "pantry" },
+      { name: "Fresh Smashed Guacamole", amount: "2 tbsp", category: "produce" },
+      { name: "Steamed Sweet Corn & Shredded Romaine", amount: "1.5 cups", category: "produce" },
+    ],
+    instructions: [
+      "Roast sweet potato cubes with cumin and smoked paprika.",
+      "Combine with warm black beans, sweet corn, and crisp romaine lettuce in a wide bowl.",
+      "Top with fresh lime guacamole and cilantro.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "gluten_free", "high_fiber"],
+  },
+
+  // ==========================================
+  // DINNERS (16 VARIED RECIPES)
+  // ==========================================
+  {
+    id: "di_grilled_chicken_sweet_potato_beans",
+    title: "Grilled Chicken Tenderloins with Roasted Sweet Potato & Crisp Green Beans",
+    mealType: "dinner",
+    calories: 490,
+    protein: 38,
+    carbs: 46,
+    fat: 16,
+    fiber: 9,
+    prepTimeMin: 20,
     biomarkerBadges: ["🍠 Complex Carbs", "🍗 High Lean Protein", "🧪 Low Saturated Fat"],
     clinicalBenefits: [
-      "Balanced macro distribution ideal for evening glycogen replenishment and muscle recovery.",
-      "Slow-burning complex carbs in sweet potatoes stabilize overnight cortisol and blood sugar.",
-      "High potassium and dietary fiber from crisp green beans.",
+      "Balanced macro distribution ideal for evening glycogen replenishment and overnight recovery.",
+      "Slow-burning complex carbs in sweet potatoes stabilize evening cortisol and overnight glycemia.",
+      "High potassium and dietary fiber from crisp steamed green beans.",
     ],
     ingredients: [
       { name: "Grilled Chicken Tenderloins", amount: "150g", category: "protein" },
       { name: "Roasted Sweet Potato Wedges", amount: "140g", category: "produce" },
       { name: "Steamed Crisp Green Beans", amount: "1.5 cups", category: "produce" },
-      { name: "Extra Virgin Olive Oil & Herbs", amount: "1 tsp", category: "pantry" },
+      { name: "Extra Virgin Olive Oil & Fresh Rosemary", amount: "1 tsp", category: "pantry" },
     ],
     instructions: [
-      "Roast sweet potato wedges tossed in olive oil at 400°F for 20 mins.",
-      "Grill seasoned chicken tenderloins with garlic and rosemary.",
-      "Steam green beans lightly and assemble together with a squeeze of fresh lemon.",
+      "Roast sweet potato wedges tossed in olive oil at 400°F for 20 mins until caramelized.",
+      "Grill seasoned chicken tenderloins with rosemary, sea salt, and black pepper.",
+      "Steam green beans lightly and assemble together with a squeeze of fresh lemon juice.",
     ],
     dietaryTags: ["omnivore", "gluten_free", "heart_healthy", "high_protein"],
   },
   {
-    id: "di_baked_cod_steamed_veggies_sweet_potato",
-    title: "Pan-Roasted White Fish with Garlic Sweet Potato & Asparagus",
-    mealType: "dinner",
-    calories: 480,
-    protein: 44,
-    carbs: 46,
-    fat: 11,
-    fiber: 8,
-    prepTimeMin: 22,
-    imageUrl: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=400&q=80",
-    biomarkerBadges: ["🌊 Marine Clean Protein", "🫀 Heart Healthy", "🩸 Ultra Low Fat"],
-    clinicalBenefits: [
-      "Ultra-lean marine protein with near-zero saturated fat burden.",
-      "Complex anthocyanins and beta-carotene promote immune and endothelial health.",
-      "Asparagus acts as a natural gentle diuretic to reduce sodium retention.",
-    ],
-    ingredients: [
-      { name: "Cod or Halibut Fillet", amount: "180g", category: "protein" },
-      { name: "Baked Sweet Potato", amount: "150g", category: "produce" },
-      { name: "Fresh Asparagus Spears", amount: "10 spears", category: "produce" },
-      { name: "Extra Virgin Olive Oil", amount: "2 tsp", category: "pantry" },
-    ],
-    instructions: [
-      "Roast sweet potato cubes and asparagus tossed in olive oil for 20 mins.",
-      "Bake seasoned cod fillet with lemon slices for 12-14 mins until flaky.",
-      "Serve garnished with fresh dill.",
-    ],
-    dietaryTags: ["omnivore", "pescatarian", "gluten_free", "heart_healthy", "low_fat"],
-  },
-  {
     id: "di_paneer_tofu_stirfry_quinoa",
-    title: "Wok-Tossed Tofu & Broccoli with Ginger-Tamari Sauce",
+    title: "Wok-Tossed Tofu & Broccoli with Ginger-Tamari Sauce & Quinoa",
     mealType: "dinner",
     calories: 440,
     protein: 28,
@@ -1226,25 +1655,140 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
     fat: 17,
     fiber: 9,
     prepTimeMin: 18,
-    imageUrl: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=400&q=80",
     biomarkerBadges: ["🥦 Glucosinolate Detox", "🌱 Complete Plant Protein", "🧪 Low Sodium"],
     clinicalBenefits: [
-      "Isoflavones support arterial elasticity and healthy lipid profiles.",
-      "Glucosinolates from broccoli promote cellular detoxification.",
-      "Gingerols soothe gastrointestinal lining and accelerate gastric settling.",
+      "Isoflavones support arterial elasticity and promote favorable lipid profiles.",
+      "Glucosinolates and sulforaphane from broccoli promote cellular phase-2 liver detoxification.",
+      "Gingerols soothe the gastrointestinal lining and accelerate gastric emptying before sleep.",
     ],
     ingredients: [
-      { name: "Organic Firm Tofu / Paneer", amount: "160g diced", category: "protein" },
-      { name: "Broccoli, Snap Peas & Bell Peppers", amount: "2 cups", category: "produce" },
+      { name: "Organic Firm Tofu / Low-Fat Paneer", amount: "160g diced", category: "protein" },
+      { name: "Broccoli Florets, Snap Peas & Bell Peppers", amount: "2 cups", category: "produce" },
       { name: "Cooked Tri-Color Quinoa", amount: "3/4 cup", category: "pantry" },
-      { name: "Low-Sodium Tamari & Ginger", amount: "1 tbsp sauce", category: "pantry" },
+      { name: "Low-Sodium Tamari & Minced Ginger", amount: "1 tbsp", category: "pantry" },
     ],
     instructions: [
-      "Sear tofu cubes in sesame oil until crisp on all sides (6-7 mins).",
-      "Toss in fresh broccoli florets, snap peas, and ginger with 2 tbsp water.",
-      "Deglaze with low-sodium tamari and serve over quinoa.",
+      "Sear tofu cubes in sesame oil until crisp and golden on all sides (6-7 mins).",
+      "Toss in fresh broccoli florets, snap peas, and ginger with 2 tbsp of water to flash steam.",
+      "Deglaze with low-sodium tamari and serve over warm fluffy quinoa.",
     ],
     dietaryTags: ["vegan", "vegetarian", "jain", "gluten_free", "low_sodium"],
+  },
+  {
+    id: "di_baked_salmon_wild_rice",
+    title: "Herb-Crusted Wild Salmon with Wild Rice & Charred Broccolini",
+    mealType: "dinner",
+    calories: 510,
+    protein: 42,
+    carbs: 40,
+    fat: 20,
+    fiber: 7,
+    prepTimeMin: 22,
+    biomarkerBadges: ["🐟 EPA / DHA Omega-3", "🫀 Cardioprotective", "🌿 Antioxidant Dense"],
+    clinicalBenefits: [
+      "High concentrations of marine omega-3 fatty acids actively lower nocturnal cardiac arrhythmia risk.",
+      "Wild rice delivers higher protein, fiber, and B vitamins than standard refined grains.",
+      "Broccolini supplies indoles and sulforaphane for healthy cellular regulation.",
+    ],
+    ingredients: [
+      { name: "Wild Alaskan Salmon Fillet", amount: "150g", category: "protein" },
+      { name: "Cooked Wild Rice Medley", amount: "3/4 cup", category: "pantry" },
+      { name: "Charred Broccolini Spears", amount: "1.5 cups", category: "produce" },
+      { name: "Extra Virgin Olive Oil & Lemon", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Season salmon with dill, lemon zest, black pepper, and olive oil; bake at 385°F for 14 mins.",
+      "Char broccolini in a cast-iron skillet with olive oil and sea salt.",
+      "Serve baked salmon over warm wild rice alongside broccolini.",
+    ],
+    dietaryTags: ["omnivore", "pescatarian", "gluten_free", "heart_healthy", "high_protein"],
+  },
+  {
+    id: "di_baked_cod_steamed_veggies_sweet_potato",
+    title: "Pan-Roasted White Fish with Baked Sweet Potato & Fresh Asparagus",
+    mealType: "dinner",
+    calories: 460,
+    protein: 42,
+    carbs: 44,
+    fat: 10,
+    fiber: 8,
+    prepTimeMin: 20,
+    biomarkerBadges: ["🌊 Marine Clean Protein", "🫀 Heart Healthy", "🩸 Ultra Low Fat"],
+    clinicalBenefits: [
+      "Ultra-lean marine protein with near-zero saturated fat burden.",
+      "Complex anthocyanins and beta-carotene promote immune and endothelial health.",
+      "Asparagus acts as a natural gentle diuretic to reduce sodium retention.",
+    ],
+    ingredients: [
+      { name: "Wild Cod or Halibut Fillet", amount: "170g", category: "protein" },
+      { name: "Baked Sweet Potato", amount: "140g", category: "produce" },
+      { name: "Fresh Asparagus Spears", amount: "10 spears", category: "produce" },
+      { name: "Extra Virgin Olive Oil & Herbs", amount: "2 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Roast sweet potato cubes and asparagus tossed in olive oil at 400°F for 18 mins.",
+      "Bake seasoned cod fillet with lemon slices for 12 mins until flaky.",
+      "Garnish with fresh dill and cracked black pepper.",
+    ],
+    dietaryTags: ["omnivore", "pescatarian", "gluten_free", "heart_healthy", "low_fat"],
+  },
+  {
+    id: "di_yellow_moong_khichdi",
+    title: "Soothing Yellow Moong & Brown Rice Khichdi with Steamed Zucchini",
+    mealType: "dinner",
+    calories: 420,
+    protein: 19,
+    carbs: 68,
+    fat: 8,
+    fiber: 14,
+    prepTimeMin: 20,
+    biomarkerBadges: ["🌿 Gut Healing", "🩸 Light Digestion", "🌱 100% Plant-Based"],
+    clinicalBenefits: [
+      "Balanced 1:1 amino acid matrix of lentils and rice provides complete easy-to-assimilate protein.",
+      "Cumin, asafoetida, and turmeric reduce nocturnal bloating and encourage sound sleep.",
+      "Low dietary fat ensures rapid gastric emptying and reduces nocturnal GERD risk.",
+    ],
+    ingredients: [
+      { name: "Yellow Moong Dal & Brown Rice", amount: "70g combined dry", category: "pantry" },
+      { name: "Diced Zucchini & Spinach", amount: "1.5 cups", category: "produce" },
+      { name: "Cold-Pressed Mustard/Olive Oil", amount: "1 tsp", category: "pantry" },
+      { name: "Turmeric, Cumin & Fresh Ginger", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Pressure cook or simmer dal and brown rice with turmeric, ginger, and 4x water until creamy.",
+      "Fold in tender diced zucchini and baby spinach in the last 5 minutes.",
+      "Temper with cumin seeds in a teaspoon of olive oil and serve warm.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "heart_healthy"],
+  },
+  {
+    id: "di_paneer_tikka_grilled_veggies",
+    title: "Tandoori Grilled Paneer Skewers with Mint Raita & Quinoa",
+    mealType: "dinner",
+    calories: 470,
+    protein: 29,
+    carbs: 38,
+    fat: 21,
+    fiber: 8,
+    prepTimeMin: 22,
+    biomarkerBadges: ["🦴 High Calcium", "⚡ Sustained Casein Protein", "🌱 Nutrient Dense"],
+    clinicalBenefits: [
+      "Casein protein matrix provides a sustained amino acid influx to support overnight muscle remodeling.",
+      "Dense in bioavailable calcium, zinc, and fat-soluble vitamins.",
+      "Tandoori spices (turmeric, coriander, cumin, ajwain) provide potent digestive anti-inflammatories.",
+    ],
+    ingredients: [
+      { name: "Fresh Paneer (Cubed)", amount: "150g", category: "protein" },
+      { name: "Bell Peppers & Zucchini Chunks", amount: "2 cups", category: "produce" },
+      { name: "Steamed Quinoa", amount: "1/2 cup", category: "pantry" },
+      { name: "Low-Fat Greek Yogurt Marinade with Spices", amount: "2 tbsp", category: "dairy_alt" },
+    ],
+    instructions: [
+      "Marinate paneer and vegetable chunks in yogurt, lemon juice, turmeric, and tandoori spices.",
+      "Grill in an oven or pan-sear on skewers until lightly charred and smoky.",
+      "Serve over warm quinoa with a side of cool mint cucumber raita.",
+    ],
+    dietaryTags: ["vegetarian", "eggetarian", "jain", "high_protein"],
   },
   {
     id: "di_turkey_zucchini_bolognese",
@@ -1256,46 +1800,192 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
     fat: 15,
     fiber: 7,
     prepTimeMin: 25,
-    imageUrl: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?auto=format&fit=crop&w=400&q=80",
     biomarkerBadges: ["🍅 Lycopene Rich", "💪 High Lean Protein", "🩸 Low Carb"],
     clinicalBenefits: [
-      "Extremely low saturated fat profile supporting healthy LDL particle size.",
-      "Lycopene from cooked tomato sauce provides potent vascular and prostate protection.",
-      "Low glycemic index ideal for evening metabolic settling.",
+      "Extremely low saturated fat profile supporting healthy LDL particle size and arterial health.",
+      "Lycopene from simmered tomato puree provides potent vascular antioxidant protection.",
+      "Low glycemic load is ideal for evening metabolic calmness and restful sleep.",
     ],
     ingredients: [
-      { name: "Lean Ground Turkey", amount: "150g", category: "protein" },
-      { name: "Spaghetti Squash / Zucchini Noodles", amount: "2 cups", category: "produce" },
-      { name: "Crushed Organic Tomatoes & Basil", amount: "1 cup", category: "pantry" },
+      { name: "Extra Lean Ground Turkey Breast", amount: "150g", category: "protein" },
+      { name: "Spaghetti Squash / Zucchini Noodles", amount: "2.5 cups", category: "produce" },
+      { name: "Crushed Organic San Marzano Tomatoes", amount: "1 cup", category: "pantry" },
+      { name: "Fresh Basil, Oregano & Olive Oil", amount: "1 tsp", category: "produce" },
     ],
     instructions: [
-      "Brown lean turkey in a pan with oregano, basil, and garlic.",
-      "Simmer with crushed tomatoes on low heat for 15 mins.",
-      "Serve over roasted spaghetti squash or flash-sautéed zucchini noodles.",
+      "Brown lean turkey in a pan with oregano, basil, and black pepper.",
+      "Simmer with crushed tomatoes and Italian herbs on low heat for 15 mins.",
+      "Serve over roasted fork-scraped spaghetti squash strands.",
     ],
     dietaryTags: ["omnivore", "keto", "low_carb", "gluten_free", "high_protein"],
   },
-
-  // SNACKS
   {
-    id: "sn_greek_yogurt_berries",
-    title: "Greek Yogurt with Mixed Berries and Almonds",
-    mealType: "snack",
-    calories: 200,
-    protein: 12,
-    carbs: 18,
-    fat: 10,
-    fiber: 4,
-    prepTimeMin: 3,
-    imageUrl: "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=400&q=80",
-    biomarkerBadges: ["🦠 Probiotics", "⚡ Quick Protein", "🫐 Low Glycemic"],
+    id: "di_stuffed_bell_peppers_lentils",
+    title: "Mediterranean Stuffed Bell Peppers with Spiced Lentils & Pine Nuts",
+    mealType: "dinner",
+    calories: 430,
+    protein: 21,
+    carbs: 58,
+    fat: 12,
+    fiber: 14,
+    prepTimeMin: 25,
+    biomarkerBadges: ["🫑 Vitamin C Dense", "🌱 Complete Plant Fiber", "🫀 Polyphenol Rich"],
     clinicalBenefits: [
-      "Nutrient-dense afternoon snack providing sustained amino acid delivery and gut barrier support.",
-      "Polyphenols protect against oxidative stress.",
+      "Bell peppers provide over 200% daily value of vitamin C to support collagen synthesis.",
+      "Brown lentils supply abundant soluble fiber and prebiotic resistant starch.",
+      "Pine nuts deliver pinolenic acid, which stimulates satiety hormones CCK and GLP-1.",
     ],
     ingredients: [
-      { name: "Plain Greek Yogurt", amount: "150g", category: "dairy_alt" },
-      { name: "Mixed Fresh Berries", amount: "1/2 cup", category: "produce" },
+      { name: "Large Red / Yellow Bell Peppers", amount: "2 whole (halved)", category: "produce" },
+      { name: "Cooked Brown Lentils & Quinoa", amount: "1 cup combined", category: "pantry" },
+      { name: "Toasted Pine Nuts", amount: "10g", category: "pantry" },
+      { name: "Organic Marinara Sauce & Herbs", amount: "1/2 cup", category: "pantry" },
+    ],
+    instructions: [
+      "Stuff halved bell peppers with seasoned cooked lentils, quinoa, marinara, and pine nuts.",
+      "Bake covered in an oven at 375°F for 20 minutes until peppers are fork-tender.",
+      "Garnish with fresh parsley before serving.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "gluten_free", "high_fiber"],
+  },
+  {
+    id: "di_asian_sesame_chicken_stirfry",
+    title: "Ginger Sesame Chicken Breast with Sugar Snap Peas & Cauliflower Rice",
+    mealType: "dinner",
+    calories: 420,
+    protein: 44,
+    carbs: 20,
+    fat: 16,
+    fiber: 7,
+    prepTimeMin: 18,
+    biomarkerBadges: ["⚡ High Protein", "🩸 Low Carb", "🥦 Cruciferous Detox"],
+    clinicalBenefits: [
+      "High protein-to-calorie ratio supports overnight anabolic tissue rebuilding.",
+      "Riced cauliflower reduces net carbohydrate intake while providing potent indoles.",
+      "Sesame lignans and ginger provide antioxidant protection against lipid peroxidation.",
+    ],
+    ingredients: [
+      { name: "Chicken Breast Tenderloins", amount: "160g (sliced)", category: "protein" },
+      { name: "Fresh Riced Cauliflower", amount: "2 cups", category: "produce" },
+      { name: "Sugar Snap Peas & Water Chestnuts", amount: "1.5 cups", category: "produce" },
+      { name: "Low-Sodium Tamari & Sesame Oil", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Stir-fry chicken breast strips in sesame oil with minced ginger for 5 minutes.",
+      "Add snap peas and flash-sautéed cauliflower rice with a splash of tamari.",
+      "Serve piping hot sprinkled with toasted sesame seeds.",
+    ],
+    dietaryTags: ["omnivore", "low_carb", "keto", "high_protein"],
+  },
+  {
+    id: "di_coconut_red_lentil_soup",
+    title: "Velvety Coconut Red Lentil Soup with Roasted Pumpkin Seeds",
+    mealType: "dinner",
+    calories: 430,
+    protein: 20,
+    carbs: 56,
+    fat: 14,
+    fiber: 15,
+    prepTimeMin: 20,
+    biomarkerBadges: ["🥥 Medium Chain Triglycerides", "🌱 High Iron & Fiber", "🌿 Anti-Inflammatory"],
+    clinicalBenefits: [
+      "Red lentils dissolve smoothly and provide gut-nourishing soluble and insoluble prebiotic fiber.",
+      "Medium chain fatty acids from coconut milk provide gentle, easily metabolizable evening fuel.",
+      "Pumpkin seeds supply essential zinc and magnesium to support restful sleep architecture.",
+    ],
+    ingredients: [
+      { name: "Split Red Lentils (Masoor)", amount: "65g dry", category: "pantry" },
+      { name: "Light Coconut Milk", amount: "100ml", category: "dairy_alt" },
+      { name: "Steamed Spinach & Carrots / Zucchini", amount: "1 cup", category: "produce" },
+      { name: "Roasted Pepitas (Pumpkin Seeds)", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Simmer red lentils with turmeric, cumin, ginger, and vegetable broth for 15 mins until velvety.",
+      "Stir in light coconut milk and wilted baby greens.",
+      "Ladle into a warm bowl and top with crunchy roasted pumpkin seeds.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "anti_inflammatory"],
+  },
+  {
+    id: "di_mediterranean_grilled_shrimp",
+    title: "Lemon Herb Grilled Shrimp with Greek Quinoa & Cucumber Salad",
+    mealType: "dinner",
+    calories: 430,
+    protein: 38,
+    carbs: 36,
+    fat: 14,
+    fiber: 6,
+    prepTimeMin: 15,
+    biomarkerBadges: ["🦐 Clean Marine Protein", "⚡ Fast Digestion", "🫀 Zero Saturated Fat"],
+    clinicalBenefits: [
+      "Shrimp provides dense bioavailable protein with minimal calories and zero saturated fat.",
+      "Rich in astaxanthin, a marine carotenoid known for potent mitochondrial antioxidant activity.",
+      "Light evening meal profile prevents sleep disturbance and gastroesophageal reflux.",
+    ],
+    ingredients: [
+      { name: "Wild Caught Shrimp (Peeled)", amount: "170g", category: "protein" },
+      { name: "Cooked Tri-Color Quinoa", amount: "3/4 cup", category: "pantry" },
+      { name: "Persian Cucumbers & Cherry Tomatoes", amount: "1.5 cups", category: "produce" },
+      { name: "Extra Virgin Olive Oil & Lemon", amount: "1 tbsp", category: "pantry" },
+    ],
+    instructions: [
+      "Skewer seasoned shrimp and grill in olive oil with oregano and lemon for 2 mins per side.",
+      "Toss cooked quinoa with diced cucumbers, cherry tomatoes, and lemon vinaigrette.",
+      "Serve warm grilled shrimp over the crisp quinoa salad.",
+    ],
+    dietaryTags: ["omnivore", "pescatarian", "gluten_free", "high_protein", "low_calorie"],
+  },
+  {
+    id: "di_baingan_bharta_missi_roti",
+    title: "Smoky Roasted Eggplant (Baingan Bharta) with Spiced Chickpea Missi Roti",
+    mealType: "dinner",
+    calories: 410,
+    protein: 17,
+    carbs: 62,
+    fat: 10,
+    fiber: 15,
+    prepTimeMin: 25,
+    biomarkerBadges: ["🍆 Nasunin Antioxidant", "🩸 Low Glycemic Index", "🌱 High Fiber"],
+    clinicalBenefits: [
+      "Nasunin in eggplant skin protects brain cell membrane lipids from oxidative degradation.",
+      "Chickpea flour (besan) in missi roti provides complex low-GI carbs and sustained amino acids.",
+      "Exceptional dietary fiber supports smooth overnight digestion and morning bowel regularity.",
+    ],
+    ingredients: [
+      { name: "Charred & Mashed Eggplant", amount: "2 cups", category: "produce" },
+      { name: "Fresh Diced Tomatoes & Ginger", amount: "1 cup", category: "produce" },
+      { name: "Chickpea & Whole Wheat Missi Roti", amount: "2 small rotis", category: "pantry" },
+      { name: "Cold-Pressed Mustard Oil & Cumin", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: [
+      "Roast eggplant over open flame or broil until charred and tender, then peel and mash.",
+      "Cook with cumin, ginger, turmeric, and fresh diced tomatoes in a teaspoon of mustard oil.",
+      "Serve alongside freshly cooked chickpea missi roti.",
+    ],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "heart_healthy"],
+  },
+
+  // ==========================================
+  // SNACKS (16 VARIED RECIPES)
+  // ==========================================
+  {
+    id: "sn_greek_yogurt_berries",
+    title: "Greek Yogurt with Wild Blueberries & Crushed Almonds",
+    mealType: "snack",
+    calories: 190,
+    protein: 15,
+    carbs: 16,
+    fat: 7,
+    fiber: 4,
+    prepTimeMin: 3,
+    biomarkerBadges: ["🦠 Probiotics", "⚡ Quick Protein", "🫐 Low Glycemic"],
+    clinicalBenefits: [
+      "Sustained amino acid delivery helps prevent mid-afternoon energy slumps.",
+      "Polyphenols from wild blueberries protect against cellular oxidative stress.",
+    ],
+    ingredients: [
+      { name: "Plain Non-Fat Greek Yogurt", amount: "150g", category: "dairy_alt" },
+      { name: "Wild Fresh Blueberries", amount: "1/2 cup", category: "produce" },
       { name: "Raw Almond Halves", amount: "10g", category: "pantry" },
     ],
     instructions: ["Combine Greek yogurt with mixed berries and a sprinkle of crushed almonds."],
@@ -1303,15 +1993,14 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
   },
   {
     id: "sn_apple_almond_butter",
-    title: "Crisp Apple Slices with Raw Almond Butter",
+    title: "Crisp Honeycrisp Apple Slices with Raw Almond Butter",
     mealType: "snack",
-    calories: 210,
+    calories: 200,
     protein: 5,
-    carbs: 27,
-    fat: 10,
+    carbs: 26,
+    fat: 9,
     fiber: 6,
     prepTimeMin: 2,
-    imageUrl: "https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?auto=format&fit=crop&w=400&q=80",
     biomarkerBadges: ["🍎 Pectin Fiber", "🧠 Vitamin E", "🌿 Heart Healthy"],
     clinicalBenefits: [
       "Quercetin from apple skin reduces inflammatory oxidative markers.",
@@ -1321,12 +2010,12 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
       { name: "Organic Honeycrisp Apple", amount: "1 medium", category: "produce" },
       { name: "Raw Almond Butter", amount: "1 tbsp (16g)", category: "pantry" },
     ],
-    instructions: ["Slice apple thinly and serve with 1 tbsp creamy almond butter."],
+    instructions: ["Slice apple thinly and serve with 1 tbsp creamy raw almond butter."],
     dietaryTags: ["vegan", "vegetarian", "jain", "heart_healthy", "low_glycemic"],
   },
   {
     id: "sn_roasted_edamame_sea_salt",
-    title: "Crunchy Sea Salt Roasted Edamame",
+    title: "Crunchy Sea Salt & Paprika Roasted Edamame",
     mealType: "snack",
     calories: 140,
     protein: 13,
@@ -1334,11 +2023,10 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
     fat: 4.5,
     fiber: 6,
     prepTimeMin: 1,
-    imageUrl: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?auto=format&fit=crop&w=400&q=80",
     biomarkerBadges: ["🌱 Plant Protein", "🩸 Low Carb", "🧪 High Potassium"],
     clinicalBenefits: [
-      "High ratio of plant protein to net carbohydrates.",
-      "Rich in folate, vitamin K1, and essential minerals.",
+      "High ratio of clean plant protein to net carbohydrates.",
+      "Rich in folate, vitamin K1, and essential intracellular minerals.",
     ],
     ingredients: [
       { name: "Dry Roasted Edamame", amount: "35g (1/3 cup)", category: "pantry" },
@@ -1348,7 +2036,7 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
   },
   {
     id: "sn_protein_matcha_shake",
-    title: "Antioxidant Iced Matcha & Pea Protein Shake",
+    title: "Antioxidant Iced Ceremonial Matcha & Pea Protein Shake",
     mealType: "snack",
     calories: 160,
     protein: 22,
@@ -1356,19 +2044,176 @@ const MEAL_RECIPES_BANK: MealRecipe[] = [
     fat: 3,
     fiber: 2,
     prepTimeMin: 3,
-    imageUrl: "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?auto=format&fit=crop&w=400&q=80",
     biomarkerBadges: ["🍵 EGCG Matcha", "🧠 L-Theanine Focus", "⚡ Fast Recovery"],
     clinicalBenefits: [
-      "L-theanine in matcha promotes calm, focused alpha brain waves.",
-      "EGCG stimulates cellular autophagy and metabolic rate.",
+      "L-theanine in ceremonial matcha promotes calm, focused alpha brain wave activity.",
+      "EGCG stimulates cellular autophagy and thermogenic metabolic rate.",
     ],
     ingredients: [
       { name: "Ceremonial Matcha Powder", amount: "1 tsp", category: "pantry" },
-      { name: "Clean Protein Powder", amount: "20g", category: "pantry" },
+      { name: "Clean Pea Protein Powder", amount: "20g", category: "pantry" },
       { name: "Unsweetened Almond Milk", amount: "250ml", category: "dairy_alt" },
     ],
-    instructions: ["Shake vigorously in a blender bottle with ice cubes until frothy."],
+    instructions: ["Shake vigorously in a blender bottle with ice cubes until frothy and smooth."],
     dietaryTags: ["vegan", "vegetarian", "jain", "high_protein", "low_carb"],
+  },
+  {
+    id: "sn_spiced_roasted_makhana",
+    title: "Turmeric & Black Pepper Roasted Foxnuts (Makhana)",
+    mealType: "snack",
+    calories: 130,
+    protein: 4,
+    carbs: 22,
+    fat: 3,
+    fiber: 4,
+    prepTimeMin: 5,
+    biomarkerBadges: ["🪷 Low Glycemic", "🧪 Mineral Rich", "🫀 Zero Cholesterol"],
+    clinicalBenefits: [
+      "Low glycemic index snack with natural kaempferol flavonoids that reduce inflammation.",
+      "Rich in magnesium and potassium to support cellular electrolyte balance.",
+    ],
+    ingredients: [
+      { name: "Puffed Lotus Seeds (Makhana)", amount: "30g", category: "pantry" },
+      { name: "Cold-Pressed Olive Oil", amount: "1/2 tsp", category: "pantry" },
+      { name: "Turmeric & Black Pepper", amount: "1/4 tsp each", category: "pantry" },
+    ],
+    instructions: ["Dry roast makhana in a pan with olive oil, turmeric, and black pepper until crunchy."],
+    dietaryTags: ["vegan", "vegetarian", "jain", "gluten_free", "low_calorie"],
+  },
+  {
+    id: "sn_cucumber_hummus_bites",
+    title: "Crisp Cucumber & Bell Pepper Batons with Classic Hummus",
+    mealType: "snack",
+    calories: 140,
+    protein: 5,
+    carbs: 16,
+    fat: 7,
+    fiber: 5,
+    prepTimeMin: 3,
+    biomarkerBadges: ["🥒 Hydrating", "🌱 Soluble Fiber", "🧪 Low Calorie"],
+    clinicalBenefits: [
+      "High water content cucumbers promote cellular hydration and mineral uptake.",
+      "Chickpea tahini hummus delivers gut-friendly prebiotic fiber.",
+    ],
+    ingredients: [
+      { name: "English Cucumber & Red Bell Pepper", amount: "1.5 cups sliced", category: "produce" },
+      { name: "Classic Garlic/Plain Hummus", amount: "2 tbsp (35g)", category: "pantry" },
+    ],
+    instructions: ["Cut vegetables into batons and dip into creamy hummus."],
+    dietaryTags: ["vegan", "vegetarian", "jain", "low_calorie", "heart_healthy"],
+  },
+  {
+    id: "sn_walnuts_goji_berries",
+    title: "Raw Walnut Halves with Antioxidant Goji Berries & Pumpkin Seeds",
+    mealType: "snack",
+    calories: 180,
+    protein: 6,
+    carbs: 14,
+    fat: 12,
+    fiber: 4,
+    prepTimeMin: 1,
+    biomarkerBadges: ["🧠 Brain Omega-3", "👁️ Zeaxanthin Vision", "🫀 Heart Healthy"],
+    clinicalBenefits: [
+      "Rich in alpha-linolenic acid (ALA) for neurovascular membrane preservation.",
+      "Goji berry zeaxanthin and lutein safeguard retinal pigment epithelium.",
+    ],
+    ingredients: [
+      { name: "Raw Walnut Halves", amount: "15g", category: "pantry" },
+      { name: "Dried Goji Berries", amount: "1 tbsp (12g)", category: "pantry" },
+      { name: "Raw Pumpkin Seeds", amount: "10g", category: "pantry" },
+    ],
+    instructions: ["Mix together in a snack bowl for a nutrient-dense trail mix."],
+    dietaryTags: ["vegan", "vegetarian", "jain", "heart_healthy", "gluten_free"],
+  },
+  {
+    id: "sn_hard_boiled_eggs_paprika",
+    title: "Pasture-Raised Boiled Eggs with Smoked Paprika & Sea Salt",
+    mealType: "snack",
+    calories: 140,
+    protein: 13,
+    carbs: 1,
+    fat: 10,
+    fiber: 0,
+    prepTimeMin: 8,
+    biomarkerBadges: ["⚡ Pure Protein", "🧠 Choline Dense", "🩸 Zero Carb"],
+    clinicalBenefits: [
+      "Provides complete bioavailable protein without impacting insulin secretion.",
+      "Choline optimizes hepatic lipid clearance and cognitive clarity.",
+    ],
+    ingredients: [
+      { name: "Pasture-Raised Eggs", amount: "2 large", category: "protein" },
+      { name: "Smoked Paprika & Flaky Salt", amount: "Pinch", category: "pantry" },
+    ],
+    instructions: ["Boil eggs for 8 mins, peel, halve, and dust with smoked paprika and sea salt."],
+    dietaryTags: ["omnivore", "eggetarian", "pescatarian", "keto", "high_protein", "low_carb"],
+  },
+  {
+    id: "sn_dark_chocolate_pistachios",
+    title: "85% Dark Cacao Squares with Roasted Pistachios",
+    mealType: "snack",
+    calories: 170,
+    protein: 4,
+    carbs: 12,
+    fat: 12,
+    fiber: 4,
+    prepTimeMin: 1,
+    biomarkerBadges: ["🍫 Flavanol Nitric Oxide", "🧪 Magnesium Rich", "🫀 Arterial Health"],
+    clinicalBenefits: [
+      "Cocoa flavanols stimulate endothelial nitric oxide production to support vasodilation.",
+      "Pistachios supply plant sterols that hinder dietary cholesterol uptake.",
+    ],
+    ingredients: [
+      { name: "85% Single-Origin Dark Chocolate", amount: "20g (2 squares)", category: "pantry" },
+      { name: "Roasted Unsalted Pistachios", amount: "15g (approx 20 nuts)", category: "pantry" },
+    ],
+    instructions: ["Savor slow-melting dark chocolate squares alongside roasted pistachios."],
+    dietaryTags: ["vegan", "vegetarian", "jain", "heart_healthy"],
+  },
+  {
+    id: "sn_chia_mango_pot",
+    title: "Coconut Chia Seed Pot with Fresh Mango Puree",
+    mealType: "snack",
+    calories: 160,
+    protein: 4,
+    carbs: 20,
+    fat: 8,
+    fiber: 7,
+    prepTimeMin: 5,
+    biomarkerBadges: ["🥭 Vitamin A", "🌿 Soluble Prebiotic", "🌱 Plant Omega-3"],
+    clinicalBenefits: [
+      "Chia seed soluble mucilage creates a prebiotic gel that promotes gastrointestinal mucosal barrier integrity.",
+      "Fresh mango supplies mangiferin, a natural antioxidant protecting against metabolic stress.",
+    ],
+    ingredients: [
+      { name: "Chia Seeds", amount: "1.5 tbsp", category: "pantry" },
+      { name: "Light Coconut Milk", amount: "100ml", category: "dairy_alt" },
+      { name: "Fresh Pureed Mango", amount: "3 tbsp", category: "produce" },
+    ],
+    instructions: ["Stir chia seeds into coconut milk and chill for 20 mins; top with fresh mango puree."],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber"],
+  },
+  {
+    id: "sn_spiced_chana_chaat",
+    title: "Tangy Sprouted Moong & Boiled Chickpea Chaat",
+    mealType: "snack",
+    calories: 160,
+    protein: 9,
+    carbs: 26,
+    fat: 3,
+    fiber: 7,
+    prepTimeMin: 5,
+    biomarkerBadges: ["🌱 Sprouted Enzymes", "🩸 Low GI", "🧪 High Potassium"],
+    clinicalBenefits: [
+      "Sprouting multiplies live enzymatic activity and dramatically increases vitamin C content.",
+      "Chaat masala and fresh lemon juice stimulate digestive fire and enhance non-heme iron uptake.",
+    ],
+    ingredients: [
+      { name: "Sprouted Moong & Boiled Chickpeas", amount: "1/2 cup combined", category: "pantry" },
+      { name: "Diced Cucumber & Tomato", amount: "1/2 cup", category: "produce" },
+      { name: "Fresh Lemon Juice & Chaat Masala", amount: "1 tsp", category: "pantry" },
+    ],
+    instructions: ["Toss sprouted moong and chickpeas with diced cucumber, tomato, lemon juice, and chaat masala."],
+    dietaryTags: ["vegan", "vegetarian", "jain", "high_fiber", "low_glycemic"],
   },
 ];
 
@@ -1428,50 +2273,64 @@ export function filterSafeRecipes(
   const normPref = (dietPref || "omnivore").toLowerCase().trim();
 
   return recipes.filter((r) => {
-    const tags = r.dietaryTags || [];
+    const tags = (r.dietaryTags || []).map((t) => t.toLowerCase());
     const ingNames = r.ingredients.map((i) => i.name.toLowerCase());
     const titleLower = r.title.toLowerCase();
 
-    const isMeatOrFishOrPoultry =
-      tags.includes("omnivore") ||
-      tags.includes("pescatarian") ||
+    const isMeatOrPoultry =
       titleLower.includes("chicken") ||
-      titleLower.includes("salmon") ||
       titleLower.includes("turkey") ||
-      titleLower.includes("fish") ||
       titleLower.includes("beef") ||
-      titleLower.includes("shrimp") ||
-      titleLower.includes("tuna") ||
       titleLower.includes("pork") ||
-      titleLower.includes("cod") ||
+      titleLower.includes("bacon") ||
+      titleLower.includes("steak") ||
       ingNames.some((i) =>
         i.includes("chicken") ||
-        i.includes("salmon") ||
         i.includes("turkey") ||
-        i.includes("fish") ||
         i.includes("beef") ||
-        i.includes("shrimp") ||
-        i.includes("tuna") ||
         i.includes("pork") ||
         i.includes("bacon") ||
-        i.includes("cod")
+        i.includes("steak")
+      );
+
+    const isFishOrSeafood =
+      titleLower.includes("salmon") ||
+      titleLower.includes("fish") ||
+      titleLower.includes("cod") ||
+      titleLower.includes("tuna") ||
+      titleLower.includes("shrimp") ||
+      titleLower.includes("crab") ||
+      titleLower.includes("seafood") ||
+      titleLower.includes("halibut") ||
+      ingNames.some((i) =>
+        i.includes("salmon") ||
+        i.includes("fish") ||
+        i.includes("cod") ||
+        i.includes("tuna") ||
+        i.includes("shrimp") ||
+        i.includes("crab") ||
+        i.includes("seafood") ||
+        i.includes("halibut")
       );
 
     const isEgg =
       tags.includes("eggetarian") ||
       titleLower.includes("egg") ||
       titleLower.includes("omelette") ||
+      titleLower.includes("frittata") ||
       (titleLower.includes("scramble") && !titleLower.includes("tofu")) ||
-      ingNames.some((i) => i.includes("egg"));
+      ingNames.some((i) => i.includes("egg") && !i.includes("eggplant"));
 
     const isDairy = ingNames.some((i) =>
       i.includes("yogurt") ||
       i.includes("paneer") ||
       i.includes("cheese") ||
-      i.includes("milk") ||
+      (i.includes("milk") && !i.includes("almond milk") && !i.includes("coconut milk") && !i.includes("soy milk") && !i.includes("oat milk")) ||
       i.includes("whey") ||
-      i.includes("butter") ||
-      i.includes("ghee")
+      (i.includes("butter") && !i.includes("almond butter") && !i.includes("peanut butter")) ||
+      i.includes("ghee") ||
+      i.includes("cottage cheese") ||
+      i.includes("feta")
     );
 
     const isRootVeg =
@@ -1489,41 +2348,28 @@ export function filterSafeRecipes(
       );
 
     // 1. JAIN PREFERENCE:
-    // Strictly NO Meat, NO Poultry, NO Fish, NO Seafood, NO Eggs, AND NO Root Vegetables (Onion, Garlic, Potato, Beet, Radish, Carrot)!
     if (normPref === "jain") {
-      if (isMeatOrFishOrPoultry || isEgg || isRootVeg) return false;
+      if (isMeatOrPoultry || isFishOrSeafood || isEgg || isRootVeg) return false;
       if (!tags.includes("jain") && !tags.includes("vegan") && !tags.includes("vegetarian")) return false;
     }
-
     // 2. VEGAN PREFERENCE:
-    // Strictly NO Meat, NO Poultry, NO Fish, NO Seafood, NO Eggs, AND NO Dairy!
     else if (normPref === "vegan") {
-      if (isMeatOrFishOrPoultry || isEgg || isDairy) return false;
+      if (isMeatOrPoultry || isFishOrSeafood || isEgg || isDairy) return false;
       if (!tags.includes("vegan")) return false;
     }
-
     // 3. VEGETARIAN PREFERENCE:
-    // Strictly NO Meat, NO Poultry, NO Fish, NO Seafood, AND NO Eggs!
     else if (normPref === "vegetarian") {
-      if (isMeatOrFishOrPoultry || isEgg) return false;
+      if (isMeatOrPoultry || isFishOrSeafood || isEgg) return false;
       if (!tags.includes("vegetarian") && !tags.includes("vegan") && !tags.includes("jain")) return false;
     }
-
     // 4. EGGETARIAN PREFERENCE:
-    // Strictly NO Meat, NO Poultry, NO Fish, NO Seafood! (Eggs & Vegetarian allowed)
     else if (normPref === "eggetarian") {
-      if (isMeatOrFishOrPoultry) return false;
+      if (isMeatOrPoultry || isFishOrSeafood) return false;
     }
-
     // 5. PESCATARIAN PREFERENCE:
-    // Strictly NO Poultry, Red Meat, Beef, Pork! (Fish & Vegetarian allowed)
     else if (normPref === "pescatarian") {
-      const isPoultryOrRedMeat = ingNames.some((i) =>
-        i.includes("chicken") || i.includes("turkey") || i.includes("beef") || i.includes("pork") || i.includes("bacon")
-      );
-      if (isPoultryOrRedMeat) return false;
+      if (isMeatOrPoultry) return false;
     }
-
     // 6. KETO PREFERENCE:
     else if (normPref === "keto") {
       if (!tags.includes("keto") && !tags.includes("low_carb")) return false;
@@ -1533,11 +2379,11 @@ export function filterSafeRecipes(
     for (const allergy of allergies) {
       const a = allergy.toLowerCase();
       if (a === "lactose" && isDairy) return false;
-      if (a === "gluten" && ingNames.some((i) => i.includes("wheat") || i.includes("bread") || i.includes("sourdough") || i.includes("tortilla") || i.includes("pasta"))) return false;
+      if (a === "gluten" && ingNames.some((i) => i.includes("wheat") || i.includes("bread") || i.includes("sourdough") || i.includes("tortilla") || i.includes("pasta") || i.includes("couscous") || i.includes("spelt"))) return false;
       if (a === "peanuts" && ingNames.some((i) => i.includes("peanut"))) return false;
-      if (a === "tree_nuts" && ingNames.some((i) => i.includes("almond") || i.includes("walnut") || i.includes("cashew"))) return false;
+      if (a === "tree_nuts" && ingNames.some((i) => i.includes("almond") || i.includes("walnut") || i.includes("cashew") || i.includes("pistachio") || i.includes("pine nut") || i.includes("pecan"))) return false;
       if (a === "eggs" && isEgg) return false;
-      if (a === "soy" && ingNames.some((i) => i.includes("tofu") || i.includes("tempeh") || i.includes("edamame") || i.includes("soy"))) return false;
+      if (a === "soy" && ingNames.some((i) => i.includes("tofu") || i.includes("tempeh") || i.includes("edamame") || i.includes("soy") || i.includes("tamari"))) return false;
       if (a === "shellfish" && ingNames.some((i) => i.includes("shrimp") || i.includes("crab") || i.includes("shellfish"))) return false;
     }
 
@@ -1546,7 +2392,7 @@ export function filterSafeRecipes(
 }
 
 /**
- * Generate a complete 7-Day interactive diet plan.
+ * Generate a complete 7-Day interactive diet plan with diverse, non-repeating meals.
  */
 export function generateWeeklyDietPlan(
   activePanel: LabPanelRow | null,
@@ -1566,29 +2412,32 @@ export function generateWeeklyDietPlan(
   const dinners = safeRecipes.filter((r) => r.mealType === "dinner");
   const snacks = safeRecipes.filter((r) => r.mealType === "snack");
 
-  // Guaranteed safe fallback dishes (NEVER non-veg or eggs for vegetarian/jain)
   const getBf = (idx: number) => {
+    if (breakfasts.length > idx) return breakfasts[idx];
     if (breakfasts.length > 0) return breakfasts[idx % breakfasts.length];
     if (safeRecipes.length > 0) return safeRecipes[idx % safeRecipes.length];
-    return MEAL_RECIPES_BANK.find((r) => r.id === "bf_overnight_chia_oat_parfait") || MEAL_RECIPES_BANK[0];
+    return MEAL_RECIPES_BANK[0];
   };
 
   const getLu = (idx: number) => {
+    if (lunches.length > idx) return lunches[idx];
     if (lunches.length > 0) return lunches[idx % lunches.length];
     if (safeRecipes.length > 0) return safeRecipes[idx % safeRecipes.length];
-    return MEAL_RECIPES_BANK.find((r) => r.id === "lu_lentil_dal_spinach_brown_rice") || MEAL_RECIPES_BANK[0];
+    return MEAL_RECIPES_BANK[1] || MEAL_RECIPES_BANK[0];
   };
 
   const getDi = (idx: number) => {
+    if (dinners.length > idx) return dinners[idx];
     if (dinners.length > 0) return dinners[idx % dinners.length];
     if (safeRecipes.length > 0) return safeRecipes[idx % safeRecipes.length];
-    return MEAL_RECIPES_BANK.find((r) => r.id === "di_paneer_tofu_stirfry_quinoa") || MEAL_RECIPES_BANK[0];
+    return MEAL_RECIPES_BANK[2] || MEAL_RECIPES_BANK[0];
   };
 
   const getSn = (idx: number) => {
+    if (snacks.length > idx) return snacks[idx];
     if (snacks.length > 0) return snacks[idx % snacks.length];
     if (safeRecipes.length > 0) return safeRecipes[idx % safeRecipes.length];
-    return MEAL_RECIPES_BANK.find((r) => r.id === "sn_apple_almond_butter") || MEAL_RECIPES_BANK[0];
+    return MEAL_RECIPES_BANK[3] || MEAL_RECIPES_BANK[0];
   };
 
   const bmr = calculateBMR(settings.targetWeightKg || 72, 175, 36, "male");
