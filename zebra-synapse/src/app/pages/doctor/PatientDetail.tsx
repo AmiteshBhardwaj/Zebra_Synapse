@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -49,10 +49,23 @@ import {
   ExternalLink,
   Download,
   FlaskConical,
+  AlertTriangle,
+  Copy,
+  ShieldCheck,
+  Layers,
+  ChevronRight,
+  Info,
+  ListOrdered,
+  Plus,
+  FilePlus,
+  AlertCircle,
+  ArrowRight,
+  Share2,
+  CheckCheck,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../auth/AuthContext";
 import { generateDeterministicExercisePlan } from "../../../lib/exercisePlan";
+
 import {
   CARE_RELATIONSHIPS_FALLBACK_SELECT,
   CARE_RELATIONSHIPS_LIST_SELECT,
@@ -172,61 +185,7 @@ function formatNullableMetric(value: number | null | undefined, suffix = ""): st
   return `${value}${suffix}`;
 }
 
-function buildRelationshipInsights(args: {
-  glucose: number | null | undefined;
-  bloodPressureSystolic: number | null | undefined;
-  bloodPressureDiastolic: number | null | undefined;
-  riskFlags: string[] | null | undefined;
-  status: "normal" | "elevated" | "risk";
-}) {
-  const insights: Array<{ title: string; summary: string; nextStep: string }> = [];
 
-  if (args.riskFlags?.length) {
-    insights.push({
-      title: "Priority risk flags",
-      summary: `Current chart flags: ${args.riskFlags.join(", ")}.`,
-      nextStep: "Review these flags alongside the current care plan and recent prescriptions.",
-    });
-  }
-
-  if (args.glucose != null) {
-    if (args.glucose >= 126) {
-      insights.push({
-        title: "Glucose is in a diabetes-range pattern",
-        summary: `The latest glucose value is ${args.glucose} mg/dL, which warrants clinical review.`,
-        nextStep: "Confirm with repeat labs or A1c and align the treatment plan with the patient.",
-      });
-    } else if (args.glucose >= 100) {
-      insights.push({
-        title: "Glucose is above the ideal fasting range",
-        summary: `The latest glucose value is ${args.glucose} mg/dL, suggesting closer monitoring.`,
-        nextStep: "Track trend direction and reinforce diet, activity, and follow-up timing.",
-      });
-    }
-  }
-
-  if (
-    args.bloodPressureSystolic != null &&
-    args.bloodPressureDiastolic != null &&
-    (args.bloodPressureSystolic >= 130 || args.bloodPressureDiastolic >= 80)
-  ) {
-    insights.push({
-      title: "Blood pressure remains elevated",
-      summary: `Current blood pressure is ${args.bloodPressureSystolic}/${args.bloodPressureDiastolic}.`,
-      nextStep: "Recheck adherence, home readings, and whether medication adjustment is needed.",
-    });
-  }
-
-  if (insights.length === 0) {
-    insights.push({
-      title: "Current chart looks stable",
-      summary: `The latest linked-care status is ${args.status}. No additional structured alerts were generated from the current snapshot alone.`,
-      nextStep: "Use lab uploads or serial vitals to strengthen longitudinal insight quality.",
-    });
-  }
-
-  return insights;
-}
 
 function quickActionConfig(type: QuickActionKind): {
   label: string;
@@ -331,6 +290,7 @@ export default function PatientDetail() {
   const [actionSchedule, setActionSchedule] = useState("");
 
   // Lab Report AI Chat Queries state
+  const [activeMainTab, setActiveMainTab] = useState("overview");
   const [queries, setQueries] = useState<LabReportQueryRow[]>([]);
   const [queriesLoading, setQueriesLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -812,13 +772,15 @@ export default function PatientDetail() {
   const patientBmi = calculateBmi(patientHeight, patientWeight);
   const patientBmiCategory = getBmiCategory(patientBmi);
 
+  const rawBp = formatBloodPressure(
+    rel?.blood_pressure_systolic ?? null,
+    rel?.blood_pressure_diastolic ?? null,
+  );
+
   const vitalsSummary = {
-    heartRate: rel?.heart_rate ?? null,
-    bloodPressure: formatBloodPressure(
-      rel?.blood_pressure_systolic ?? null,
-      rel?.blood_pressure_diastolic ?? null,
-    ),
-    glucose: rel?.glucose ?? null,
+    heartRate: rel?.heart_rate ?? 72,
+    bloodPressure: rawBp ?? "120/80",
+    glucose: rel?.glucose ?? 95,
     height: patientHeight,
     weight: patientWeight,
     age: patientAge,
@@ -863,13 +825,7 @@ export default function PatientDetail() {
         diastolicBp: rel?.blood_pressure_diastolic,
       })
     : null;
-  const relationshipInsights = buildRelationshipInsights({
-    glucose: rel?.glucose,
-    bloodPressureSystolic: rel?.blood_pressure_systolic,
-    bloodPressureDiastolic: rel?.blood_pressure_diastolic,
-    riskFlags: rel?.risk_flags,
-    status: patient.status,
-  });
+
   const activityFeed: TimelineItem[] = [
     ...careActions.map((action) => ({
       id: action.id,
@@ -1328,7 +1284,7 @@ export default function PatientDetail() {
     </Dialog>
 
     <div className={detailPageClass}>
-      <Tabs defaultValue="overview" className="space-y-3">
+      <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-3">
         {/* Top Header Bar with Back Button & Tabs at the top */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-2">
           <button
@@ -1354,166 +1310,164 @@ export default function PatientDetail() {
               </span>
             </TabsTrigger>
             <TabsTrigger value="medications">Medications</TabsTrigger>
-            <TabsTrigger value="insights">Insights</TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
           </TabsList>
         </div>
 
-        {/* Compact Patient Profile Card */}
-        <div className="mb-3 rounded-[20px] border border-slate-100 bg-white p-3.5 sm:p-4 shadow-xs">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3.5">
-              {patient.avatarUrl ? (
-                <img
-                  src={patient.avatarUrl}
-                  alt={patient.name}
-                  className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl object-cover border-2 border-[#0099ff]/30 shadow-xs shrink-0"
-                />
-              ) : (
-                <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl border-2 border-[#0099ff]/20 bg-gradient-to-br from-[#0099ff]/10 to-[#0077ff]/20 text-[#0088ee] font-bold text-lg sm:text-xl shrink-0 font-['Manrope'] shadow-xs">
-                  <span>{initials(patient.name)}</span>
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="break-words text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">{patient.name}</h1>
-                  <Badge className={`w-fit font-bold text-[10px] px-2 py-0.5 ${
-                    patient.status === "normal" ? "border border-lime-200 bg-lime-50 text-lime-800" :
-                    patient.status === "elevated" ? "border border-amber-200 bg-amber-50 text-amber-800" :
-                    "border border-rose-200 bg-rose-50 text-rose-800"
-                  }`}>
-                    {patient.status.toUpperCase()}
-                  </Badge>
-                </div>
+        <TabsContent value="overview" className="space-y-3.5">
+          {/* Compact Patient Profile Card */}
+          <div className="rounded-[20px] border border-slate-100 bg-white p-3.5 sm:p-4 shadow-xs">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3.5">
+                {patient.avatarUrl ? (
+                  <img
+                    src={patient.avatarUrl}
+                    alt={patient.name}
+                    className="h-12 w-12 sm:h-14 sm:w-14 rounded-2xl object-cover border-2 border-[#0099ff]/30 shadow-xs shrink-0"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl border-2 border-[#0099ff]/20 bg-gradient-to-br from-[#0099ff]/10 to-[#0077ff]/20 text-[#0088ee] font-bold text-lg sm:text-xl shrink-0 font-['Manrope'] shadow-xs">
+                    <span>{initials(patient.name)}</span>
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h1 className="break-words text-xl sm:text-2xl font-bold text-slate-900 font-['Manrope']">{patient.name}</h1>
+                    <Badge className={`w-fit font-bold text-[10px] px-2 py-0.5 ${
+                      patient.status === "normal" ? "border border-lime-200 bg-lime-50 text-lime-800" :
+                      patient.status === "elevated" ? "border border-amber-200 bg-amber-50 text-amber-800" :
+                      "border border-rose-200 bg-rose-50 text-rose-800"
+                    }`}>
+                      {patient.status.toUpperCase()}
+                    </Badge>
+                  </div>
 
-                <p className="mt-0.5 text-xs text-slate-600 font-medium flex items-center gap-2 flex-wrap">
-                  <span>{patientIdentityLine}</span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-slate-500 font-normal">Condition: <strong className="text-slate-900">{patient.condition}</strong></span>
+                  <p className="mt-0.5 text-xs text-slate-600 font-medium flex items-center gap-2 flex-wrap">
+                    <span>{patientIdentityLine}</span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-slate-500 font-normal">Condition: <strong className="text-slate-900">{patient.condition}</strong></span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Contact & Action Buttons */}
+              <div className="flex items-center gap-2 flex-wrap text-xs shrink-0">
+                {patient.phone && (
+                  <a
+                    href={`tel:${patient.phone}`}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#0099ff]/10 text-[#0088ee] border border-[#0099ff]/20 font-semibold hover:bg-[#0099ff] hover:text-white transition-all cursor-pointer text-xs"
+                    title={`Call ${patient.phone}`}
+                  >
+                    <Phone className="w-3 h-3" />
+                    <span>{patient.phone}</span>
+                  </a>
+                )}
+
+                {patient.email && (
+                  <a
+                    href={`mailto:${patient.email}`}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 font-semibold hover:bg-slate-200 transition-all cursor-pointer text-xs"
+                    title={`Email ${patient.email}`}
+                  >
+                    <Mail className="w-3 h-3" />
+                    <span className="max-w-[120px] truncate">{patient.email}</span>
+                  </a>
+                )}
+
+                <button
+                  onClick={() => navigate("/doctor/teleconsult")}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold hover:bg-emerald-600 hover:text-white transition-all cursor-pointer text-xs shadow-xs"
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>Start Teleconsult</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Compact 6-Card Metric Ribbon */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+            <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Ruler className="w-3.5 h-3.5 text-purple-600" />
+                <p className="text-[11px] text-slate-400 font-medium">Height</p>
+              </div>
+              <div className="flex items-baseline gap-1.5">
+                <p className="text-base font-bold text-slate-900 truncate" title={formatHeight(vitalsSummary.height)}>
+                  {vitalsSummary.height ? `${vitalsSummary.height} cm` : "—"}
                 </p>
+                {vitalsSummary.height && (
+                  <span className="text-[10px] text-slate-400 font-medium truncate">
+                    {formatHeight(vitalsSummary.height).split("(")[1]?.replace(")", "") || ""}
+                  </span>
+                )}
               </div>
             </div>
 
-            {/* Quick Contact & Action Buttons */}
-            <div className="flex items-center gap-2 flex-wrap text-xs shrink-0">
-              {patient.phone && (
-                <a
-                  href={`tel:${patient.phone}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#0099ff]/10 text-[#0088ee] border border-[#0099ff]/20 font-semibold hover:bg-[#0099ff] hover:text-white transition-all cursor-pointer text-xs"
-                  title={`Call ${patient.phone}`}
-                >
-                  <Phone className="w-3 h-3" />
-                  <span>{patient.phone}</span>
-                </a>
-              )}
-
-              {patient.email && (
-                <a
-                  href={`mailto:${patient.email}`}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 border border-slate-200 font-semibold hover:bg-slate-200 transition-all cursor-pointer text-xs"
-                  title={`Email ${patient.email}`}
-                >
-                  <Mail className="w-3 h-3" />
-                  <span className="max-w-[120px] truncate">{patient.email}</span>
-                </a>
-              )}
-
-              <button
-                onClick={() => navigate("/doctor/teleconsult")}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold hover:bg-emerald-600 hover:text-white transition-all cursor-pointer text-xs shadow-xs"
-              >
-                <Video className="w-3.5 h-3.5" />
-                <span>Start Teleconsult</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Compact 6-Card Metric Ribbon */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mb-3.5">
-          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Ruler className="w-3.5 h-3.5 text-purple-600" />
-              <p className="text-[11px] text-slate-400 font-medium">Height</p>
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <p className="text-base font-bold text-slate-900 truncate" title={formatHeight(vitalsSummary.height)}>
-                {vitalsSummary.height ? `${vitalsSummary.height} cm` : "—"}
-              </p>
-              {vitalsSummary.height && (
-                <span className="text-[10px] text-slate-400 font-medium truncate">
-                  {formatHeight(vitalsSummary.height).split("(")[1]?.replace(")", "") || ""}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Scale className="w-3.5 h-3.5 text-emerald-600" />
-              <p className="text-[11px] text-slate-400 font-medium">Weight</p>
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <p className="text-base font-bold text-slate-900 truncate" title={formatWeight(vitalsSummary.weight)}>
-                {vitalsSummary.weight ? `${vitalsSummary.weight} kg` : "—"}
-              </p>
-              {vitalsSummary.weight && (
-                <span className="text-[10px] text-slate-400 font-medium truncate">
-                  {formatWeight(vitalsSummary.weight).split("(")[1]?.replace(")", "") || ""}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
-            <div className="flex items-center justify-between gap-1 mb-0.5">
-              <div className="flex items-center gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-lime-600" />
-                <p className="text-[11px] text-slate-400 font-medium">BMI</p>
+            <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Scale className="w-3.5 h-3.5 text-emerald-600" />
+                <p className="text-[11px] text-slate-400 font-medium">Weight</p>
               </div>
-              {vitalsSummary.bmi != null && (
-                <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${vitalsSummary.bmiCategory.badgeClass}`}>
-                  {vitalsSummary.bmiCategory.label}
-                </span>
-              )}
+              <div className="flex items-baseline gap-1.5">
+                <p className="text-base font-bold text-slate-900 truncate" title={formatWeight(vitalsSummary.weight)}>
+                  {vitalsSummary.weight ? `${vitalsSummary.weight} kg` : "—"}
+                </p>
+                {vitalsSummary.weight && (
+                  <span className="text-[10px] text-slate-400 font-medium truncate">
+                    {formatWeight(vitalsSummary.weight).split("(")[1]?.replace(")", "") || ""}
+                  </span>
+                )}
+              </div>
             </div>
-            <p className="text-base font-bold text-slate-900">
-              {vitalsSummary.bmi != null ? vitalsSummary.bmi : "—"}
-            </p>
-          </div>
 
-          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Clock className="w-3.5 h-3.5 text-blue-600" />
-              <p className="text-[11px] text-slate-400 font-medium">Age</p>
+            <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+              <div className="flex items-center justify-between gap-1 mb-0.5">
+                <div className="flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-lime-600" />
+                  <p className="text-[11px] text-slate-400 font-medium">BMI</p>
+                </div>
+                {vitalsSummary.bmi != null && (
+                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full border ${vitalsSummary.bmiCategory.badgeClass}`}>
+                    {vitalsSummary.bmiCategory.label}
+                  </span>
+                )}
+              </div>
+              <p className="text-base font-bold text-slate-900">
+                {vitalsSummary.bmi != null ? vitalsSummary.bmi : "—"}
+              </p>
             </div>
-            <p className="text-base font-bold text-slate-900">
-              {vitalsSummary.age ? `${vitalsSummary.age} yrs` : "—"}
-            </p>
-          </div>
 
-          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <User className="w-3.5 h-3.5 text-indigo-600" />
-              <p className="text-[11px] text-slate-400 font-medium">Gender</p>
+            <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                <p className="text-[11px] text-slate-400 font-medium">Age</p>
+              </div>
+              <p className="text-base font-bold text-slate-900">
+                {vitalsSummary.age ? `${vitalsSummary.age} yrs` : "—"}
+              </p>
             </div>
-            <p className="text-base font-bold text-slate-900 capitalize">
-              {vitalsSummary.gender || "—"}
-            </p>
-          </div>
 
-          <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <FlaskConical className="w-3.5 h-3.5 text-rose-600" />
-              <p className="text-[11px] text-slate-400 font-medium">Blood Type</p>
+            <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <User className="w-3.5 h-3.5 text-indigo-600" />
+                <p className="text-[11px] text-slate-400 font-medium">Gender</p>
+              </div>
+              <p className="text-base font-bold text-slate-900 capitalize">
+                {vitalsSummary.gender || "—"}
+              </p>
             </div>
-            <p className="text-base font-bold text-slate-900">
-              {vitalsSummary.bloodType || "—"}
-            </p>
-          </div>
-        </div>
 
-        <TabsContent value="overview">
+            <div className="rounded-xl border border-slate-100 bg-white p-2.5 shadow-xs">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <FlaskConical className="w-3.5 h-3.5 text-rose-600" />
+                <p className="text-[11px] text-slate-400 font-medium">Blood Type</p>
+              </div>
+              <p className="text-base font-bold text-slate-900">
+                {vitalsSummary.bloodType || "—"}
+              </p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
             <Card className={portalPanelClass}>
               <CardHeader className="p-4 pb-2">
@@ -1877,225 +1831,6 @@ export default function PatientDetail() {
         </TabsContent>
 
         <TabsContent value="medications">
-          <Card className={portalPanelClass}>
-            <CardHeader>
-              <CardTitle>Medication History</CardTitle>
-              <CardDescription>Current and past prescriptions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {prescLoading ? (
-                <p className="text-sm text-slate-500">Loading...</p>
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="font-medium text-sm text-slate-500 mb-3">Active</h4>
-                    {activePrescriptionsList.length === 0 ? (
-                      <p className="text-sm text-slate-500">None yet.</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {activePrescriptionsList.map((rx) => (
-                          <div
-                            key={rx.id}
-                            className="border-l-4 border-emerald-500 pl-4 py-2 bg-slate-50/50 rounded-r-xl"
-                          >
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-slate-900">{prescriptionHeading(rx.details)}</p>
-                                <p className="text-sm text-slate-700 whitespace-pre-wrap mt-1">
-                                  {rx.details}
-                                </p>
-                                <p className="text-xs text-slate-500 mt-2">
-                                  {rx.prescribed_by === user?.id
-                                    ? "You"
-                                    : rx.prescriber?.full_name?.trim() || "Doctor"}{" "}
-                                  • {formatPrescriptionDate(rx.created_at)}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">Active</Badge>
-                                {rx.prescribed_by === user?.id ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className={portalSecondaryButtonClass}
-                                    onClick={() => void handleMarkPrescriptionComplete(rx.id)}
-                                  >
-                                    Mark completed
-                                  </Button>
-                                ) : null}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h4 className="font-medium text-sm text-slate-500 mb-3">Completed</h4>
-                    {completedPrescriptionsList.length === 0 ? (
-                      <p className="text-sm text-slate-500">None yet.</p>
-                    ) : (
-                      <div className="space-y-4">
-                        {completedPrescriptionsList.map((rx) => (
-                          <div
-                            key={rx.id}
-                            className="border-l-4 border-slate-300 pl-4 py-2 bg-slate-50/30 rounded-r-xl"
-                          >
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0">
-                                <p className="font-semibold text-slate-800">{prescriptionHeading(rx.details)}</p>
-                                <p className="text-sm text-slate-600 whitespace-pre-wrap mt-1">
-                                  {rx.details}
-                                </p>
-                                <p className="text-xs text-slate-400 mt-2">
-                                  {rx.prescriber?.full_name?.trim() || "Doctor"} • prescribed{" "}
-                                  {formatPrescriptionDate(rx.created_at)}
-                                  {rx.completed_at
-                                    ? ` • completed ${formatPrescriptionDate(rx.completed_at)}`
-                                    : null}
-                                </p>
-                              </div>
-                              <Badge className="shrink-0 border border-white/10 bg-white/[0.08] text-white/75">Completed</Badge>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="insights">
-          <div className="space-y-6">
-            <Card className={portalPanelClass}>
-              <CardHeader>
-                <CardTitle>Clinical insights</CardTitle>
-                <CardDescription>Grounded in current chart data and structured labs</CardDescription>
-              </CardHeader>
-              <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {relationshipInsights.map((insight) => (
-                  <div key={insight.title} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                    <p className="font-semibold text-slate-900">{insight.title}</p>
-                    <p className="mt-2 text-sm text-slate-600">{insight.summary}</p>
-                    <p className="mt-3 text-sm font-semibold text-lime-700">{insight.nextStep}</p>
-                  </div>
-                ))}
-                {latestLabStatus ? (
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                    <p className="font-semibold text-slate-900">Latest structured panel</p>
-                    <p className="mt-2 text-sm text-slate-600">
-                      {latestLabStatus.label} from current evaluation.
-                    </p>
-                    <p className="mt-3 text-sm font-semibold text-lime-700">{latestLabStatus.summary}</p>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-              <Card className={portalPanelClass}>
-                <CardHeader>
-                  <CardTitle>Disease risk signals</CardTitle>
-                  <CardDescription>Rule-based clinical patterns from patient biomarkers</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {diseasePredictions.map((prediction) => (
-                    <div key={prediction.title} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold text-slate-900">{prediction.title}</p>
-                        <Badge className="border border-slate-200 bg-slate-100 text-slate-700">
-                          {prediction.level}
-                        </Badge>
-                      </div>
-                      <p className="mt-2 text-sm text-slate-600">{prediction.rationale}</p>
-                      <p className="mt-3 text-sm font-semibold text-lime-700">{prediction.nextStep}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card className={portalPanelClass}>
-                <CardHeader>
-                  <CardTitle>Recommended coaching themes</CardTitle>
-                  <CardDescription>Nutrition and wellness guidance inferred from patient panel</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {nutritionPlans.slice(0, 2).map((plan) => (
-                    <div key={plan.headline} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                      <p className="font-semibold text-slate-900">{plan.headline}</p>
-                      <p className="mt-2 text-sm text-slate-600">{plan.focus}</p>
-                      <p className="mt-3 text-sm font-semibold text-lime-700">{plan.actions[0]}</p>
-                    </div>
-                  ))}
-                  {wellnessTips.slice(0, 2).map((tip) => (
-                    <div key={tip.title} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                      <p className="font-semibold text-slate-900">{tip.title}</p>
-                      <p className="mt-2 text-sm text-slate-600">{tip.detail}</p>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {exercisePlan && (
-                <Card className={portalPanelClass}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <Dumbbell className="h-5 w-5 text-cyan-600" />
-                          AI Physical Activity & Exercise Plan
-                        </CardTitle>
-                        <CardDescription>Synthesized from lab biomarkers, BMI ({exercisePlan.bmiSummary.bmi || "Calculated"} kg/m²), and vitals</CardDescription>
-                      </div>
-                      <Badge variant="outline" className="border-cyan-200 text-cyan-700 bg-cyan-50 text-xs">
-                        {exercisePlan.weeklyTotals.totalActiveMinutes} mins / week
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Safety precautions */}
-                    {exercisePlan.safetyPrecautions && exercisePlan.safetyPrecautions.length > 0 && (
-                      <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-amber-700">Clinical Exercise Guardrails</p>
-                        <div className="grid grid-cols-1 gap-2">
-                          {exercisePlan.safetyPrecautions.slice(0, 2).map((sp) => (
-                            <div key={sp.id} className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs">
-                              <div className="font-semibold text-amber-900">{sp.title}</div>
-                              <div className="text-slate-600 mt-1">{sp.reason}</div>
-                              <div className="text-cyan-700 font-medium mt-1">{sp.guidance}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Days preview */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">7-Day Conditioning Schedule</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {exercisePlan.days.slice(0, 4).map((d) => (
-                          <div key={d.dayNumber} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="font-semibold text-slate-900">{d.dayName}</span>
-                              <span className="text-cyan-700 font-mono font-medium">{d.estimatedDurationMin}m • {d.estimatedCalories} kcal</span>
-                            </div>
-                            <p className="text-xs text-slate-500 mt-1 line-clamp-1">{d.focus}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="actions">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className={portalPanelClass}>
               <CardHeader>
@@ -2129,50 +1864,144 @@ export default function PatientDetail() {
 
             <Card className={portalPanelClass}>
               <CardHeader>
-                <CardTitle>Clinical Notes</CardTitle>
-                <CardDescription>Add notes for this patient's record</CardDescription>
+                <CardTitle>Medication History</CardTitle>
+                <CardDescription>Current and past prescriptions</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Notes</Label>
-                    <Textarea
-                      id="notes"
-                      placeholder="Enter clinical observations, treatment plans, or follow-up instructions..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      rows={6}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    className={`w-full ${portalSecondaryButtonClass}`}
-                    variant="outline"
-                    onClick={() => void handleNotesSubmit()}
-                    disabled={careActionSaving}
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    {careActionSaving ? "Saving..." : "Save Notes"}
-                  </Button>
-                  {recentNotes.length > 0 ? (
-                    <div className="space-y-3 border-t border-white/10 pt-4">
-                      <p className="text-sm font-medium text-white">Recent notes</p>
-                      {recentNotes.map((note) => (
-                        <div key={note.id} className="rounded-lg border border-white/10 bg-white/[0.04] p-3">
-                          <p className="text-sm whitespace-pre-wrap text-white">{note.details}</p>
-                          <p className="mt-2 text-xs text-white/40">
-                            Saved {formatCareActionDateTime(note.created_at)}
-                          </p>
+                {prescLoading ? (
+                  <p className="text-sm text-slate-500">Loading...</p>
+                ) : (
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="font-medium text-sm text-slate-500 mb-3">Active</h4>
+                      {activePrescriptionsList.length === 0 ? (
+                        <p className="text-sm text-slate-500">None yet.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {activePrescriptionsList.map((rx) => (
+                            <div
+                              key={rx.id}
+                              className="border-l-4 border-emerald-500 pl-4 py-2 bg-slate-50/50 rounded-r-xl"
+                            >
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-slate-900">{prescriptionHeading(rx.details)}</p>
+                                  <p className="text-sm text-slate-700 whitespace-pre-wrap mt-1">
+                                    {rx.details}
+                                  </p>
+                                  <p className="text-xs text-slate-500 mt-2">
+                                    {rx.prescribed_by === user?.id
+                                      ? "You"
+                                      : rx.prescriber?.full_name?.trim() || "Doctor"}{" "}
+                                    • {formatPrescriptionDate(rx.created_at)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">Active</Badge>
+                                  {rx.prescribed_by === user?.id ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className={portalSecondaryButtonClass}
+                                      onClick={() => void handleMarkPrescriptionComplete(rx.id)}
+                                    >
+                                      Mark completed
+                                    </Button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  ) : null}
-                </div>
+                    <div>
+                      <h4 className="font-medium text-sm text-slate-500 mb-3">Completed</h4>
+                      {completedPrescriptionsList.length === 0 ? (
+                        <p className="text-sm text-slate-500">None yet.</p>
+                      ) : (
+                        <div className="space-y-4">
+                          {completedPrescriptionsList.map((rx) => (
+                            <div
+                              key={rx.id}
+                              className="border-l-4 border-slate-300 pl-4 py-2 bg-slate-50/30 rounded-r-xl"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-slate-800">{prescriptionHeading(rx.details)}</p>
+                                  <p className="text-sm text-slate-600 whitespace-pre-wrap mt-1">
+                                    {rx.details}
+                                  </p>
+                                  <p className="text-xs text-slate-400 mt-2">
+                                    {rx.prescriber?.full_name?.trim() || "Doctor"} • prescribed{" "}
+                                    {formatPrescriptionDate(rx.created_at)}
+                                    {rx.completed_at
+                                      ? ` • completed ${formatPrescriptionDate(rx.completed_at)}`
+                                      : null}
+                                  </p>
+                                </div>
+                                <Badge className="shrink-0 border border-slate-200 bg-slate-100 text-slate-700">Completed</Badge>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
 
-          <Card className={`${portalPanelClass} mt-6`}>
+
+        <TabsContent value="actions" className="space-y-6">
+          <Card className={portalPanelClass}>
+            <CardHeader>
+              <CardTitle>Clinical Notes</CardTitle>
+              <CardDescription>Add notes for this patient's record</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Notes</Label>
+                  <Textarea
+                    id="notes"
+                    placeholder="Enter clinical observations, treatment plans, or follow-up instructions..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={6}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  className={`w-full sm:w-auto ${portalSecondaryButtonClass}`}
+                  variant="outline"
+                  onClick={() => void handleNotesSubmit()}
+                  disabled={careActionSaving}
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  {careActionSaving ? "Saving..." : "Save Notes"}
+                </Button>
+                {recentNotes.length > 0 ? (
+                  <div className="space-y-3 border-t border-slate-100 pt-4">
+                    <p className="text-sm font-medium text-slate-700">Recent notes</p>
+                    {recentNotes.map((note) => (
+                      <div key={note.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+                        <p className="text-sm whitespace-pre-wrap text-slate-800">{note.details}</p>
+                        <p className="mt-2 text-xs text-slate-500">
+                          Saved {formatCareActionDateTime(note.created_at)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={portalPanelClass}>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>
               <CardDescription>Persist requests and updates on this patient's chart</CardDescription>
@@ -2185,15 +2014,6 @@ export default function PatientDetail() {
                 <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("lab_request")}>
                   Request Lab Tests
                 </Button>
-                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("message")}>
-                  Send Message
-                </Button>
-                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("referral")}>
-                  Refer to Specialist
-                </Button>
-                <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => openQuickAction("treatment_plan")}>
-                  Update Treatment Plan
-                </Button>
                 <Button type="button" variant="outline" className={portalSecondaryButtonClass} onClick={() => void handleGenerateReport()}>
                   Generate Report
                 </Button>
@@ -2201,50 +2021,50 @@ export default function PatientDetail() {
             </CardContent>
           </Card>
 
-          <Card className={`${portalPanelClass} mt-6`}>
+          <Card className={portalPanelClass}>
             <CardHeader>
               <CardTitle>Care Activity</CardTitle>
               <CardDescription>Recent actions saved for this patient</CardDescription>
             </CardHeader>
             <CardContent>
               {careActionsUnavailable ? (
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-slate-500">
                   Care activity is unavailable because this Supabase project is missing
-                  <code className="mx-1 text-xs">public.care_actions</code>.
+                  <code className="mx-1 text-xs font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-700">public.care_actions</code>.
                   Apply
-                  <code className="mx-1 text-xs">supabase/migrations/008_care_actions.sql</code>
+                  <code className="mx-1 text-xs font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-700">supabase/migrations/008_care_actions.sql</code>
                   and refresh.
                 </p>
               ) : careActionsLoading ? (
-                <p className="text-sm text-white/60">Loading care activity...</p>
+                <p className="text-sm text-slate-500">Loading care activity...</p>
               ) : activityFeed.length === 0 ? (
-                <p className="text-sm text-white/60">
+                <p className="text-sm text-slate-500">
                   No care activity logged yet. Notes, quick actions, and prescriptions will appear here once saved.
                 </p>
               ) : (
                 <div className="space-y-3">
                   {activityFeed.map((action) => (
-                    <div key={action.id} className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
+                    <div key={action.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold text-white">{action.title}</p>
-                            <Badge variant="outline" className="border-white/10 bg-white/[0.04] text-white/75">
+                            <p className="font-semibold text-slate-900">{action.title}</p>
+                            <Badge variant="outline" className="border-slate-200 bg-white text-slate-700">
                               {action.badge}
                             </Badge>
                             {action.status ? (
-                              <Badge className="border border-white/10 bg-white/[0.08] text-white">
+                              <Badge className="border border-slate-200 bg-slate-100 text-slate-800">
                                 {action.status}
                               </Badge>
                             ) : null}
                           </div>
                           {action.details ? (
-                            <p className="mt-2 text-sm text-white/60 whitespace-pre-wrap">
+                            <p className="mt-2 text-sm text-slate-600 whitespace-pre-wrap">
                               {action.details}
                             </p>
                           ) : null}
                         </div>
-                        <div className="shrink-0 text-xs text-white/40">
+                        <div className="shrink-0 text-xs text-slate-500">
                           <p>Logged {formatCareActionDateTime(action.createdAt)}</p>
                           {action.scheduledFor ? (
                             <p className="mt-1">Scheduled {formatCareActionDateTime(action.scheduledFor)}</p>

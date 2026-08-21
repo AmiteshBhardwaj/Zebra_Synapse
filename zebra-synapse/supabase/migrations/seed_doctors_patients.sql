@@ -90,7 +90,7 @@ insert into seed_patients_data (
   risk_flags
 )
 values
-  (1, 'zebra-seed-patient-1@example.test', 'Maya Thompson', 165.0, 68.5, 34, 'Female', 'O+', 'omnivore', '{}'::text[], array['hypertension']::text[], 4, 'Hypertension', null, 128, 82, 96, 'elevated', array['Home BP review']::text[]),
+  (1, 'zebra-seed-patient-1@example.test', 'Maya Thompson', 165.0, 68.5, 34, 'Female', 'O+', 'omnivore', '{}'::text[], array['hypertension']::text[], 4, 'Hypertension', 72, 120, 80, 95, 'normal', array['Routine BP review']::text[]),
   (2, 'zebra-seed-patient-2@example.test', 'Liam Carter', 178.0, 76.0, 41, 'Male', 'A+', 'vegetarian', array['lactose']::text[], '{}'::text[], 11, 'Hyperlipidemia', 68, 118, 76, 92, 'normal', '{}'::text[]),
   (3, 'zebra-seed-patient-3@example.test', 'Sofia Bennett', 162.0, 79.5, 52, 'Female', 'B+', 'omnivore', '{}'::text[], array['diabetes']::text[], 7, 'Type 2 diabetes', 76, 132, 84, 148, 'risk', array['High glucose']::text[]),
   (4, 'zebra-seed-patient-4@example.test', 'Noah Patel', 182.0, 74.0, 29, 'Male', 'AB+', 'vegan', array['peanuts']::text[], '{}'::text[], 18, 'Asthma', 74, 116, 74, 90, 'normal', array['Inhaler refill due']::text[]),

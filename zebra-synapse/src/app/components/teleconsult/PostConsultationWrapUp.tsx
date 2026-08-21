@@ -281,48 +281,45 @@ ${draftText}
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-3 animate-in fade-in duration-200">
       {/* Top Banner / Session Recap Header */}
-      <div className="rounded-[26px] bg-gradient-to-r from-[#3E36B0] via-[#4A42C4] to-[#6A61EB] p-6 md:p-8 text-white shadow-xl shadow-[#3E36B0]/15 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="absolute -top-16 -right-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 right-36 w-48 h-48 bg-[#A8DEF7]/20 rounded-full blur-2xl pointer-events-none" />
+      <div className="rounded-2xl bg-gradient-to-r from-[#3E36B0] via-[#4A42C4] to-[#6A61EB] px-4 py-3 sm:px-5 sm:py-3 text-white shadow-md shadow-[#3E36B0]/15 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-8 right-24 w-36 h-36 bg-[#A8DEF7]/20 rounded-full blur-xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-xl space-y-2">
+        <div className="relative z-10 space-y-0.5">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-xs font-semibold text-[#A8DEF7] border border-white/20 backdrop-blur-sm">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/15 text-[11px] font-semibold text-[#A8DEF7] border border-white/20 backdrop-blur-sm">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
               Call Concluded • Post-Consultation Wrap-Up
             </span>
-            <span className="rounded-full bg-emerald-400 text-slate-900 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">
+            <span className="rounded-full bg-emerald-400 text-slate-900 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
               Encounter Documentation
             </span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight font-['Manrope']">
+          <h1 className="text-base sm:text-lg font-extrabold tracking-tight font-['Manrope']">
             Wrap Up Consultation with {patientName || "Patient"}
           </h1>
-          <p className="text-xs md:text-sm text-white/80 leading-relaxed font-medium">
-            Finalize clinical notes, prescribe medications, and choose your next workflow action.
-          </p>
         </div>
 
         {/* Quick Stats Pill */}
-        <div className="relative z-10 flex flex-wrap items-center gap-3">
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/15 p-3.5 flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#A8DEF7]" />
+        <div className="relative z-10 flex items-center gap-2">
+          <div className="bg-white/10 backdrop-blur-md rounded-xl border border-white/15 px-3 py-1 flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#A8DEF7]" />
               <div>
-                <p className="text-[10px] text-white/70 uppercase font-semibold">Call Duration</p>
-                <p className="font-bold text-white text-sm">{formatDuration(callDurationSec)}</p>
+                <span className="text-[10px] text-white/70 font-semibold mr-1">Duration:</span>
+                <span className="font-bold text-white text-xs">{formatDuration(callDurationSec)}</span>
               </div>
             </div>
-            <div className="h-7 w-px bg-white/20" />
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-300" />
+            <div className="h-4 w-px bg-white/20" />
+            <div className="flex items-center gap-1.5">
+              <Users className="w-3.5 h-3.5 text-emerald-300" />
               <div>
-                <p className="text-[10px] text-white/70 uppercase font-semibold">Live Queue</p>
-                <p className="font-bold text-white text-sm">
-                  {waitingQueueCount > 0 ? `${waitingQueueCount} Waiting` : "Queue Ready"}
-                </p>
+                <span className="text-[10px] text-white/70 font-semibold mr-1">Live Queue:</span>
+                <span className="font-bold text-white text-xs">
+                  {waitingQueueCount > 0 ? `${waitingQueueCount} Waiting` : "Ready"}
+                </span>
               </div>
             </div>
           </div>
@@ -330,17 +327,17 @@ ${draftText}
       </div>
 
       {/* Main Grid: Clinical Documentation & Action Bar */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left 2 Columns: Clinical Notes & Diagnosis */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid gap-3 lg:grid-cols-12">
+        {/* Left Column (7 cols): Clinical Notes, Diagnosis & Guidance */}
+        <div className="lg:col-span-7 space-y-3">
           {/* Section 1: Diagnosis & Assessment */}
-          <div className="rounded-[26px] bg-white border border-slate-200/70 p-6 space-y-4 shadow-sm">
+          <div className="rounded-2xl bg-white border border-slate-200/80 p-3.5 space-y-2 shadow-xs">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[#3E36B0] font-bold text-xs tracking-wider uppercase">
-                <Stethoscope className="h-4 w-4" />
+              <div className="flex items-center gap-1.5 text-[#3E36B0] font-bold text-[11px] tracking-wider uppercase">
+                <Stethoscope className="h-3.5 w-3.5" />
                 <span>Primary Diagnosis & Clinical Assessment</span>
               </div>
-              <span className="text-[11px] text-slate-400 font-medium">Required for health record</span>
+              <span className="text-[10px] text-slate-400 font-medium">Required for health record</span>
             </div>
 
             <input
@@ -348,19 +345,19 @@ ${draftText}
               value={diagnosis}
               onChange={(e) => setDiagnosis(e.target.value)}
               placeholder="e.g. Hypermobility Spectrum Disorder (hEDS) with mild POTS flare-up"
-              className="w-full h-11 rounded-2xl border border-slate-200 bg-[#F4F6FC] px-4 text-xs sm:text-sm text-[#111111] placeholder:text-slate-400 focus:border-[#3E36B0] focus:ring-1 focus:ring-[#3E36B0]/20 outline-none font-medium"
+              className="w-full h-9 rounded-xl border border-slate-200 bg-[#F4F6FC] px-3 text-xs text-[#111111] placeholder:text-slate-400 focus:border-[#3E36B0] focus:ring-1 focus:ring-[#3E36B0]/20 outline-none font-medium"
             />
 
             {/* Quick Diagnosis Chips */}
-            <div className="space-y-1.5 pt-1">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quick Suggestions</p>
-              <div className="flex flex-wrap gap-1.5">
+            <div className="flex items-center gap-1.5 pt-0.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Quick:</span>
+              <div className="flex flex-wrap gap-1">
                 {QUICK_DIAGNOSES.map((d) => (
                   <button
                     key={d}
                     type="button"
                     onClick={() => setDiagnosis(d)}
-                    className="text-[11px] px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-[#D8D9FF] hover:text-[#3E36B0] text-slate-600 font-medium transition-all cursor-pointer"
+                    className="text-[10px] px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-[#D8D9FF] hover:text-[#3E36B0] text-slate-600 font-medium transition-all cursor-pointer whitespace-nowrap"
                   >
                     + {d}
                   </button>
@@ -370,10 +367,10 @@ ${draftText}
           </div>
 
           {/* Section 2: Clinical Notes Editor */}
-          <div className="rounded-[26px] bg-white border border-slate-200/70 p-6 space-y-4 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-[#3E36B0] font-bold text-xs tracking-wider uppercase">
-                <FileEdit className="h-4 w-4" />
+          <div className="rounded-2xl bg-white border border-slate-200/80 p-3.5 space-y-2 shadow-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-[#3E36B0] font-bold text-[11px] tracking-wider uppercase">
+                <FileEdit className="h-3.5 w-3.5" />
                 <span>Clinical Notes & SOAP Observations</span>
               </div>
 
@@ -384,25 +381,25 @@ ${draftText}
                 size="sm"
                 onClick={handleAiPolish}
                 disabled={isAiPolishing}
-                className="h-8 rounded-xl border-[#3E36B0]/30 bg-[#F4F6FC] text-[#3E36B0] hover:bg-[#D8D9FF] text-xs font-bold gap-1.5 shadow-sm cursor-pointer"
+                className="h-7 px-2.5 rounded-lg border-[#3E36B0]/30 bg-[#F4F6FC] text-[#3E36B0] hover:bg-[#D8D9FF] text-[11px] font-bold gap-1 shadow-xs cursor-pointer"
               >
-                <Sparkles className={`w-3.5 h-3.5 ${isAiPolishing ? "animate-spin text-amber-500" : "text-[#3E36B0]"}`} />
-                <span>{isAiPolishing ? "AI Structuring Note..." : "AI Polish & SOAP Summary"}</span>
+                <Sparkles className={`w-3 h-3 ${isAiPolishing ? "animate-spin text-amber-500" : "text-[#3E36B0]"}`} />
+                <span>{isAiPolishing ? "Structuring..." : "AI Polish & SOAP Summary"}</span>
               </Button>
             </div>
 
             {/* 1-Click Templates */}
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">1-Click Clinical Templates</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Templates:</span>
+              <div className="flex flex-wrap gap-1">
                 {CLINICAL_TEMPLATES.map((tmpl) => (
                   <button
                     key={tmpl.label}
                     type="button"
                     onClick={() => handleApplyTemplate(tmpl.content)}
-                    className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 bg-[#FAFBFD] hover:border-[#3E36B0] hover:bg-[#F4F6FC] text-slate-700 font-semibold transition-all cursor-pointer flex items-center gap-1"
+                    className="text-[10px] px-2 py-0.5 rounded-lg border border-slate-200 bg-[#FAFBFD] hover:border-[#3E36B0] hover:bg-[#F4F6FC] text-slate-700 font-semibold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap"
                   >
-                    <Plus className="w-3 h-3 text-[#3E36B0]" />
+                    <Plus className="w-2.5 h-2.5 text-[#3E36B0]" />
                     {tmpl.label}
                   </button>
                 ))}
@@ -413,24 +410,24 @@ ${draftText}
               value={clinicalNotes}
               onChange={(e) => setClinicalNotes(e.target.value)}
               placeholder="Document patient subjective complaints, objective exam notes, clinical impressions, multi-omics biomarkers, or diagnostic instructions..."
-              className="w-full h-56 rounded-2xl border border-slate-200 bg-[#F4F6FC] p-4 text-xs sm:text-sm text-[#111111] placeholder:text-slate-400 focus:border-[#3E36B0] focus:ring-1 focus:ring-[#3E36B0]/20 outline-none resize-none leading-relaxed font-mono"
+              className="w-full h-32 sm:h-36 rounded-xl border border-slate-200 bg-[#F4F6FC] p-3 text-xs text-[#111111] placeholder:text-slate-400 focus:border-[#3E36B0] focus:ring-1 focus:ring-[#3E36B0]/20 outline-none resize-none leading-relaxed font-mono"
             />
           </div>
 
           {/* Section 3: Follow-Up & Patient Guidance */}
-          <div className="rounded-[26px] bg-white border border-slate-200/70 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center gap-2 text-[#3E36B0] font-bold text-xs tracking-wider uppercase">
-              <Calendar className="h-4 w-4" />
-              <span>Follow-Up & Direct Patient Guidance</span>
+          <div className="rounded-2xl bg-white border border-slate-200/80 p-3 space-y-2 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[#3E36B0] font-bold text-[11px] tracking-wider uppercase">
+              <Calendar className="h-3.5 w-3.5" />
+              <span>Follow-Up & Direct Guidance</span>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-600">Recommended Follow-up</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-600">Follow-up Window</label>
                 <select
                   value={followUpTime}
                   onChange={(e) => setFollowUpTime(e.target.value)}
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-[#F4F6FC] px-3 text-xs text-slate-800 font-medium outline-none focus:border-[#3E36B0]"
+                  className="w-full h-8.5 rounded-xl border border-slate-200 bg-[#F4F6FC] px-2.5 text-xs text-slate-800 font-medium outline-none focus:border-[#3E36B0]"
                 >
                   <option value="No follow-up needed">No follow-up needed</option>
                   <option value="3 to 5 days">3 to 5 days</option>
@@ -441,67 +438,67 @@ ${draftText}
                 </select>
               </div>
 
-              <div className="sm:col-span-2 space-y-1.5">
-                <label className="text-[11px] font-bold text-slate-600">Direct Patient Care Instructions</label>
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-[10px] font-bold text-slate-600">Direct Patient Care Instructions</label>
                 <input
                   type="text"
                   value={patientAdvice}
                   onChange={(e) => setPatientAdvice(e.target.value)}
-                  placeholder="e.g. Maintain electrolyte hydration, log daily blood pressure, avoid high-impact hyperflexion."
-                  className="w-full h-10 rounded-xl border border-slate-200 bg-[#F4F6FC] px-3 text-xs text-slate-800 font-medium outline-none focus:border-[#3E36B0]"
+                  placeholder="e.g. Maintain electrolyte hydration, log daily blood pressure, avoid high impact."
+                  className="w-full h-8.5 rounded-xl border border-slate-200 bg-[#F4F6FC] px-2.5 text-xs text-slate-800 font-medium outline-none focus:border-[#3E36B0]"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Prescriptions Dispenser & Final Actions */}
-        <div className="space-y-6">
+        {/* Right Column (5 cols): Prescriptions Dispenser & Final Actions */}
+        <div className="lg:col-span-5 space-y-3">
           {/* Prescriptions Card */}
-          <div className="rounded-[26px] bg-white border border-slate-200/70 p-6 space-y-4 shadow-sm">
+          <div className="rounded-2xl bg-white border border-slate-200/80 p-3.5 space-y-2.5 shadow-xs">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[#3E36B0] font-bold text-xs tracking-wider uppercase">
-                <Pill className="h-4 w-4" />
+              <div className="flex items-center gap-1.5 text-[#3E36B0] font-bold text-[11px] tracking-wider uppercase">
+                <Pill className="h-3.5 w-3.5" />
                 <span>Prescriptions Dispensed</span>
               </div>
-              <span className="rounded-full bg-[#D8D9FF] px-2.5 py-0.5 text-[11px] font-bold text-[#3E36B0]">
+              <span className="rounded-full bg-[#D8D9FF] px-2 py-0.5 text-[10px] font-bold text-[#3E36B0]">
                 {prescriptions.length} Added
               </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              Add any medications prescribed during this session. They will be auto-saved to the patient's official Prescriptions portal.
+            <p className="text-[11px] text-slate-500 font-medium leading-tight">
+              Medications prescribed during this session will be synchronized to the patient EHR portal.
             </p>
 
             {/* Prescriptions List */}
             {prescriptions.length > 0 ? (
-              <div className="space-y-2.5">
+              <div className="max-h-28 overflow-y-auto space-y-1.5 pr-1">
                 {prescriptions.map((rx) => (
                   <div
                     key={rx.id}
-                    className="rounded-xl border border-slate-200 bg-[#FAFBFD] p-3 text-xs space-y-1 relative group"
+                    className="rounded-xl border border-slate-200 bg-[#FAFBFD] p-2 text-xs space-y-0.5 relative group"
                   >
                     <div className="flex items-center justify-between">
-                      <p className="font-bold text-[#111111]">{rx.name}</p>
+                      <p className="font-bold text-[#111111] text-xs">{rx.name}</p>
                       <button
                         type="button"
                         onClick={() => handleRemovePrescription(rx.id)}
-                        className="text-slate-400 hover:text-rose-500 p-1 transition-colors cursor-pointer"
+                        className="text-slate-400 hover:text-rose-500 p-0.5 transition-colors cursor-pointer"
                         title="Remove Prescription"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <p className="text-[11px] text-[#3E36B0] font-semibold">
+                    <p className="text-[10px] text-[#3E36B0] font-semibold">
                       {rx.dosage} • {rx.duration}
                     </p>
                     {rx.instructions && (
-                      <p className="text-[11px] text-slate-500 italic font-sans">{rx.instructions}</p>
+                      <p className="text-[10px] text-slate-500 italic font-sans truncate">{rx.instructions}</p>
                     )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-slate-200 bg-[#F4F6FC] p-4 text-center text-xs text-slate-400">
+              <div className="rounded-xl border border-dashed border-slate-200 bg-[#F4F6FC] py-2.5 px-3 text-center text-[11px] text-slate-400">
                 No new medications added for this session yet.
               </div>
             )}
@@ -512,46 +509,46 @@ ${draftText}
                 type="button"
                 variant="outline"
                 onClick={() => setShowRxForm(true)}
-                className="w-full rounded-xl border-dashed border-[#3E36B0]/40 text-[#3E36B0] hover:bg-[#F4F6FC] text-xs font-bold h-10 gap-1.5 cursor-pointer"
+                className="w-full rounded-xl border-dashed border-[#3E36B0]/40 text-[#3E36B0] hover:bg-[#F4F6FC] text-xs font-bold h-8.5 gap-1.5 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>Add Medication Prescription</span>
               </Button>
             ) : (
-              <div className="rounded-2xl border border-[#3E36B0]/30 bg-[#FAFBFD] p-4 space-y-3 animate-in fade-in">
+              <div className="rounded-xl border border-[#3E36B0]/30 bg-[#FAFBFD] p-2.5 space-y-2 animate-in fade-in">
                 <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-                  <span className="text-xs font-bold text-[#111111]">New Prescription Details</span>
+                  <span className="text-[11px] font-bold text-[#111111]">New Prescription Details</span>
                   <button
                     type="button"
                     onClick={() => setShowRxForm(false)}
-                    className="text-xs text-slate-400 hover:text-slate-600 cursor-pointer font-medium"
+                    className="text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer font-medium"
                   >
                     Cancel
                   </button>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <input
                     type="text"
                     value={rxName}
                     onChange={(e) => setRxName(e.target.value)}
                     placeholder="Medication Name (e.g. Midodrine HCl)"
-                    className="w-full h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs outline-none focus:border-[#3E36B0]"
+                    className="w-full h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs outline-none focus:border-[#3E36B0]"
                   />
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-1.5">
                     <input
                       type="text"
                       value={rxDosage}
                       onChange={(e) => setRxDosage(e.target.value)}
                       placeholder="Dosage (e.g. 5mg TID)"
-                      className="w-full h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs outline-none focus:border-[#3E36B0]"
+                      className="w-full h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs outline-none focus:border-[#3E36B0]"
                     />
                     <input
                       type="text"
                       value={rxDuration}
                       onChange={(e) => setRxDuration(e.target.value)}
                       placeholder="Duration (e.g. 30 days)"
-                      className="w-full h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs outline-none focus:border-[#3E36B0]"
+                      className="w-full h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs outline-none focus:border-[#3E36B0]"
                     />
                   </div>
                   <input
@@ -559,16 +556,16 @@ ${draftText}
                     value={rxInstructions}
                     onChange={(e) => setRxInstructions(e.target.value)}
                     placeholder="Instructions (e.g. Take morning and afternoon)"
-                    className="w-full h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs outline-none focus:border-[#3E36B0]"
+                    className="w-full h-8 rounded-lg border border-slate-200 bg-white px-2.5 text-xs outline-none focus:border-[#3E36B0]"
                   />
                 </div>
 
                 <Button
                   type="button"
                   onClick={handleAddPrescription}
-                  className="w-full bg-[#3E36B0] hover:bg-[#312B91] text-white font-bold text-xs h-9 rounded-xl shadow-sm cursor-pointer"
+                  className="w-full bg-[#3E36B0] hover:bg-[#312B91] text-white font-bold text-xs h-8 rounded-lg shadow-xs cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5 mr-1" />
+                  <Plus className="w-3 h-3 mr-1" />
                   Save Prescription Item
                 </Button>
               </div>
@@ -576,13 +573,13 @@ ${draftText}
           </div>
 
           {/* Encounter Actions Card */}
-          <div className="rounded-[26px] bg-white border border-slate-200/70 p-6 space-y-4 shadow-sm">
-            <div className="flex items-center gap-2 text-[#3E36B0] font-bold text-xs tracking-wider uppercase">
-              <Activity className="h-4 w-4" />
+          <div className="rounded-2xl bg-white border border-slate-200/80 p-3.5 space-y-2.5 shadow-xs">
+            <div className="flex items-center gap-1.5 text-[#3E36B0] font-bold text-[11px] tracking-wider uppercase">
+              <Activity className="h-3.5 w-3.5" />
               <span>Next-Step Action</span>
             </div>
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              Select how you would like to proceed after saving this clinical encounter.
+            <p className="text-[11px] text-slate-500 font-medium leading-tight">
+              Choose your workflow action upon saving this clinical encounter.
             </p>
 
             {/* Primary Action Button */}
@@ -590,27 +587,27 @@ ${draftText}
               type="button"
               onClick={handleSaveAndContinue}
               disabled={isSaving}
-              className="w-full h-12 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-600/20 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full h-10.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-[0.98] transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <Users className="w-4 h-4 text-emerald-200" />
               <span>{isSaving ? "Saving Encounter..." : "Save & Continue Teleconsultations"}</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
+              <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
             </Button>
 
             {/* Secondary Actions */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-100">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleSaveAndOpenPatient}
                 disabled={isSaving}
-                className="w-full h-10 rounded-xl border-slate-200 hover:border-[#3E36B0]/40 text-slate-700 hover:text-[#3E36B0] text-xs font-bold justify-between cursor-pointer"
+                className="w-full h-8.5 rounded-lg border-slate-200 hover:border-[#3E36B0]/40 text-slate-700 hover:text-[#3E36B0] text-[11px] font-bold justify-between px-2.5 cursor-pointer"
               >
-                <span className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-slate-400" />
-                  Save & Open Patient EHR Chart
+                <span className="flex items-center gap-1.5 truncate">
+                  <FileText className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate">Open Patient EHR</span>
                 </span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
               </Button>
 
               <Button
@@ -618,13 +615,13 @@ ${draftText}
                 variant="outline"
                 onClick={handleSaveAndReturnDashboard}
                 disabled={isSaving}
-                className="w-full h-10 rounded-xl border-slate-200 hover:border-[#3E36B0]/40 text-slate-700 hover:text-[#3E36B0] text-xs font-bold justify-between cursor-pointer"
+                className="w-full h-8.5 rounded-lg border-slate-200 hover:border-[#3E36B0]/40 text-slate-700 hover:text-[#3E36B0] text-[11px] font-bold justify-between px-2.5 cursor-pointer"
               >
-                <span className="flex items-center gap-2">
-                  <LayoutDashboard className="w-4 h-4 text-slate-400" />
-                  Save & Return to Doctor Dashboard
+                <span className="flex items-center gap-1.5 truncate">
+                  <LayoutDashboard className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate">Doctor Dashboard</span>
                 </span>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
               </Button>
             </div>
           </div>

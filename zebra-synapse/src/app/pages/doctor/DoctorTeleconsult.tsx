@@ -404,7 +404,11 @@ export default function DoctorTeleconsult() {
   };
 
   return (
-    <div className="min-h-full text-slate-800 p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto font-sans space-y-6">
+    <div
+      className={`text-slate-800 max-w-[1600px] mx-auto font-sans ${
+        viewState === "wrap-up" ? "p-1 sm:p-2 lg:p-2.5" : "min-h-full p-4 sm:p-6 lg:p-8 space-y-6"
+      }`}
+    >
       {viewState === "wrap-up" ? (
         /* Dedicated Post-Consultation Wrap-Up Workstation */
         <PostConsultationWrapUp

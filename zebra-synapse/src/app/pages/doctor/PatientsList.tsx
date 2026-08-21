@@ -344,44 +344,6 @@ export default function PatientsList() {
                 </span>
               </div>
 
-              {/* Symptoms / Vitals Quick Row */}
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">
-                  Clinical Indicators & Vitals
-                </p>
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Heart Rate */}
-                  <div className="bg-[#F4F6FC] rounded-xl p-2 border border-slate-100 text-center">
-                    <HeartPulse className="w-3.5 h-3.5 text-rose-500 mx-auto mb-0.5" />
-                    <p className="text-[9px] text-slate-500 font-medium">Heart Rate</p>
-                    <p className="text-[11px] font-bold text-[#111111]">
-                      {selectedPatient.vitals.heartRate != null
-                        ? `${selectedPatient.vitals.heartRate} bpm`
-                        : "—"}
-                    </p>
-                  </div>
-
-                  {/* Blood Pressure */}
-                  <div className="bg-[#F4F6FC] rounded-xl p-2 border border-slate-100 text-center">
-                    <Activity className="w-3.5 h-3.5 text-emerald-600 mx-auto mb-0.5" />
-                    <p className="text-[9px] text-slate-500 font-medium">Blood Pressure</p>
-                    <p className="text-[11px] font-bold text-[#111111]">
-                      {selectedPatient.vitals.bloodPressure || "—"}
-                    </p>
-                  </div>
-
-                  {/* Glucose / Temp */}
-                  <div className="bg-[#F4F6FC] rounded-xl p-2 border border-slate-100 text-center">
-                    <Thermometer className="w-3.5 h-3.5 text-[#3E36B0] mx-auto mb-0.5" />
-                    <p className="text-[9px] text-slate-500 font-medium">Glucose / Temp</p>
-                    <p className="text-[11px] font-bold text-[#111111]">
-                      {selectedPatient.vitals.glucose != null
-                        ? `${selectedPatient.vitals.glucose} mg/dL`
-                        : "—"}
-                    </p>
-                  </div>
-                </div>
-              </div>
 
               {/* Observation & Diagnosis Summary */}
               <div className="bg-[#FAFBFD] rounded-xl p-2.5 border border-slate-100">

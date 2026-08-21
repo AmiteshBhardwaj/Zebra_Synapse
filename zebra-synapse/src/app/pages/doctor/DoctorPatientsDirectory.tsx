@@ -5,10 +5,8 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Calendar,
-  Activity,
   SlidersHorizontal,
   Video,
-  FileText,
   Grid,
   List,
   Phone,
@@ -116,55 +114,8 @@ export default function DoctorPatientsDirectory() {
         </div>
       </div>
 
-      {/* Roster Overview Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 md:gap-3">
-        <div className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-sm flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#0088ee] flex items-center justify-center shrink-0">
-            <Users className="w-4.5 h-4.5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Total Patients</p>
-            <p className="text-lg font-bold text-slate-900 font-['Manrope'] leading-none mt-0.5">{totalCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-sm flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <Activity className="w-4.5 h-4.5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Active Monitoring</p>
-            <p className="text-lg font-bold text-emerald-600 font-['Manrope'] leading-none mt-0.5">{totalCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-sm flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-            <Video className="w-4.5 h-4.5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Teleconsult Ready</p>
-            <p className="text-lg font-bold text-sky-600 font-['Manrope'] leading-none mt-0.5">{totalCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-sm flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <FileText className="w-4.5 h-4.5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Medical Records</p>
-            <p className="text-lg font-bold text-indigo-600 font-['Manrope'] leading-none mt-0.5">{totalCount}</p>
-          </div>
-        </div>
-      </div>
-
       {/* Controls Toolbar */}
-      <div className="bg-white rounded-2xl p-2.5 md:p-3 shadow-sm border border-slate-200/80 flex items-center justify-between gap-2.5">
-        <p className="text-xs font-semibold text-slate-600">
-          Showing {filteredPatients.length} patient{filteredPatients.length === 1 ? "" : "s"}
-        </p>
-
+      <div className="bg-white rounded-2xl p-2.5 md:p-3 shadow-sm border border-slate-200/80 flex items-center gap-2.5">
         {/* Sort & View Controls */}
         <div className="flex items-center gap-2 shrink-0">
           <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-600">
