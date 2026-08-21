@@ -71,22 +71,14 @@ export default function DoctorAppointments() {
 
   // State
   const [appointments, setAppointments] = useState<DoctorAppointment[]>(() => {
-    const saved = localStorage.getItem("zebra_doc_appointments");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return INITIAL_APPOINTMENTS;
-      }
-    }
-    return INITIAL_APPOINTMENTS;
+    return loadDoctorAppointments();
   });
 
   const [patients, setPatients] = useState<DoctorPatientListItem[]>([]);
   const [loadingPatients, setLoadingPatients] = useState(true);
 
   // Filters & Views
-  const [tabFilter, setTabFilter] = useState<"all" | "today" | "upcoming" | "completed" | "teleconsult">("today");
+  const [tabFilter, setTabFilter] = useState<"all" | "today" | "upcoming" | "requests" | "completed" | "teleconsult">("today");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [currentMonthDate, setCurrentMonthDate] = useState<Date>(new Date(2026, 7, 15)); // August 2026
   const [selectedDay, setSelectedDay] = useState<number | null>(15);
@@ -99,6 +91,9 @@ export default function DoctorAppointments() {
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [completeModalOpen, setCompleteModalOpen] = useState(false);
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+  const [appointmentToReject, setAppointmentToReject] = useState<DoctorAppointment | null>(null);
+  const [rejectionNote, setRejectionNote] = useState<string>("");
 
   const [selectedAppointment, setSelectedAppointment] = useState<DoctorAppointment | null>(null);
 
@@ -127,6 +122,25 @@ export default function DoctorAppointments() {
     "July", "August", "September", "October", "November", "December"
   ];
 
+  // Sync with localStorage & cross-window updates
+  useEffect(() => {
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent<DoctorAppointment[]>;
+      if (customEvent.detail && Array.isArray(customEvent.detail)) {
+        setAppointments(customEvent.detail);
+      } else {
+        setAppointments(loadDoctorAppointments());
+      }
+    };
+    window.addEventListener("zebra-appointments-updated", handleSync);
+    return () => window.removeEventListener("zebra-appointments-updated", handleSync);
+  }, []);
+
+  // Persist appointments in localStorage
+  useEffect(() => {
+    saveDoctorAppointments(appointments);
+  }, [appointments]);
+
   // Dynamic calendar days with appointment indicator dots
   const calendarDays = useMemo(() => {
     const year = currentMonthDate.getFullYear();
@@ -141,7 +155,7 @@ export default function DoctorAppointments() {
     for (let d = 1; d <= daysInMonth; d++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
       const hasAppointments = appointments.some(
-        (a) => a.date === dateStr && a.status !== "Cancelled"
+        (a) => a.date === dateStr && a.status === "Confirmed"
       );
       days.push({
         day: d,
@@ -152,7 +166,6 @@ export default function DoctorAppointments() {
     }
     return days;
   }, [currentMonthDate, appointments]);
-
 
   const handleSelectCalendarDay = (day: number) => {
     const year = currentMonthDate.getFullYear();
@@ -168,7 +181,7 @@ export default function DoctorAppointments() {
     }
   };
 
-  const handleTabClick = (tabId: "all" | "today" | "upcoming" | "completed" | "teleconsult") => {
+  const handleTabClick = (tabId: "all" | "today" | "upcoming" | "requests" | "completed" | "teleconsult") => {
     setTabFilter(tabId);
     setSelectedCalendarDate(null);
     if (tabId === "today") {
@@ -177,11 +190,6 @@ export default function DoctorAppointments() {
       setSelectedDay(null);
     }
   };
-
-  // Persist appointments in localStorage
-  useEffect(() => {
-    localStorage.setItem("zebra_doc_appointments", JSON.stringify(appointments));
-  }, [appointments]);
 
   // Load real patients from Supabase
   const loadPatients = useCallback(async () => {
@@ -213,10 +221,11 @@ export default function DoctorAppointments() {
     void loadPatients();
   }, [loadPatients]);
 
-  // Handle URL query parameters (e.g. ?schedule=true or ?patient=ID)
+  // Handle URL query parameters (e.g. ?schedule=true or ?patient=ID or ?tab=requests)
   useEffect(() => {
     const querySchedule = searchParams.get("schedule");
     const queryPatient = searchParams.get("patient");
+    const queryTab = searchParams.get("tab");
     if (querySchedule === "true") {
       setScheduleModalOpen(true);
     }
@@ -224,17 +233,22 @@ export default function DoctorAppointments() {
       setNewPatientSelection(queryPatient);
       setScheduleModalOpen(true);
     }
+    if (queryTab === "requests") {
+      setTabFilter("requests");
+      setSelectedCalendarDate(null);
+    }
   }, [searchParams]);
 
   // Stats Calculations
   const stats = useMemo(() => {
     const todayStr = "2026-08-15";
-    const todayCount = appointments.filter((a) => a.date === todayStr && a.status !== "Cancelled").length;
+    const todayCount = appointments.filter((a) => a.date === todayStr && a.status === "Confirmed").length;
     const upcomingCount = appointments.filter((a) => a.date >= todayStr && a.status === "Confirmed").length;
+    const requestsCount = appointments.filter((a) => a.status === "Requested").length;
     const teleconsultCount = appointments.filter((a) => a.type === "teleconsult" && a.status === "Confirmed").length;
     const completedCount = appointments.filter((a) => a.status === "Completed").length;
 
-    return { todayCount, upcomingCount, teleconsultCount, completedCount };
+    return { todayCount, upcomingCount, requestsCount, teleconsultCount, completedCount };
   }, [appointments]);
 
   // Filtered Appointments List
@@ -248,13 +262,15 @@ export default function DoctorAppointments() {
     } else {
       // Tab filtering
       if (tabFilter === "today") {
-        list = list.filter((a) => a.date === todayStr);
+        list = list.filter((a) => a.date === todayStr && a.status === "Confirmed");
       } else if (tabFilter === "upcoming") {
         list = list.filter((a) => a.date >= todayStr && a.status === "Confirmed");
+      } else if (tabFilter === "requests") {
+        list = list.filter((a) => a.status === "Requested");
       } else if (tabFilter === "completed") {
         list = list.filter((a) => a.status === "Completed");
       } else if (tabFilter === "teleconsult") {
-        list = list.filter((a) => a.type === "teleconsult");
+        list = list.filter((a) => a.type === "teleconsult" && (a.status === "Confirmed" || a.status === "Requested"));
       }
     }
 
@@ -386,6 +402,47 @@ export default function DoctorAppointments() {
     setClinicalNotes("");
   };
 
+  // Accept Appointment Request Handler
+  const handleAcceptAppointment = (apt: DoctorAppointment) => {
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === apt.id
+          ? { ...a, status: "Confirmed" as const }
+          : a
+      )
+    );
+    toast.success(`Appointment with ${apt.patientName} on ${apt.date} at ${apt.time} accepted & confirmed!`);
+  };
+
+  // Reject Appointment Modal Trigger
+  const handleOpenRejectModal = (apt: DoctorAppointment) => {
+    setAppointmentToReject(apt);
+    setRejectionNote("");
+    setRejectModalOpen(true);
+  };
+
+  // Confirm Reject
+  const handleConfirmReject = () => {
+    if (!appointmentToReject) return;
+
+    setAppointments((prev) =>
+      prev.map((a) =>
+        a.id === appointmentToReject.id
+          ? {
+              ...a,
+              status: "Rejected" as const,
+              rejectionReason: rejectionNote.trim() || "Physician schedule at full capacity for requested time slot.",
+            }
+          : a
+      )
+    );
+
+    toast.info(`Appointment request from ${appointmentToReject.patientName} has been declined.`);
+    setRejectModalOpen(false);
+    setAppointmentToReject(null);
+    setRejectionNote("");
+  };
+
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 0) return "PT";
@@ -412,7 +469,7 @@ export default function DoctorAppointments() {
             Appointment Center
           </h1>
           <p className="mt-0.5 text-xs text-white/80 leading-snug font-medium line-clamp-1">
-            Manage your daily patient consultation queue, organize in-person visits, and launch high-definition multi-omics teleconsultations.
+            Manage your daily patient consultation queue, triage incoming requests, organize in-person visits, and launch teleconsultations.
           </p>
         </div>
 
@@ -423,6 +480,7 @@ export default function DoctorAppointments() {
             {[
               { id: "today", label: "Today's Schedule" },
               { id: "upcoming", label: "Upcoming" },
+              { id: "requests", label: "Requests", count: stats.requestsCount },
               { id: "teleconsult", label: "Teleconsults" },
               { id: "completed", label: "Completed" },
               { id: "all", label: "All Records" },
@@ -431,13 +489,24 @@ export default function DoctorAppointments() {
                 key={tab.id}
                 type="button"
                 onClick={() => handleTabClick(tab.id as any)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                   tabFilter === tab.id && !selectedCalendarDate
                     ? "bg-white text-[#3E36B0] shadow-sm font-extrabold"
                     : "text-white/85 hover:text-white hover:bg-white/15"
                 }`}
               >
-                {tab.label}
+                <span>{tab.label}</span>
+                {typeof tab.count === "number" && tab.count > 0 && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                      tabFilter === tab.id && !selectedCalendarDate
+                        ? "bg-[#3E36B0] text-white"
+                        : "bg-amber-400 text-slate-950 shadow-sm animate-pulse"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -491,6 +560,8 @@ export default function DoctorAppointments() {
                     ? "Today's Schedule Queue"
                     : tabFilter === "upcoming"
                     ? "Upcoming Visits"
+                    : tabFilter === "requests"
+                    ? "Pending Patient Appointment Requests"
                     : tabFilter === "teleconsult"
                     ? "Teleconsultations"
                     : tabFilter === "completed"
@@ -525,9 +596,15 @@ export default function DoctorAppointments() {
                   <div className="w-11 h-11 rounded-xl bg-[#F4F6FC] text-slate-400 flex items-center justify-center mx-auto">
                     <CalendarX className="w-5 h-5" />
                   </div>
-                  <p className="text-xs font-bold text-slate-700">No appointments found</p>
+                  <p className="text-xs font-bold text-slate-700">
+                    {tabFilter === "requests"
+                      ? "No pending appointment requests"
+                      : "No appointments found"}
+                  </p>
                   <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-                    No appointments matching current filters.
+                    {tabFilter === "requests"
+                      ? "All patient appointment requests have been processed."
+                      : "No appointments matching current filters."}
                   </p>
                   <button
                     type="button"
@@ -546,15 +623,20 @@ export default function DoctorAppointments() {
                 <div className="grid gap-2.5">
                   {filteredAppointments.map((apt) => {
                     const isToday = apt.date === "2026-08-15";
+                    const isRequest = apt.status === "Requested";
 
                     return (
                       <div
                         key={apt.id}
                         className={`p-3 rounded-xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-3 ${
-                          apt.status === "Completed"
+                          isRequest
+                            ? "bg-amber-50/40 border-amber-200/80 shadow-xs ring-1 ring-amber-400/20 hover:border-amber-400"
+                            : apt.status === "Completed"
                             ? "bg-slate-50/70 border-slate-100 opacity-85"
                             : apt.status === "Cancelled"
                             ? "bg-rose-50/30 border-rose-100 opacity-75"
+                            : apt.status === "Rejected"
+                            ? "bg-slate-50 border-slate-200 opacity-75"
                             : isToday
                             ? "bg-white border-[#3E36B0]/30 shadow-xs ring-1 ring-[#3E36B0]/10 hover:border-[#3E36B0]"
                             : "bg-white border-slate-200/70 hover:border-slate-300 shadow-xs"
@@ -564,7 +646,9 @@ export default function DoctorAppointments() {
                         <div className="flex items-center gap-3 min-w-0">
                           <div
                             className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 shadow-xs ${
-                              apt.type === "teleconsult"
+                              isRequest
+                                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                : apt.type === "teleconsult"
                                 ? "bg-purple-100 text-[#3E36B0]"
                                 : "bg-[#E5ECF9] text-[#3E36B0]"
                             }`}
@@ -586,17 +670,32 @@ export default function DoctorAppointments() {
                               {/* Status badge */}
                               <span
                                 className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                                  apt.status === "Confirmed"
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  : apt.status === "Completed"
-                                  ? "bg-slate-100 text-slate-600 border border-slate-200"
-                                  : apt.status === "Cancelled"
-                                  ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                  : "bg-amber-50 text-amber-700 border border-amber-200"
+                                  apt.status === "Requested"
+                                    ? "bg-amber-100 text-amber-900 border border-amber-300 font-extrabold animate-pulse"
+                                    : apt.status === "Confirmed"
+                                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    : apt.status === "Completed"
+                                    ? "bg-slate-100 text-slate-600 border border-slate-200"
+                                    : apt.status === "Cancelled" || apt.status === "Rejected"
+                                    ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                    : "bg-amber-50 text-amber-700 border border-amber-200"
                                 }`}
                               >
-                                {apt.status}
+                                {apt.status === "Requested" ? "Pending Request" : apt.status}
                               </span>
+
+                              {/* Urgency Badge */}
+                              {apt.urgency && apt.urgency !== "normal" && (
+                                <span
+                                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
+                                    apt.urgency === "urgent"
+                                      ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                      : "bg-orange-100 text-orange-800 border border-orange-300"
+                                  }`}
+                                >
+                                  {apt.urgency}
+                                </span>
+                              )}
 
                               {/* Type badge */}
                               <span
@@ -621,13 +720,20 @@ export default function DoctorAppointments() {
                               </span>
                             </div>
 
-                            <p className="text-[11px] font-semibold text-slate-600 mt-0.5 truncate">
+                            <p className="text-[11px] font-semibold text-slate-700 mt-0.5 truncate">
                               {apt.condition}
                             </p>
 
                             {apt.notes && (
-                              <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
-                                Note: {apt.notes}
+                              <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">
+                                {isRequest ? "Patient Note: " : "Note: "}
+                                {apt.notes}
+                              </p>
+                            )}
+
+                            {apt.rejectionReason && (
+                              <p className="text-[10px] text-rose-600 font-medium mt-0.5 line-clamp-1">
+                                Decline Reason: {apt.rejectionReason}
                               </p>
                             )}
                           </div>
@@ -656,6 +762,30 @@ export default function DoctorAppointments() {
 
                         {/* Right: Action Buttons */}
                         <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:flex-nowrap">
+                          {/* Request specific actions: Accept / Decline */}
+                          {apt.status === "Requested" && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleAcceptAppointment(apt)}
+                                className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                title="Accept & Confirm Appointment"
+                              >
+                                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                                <span>Accept</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenRejectModal(apt)}
+                                className="h-8 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                                title="Decline / Reject Request"
+                              >
+                                <span>Decline</span>
+                              </button>
+                            </>
+                          )}
+
                           {apt.type === "teleconsult" && apt.status === "Confirmed" && (
                             <button
                               type="button"
@@ -1149,6 +1279,52 @@ export default function DoctorAppointments() {
                 className="h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-5 shadow-sm"
               >
                 Mark Completed & Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* DECLINE / REJECT APPOINTMENT REQUEST MODAL */}
+      <Dialog open={rejectModalOpen} onOpenChange={setRejectModalOpen}>
+        <DialogContent className="sm:max-w-[460px] p-6 rounded-[28px] bg-white border border-slate-100 shadow-2xl">
+          <DialogHeader className="space-y-2 pb-2">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <DialogTitle className="text-base font-bold text-slate-900 font-['Manrope']">
+              Decline Appointment Request?
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Decline the consultation request from{" "}
+              <strong className="text-slate-900">{appointmentToReject?.patientName}</strong> for {appointmentToReject?.date} at {appointmentToReject?.time}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Reason / Alternative Suggestions (Optional)</Label>
+              <textarea
+                value={rejectionNote}
+                onChange={(e) => setRejectionNote(e.target.value)}
+                placeholder="e.g. Schedule at capacity; please select another time slot or book with Dr. Amelia Hart..."
+                className="w-full h-24 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-800 placeholder:text-slate-400 focus:border-[#3E36B0] outline-none resize-none"
+              />
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2.5">
+              <Button
+                variant="outline"
+                onClick={() => setRejectModalOpen(false)}
+                className="h-10 rounded-xl text-xs font-semibold"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmReject}
+                className="h-10 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-5"
+              >
+                Confirm Decline
               </Button>
             </div>
           </div>

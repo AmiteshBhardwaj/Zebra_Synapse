@@ -58,6 +58,11 @@ import {
   ListOrdered,
   Plus,
   FilePlus,
+  FileUp,
+  Paperclip,
+  Search,
+  Trash2,
+  X,
   AlertCircle,
   ArrowRight,
   Share2,
@@ -251,6 +256,14 @@ function quickActionConfig(type: QuickActionKind): {
   }
 }
 
+function formatFileSize(bytes: number): string {
+  if (!bytes || bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
 function downloadClinicalReport(fileName: string, content: string) {
   const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
   const url = URL.createObjectURL(blob);
@@ -261,6 +274,35 @@ function downloadClinicalReport(fileName: string, content: string) {
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
+}
+
+function parseNoteAttachment(details: string | null) {
+  if (!details) return null;
+  const matchWithUrl = details.match(/\[Attachment:\s*([^|]+)\s*\|\s*([^|]+)\s*\|\s*path:([^\]]+)\]/);
+  if (matchWithUrl) {
+    return {
+      fileName: matchWithUrl[1].trim(),
+      fileSize: matchWithUrl[2].trim(),
+      storagePath: matchWithUrl[3].trim(),
+    };
+  }
+  const simpleMatch = details.match(/\[(?:Attachment|Attached Document):\s*([^|(]+?)(?:\s*\(([^)]+)\)|\s*\|\s*([^\]]+))?\]/);
+  if (simpleMatch) {
+    return {
+      fileName: simpleMatch[1].trim(),
+      fileSize: simpleMatch[2]?.trim() || simpleMatch[3]?.trim() || "Document",
+      storagePath: null,
+    };
+  }
+  return null;
+}
+
+function getCleanNoteText(details: string | null) {
+  if (!details) return "";
+  return details
+    .replace(/\[Attachment:\s*[^\]]+\]/g, "")
+    .replace(/\[Attached Document:\s*[^\]]+\]/g, "")
+    .trim();
 }
 
 export default function PatientDetail() {
@@ -288,6 +330,15 @@ export default function PatientDetail() {
   const [actionTitle, setActionTitle] = useState("");
   const [actionDetails, setActionDetails] = useState("");
   const [actionSchedule, setActionSchedule] = useState("");
+
+  // Clinical Notes & Documentation state
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteCategory, setNoteCategory] = useState("Progress Note");
+  const [noteFile, setNoteFile] = useState<File | null>(null);
+  const [noteFileUploading, setNoteFileUploading] = useState(false);
+  const [notesSearchQuery, setNotesSearchQuery] = useState("");
+  const [noteCategoryFilter, setNoteCategoryFilter] = useState("all");
+  const [copiedNoteId, setCopiedNoteId] = useState<string | null>(null);
 
   // Lab Report AI Chat Queries state
   const [activeMainTab, setActiveMainTab] = useState("overview");
@@ -912,21 +963,245 @@ export default function PatientDetail() {
     setActionDialogOpen(true);
   };
 
-  const handleNotesSubmit = async () => {
+  const allDoctorNotes = useMemo(() => {
+    return careActions.filter((action) => action.action_type === "note");
+  }, [careActions]);
+
+  const filteredDoctorNotes = useMemo(() => {
+    return allDoctorNotes.filter((note) => {
+      const q = notesSearchQuery.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        note.title?.toLowerCase().includes(q) ||
+        note.details?.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (noteCategoryFilter === "all") return true;
+      if (noteCategoryFilter === "soap") {
+        return (
+          note.title?.toLowerCase().includes("soap") ||
+          note.details?.includes("SUBJECTIVE:") ||
+          note.details?.includes("OBJECTIVE:")
+        );
+      }
+      if (noteCategoryFilter === "documents") {
+        return (
+          note.details?.includes("[Attachment:") ||
+          note.details?.includes("[Attached Document:") ||
+          note.title?.toLowerCase().includes("document:") ||
+          note.title?.toLowerCase().includes("upload")
+        );
+      }
+      return note.title?.toLowerCase().includes(noteCategoryFilter.toLowerCase());
+    });
+  }, [allDoctorNotes, notesSearchQuery, noteCategoryFilter]);
+
+  const insertSoapTemplate = () => {
+    const defaultSoap = `=== CLINICAL SOAP NOTE ===
+Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+
+SUBJECTIVE:
+Patient ${patient.name} presented for clinical review.
+- Chief Complaints / Symptoms: 
+- Adherence & Treatment Response: 
+
+OBJECTIVE:
+- Blood Pressure: ${vitalsSummary.bloodPressure || "120/80 mmHg"}
+- Heart Rate: ${vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "72 bpm"}
+- Glucose: ${vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "95 mg/dL"}
+- BMI: ${vitalsSummary.bmi != null ? `${vitalsSummary.bmi} kg/m²` : "24.5 kg/m²"} (${vitalsSummary.bmiCategory?.label || "Normal"})
+- Height / Weight: ${formatHeight(vitalsSummary.height)} / ${formatWeight(vitalsSummary.weight)}
+- Primary Condition: ${patient.condition}
+
+ASSESSMENT:
+- Clinical Status: ${patient.status.toUpperCase()}
+- Primary Assessment & Observations: 
+
+PLAN & RECOMMENDATIONS:
+- Pharmacotherapy: Continue active medications as prescribed
+- Diagnostics: Monitor biomarkers and schedule routine labs
+- Follow-up: Clinical review in 4 weeks`;
+
+    setNotes(defaultSoap);
+    setNoteTitle(`SOAP Assessment - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`);
+    setNoteCategory("SOAP Assessment");
+    toast.success("Loaded SOAP clinical note template");
+  };
+
+  const insertVitalsSnapshot = () => {
+    const snapshot = `=== VITALS & BIOMARKER SNAPSHOT ===
+Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+- Blood Pressure: ${vitalsSummary.bloodPressure || "120/80 mmHg"}
+- Heart Rate: ${vitalsSummary.heartRate != null ? `${vitalsSummary.heartRate} bpm` : "—"}
+- Fasting Glucose: ${vitalsSummary.glucose != null ? `${vitalsSummary.glucose} mg/dL` : "—"}
+- BMI: ${vitalsSummary.bmi != null ? `${vitalsSummary.bmi} kg/m²` : "—"} (${vitalsSummary.bmiCategory?.label || "Normal"})
+- Diet: ${patientDietaryPreference ? patientDietaryPreference.charAt(0).toUpperCase() + patientDietaryPreference.slice(1) : "Omnivore"}
+- Known Allergies: ${patientFoodAllergies?.length ? patientFoodAllergies.join(", ") : "None reported"}`;
+
+    setNotes((prev) => (prev ? `${prev}\n\n${snapshot}` : snapshot));
+    toast.info("Inserted vitals snapshot");
+  };
+
+  const insertFollowUpTemplate = () => {
+    const template = `=== FOLLOW-UP & DISCHARGE INSTRUCTIONS ===
+Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+
+1. Clinical Progression:
+   - Patient stable under current care protocol.
+
+2. Medication & Lifestyle Directives:
+   - Adhere strictly to prescribed medications.
+   - Maintain nutrition and hydration goals.
+
+3. Red Flag Symptoms & Emergency Protocol:
+   - Seek immediate medical review if chest pain, shortness of breath, or severe dizziness occur.
+
+4. Next Appointment:
+   - Next follow-up visit: ${nextAppointmentLabel}`;
+
+    setNotes(template);
+    setNoteTitle(`Follow-up Guidance - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`);
+    setNoteCategory("Follow-up Plan");
+    toast.success("Loaded follow-up instructions template");
+  };
+
+  const handleNoteFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setNoteFile(file);
+    if (!noteTitle) {
+      setNoteTitle(`Document: ${file.name.replace(/\.[^/.]+$/, "")}`);
+    }
+    if (file.name.endsWith(".txt") || file.name.endsWith(".md")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        if (text && !notes) {
+          setNotes(text);
+          toast.info("Imported document text into note editor");
+        }
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleSaveClinicalNote = async () => {
     const text = notes.trim();
-    if (!text) {
-      toast.error("Enter notes before saving");
+    if (!text && !noteFile) {
+      toast.error("Enter clinical notes or select a document to upload");
       return;
     }
+
+    setNoteFileUploading(true);
+    let attachmentMeta = "";
+
+    if (noteFile) {
+      const sb = getSupabase();
+      const cleanFileName = noteFile.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const storagePath = `${patientId || "common"}/clinical_notes/${Date.now()}_${cleanFileName}`;
+
+      if (sb) {
+        try {
+          const { error: uploadErr } = await sb.storage
+            .from("lab-reports")
+            .upload(storagePath, noteFile, { upsert: true });
+
+          if (!uploadErr) {
+            attachmentMeta = `\n\n[Attachment: ${noteFile.name} | ${formatFileSize(noteFile.size)} | path:${storagePath}]`;
+          } else {
+            attachmentMeta = `\n\n[Attached Document: ${noteFile.name} (${formatFileSize(noteFile.size)})]`;
+          }
+        } catch {
+          attachmentMeta = `\n\n[Attached Document: ${noteFile.name} (${formatFileSize(noteFile.size)})]`;
+        }
+      } else {
+        attachmentMeta = `\n\n[Attached Document: ${noteFile.name} (${formatFileSize(noteFile.size)})]`;
+      }
+    }
+
+    const finalTitle =
+      noteTitle.trim() ||
+      (noteFile
+        ? `Uploaded Document: ${noteFile.name}`
+        : `${noteCategory} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
+    const finalDetails = `${text}${attachmentMeta}`.trim();
+
     const ok = await insertCareAction({
       actionType: "note",
-      title: "Clinical note",
-      details: text,
+      title: finalTitle,
+      details: finalDetails,
       status: "completed",
     });
+
+    setNoteFileUploading(false);
     if (!ok) return;
-    toast.success("Clinical note saved");
+
+    toast.success(noteFile ? "Clinical note & document saved successfully" : "Clinical note saved successfully");
     setNotes("");
+    setNoteTitle("");
+    setNoteFile(null);
+    setNoteCategory("Progress Note");
+  };
+
+  const handleNotesSubmit = async () => {
+    await handleSaveClinicalNote();
+  };
+
+  const handleCopyNote = (note: CareActionRow) => {
+    const content = `${note.title}\nDate: ${formatCareActionDateTime(note.created_at)}\n\n${note.details || ""}`;
+    navigator.clipboard.writeText(content);
+    setCopiedNoteId(note.id);
+    setTimeout(() => setCopiedNoteId(null), 2000);
+    toast.success("Note copied to clipboard");
+  };
+
+  const handleDownloadNote = (note: CareActionRow) => {
+    const content = [
+      `====================================================`,
+      `              CLINICAL NOTE & MEDICAL RECORD        `,
+      `====================================================`,
+      `Patient Name:     ${patient.name}`,
+      `Patient ID:       ${patientId}`,
+      `Note Title:       ${note.title}`,
+      `Recorded Date:    ${formatCareActionDateTime(note.created_at)}`,
+      `Attending Doctor: ${(user as any)?.user_metadata?.full_name || (user as any)?.email || "Doctor"}`,
+      `----------------------------------------------------`,
+      `CLINICAL CONTENT:`,
+      `----------------------------------------------------`,
+      note.details || "No details provided.",
+      `====================================================`,
+      `Zebra Synapse Medical Care Record`,
+    ].join("\n");
+
+    const safeTitle = (note.title || "clinical-note").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const fileName = `${patient.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${safeTitle}.txt`;
+    downloadClinicalReport(fileName, content);
+    toast.success("Downloaded clinical note");
+  };
+
+  const handleDownloadNoteAttachment = async (path: string, fileName: string) => {
+    const sb = getSupabase();
+    if (sb && path) {
+      try {
+        const { data, error } = await sb.storage.from("lab-reports").download(path);
+        if (!error && data) {
+          const url = URL.createObjectURL(data);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast.success(`Downloaded ${fileName}`);
+          return;
+        }
+      } catch (e) {
+        console.warn("Storage download error", e);
+      }
+    }
+    toast.info(`Attachment ${fileName} logged on patient chart`);
   };
 
   const handleQuickActionSubmit = async () => {
@@ -1310,6 +1585,17 @@ export default function PatientDetail() {
               </span>
             </TabsTrigger>
             <TabsTrigger value="medications">Medications</TabsTrigger>
+            <TabsTrigger value="notes" className="relative">
+              <span className="flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                Clinical Notes
+                {allDoctorNotes.length > 0 && (
+                  <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px]">
+                    {allDoctorNotes.length}
+                  </span>
+                )}
+              </span>
+            </TabsTrigger>
             <TabsTrigger value="actions">Actions</TabsTrigger>
           </TabsList>
         </div>
@@ -1956,51 +2242,464 @@ export default function PatientDetail() {
         </TabsContent>
 
 
-        <TabsContent value="actions" className="space-y-6">
-          <Card className={portalPanelClass}>
-            <CardHeader>
-              <CardTitle>Clinical Notes</CardTitle>
-              <CardDescription>Add notes for this patient's record</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    placeholder="Enter clinical observations, treatment plans, or follow-up instructions..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    rows={6}
-                  />
-                </div>
-                <Button
+        <TabsContent value="notes" className="space-y-4">
+          {/* Quick Template & Actions Banner */}
+          <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white border border-slate-100 rounded-2xl shadow-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                Clinical Templates:
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
                   type="button"
-                  className={`w-full sm:w-auto ${portalSecondaryButtonClass}`}
-                  variant="outline"
-                  onClick={() => void handleNotesSubmit()}
-                  disabled={careActionSaving}
+                  onClick={insertSoapTemplate}
+                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium transition-all inline-flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Send className="w-4 h-4 mr-2" />
-                  {careActionSaving ? "Saving..." : "Save Notes"}
-                </Button>
-                {recentNotes.length > 0 ? (
-                  <div className="space-y-3 border-t border-slate-100 pt-4">
-                    <p className="text-sm font-medium text-slate-700">Recent notes</p>
-                    {recentNotes.map((note) => (
-                      <div key={note.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
-                        <p className="text-sm whitespace-pre-wrap text-slate-800">{note.details}</p>
-                        <p className="mt-2 text-xs text-slate-500">
-                          Saved {formatCareActionDateTime(note.created_at)}
+                  <Stethoscope className="w-3 h-3 text-emerald-600" />
+                  <span>SOAP Assessment</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={insertVitalsSnapshot}
+                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Activity className="w-3 h-3 text-blue-600" />
+                  <span>Vitals Snapshot</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={insertFollowUpTemplate}
+                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Calendar className="w-3 h-3 text-purple-600" />
+                  <span>Follow-up Directives</span>
+                </button>
+              </div>
+            </div>
+
+            {(notes || noteTitle || noteFile) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNotes("");
+                  setNoteTitle("");
+                  setNoteFile(null);
+                  setNoteCategory("Progress Note");
+                }}
+                className="text-xs text-rose-600 hover:text-rose-700 font-medium inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Trash2 className="w-3 h-3" />
+                <span>Clear Editor</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+            {/* Left Column: Note Composer & Document Uploader */}
+            <div className="xl:col-span-5 space-y-4">
+              <Card className={portalPanelClass}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <FilePlus className="w-4 h-4 text-emerald-600" />
+                        Compose & Upload Note
+                      </CardTitle>
+                      <CardDescription>Save clinical observations or attach clinical note files</CardDescription>
+                    </div>
+                    <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-800 text-[11px]">
+                      Doctor Charting
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Category Pills */}
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-slate-600">Note Category</Label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        "Progress Note",
+                        "SOAP Assessment",
+                        "Consultation",
+                        "Follow-up Plan",
+                        "Diet & Lifestyle",
+                        "General Note",
+                      ].map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            setNoteCategory(cat);
+                            if (!noteTitle || noteTitle.includes("Note") || noteTitle.includes("Assessment") || noteTitle.includes("Plan") || noteTitle.includes("Consultation")) {
+                              setNoteTitle(`${cat} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
+                            }
+                          }}
+                          className={`text-[11px] px-2.5 py-1 rounded-xl font-medium transition-all cursor-pointer ${
+                            noteCategory === cat
+                              ? "bg-emerald-600 text-white font-semibold shadow-xs"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                          }`}
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Title */}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="note_title" className="text-xs font-medium text-slate-600">
+                      Note Title / Subject
+                    </Label>
+                    <Input
+                      id="note_title"
+                      placeholder="e.g. Clinical Progress Note, Routine Assessment..."
+                      value={noteTitle}
+                      onChange={(e) => setNoteTitle(e.target.value)}
+                      className={portalInputClass}
+                    />
+                  </div>
+
+                  {/* Textarea */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="clinical_notes_text" className="text-xs font-medium text-slate-600">
+                        Clinical Content & Observations
+                      </Label>
+                      <span className="text-[10px] text-slate-400">
+                        {notes.length} characters
+                      </span>
+                    </div>
+                    <Textarea
+                      id="clinical_notes_text"
+                      placeholder="Enter clinical observations, diagnosis, treatment plans, follow-up instructions, or import from file..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={9}
+                      className="font-sans text-xs sm:text-sm leading-relaxed"
+                    />
+                  </div>
+
+                  {/* File Upload Attachment Area */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <Label className="text-xs font-medium text-slate-600 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Paperclip className="w-3.5 h-3.5 text-slate-500" />
+                        Attach Clinical Document / Note File
+                      </span>
+                      <span className="text-[10px] text-slate-400">PDF, DOCX, TXT, Images</span>
+                    </Label>
+
+                    {!noteFile ? (
+                      <label
+                        htmlFor="clinical_note_file_upload"
+                        className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 hover:border-emerald-500/60 rounded-2xl bg-slate-50/50 hover:bg-emerald-50/30 transition-all cursor-pointer group"
+                      >
+                        <FileUp className="w-6 h-6 text-slate-400 group-hover:text-emerald-600 transition-colors mb-1" />
+                        <p className="text-xs font-semibold text-slate-700 group-hover:text-emerald-700">
+                          Click or drag to attach file
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          Upload scanned physician notes, PDF summaries, or chart exports
+                        </p>
+                        <input
+                          id="clinical_note_file_upload"
+                          type="file"
+                          accept=".pdf,.doc,.docx,.txt,.rtf,.png,.jpg,.jpeg"
+                          onChange={handleNoteFileSelect}
+                          className="hidden"
+                        />
+                      </label>
+                    ) : (
+                      <div className="flex items-center justify-between p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-900 truncate">
+                              {noteFile.name}
+                            </p>
+                            <p className="text-[10px] text-emerald-700">
+                              {formatFileSize(noteFile.size)} • Ready to save
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNoteFile(null)}
+                          className="p-1 rounded-lg hover:bg-emerald-200/60 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+                          title="Remove attached file"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Save Button */}
+                  <Button
+                    type="button"
+                    className={`w-full ${portalPrimaryButtonClass} py-2.5 gap-2`}
+                    disabled={noteFileUploading || careActionSaving}
+                    onClick={() => void handleSaveClinicalNote()}
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>
+                      {noteFileUploading || careActionSaving
+                        ? "Saving & Uploading..."
+                        : noteFile
+                        ? "Save Note & Attach Document"
+                        : "Save Clinical Note"}
+                    </span>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Right Column: Clinical Notes Feed & Archive */}
+            <div className="xl:col-span-7 space-y-4">
+              <Card className={portalPanelClass}>
+                <CardHeader className="pb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-base">Clinical Notes Archive</CardTitle>
+                        <Badge className="border border-slate-200 bg-slate-100 text-slate-700 text-xs">
+                          {allDoctorNotes.length} saved
+                        </Badge>
+                      </div>
+                      <CardDescription>
+                        Chronological record of clinical notes, SOAP evaluations, and document uploads
+                      </CardDescription>
+                    </div>
+
+                    {/* Filter Tabs */}
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setNoteCategoryFilter("all")}
+                        className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                          noteCategoryFilter === "all"
+                            ? "bg-white text-slate-900 shadow-xs font-semibold"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        All ({allDoctorNotes.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNoteCategoryFilter("soap")}
+                        className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                          noteCategoryFilter === "soap"
+                            ? "bg-white text-slate-900 shadow-xs font-semibold"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        SOAP Notes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNoteCategoryFilter("documents")}
+                        className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                          noteCategoryFilter === "documents"
+                            ? "bg-white text-slate-900 shadow-xs font-semibold"
+                            : "text-slate-600 hover:text-slate-900"
+                        }`}
+                      >
+                        Documents
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="pt-2">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <Input
+                        type="text"
+                        placeholder="Search clinical notes by keyword, observation, or title..."
+                        value={notesSearchQuery}
+                        onChange={(e) => setNotesSearchQuery(e.target.value)}
+                        className={`${portalInputClass} pl-8.5 text-xs h-9`}
+                      />
+                      {notesSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setNotesSearchQuery("")}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  {careActionsLoading ? (
+                    <p className="text-sm text-slate-500 py-6 text-center">Loading clinical notes...</p>
+                  ) : filteredDoctorNotes.length === 0 ? (
+                    <div className="text-center py-12 px-4 space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mx-auto">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">
+                          {notesSearchQuery ? "No matching notes found" : "No clinical notes saved yet"}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                          {notesSearchQuery
+                            ? `No notes matching "${notesSearchQuery}". Try a different search term.`
+                            : "Use the composer on the left to write SOAP notes, clinical observations, or attach medical files."}
                         </p>
                       </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
+                      {!notesSearchQuery && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={insertSoapTemplate}
+                          className={`${portalSecondaryButtonClass} text-xs gap-1.5 mx-auto mt-2`}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Insert SOAP Template</span>
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {filteredDoctorNotes.map((note) => {
+                        const attachment = parseNoteAttachment(note.details);
+                        const cleanText = getCleanNoteText(note.details);
+                        const isSoap =
+                          note.title?.toLowerCase().includes("soap") ||
+                          note.details?.includes("SUBJECTIVE:") ||
+                          note.details?.includes("OBJECTIVE:");
 
+                        return (
+                          <div
+                            key={note.id}
+                            className="rounded-2xl border border-slate-200 bg-white p-4.5 space-y-3 hover:border-slate-300 transition-all shadow-xs"
+                          >
+                            {/* Note Header */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                <p className="font-bold text-slate-900 text-sm">{note.title}</p>
+                                {isSoap ? (
+                                  <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-800 text-[10px]">
+                                    SOAP Note
+                                  </Badge>
+                                ) : attachment ? (
+                                  <Badge className="border border-blue-200 bg-blue-50 text-blue-800 text-[10px]">
+                                    Attached Document
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 text-[10px]">
+                                    Clinical Note
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 text-xs text-slate-500 shrink-0">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <span>{formatCareActionDateTime(note.created_at)}</span>
+                              </div>
+                            </div>
+
+                            {/* Note Body */}
+                            {cleanText && (
+                              <div className="text-xs sm:text-sm text-slate-700 whitespace-pre-wrap leading-relaxed font-sans bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+                                {cleanText}
+                              </div>
+                            )}
+
+                            {/* Attached Document Banner */}
+                            {attachment && (
+                              <div className="flex items-center justify-between gap-3 p-3 bg-blue-50/60 border border-blue-200/80 rounded-xl">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-700 shrink-0">
+                                    <FileText className="w-4 h-4" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-slate-900 truncate">
+                                      {attachment.fileName}
+                                    </p>
+                                    <p className="text-[10px] text-blue-700">
+                                      {attachment.fileSize} • Clinical Attachment
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    void handleDownloadNoteAttachment(
+                                      attachment.storagePath || "",
+                                      attachment.fileName
+                                    )
+                                  }
+                                  className="border-blue-200 bg-white hover:bg-blue-100/50 text-blue-800 text-xs font-medium h-8 gap-1.5 shrink-0"
+                                >
+                                  <Download className="w-3.5 h-3.5" />
+                                  <span>Download</span>
+                                </Button>
+                              </div>
+                            )}
+
+                            {/* Note Action Toolbar */}
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 text-xs">
+                              <span className="text-[11px] text-slate-400">
+                                Attending: <strong className="text-slate-600 font-medium">Physician Record</strong>
+                              </span>
+
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyNote(note)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer font-medium"
+                                  title="Copy note text"
+                                >
+                                  {copiedNoteId === note.id ? (
+                                    <>
+                                      <Check className="w-3 h-3 text-emerald-600" />
+                                      <span className="text-emerald-600">Copied</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="w-3 h-3" />
+                                      <span>Copy</span>
+                                    </>
+                                  )}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadNote(note)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer font-medium"
+                                  title="Download note as text file"
+                                >
+                                  <Download className="w-3 h-3" />
+                                  <span>Export</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="actions" className="space-y-6">
           <Card className={portalPanelClass}>
             <CardHeader>
               <CardTitle>Quick Actions</CardTitle>

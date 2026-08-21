@@ -10,12 +10,14 @@ import {
   MapPin,
   Plus,
   Search,
+  Send,
   Sparkles,
   Stethoscope,
   Video,
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "../../../auth/AuthContext";
 import { Button } from "../../components/ui/button";
 import {
   Dialog,
@@ -43,6 +45,11 @@ import {
   portalSelectItemClass,
   portalSelectTriggerClass,
 } from "../../components/patient/PortalTheme";
+import {
+  loadDoctorAppointments,
+  saveDoctorAppointments,
+  type DoctorAppointment,
+} from "../../../lib/doctorAppointments";
 
 export function getQuickDateISO(offsetDays = 0): string {
   const d = new Date();
@@ -74,7 +81,7 @@ export const CLINIC_TIME_SLOTS: Array<{ label: string; value: string }> = [
 ];
 
 export type Appointment = {
-  id: number;
+  id: number | string;
   doctor: string;
   specialty: string;
   date: string;
@@ -82,6 +89,11 @@ export type Appointment = {
   location?: string;
   status: string;
   notes?: string;
+  rejectionReason?: string;
+  urgency?: "normal" | "priority" | "urgent";
+  type?: "in-person" | "teleconsult" | "follow-up" | "lab-review";
+  patientName?: string;
+  createdAt?: string;
 };
 
 export type DoctorOption = {
@@ -281,28 +293,59 @@ function DoctorAvatarCircle({
 export default function Appointments() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user, profile } = useAuth();
+
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [allDoctorsModalOpen, setAllDoctorsModalOpen] = useState(false);
   const [doctorSearchQuery, setDoctorSearchQuery] = useState("");
+
+  // Request Form States
   const [selectedDoctor, setSelectedDoctor] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [requestType, setRequestType] = useState<"in-person" | "teleconsult">("in-person");
+  const [requestReason, setRequestReason] = useState("");
+  const [requestUrgency, setRequestUrgency] = useState<"normal" | "priority" | "urgent">("normal");
+
+  const [selectedAppointment, setSelectedAppointment] = useState<DoctorAppointment | null>(null);
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleTime, setRescheduleTime] = useState("");
   const [isSavingSchedule, setIsSavingSchedule] = useState(false);
   const [isSavingReschedule, setIsSavingReschedule] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
-  const [appointmentToCancel, setAppointmentToCancel] = useState<Appointment | null>(null);
+  const [appointmentToCancel, setAppointmentToCancel] = useState<DoctorAppointment | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Tab state: "upcoming" | "requested" | "past"
+  const [activeTab, setActiveTab] = useState<"upcoming" | "requested" | "past">("upcoming");
+
+  // Load appointments from unified store
+  const [allAppointments, setAllAppointments] = useState<DoctorAppointment[]>(() => {
+    return loadDoctorAppointments();
+  });
+
+  // Sync state across tabs and windows
+  useEffect(() => {
+    const handleSync = (e: Event) => {
+      const customEvent = e as CustomEvent<DoctorAppointment[]>;
+      if (customEvent.detail && Array.isArray(customEvent.detail)) {
+        setAllAppointments(customEvent.detail);
+      } else {
+        setAllAppointments(loadDoctorAppointments());
+      }
+    };
+    window.addEventListener("zebra-appointments-updated", handleSync);
+    return () => window.removeEventListener("zebra-appointments-updated", handleSync);
+  }, []);
 
   // Auto-open schedule modal if doctor or schedule param is in URL
   useEffect(() => {
     const queryDoctor = searchParams.get("doctor");
     const querySchedule = searchParams.get("schedule");
+    const queryTab = searchParams.get("tab");
     if (queryDoctor) {
       const matched = doctorOptions.find(
         (opt) =>
@@ -317,85 +360,33 @@ export default function Appointments() {
     } else if (querySchedule === "true") {
       setScheduleOpen(true);
     }
+    if (queryTab === "requested") {
+      setActiveTab("requested");
+    }
   }, [searchParams]);
 
-  // Tab state: "upcoming" or "past"
-  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
+  const todayStr = "2026-08-15";
 
-  const [allAppointments, setAllAppointments] = useState<Appointment[]>([
-    {
-      id: 1,
-      doctor: "Dr. Amelia Hart",
-      specialty: "Internal Medicine & Primary Care",
-      date: "2026-08-25",
-      time: "10:00 AM",
-      location: "Zebra Synapse Health Center, Suite 402",
-      status: "Confirmed",
-    },
-    {
-      id: 2,
-      doctor: "Dr. Benjamin Ortiz",
-      specialty: "Endocrinologist",
-      date: "2026-09-02",
-      time: "2:30 PM",
-      location: "Endocrine & Metabolic Suite, Floor 3",
-      status: "Confirmed",
-    },
-    {
-      id: 3,
-      doctor: "Dr. Chloe Menon",
-      specialty: "Cardiologist",
-      date: "2026-04-15",
-      time: "10:00 AM",
-      location: "Heart & Vascular Center, Suite 402",
-      status: "Completed",
-      notes: "Cardiology follow-up completed. ECG trace normal. Blood pressure controlled. Continue current medication.",
-    },
-    {
-      id: 4,
-      doctor: "Dr. Gabriel Chen",
-      specialty: "Nephrologist",
-      date: "2026-04-22",
-      time: "2:30 PM",
-      location: "Renal Care Clinic, Suite 104",
-      status: "Completed",
-      notes: "Renal panel follow-up assessment. eGFR stable. Adjusted fluid intake and dietary recommendations.",
-    },
-    {
-      id: 5,
-      doctor: "Dr. Evelyn Brooks",
-      specialty: "General Physician",
-      date: "2026-03-10",
-      time: "11:15 AM",
-      location: "Main Clinic, Room 105",
-      status: "Completed",
-      notes: "Annual checkup completed. Vital signs optimal. Recommended routine lipid panel recheck in 6 months.",
-    },
-  ]);
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const isPastAppointment = (apt: Appointment) => {
-    if (apt.status === "Completed" || apt.status === "Cancelled") return true;
-    try {
-      const aptDate = new Date(`${apt.date}T23:59:59`);
-      return aptDate < today;
-    } catch {
-      return false;
-    }
-  };
-
-  const upcomingAppointments = allAppointments.filter((apt) => !isPastAppointment(apt));
-  const pastAppointments = allAppointments.filter((apt) => isPastAppointment(apt));
+  const upcomingAppointments = allAppointments.filter(
+    (apt) => apt.status === "Confirmed" && apt.date >= todayStr
+  );
+  const requestedAppointments = allAppointments.filter(
+    (apt) => apt.status === "Requested" || apt.status === "Rejected"
+  );
+  const pastAppointments = allAppointments.filter(
+    (apt) => apt.status === "Completed" || apt.status === "Cancelled" || (apt.status === "Confirmed" && apt.date < todayStr)
+  );
 
   const resetScheduleForm = () => {
     setSelectedDoctor("");
     setSelectedDate("");
     setSelectedTime("");
+    setRequestType("in-person");
+    setRequestReason("");
+    setRequestUrgency("normal");
   };
 
-  const handleScheduleAppointment = () => {
+  const handleSendAppointmentRequest = () => {
     if (!selectedDoctor || !selectedDate || !selectedTime) return;
 
     const matchedOption = doctorOptions.find((option) => option.value === selectedDoctor);
@@ -403,26 +394,42 @@ export default function Appointments() {
 
     setIsSavingSchedule(true);
     window.setTimeout(() => {
-      const nextAppointment: Appointment = {
-        id: Date.now(),
-        doctor: matchedOption.doctor,
+      const pName = profile?.full_name || "Elena Rostova";
+      const nextAppointment: DoctorAppointment = {
+        id: `apt-req-${Date.now()}`,
+        patientId: user?.id,
+        patientName: pName,
+        patientAge: profile?.age || 29,
+        patientGender: profile?.gender || "Female",
+        patientEmail: user?.email || undefined,
+        doctorName: matchedOption.doctor,
         specialty: matchedOption.specialty,
+        condition: requestReason.trim() || "Genomic Phenotype Follow-Up",
         date: selectedDate,
-        time: formatTimeLabel(selectedTime),
-        location: matchedOption.hospital ? `${matchedOption.hospital}, Suite 402` : "Medical Plaza, Suite 210",
-        status: "Confirmed",
+        time: selectedTime.includes("M") ? selectedTime : formatTimeLabel(selectedTime),
+        durationMinutes: 30,
+        type: requestType,
+        status: "Requested",
+        location: requestType === "teleconsult" ? "Virtual Consult Room #1" : (matchedOption.hospital ? `${matchedOption.hospital}, Suite 402` : "Zebra Synapse Health Center, Suite 402"),
+        notes: requestReason.trim() ? `Patient Request: ${requestReason.trim()}` : "Patient requested consultation slot.",
+        urgency: requestUrgency,
+        requestedBy: "patient",
+        createdAt: new Date().toISOString(),
       };
 
-      setAllAppointments((current) => [nextAppointment, ...current]);
+      const updated = [nextAppointment, ...allAppointments];
+      setAllAppointments(updated);
+      saveDoctorAppointments(updated);
+
       setIsSavingSchedule(false);
       setScheduleOpen(false);
       resetScheduleForm();
-      setActiveTab("upcoming");
-      toast.success(`Appointment confirmed with ${matchedOption.doctor}!`);
+      setActiveTab("requested");
+      toast.success(`Appointment request sent to ${matchedOption.doctor}! Pending doctor review.`);
     }, 450);
   };
 
-  const handleReschedule = (appointment: Appointment) => {
+  const handleReschedule = (appointment: DoctorAppointment) => {
     setSelectedAppointment(appointment);
     setRescheduleDate(appointment.date);
     setRescheduleTime("");
@@ -434,17 +441,19 @@ export default function Appointments() {
 
     setIsSavingReschedule(true);
     window.setTimeout(() => {
-      setAllAppointments((current) =>
-        current.map((appointment) =>
-          appointment.id === selectedAppointment.id
-            ? {
-                ...appointment,
-                date: rescheduleDate,
-                time: formatTimeLabel(rescheduleTime),
-              }
-            : appointment,
-        ),
+      const formattedTime = rescheduleTime.includes("M") ? rescheduleTime : formatTimeLabel(rescheduleTime);
+      const updated = allAppointments.map((appointment) =>
+        appointment.id === selectedAppointment.id
+          ? {
+              ...appointment,
+              date: rescheduleDate,
+              time: formattedTime,
+            }
+          : appointment,
       );
+      setAllAppointments(updated);
+      saveDoctorAppointments(updated);
+
       setIsSavingReschedule(false);
       setRescheduleOpen(false);
       setSelectedAppointment(null);
@@ -454,7 +463,7 @@ export default function Appointments() {
     }, 400);
   };
 
-  const handleViewNotes = (appointment: Appointment) => {
+  const handleViewNotes = (appointment: DoctorAppointment) => {
     setSelectedAppointment(appointment);
     setNotesOpen(true);
   };
@@ -467,7 +476,7 @@ export default function Appointments() {
     }
   };
 
-  const handleCancelClick = (appointment: Appointment) => {
+  const handleCancelClick = (appointment: DoctorAppointment) => {
     setAppointmentToCancel(appointment);
     setCancelReason("");
     setCancelOpen(true);
@@ -478,22 +487,23 @@ export default function Appointments() {
 
     setIsCancelling(true);
     window.setTimeout(() => {
-      setAllAppointments((current) =>
-        current.map((apt) =>
-          apt.id === appointmentToCancel.id
-            ? {
-                ...apt,
-                status: "Cancelled",
-                notes: cancelReason
-                  ? `Appointment cancelled by patient. Reason: ${cancelReason}`
-                  : "Appointment cancelled by patient.",
-              }
-            : apt,
-        ),
+      const updated = allAppointments.map((apt) =>
+        apt.id === appointmentToCancel.id
+          ? {
+              ...apt,
+              status: "Cancelled" as const,
+              notes: cancelReason
+                ? `Appointment cancelled by patient. Reason: ${cancelReason}`
+                : "Appointment cancelled by patient.",
+            }
+          : apt,
       );
+      setAllAppointments(updated);
+      saveDoctorAppointments(updated);
+
       setIsCancelling(false);
       setCancelOpen(false);
-      toast.success(`Appointment with ${appointmentToCancel.doctor} has been cancelled.`);
+      toast.success(`Appointment with ${appointmentToCancel.doctorName || appointmentToCancel.patientName} has been cancelled.`);
       setAppointmentToCancel(null);
     }, 400);
   };
@@ -529,7 +539,7 @@ export default function Appointments() {
 
   return (
     <div className="h-full flex flex-col p-3 sm:p-4 lg:p-5 max-w-[1600px] mx-auto overflow-hidden bg-[#f6f8f5]">
-      {/* 1. TOP HEADER (COMPACT) */}
+      {/* 1. TOP HEADER */}
       <header className="flex shrink-0 flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 rounded-2xl bg-white/75 backdrop-blur-md border border-white/90 px-3.5 py-2 sm:px-4.5 sm:py-2.5 shadow-[0_4px_20px_rgba(30,100,180,0.05)] mb-2.5 sm:mb-3">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-500/15 text-[#0099ff] shadow-sm">
@@ -545,7 +555,7 @@ export default function Appointments() {
               </span>
             </div>
             <p className="text-[11px] font-medium text-slate-400 leading-tight">
-              Manage upcoming visits and review completed medical appointments.
+              Request appointments with specialists, manage upcoming visits, and review clinical notes.
             </p>
           </div>
         </div>
@@ -555,30 +565,30 @@ export default function Appointments() {
             onClick={() => setScheduleOpen(true)}
             className="h-8.5 px-3.5 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-[0_4px_14px_rgba(0,168,255,0.25)] hover:shadow-[0_6px_20px_rgba(0,168,255,0.35)] transition-all cursor-pointer font-['Manrope']"
           >
-            <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-            <span>Schedule Appointment</span>
+            <Send className="h-3.5 w-3.5" />
+            <span>Request Appointment</span>
           </Button>
         </div>
       </header>
 
       {/* 2. MAIN 2-COLUMN DASHBOARD GRID */}
       <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4.5">
-        {/* LEFT COLUMN: VISITS (Upcoming / Past) */}
+        {/* LEFT COLUMN: VISITS (Upcoming / Requested / Past) */}
         <section className="lg:col-span-7 xl:col-span-7 flex flex-col min-h-0">
           {/* Tab Filter Row */}
-          <div className="flex items-center justify-between gap-2 mb-3 shrink-0">
-            <div className="flex items-center gap-2 bg-slate-200/60 p-1 rounded-2xl">
+          <div className="flex items-center justify-between gap-2 mb-3 shrink-0 flex-wrap">
+            <div className="flex items-center gap-1.5 bg-slate-200/60 p-1 rounded-2xl">
               <button
                 type="button"
                 onClick={() => setActiveTab("upcoming")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeTab === "upcoming"
                     ? "bg-[#00a8ff] text-white shadow-sm shadow-[#00a8ff]/25"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <Calendar className="h-3.5 w-3.5" />
-                <span>Upcoming Visits</span>
+                <span>Upcoming</span>
                 <span
                   className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                     activeTab === "upcoming" ? "bg-white/30 text-white" : "bg-slate-300 text-slate-700"
@@ -590,15 +600,37 @@ export default function Appointments() {
 
               <button
                 type="button"
-                onClick={() => setActiveTab("past")}
-                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === "past"
+                onClick={() => setActiveTab("requested")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === "requested"
                     ? "bg-[#00a8ff] text-white shadow-sm shadow-[#00a8ff]/25"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <Clock className="h-3.5 w-3.5" />
-                <span>Past Visits</span>
+                <span>Pending Requests</span>
+                {requestedAppointments.length > 0 && (
+                  <span
+                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      activeTab === "requested" ? "bg-white/30 text-white" : "bg-amber-400 text-slate-950 font-black"
+                    }`}
+                  >
+                    {requestedAppointments.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("past")}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  activeTab === "past"
+                    ? "bg-[#00a8ff] text-white shadow-sm shadow-[#00a8ff]/25"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Past</span>
                 <span
                   className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
                     activeTab === "past" ? "bg-white/30 text-white" : "bg-slate-300 text-slate-700"
@@ -611,7 +643,9 @@ export default function Appointments() {
 
             <span className="text-[11px] font-semibold text-slate-400 hidden sm:inline">
               {activeTab === "upcoming"
-                ? `${upcomingAppointments.length} scheduled visit${upcomingAppointments.length === 1 ? "" : "s"}`
+                ? `${upcomingAppointments.length} confirmed visit${upcomingAppointments.length === 1 ? "" : "s"}`
+                : activeTab === "requested"
+                ? `${requestedAppointments.length} requested appointment${requestedAppointments.length === 1 ? "" : "s"}`
                 : `${pastAppointments.length} completed visit${pastAppointments.length === 1 ? "" : "s"}`}
             </span>
           </div>
@@ -624,8 +658,8 @@ export default function Appointments() {
                   upcomingAppointments.map((appointment) => {
                     const matchedDoctor = doctorOptions.find(
                       (d) =>
-                        d.doctor.toLowerCase() === appointment.doctor.toLowerCase() ||
-                        appointment.doctor.toLowerCase().includes(d.doctor.toLowerCase())
+                        d.doctor.toLowerCase() === (appointment.doctorName || "").toLowerCase() ||
+                        (appointment.doctorName || "").toLowerCase().includes(d.doctor.toLowerCase())
                     );
                     return (
                       <article
@@ -637,18 +671,18 @@ export default function Appointments() {
                           <div className="flex items-center gap-3 min-w-0">
                             <DoctorAvatarCircle
                               src={matchedDoctor?.avatar}
-                              name={appointment.doctor}
+                              name={appointment.doctorName || "Doctor"}
                               initials={matchedDoctor?.initials}
                               className="h-11 w-11 sm:h-12 sm:w-12 shrink-0"
                             />
                             <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight font-['Manrope'] truncate">
-                                  {appointment.doctor}
+                                  {appointment.doctorName || "Consulting Physician"}
                                 </h3>
                               </div>
                               <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
-                                {appointment.specialty}
+                                {appointment.specialty || "Clinical Specialist"}
                               </p>
                             </div>
                           </div>
@@ -666,27 +700,39 @@ export default function Appointments() {
                             <span>{appointment.time}</span>
                           </div>
                           <div className="flex items-center gap-1.5 text-slate-500 truncate max-w-[200px]">
-                            <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+                            {appointment.type === "teleconsult" ? (
+                              <Video className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                            ) : (
+                              <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+                            )}
                             <span className="truncate">{appointment.location || "Synapse Clinic"}</span>
                           </div>
                         </div>
 
                         {/* Bottom: Action Buttons */}
                         <div className="flex flex-wrap items-center gap-2 pt-0.5">
-                          <Button
-                            type="button"
-                            className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_3px_10px_rgba(0,153,255,0.25)] hover:shadow-[0_4px_14px_rgba(0,153,255,0.35)] transition-all cursor-pointer active:scale-[0.98]"
-                            onClick={() =>
-                              navigate(
-                                `/patient/teleconsult?id=apt-${appointment.id}&doctor=${encodeURIComponent(
-                                  appointment.doctor
-                                )}&specialty=${encodeURIComponent(appointment.specialty)}`
-                              )
-                            }
-                          >
-                            <Video className="h-3.5 w-3.5" />
-                            <span>Join Live Video Call</span>
-                          </Button>
+                          {appointment.type === "teleconsult" ? (
+                            <Button
+                              type="button"
+                              className="h-9 px-3.5 rounded-xl bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_3px_10px_rgba(0,153,255,0.25)] hover:shadow-[0_4px_14px_rgba(0,153,255,0.35)] transition-all cursor-pointer active:scale-[0.98]"
+                              onClick={() =>
+                                navigate(
+                                  `/patient/teleconsult?id=${appointment.id}&doctor=${encodeURIComponent(
+                                    appointment.doctorName || "Doctor"
+                                  )}&specialty=${encodeURIComponent(appointment.specialty || "Specialist")}`
+                                )
+                              }
+                            >
+                              <Video className="h-3.5 w-3.5" />
+                              <span>Join Live Video Call</span>
+                            </Button>
+                          ) : (
+                            <div className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100 flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>In-Person Visit Confirmed</span>
+                            </div>
+                          )}
+
                           <Button
                             variant="outline"
                             className={`h-9 px-3 text-xs rounded-xl active:scale-[0.98] ${portalSecondaryButtonClass}`}
@@ -710,7 +756,171 @@ export default function Appointments() {
                   <div className="rounded-[22px] border border-dashed border-slate-200 bg-white/60 p-8 text-center text-xs text-slate-400">
                     <Calendar className="h-8 w-8 mx-auto text-slate-300 mb-2" />
                     <p className="font-semibold text-slate-600">No upcoming visits scheduled.</p>
-                    <p className="mt-1 text-[11px] text-slate-400">Click &quot;Schedule Appointment&quot; to book your next visit.</p>
+                    <p className="mt-1 text-[11px] text-slate-400">Click &quot;Request Appointment&quot; to choose a doctor and submit a consultation request.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {activeTab === "requested" && (
+              <>
+                {requestedAppointments.length > 0 ? (
+                  requestedAppointments.map((appointment) => {
+                    const matchedDoctor = doctorOptions.find(
+                      (d) =>
+                        d.doctor.toLowerCase() === (appointment.doctorName || "").toLowerCase() ||
+                        (appointment.doctorName || "").toLowerCase().includes(d.doctor.toLowerCase())
+                    );
+                    const isRejected = appointment.status === "Rejected";
+
+                    return (
+                      <article
+                        key={appointment.id}
+                        className={`rounded-[22px] border p-4 sm:p-4.5 transition-all duration-200 flex flex-col justify-between gap-3 shadow-xs ${
+                          isRejected
+                            ? "bg-slate-50/80 border-slate-200"
+                            : "bg-amber-50/30 border-amber-200/90 hover:border-amber-300 ring-1 ring-amber-400/20"
+                        }`}
+                      >
+                        {/* Top: Doctor Info & Status */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <DoctorAvatarCircle
+                              src={matchedDoctor?.avatar}
+                              name={appointment.doctorName || "Doctor"}
+                              initials={matchedDoctor?.initials}
+                              className="h-11 w-11 sm:h-12 sm:w-12 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight font-['Manrope'] truncate">
+                                  {appointment.doctorName || "Consulting Specialist"}
+                                </h3>
+                                {appointment.urgency && appointment.urgency !== "normal" && (
+                                  <span
+                                    className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                      appointment.urgency === "urgent"
+                                        ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                        : "bg-orange-100 text-orange-800 border border-orange-300"
+                                    }`}
+                                  >
+                                    {appointment.urgency}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
+                                {appointment.specialty || "Specialist Care"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <span
+                            className={`shrink-0 text-[10px] font-extrabold py-1 px-3 rounded-full border ${
+                              isRejected
+                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : "bg-amber-100 text-amber-900 border-amber-300 shadow-xs flex items-center gap-1.5 animate-pulse"
+                            }`}
+                          >
+                            {!isRejected && <Clock className="w-3 h-3 text-amber-800 animate-spin" />}
+                            <span>{isRejected ? "Declined by Doctor" : "Pending Doctor Review"}</span>
+                          </span>
+                        </div>
+
+                        {/* Middle: Details Pill Row */}
+                        <div className="rounded-xl border border-amber-100/70 bg-white/90 px-3 py-2 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs font-semibold text-slate-700 shadow-xs">
+                          <div className="flex items-center gap-1.5 text-slate-800">
+                            <Calendar className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                            <span>Requested Date: {formatDisplayDate(appointment.date)}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-slate-800">
+                            <Clock className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                            <span>Slot: {appointment.time}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-slate-600 truncate max-w-[200px]">
+                            {appointment.type === "teleconsult" ? (
+                              <Video className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+                            ) : (
+                              <MapPin className="h-3.5 w-3.5 text-sky-600 shrink-0" />
+                            )}
+                            <span className="truncate">
+                              {appointment.type === "teleconsult" ? "Virtual Video Consult" : "In-Person Clinic Visit"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Request Reason & Notes */}
+                        {appointment.condition && (
+                          <div className="text-xs text-slate-700 bg-white/70 rounded-xl p-2.5 border border-slate-100">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
+                              Clinical Reason & Symptoms
+                            </p>
+                            <p className="font-medium text-slate-800">{appointment.condition}</p>
+                            {appointment.notes && appointment.notes !== appointment.condition && (
+                              <p className="text-[11px] text-slate-500 mt-1">{appointment.notes}</p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Doctor Rejection Note if Rejected */}
+                        {isRejected && appointment.rejectionReason && (
+                          <div className="text-xs text-rose-800 bg-rose-50/60 rounded-xl p-2.5 border border-rose-100">
+                            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-0.5">
+                              Physician Feedback / Alternative
+                            </p>
+                            <p className="font-medium">{appointment.rejectionReason}</p>
+                          </div>
+                        )}
+
+                        {/* Bottom: Action Buttons */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+                          <p className="text-[11px] text-slate-400 italic">
+                            {isRejected
+                              ? "You can request a different appointment date or doctor below."
+                              : "The doctor will accept or adjust your slot shortly."}
+                          </p>
+
+                          <div className="flex items-center gap-2">
+                            {isRejected ? (
+                              <Button
+                                type="button"
+                                className="h-8.5 px-3 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-bold text-xs shadow-sm cursor-pointer"
+                                onClick={() => {
+                                  if (matchedDoctor) setSelectedDoctor(matchedDoctor.value);
+                                  setScheduleOpen(true);
+                                }}
+                              >
+                                <Plus className="h-3.5 w-3.5 mr-1" />
+                                <span>Request New Slot</span>
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                className="border-rose-200 bg-rose-50/70 text-rose-700 hover:bg-rose-100 text-xs font-semibold rounded-xl h-8.5 px-3 transition-all cursor-pointer shadow-none active:scale-[0.98]"
+                                onClick={() => handleCancelClick(appointment)}
+                              >
+                                <XCircle className="mr-1 h-3.5 w-3.5 text-rose-500" />
+                                Cancel Request
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-amber-200/80 bg-amber-50/20 p-8 text-center text-xs text-slate-400">
+                    <Clock className="h-8 w-8 mx-auto text-amber-400/80 mb-2" />
+                    <p className="font-bold text-slate-700">No pending appointment requests</p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      When you send an appointment request to a doctor, it will appear here with live review status.
+                    </p>
+                    <Button
+                      onClick={() => setScheduleOpen(true)}
+                      className="mt-3 h-8.5 px-3.5 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] text-white font-bold text-xs cursor-pointer shadow-sm"
+                    >
+                      <Plus className="h-3.5 w-3.5 mr-1" />
+                      <span>Request Appointment</span>
+                    </Button>
                   </div>
                 )}
               </>
@@ -722,8 +932,8 @@ export default function Appointments() {
                   pastAppointments.map((appointment) => {
                     const matchedDoctor = doctorOptions.find(
                       (d) =>
-                        d.doctor.toLowerCase() === appointment.doctor.toLowerCase() ||
-                        appointment.doctor.toLowerCase().includes(d.doctor.toLowerCase())
+                        d.doctor.toLowerCase() === (appointment.doctorName || "").toLowerCase() ||
+                        (appointment.doctorName || "").toLowerCase().includes(d.doctor.toLowerCase())
                     );
                     return (
                       <article
@@ -734,15 +944,15 @@ export default function Appointments() {
                           <div className="flex items-center gap-3 min-w-0">
                             <DoctorAvatarCircle
                               src={matchedDoctor?.avatar}
-                              name={appointment.doctor}
+                              name={appointment.doctorName || "Doctor"}
                               initials={matchedDoctor?.initials}
                               className="h-10 w-10 sm:h-11 sm:w-11 shrink-0"
                             />
                             <div className="min-w-0">
                               <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight font-['Manrope'] truncate">
-                                {appointment.doctor}
+                                {appointment.doctorName || "Doctor"}
                               </h3>
-                              <p className="text-xs text-slate-500 font-medium truncate mt-0.5">{appointment.specialty}</p>
+                              <p className="text-xs text-slate-500 font-medium truncate mt-0.5">{appointment.specialty || "General Medicine"}</p>
                             </div>
                           </div>
                           <StatusPill status={appointment.status} className="shrink-0 text-[10px] py-0.5 px-2.5" />
@@ -853,7 +1063,7 @@ export default function Appointments() {
                     }}
                     className="shrink-0 h-8.5 px-3 rounded-full bg-[#00a8ff] hover:bg-[#0095e6] active:scale-[0.98] text-white font-semibold text-xs flex items-center gap-1 shadow-[0_3px_10px_rgba(0,168,255,0.2)] hover:shadow-[0_4px_14px_rgba(0,168,255,0.3)] transition-all duration-200 cursor-pointer"
                   >
-                    <span>Book</span>
+                    <span>Request</span>
                     <ArrowUpRight className="h-3.5 w-3.5 stroke-[2.5]" />
                   </button>
                 </div>
@@ -885,31 +1095,31 @@ export default function Appointments() {
 
       {/* 3. MODALS & DIALOGS */}
 
-      {/* SCHEDULE MODAL */}
+      {/* REQUEST / SCHEDULE MODAL */}
       <Dialog open={scheduleOpen} onOpenChange={handleScheduleOpenChange}>
-        <DialogContent className="sm:max-w-[540px] p-5 sm:p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[560px] p-5 sm:p-6 rounded-[28px] bg-white border border-slate-100 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.12)] max-h-[90vh] overflow-y-auto">
           <DialogHeader className="space-y-2 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-sky-50 text-[#0099ff] border border-sky-100 shadow-sm">
-                <Calendar className="h-5 w-5 stroke-[2.2]" />
+                <Send className="h-5 w-5 stroke-[2.2]" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
                   <DialogTitle className="text-base sm:text-lg font-bold tracking-tight text-slate-900 font-['Manrope']">
-                    Schedule New Appointment
+                    Request Specialist Appointment
                   </DialogTitle>
                   <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] font-bold text-[#0284c7] uppercase tracking-wider">
-                    Care Visit
+                    Care Request
                   </span>
                 </div>
                 <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  Choose a doctor and preferred date & time for your clinic visit.
+                  Choose a doctor, preferred date & time, and provide your clinical visit reason.
                 </DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 pt-1">
+          <div className="space-y-3.5 pt-1">
             {/* SELECT DOCTOR */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
@@ -985,12 +1195,77 @@ export default function Appointments() {
               </Select>
             </div>
 
+            {/* CONSULTATION MODE & URGENCY */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Consultation Mode
+                </Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setRequestType("in-person")}
+                    className={`h-9 px-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      requestType === "in-person"
+                        ? "bg-[#00a8ff] text-white border-[#00a8ff] shadow-sm"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>In-Person</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRequestType("teleconsult")}
+                    className={`h-9 px-2 rounded-xl text-xs font-bold border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      requestType === "teleconsult"
+                        ? "bg-purple-600 text-white border-purple-600 shadow-sm"
+                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    }`}
+                  >
+                    <Video className="w-3.5 h-3.5" />
+                    <span>Teleconsult</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                  Urgency Level
+                </Label>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { id: "normal", label: "Routine" },
+                    { id: "priority", label: "Priority" },
+                    { id: "urgent", label: "Urgent" },
+                  ].map((u) => (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => setRequestUrgency(u.id as any)}
+                      className={`h-9 px-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                        requestUrgency === u.id
+                          ? u.id === "urgent"
+                            ? "bg-rose-600 text-white border-rose-600 shadow-sm"
+                            : u.id === "priority"
+                            ? "bg-orange-500 text-white border-orange-500 shadow-sm"
+                            : "bg-[#00a8ff] text-white border-[#00a8ff] shadow-sm"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      {u.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* DATE SELECTION */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="date" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                   <Calendar className="h-3.5 w-3.5 text-[#0099ff]" />
-                  <span>Date</span>
+                  <span>Preferred Date</span>
                 </Label>
                 {selectedDate && (
                   <span className="text-[11px] font-semibold text-slate-600">
@@ -1080,24 +1355,23 @@ export default function Appointments() {
               </div>
             </div>
 
-            {/* Visit Details Inset */}
-            <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5 flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-2 text-slate-700 font-medium truncate">
-                <MapPin className="h-3.5 w-3.5 text-[#0099ff] shrink-0" />
-                <span className="truncate">
-                  {(() => {
-                    const doc = doctorOptions.find((d) => d.value === selectedDoctor);
-                    return doc?.hospital ? `${doc.hospital}, Suite 402` : "Zebra Synapse Health Center, Suite 402";
-                  })()}
-                </span>
-              </div>
-              <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold px-2 py-0.5">
-                In-Person Visit
-              </span>
+            {/* REASON FOR VISIT */}
+            <div className="space-y-1.5">
+              <Label htmlFor="reason" className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Reason for Visit / Symptoms
+              </Label>
+              <Input
+                id="reason"
+                type="text"
+                placeholder="e.g. Joint pain flare, ECG follow-up, Medication review..."
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+                className="h-10 rounded-xl border-slate-200 bg-slate-50/50 hover:bg-white text-slate-900 placeholder:text-slate-400 focus-visible:border-[#00a8ff] text-xs font-medium"
+              />
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center gap-2.5 pt-1">
+            <div className="flex items-center gap-2.5 pt-1.5">
               <Button
                 type="button"
                 variant="outline"
@@ -1108,19 +1382,19 @@ export default function Appointments() {
               </Button>
               <button
                 type="button"
-                onClick={handleScheduleAppointment}
+                onClick={handleSendAppointmentRequest}
                 disabled={!isScheduleReady || isSavingSchedule}
                 className="flex-1 h-10 rounded-xl bg-[#00a8ff] hover:bg-[#0095e6] active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(0,168,255,0.28)] hover:shadow-[0_6px_22px_rgba(0,168,255,0.38)] transition-all duration-200 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isSavingSchedule ? (
                   <>
                     <div className="h-3.5 w-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                    <span>Confirming...</span>
+                    <span>Sending Request...</span>
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 className="h-4 w-4 stroke-[2.2]" />
-                    <span>Confirm Appointment</span>
+                    <Send className="h-4 w-4 stroke-[2.2]" />
+                    <span>Send Appointment Request</span>
                   </>
                 )}
               </button>
