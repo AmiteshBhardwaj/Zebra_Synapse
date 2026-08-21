@@ -6,6 +6,7 @@ export type DoctorAppointment = {
   patientGender?: string;
   patientEmail?: string;
   patientPhone?: string;
+  doctor?: string;
   doctorName?: string;
   specialty?: string;
   condition: string;

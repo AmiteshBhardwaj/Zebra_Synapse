@@ -212,11 +212,13 @@ export const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number 
   wbc: { min: 500.0, max: 100000.0 },
   platelets: { min: 10000.0, max: 1500000.0 },
   rbc: { min: 1.0, max: 10.0 },
+  rbc_count: { min: 1.0, max: 10.0 },
   hematocrit: { min: 10.0, max: 75.0 },
   mcv: { min: 40.0, max: 140.0 },
   mch: { min: 10.0, max: 50.0 },
   mchc: { min: 15.0, max: 50.0 },
   rdw: { min: 5.0, max: 40.0 },
+  rdw_cv: { min: 5.0, max: 40.0 },
   creatinine: { min: 0.1, max: 25.0 },
   blood_urea_nitrogen: { min: 1.0, max: 250.0 },
   bun_to_creatinine_ratio: { min: 1.0, max: 100.0 },
@@ -235,6 +237,7 @@ export const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number 
   tibc: { min: 50.0, max: 1000.0 },
   transferrin_saturation: { min: 1.0, max: 100.0 },
   vitamin_d: { min: 2.0, max: 250.0 },
+  vitamin_d_25_oh: { min: 2.0, max: 250.0 },
   vitamin_b12: { min: 20.0, max: 5000.0 },
   sgpt: { min: 1.0, max: 500.0 },
   sgot: { min: 1.0, max: 500.0 },
@@ -286,11 +289,36 @@ function sanitizeLineText(text: string): string {
 /**
  * Context-Aware Clinical Decimal Recovery:
  * If an OCR engine swallowed a decimal point on a metric with known reference ranges
- * (e.g. Creatinine extracted as 120 instead of 1.20, or HbA1c as 68 instead of 6.8, or AST/SGOT as 803 instead of 8.03),
+ * (e.g. Creatinine extracted as 120 instead of 1.20, RBC as 52 instead of 5.2, HbA1c as 68 instead of 6.8, or AST/SGOT as 803 instead of 8.03),
  * check candidate split positions to see if inserting a decimal places the value within expected physiological boundaries.
  */
 function recoverBiomarkerDecimal(biomarkerKey: string, val: number, lineText: string): number {
   if (val % 1 !== 0) return val;
+
+  // RBC count: standard reference is 4.0 - 6.0 million/cmm. If val is 15-100, e.g. 52 -> 5.2, 48 -> 4.8
+  if ((biomarkerKey === "rbc_count" || biomarkerKey === "rbc") && val >= 15 && val <= 100) {
+    return Number((val / 10).toFixed(2));
+  }
+
+  // MCHC: standard reference is 31.5 - 36.5 g/dL. If val is 200-500, e.g. 319 -> 31.9
+  if (biomarkerKey === "mchc" && val >= 200 && val <= 500) {
+    return Number((val / 10).toFixed(1));
+  }
+
+  // MCH: standard reference is 27 - 33 pg. If val is 200-500, e.g. 280 -> 28.0
+  if (biomarkerKey === "mch" && val >= 200 && val <= 500) {
+    return Number((val / 10).toFixed(1));
+  }
+
+  // MCV: standard reference is 80 - 100 fL. If val is 500-1500, e.g. 850 -> 85.0
+  if (biomarkerKey === "mcv" && val >= 500 && val <= 1500) {
+    return Number((val / 10).toFixed(1));
+  }
+
+  // Calcium: standard reference is 8.4 - 10.4 mg/dL. If val is 70-150, e.g. 93 -> 9.3
+  if (biomarkerKey === "calcium" && val >= 70 && val <= 150) {
+    return Number((val / 10).toFixed(2));
+  }
 
   if (biomarkerKey === "creatinine" && val > 25) {
     if (val >= 40 && val <= 250) return Number((val / 100).toFixed(2)); // e.g. 85 -> 0.85, 120 -> 1.20
@@ -318,10 +346,10 @@ function recoverBiomarkerDecimal(biomarkerKey: string, val: number, lineText: st
     return Number((val / 10).toFixed(1)); // e.g. 58 -> 5.8
   }
 
-  // SGOT / SGPT: Normal reference is 17-59 U/L.
-  // If val > 100 and integer, it very likely lost a decimal point in OCR/scan.
+  // SGOT / SGPT: Normal reference is 0-50 U/L.
+  // If val > 100 and integer, check if it swallowed a decimal point in OCR/scan.
   if ((biomarkerKey === "sgot" || biomarkerKey === "sgpt") && val > 100) {
-    // Try /100 first (e.g. 803 → 8.03, 4500 → 45.00)
+    // Try /100 first (e.g. 803 → 8.03, 1169 → 11.69)
     const div100 = Number((val / 100).toFixed(2));
     if (div100 >= 1.0 && div100 <= 200) return div100;
     // Try /10 (e.g. 450 → 45.0)
@@ -333,7 +361,13 @@ function recoverBiomarkerDecimal(biomarkerKey: string, val: number, lineText: st
 }
 
 function scaleBiomarkerValue(biomarkerKey: string, val: number, lineText: string): number {
-  const adjusted = recoverBiomarkerDecimal(biomarkerKey, val, lineText);
+  let adjusted = recoverBiomarkerDecimal(biomarkerKey, val, lineText);
+
+  if (biomarkerKey === "rbc_count" || biomarkerKey === "rbc") {
+    if (adjusted >= 15 && adjusted <= 100) {
+      adjusted = Number((adjusted / 10).toFixed(2));
+    }
+  }
 
   if (biomarkerKey === "platelets") {
     const isLakhs = /lakh/i.test(lineText) || adjusted < 20;

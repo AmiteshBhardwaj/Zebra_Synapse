@@ -292,12 +292,44 @@ function formatValue(value: number | null, unit: string): string {
 }
 
 function getPanelBiomarkerValue(panel: LabPanelRow, key: string): number | null {
+  let raw: number | null = null;
   const biomarkerValue = panel.biomarkers?.[key];
-  if (typeof biomarkerValue === "number") return biomarkerValue;
-  const definition = getBiomarkerDefinition(key);
-  if (!definition?.legacyField) return null;
-  const legacyValue = panel[definition.legacyField];
-  return typeof legacyValue === "number" ? legacyValue : null;
+  if (typeof biomarkerValue === "number") {
+    raw = biomarkerValue;
+  } else {
+    const definition = getBiomarkerDefinition(key);
+    if (definition?.legacyField) {
+      const legacyValue = panel[definition.legacyField];
+      if (typeof legacyValue === "number") raw = legacyValue;
+    }
+  }
+
+  if (raw == null) return null;
+
+  // Auto-correct common integer misread/missing decimal artifacts for existing saved records
+  if ((key === "rbc_count" || key === "rbc") && raw >= 15 && raw <= 100) {
+    return Number((raw / 10).toFixed(2));
+  }
+  if (key === "mchc" && raw >= 200 && raw <= 500) {
+    return Number((raw / 10).toFixed(1));
+  }
+  if (key === "mch" && raw >= 200 && raw <= 500) {
+    return Number((raw / 10).toFixed(1));
+  }
+  if (key === "mcv" && raw >= 500 && raw <= 1500) {
+    return Number((raw / 10).toFixed(1));
+  }
+  if (key === "creatinine" && raw >= 40 && raw <= 250) {
+    return Number((raw / 100).toFixed(2));
+  }
+  if (key === "hemoglobin_a1c" && raw >= 30 && raw <= 200) {
+    return Number((raw / 10).toFixed(1));
+  }
+  if (key === "total_bilirubin" && raw >= 20 && raw <= 400) {
+    return Number((raw / 100).toFixed(2));
+  }
+
+  return raw;
 }
 
 function evaluateConfiguredMetric(

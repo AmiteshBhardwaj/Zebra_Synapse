@@ -143,7 +143,7 @@ export interface PatientPortalContextData {
   }>;
   appointments: {
     upcoming: Array<{
-      id: number;
+      id: string | number;
       doctor: string;
       specialty: string;
       date: string;
@@ -152,7 +152,7 @@ export interface PatientPortalContextData {
       status: string;
     }>;
     past: Array<{
-      id: number;
+      id: string | number;
       doctor: string;
       specialty: string;
       date: string;

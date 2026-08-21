@@ -1507,7 +1507,7 @@ export default function Appointments() {
                   </span>
                 </div>
                 <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  Choose a new date and time for your visit with {selectedAppointment?.doctor ?? "your doctor"}.
+                  Choose a new date and time for your visit with {selectedAppointment?.doctor || selectedAppointment?.doctorName || "your doctor"}.
                 </DialogDescription>
               </div>
             </div>
@@ -1518,11 +1518,11 @@ export default function Appointments() {
             {selectedAppointment && (
               <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5 flex items-center gap-2.5">
                 <DoctorAvatarCircle
-                  name={selectedAppointment.doctor}
+                  name={selectedAppointment.doctor || selectedAppointment.doctorName || "Doctor"}
                   className="h-9 w-9 shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-bold text-slate-900 truncate">{selectedAppointment.doctor}</h4>
+                  <h4 className="text-xs font-bold text-slate-900 truncate">{selectedAppointment.doctor || selectedAppointment.doctorName || "Doctor"}</h4>
                   <p className="text-[11px] text-slate-500 truncate">
                     Currently: {formatDisplayDate(selectedAppointment.date)} at {selectedAppointment.time}
                   </p>
@@ -1685,12 +1685,12 @@ export default function Appointments() {
           <div className="space-y-3 pt-1">
             <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-[#f8fafc]">
               <DoctorAvatarCircle
-                name={selectedAppointment?.doctor || "Doctor"}
+                name={selectedAppointment?.doctor || selectedAppointment?.doctorName || "Doctor"}
                 className="h-10 w-10 shrink-0"
               />
               <div className="min-w-0 flex-1">
                 <p className="text-[9px] uppercase tracking-wider font-bold text-slate-400">Consulting Specialist</p>
-                <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">{selectedAppointment?.doctor ?? "—"}</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">{selectedAppointment?.doctor || selectedAppointment?.doctorName || "—"}</p>
                 <p className="text-[11px] text-slate-500">{selectedAppointment?.specialty ?? "Clinical Consultation"}</p>
               </div>
             </div>
@@ -1765,11 +1765,11 @@ export default function Appointments() {
             {appointmentToCancel && (
               <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-2.5 flex items-center gap-2.5">
                 <DoctorAvatarCircle
-                  name={appointmentToCancel.doctor}
+                  name={appointmentToCancel.doctor || appointmentToCancel.doctorName || "Doctor"}
                   className="h-9 w-9 shrink-0"
                 />
                 <div className="min-w-0 flex-1">
-                  <h4 className="text-xs font-bold text-slate-900 truncate">{appointmentToCancel.doctor}</h4>
+                  <h4 className="text-xs font-bold text-slate-900 truncate">{appointmentToCancel.doctor || appointmentToCancel.doctorName || "Doctor"}</h4>
                   <p className="text-[11px] text-slate-600 truncate mt-0.5">
                     {formatDisplayDate(appointmentToCancel.date)} at {appointmentToCancel.time}
                   </p>
