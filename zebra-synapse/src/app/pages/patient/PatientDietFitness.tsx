@@ -12,10 +12,17 @@ import {
   Calendar,
   Activity,
   Apple,
+  Clock,
+  HeartPulse,
+  CheckCircle2,
+  Check,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
+import { useActiveReport } from "../../../hooks/useActiveReport";
+import { generateDeterministicExercisePlan } from "../../../lib/exercisePlan";
 import {
   portalPanelClass,
   portalPrimaryButtonClass,
@@ -179,6 +186,14 @@ export default function PatientDietFitness() {
     }
   };
 
+  const handleDeleteLoggedMeal = (mealIdOrIndex: string | number) => {
+    const updated = loggedMeals.filter((m, idx) => {
+      if (m.id) return m.id !== mealIdOrIndex;
+      return idx !== mealIdOrIndex;
+    });
+    handleLoggedMealsChange(updated);
+  };
+
   const totals = useMemo(() => {
     return loggedMeals.reduce(
       (acc, item) => ({
@@ -206,15 +221,150 @@ export default function PatientDietFitness() {
     return jsDay === 0 ? 7 : jsDay;
   }, [selectedDate]);
 
-  const daysList = [
-    { dayNumber: 1, name: "Mon", title: "Cardio & Core", status: "Done" },
-    { dayNumber: 2, name: "Tue", title: "Upper Body", status: "Done" },
-    { dayNumber: 3, name: "Wed", title: "Mobility", status: "Rest" },
-    { dayNumber: 4, name: "Thu", title: "Lower Body", status: "Plan" },
-    { dayNumber: 5, name: "Fri", title: "HIIT", status: "Plan" },
-    { dayNumber: 6, name: "Sat", title: "Endurance", status: "Plan" },
-    { dayNumber: 7, name: "Sun", title: "Full Rest", status: "Rest" },
-  ];
+  const { activePanel, biomarkerTrends } = useActiveReport(panels);
+
+  const exercisePlan = useMemo(() => {
+    const fitnessStorageKey = `zebra_fitness_prefs_${profile?.id || "default"}`;
+    let prefs: any = {};
+    try {
+      const saved = localStorage.getItem(fitnessStorageKey);
+      if (saved) prefs = JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return generateDeterministicExercisePlan(activePanel, biomarkerTrends, {
+      fitnessLevel: prefs.fitnessLevel || "beginner",
+      equipment: prefs.workoutEnv || prefs.equipment || "home_minimal",
+      goal: prefs.primaryGoal || "general_health",
+      targetDurationMin: Number(prefs.durationMin) || 30,
+      physicalLimitations: prefs.limitations || [],
+    });
+  }, [activePanel, biomarkerTrends, profile?.id]);
+
+  const todayWorkout = useMemo(() => {
+    return (
+      exercisePlan.days.find((d) => d.dayNumber === currentDayOfWeekNumber) ||
+      exercisePlan.days[0]
+    );
+  }, [exercisePlan, currentDayOfWeekNumber]);
+
+  const allDayExercises = useMemo(() => {
+    if (!todayWorkout) return [];
+    return [...todayWorkout.warmup, ...todayWorkout.mainWorkout, ...todayWorkout.cooldown];
+  }, [todayWorkout]);
+
+  // Track completed exercise IDs per date (defaults to empty array - unticked)
+  const completedExKey = `zebra_completed_exercises_${profile?.id || "default"}_${selectedDate}`;
+  const [completedExerciseIds, setCompletedExerciseIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(completedExKey);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(completedExKey);
+      if (saved !== null) {
+        setCompletedExerciseIds(JSON.parse(saved));
+        return;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    setCompletedExerciseIds([]);
+  }, [completedExKey]);
+
+  const toggleExerciseCompleted = (exId: string) => {
+    const next = completedExerciseIds.includes(exId)
+      ? completedExerciseIds.filter((id) => id !== exId)
+      : [...completedExerciseIds, exId];
+
+    setCompletedExerciseIds(next);
+    try {
+      localStorage.setItem(completedExKey, JSON.stringify(next));
+      const isAllDone =
+        todayWorkout.restDay ||
+        (allDayExercises.length > 0 &&
+          allDayExercises.every((e, idx) => next.includes(e.id || `ex_${idx}`)));
+      localStorage.setItem(
+        `zebra_workout_done_${profile?.id || "default"}_${selectedDate}`,
+        JSON.stringify(isAllDone)
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const isWorkoutDone = useMemo(() => {
+    if (todayWorkout.restDay) return true;
+    if (allDayExercises.length === 0) return true;
+    return allDayExercises.every((e, idx) => {
+      const id = e.id || `ex_${idx}`;
+      return completedExerciseIds.includes(id);
+    });
+  }, [todayWorkout.restDay, allDayExercises, completedExerciseIds]);
+
+  // Calculate real week days compliance and active streak dynamically
+  const currentWeekDays = useMemo(() => {
+    const refDate = parseLocalDate(selectedDate);
+    const jsDay = refDate.getDay();
+    const dayOfWeek = jsDay === 0 ? 7 : jsDay;
+    const monDate = new Date(refDate);
+    monDate.setDate(refDate.getDate() - (dayOfWeek - 1));
+
+    const labels = ["M", "T", "W", "T", "F", "S", "S"];
+    const days = [];
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monDate);
+      d.setDate(monDate.getDate() + i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const dStr = `${yyyy}-${mm}-${dd}`;
+      const dayNum = i + 1;
+
+      let isDone = false;
+      if (dStr === selectedDate) {
+        isDone = loggedMeals.length > 0 && isWorkoutDone;
+      } else {
+        try {
+          const savedMeals = localStorage.getItem(`zebra_food_logs_${profile?.id || "default"}_${dStr}`);
+          const meals = savedMeals ? JSON.parse(savedMeals) : [];
+          const savedW = localStorage.getItem(`zebra_workout_done_${profile?.id || "default"}_${dStr}`);
+          const wDone = savedW !== null ? JSON.parse(savedW) : false;
+          isDone = Array.isArray(meals) && meals.length > 0 && wDone;
+        } catch {
+          isDone = false;
+        }
+      }
+
+      days.push({
+        dayNum,
+        label: labels[i],
+        dateStr: dStr,
+        isDone,
+      });
+    }
+    return days;
+  }, [selectedDate, loggedMeals, isWorkoutDone, profile?.id]);
+
+  const streakCount = useMemo(() => {
+    let count = 0;
+    for (const day of currentWeekDays) {
+      if (day.dayNum > currentDayOfWeekNumber) break;
+      if (day.isDone) {
+        count++;
+      } else {
+        count = 0;
+      }
+    }
+    return count;
+  }, [currentWeekDays, currentDayOfWeekNumber]);
 
   const handleTabChange = (tab: DietFitnessTab) => {
     setActiveTab(tab);
@@ -350,7 +500,9 @@ export default function PatientDietFitness() {
               </div>
               <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-xl">
                 <span className="text-[10px] uppercase text-slate-400 font-bold">Workout:</span>
-                <span className="font-bold text-cyan-300">Day 4 Lower Body</span>
+                <span className="font-bold text-cyan-300">
+                  Day {todayWorkout.dayNumber} {todayWorkout.dayName}
+                </span>
               </div>
             </div>
           </div>
@@ -443,50 +595,148 @@ export default function PatientDietFitness() {
                 </div>
               </div>
 
-              {/* Weekly Workout Snapshot Card */}
-              <div className="rounded-[22px] bg-white border border-slate-100 p-3.5 sm:p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-2 flex-1 flex flex-col justify-between">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              {/* Daily Workout Snapshot Card */}
+              <div className="rounded-[22px] bg-white border border-slate-100 p-3.5 sm:p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex-1 flex flex-col gap-2.5 min-h-0">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2 shrink-0">
                   <div className="flex items-center gap-1.5">
                     <Dumbbell className="h-4 w-4 text-lime-600" />
-                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope']">7-Day Workout Routine</h3>
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope']">
+                      {todayWorkout.dayName}'s Workout Routine
+                    </h3>
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleTabChange("exercise")}
-                    className="text-[11px] font-bold text-lime-700 hover:text-lime-800 inline-flex items-center gap-0.5 cursor-pointer"
+                    onClick={() => handleSelectExerciseDayFromSnapshot(todayWorkout.dayNumber)}
+                    className="text-[11px] font-bold text-lime-700 hover:text-lime-800 inline-flex items-center gap-0.5 cursor-pointer font-['Manrope']"
                   >
                     Full Plan <ChevronRight className="h-3 w-3" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-7 gap-1">
-                  {daysList.map((day) => {
-                    const isToday = day.dayNumber === currentDayOfWeekNumber;
-                    return (
-                      <button
-                        key={day.dayNumber}
-                        type="button"
-                        onClick={() => handleSelectExerciseDayFromSnapshot(day.dayNumber)}
-                        className={`flex flex-col items-center justify-between p-1.5 rounded-xl border text-center transition-all cursor-pointer ${
-                          isToday
-                            ? "border-lime-500 bg-lime-500 text-slate-950 font-bold shadow-2xs"
-                            : "border-slate-100 bg-slate-50/70 hover:bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        <span className="text-[10px] font-extrabold">{day.name}</span>
-                        <span className="text-[9px] text-slate-500 font-semibold mt-0.5 truncate w-full">
-                          {day.status}
-                        </span>
-                      </button>
-                    );
-                  })}
+                {/* Day Focus Header */}
+                <div className="bg-slate-50/80 rounded-xl p-2.5 border border-slate-100 space-y-1.5 shrink-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="px-2 py-0.5 rounded-md bg-lime-100 text-lime-800 text-[10px] font-extrabold uppercase font-['Manrope'] shrink-0">
+                        Day {todayWorkout.dayNumber}
+                      </span>
+                      <h4 className="text-xs font-bold text-slate-900 truncate font-['Manrope']">
+                        {todayWorkout.focus}
+                      </h4>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold font-mono shrink-0 ${
+                        todayWorkout.restDay ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
+                      }`}
+                    >
+                      {todayWorkout.intensity}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-[10px] text-slate-500 font-semibold font-['Manrope']">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3 text-slate-400" />
+                      {todayWorkout.estimatedDurationMin} mins
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Flame className="h-3 w-3 text-orange-500" />
+                      {todayWorkout.estimatedCalories} kcal
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <HeartPulse className="h-3 w-3 text-rose-500" />
+                      {todayWorkout.targetHeartRateBpm.split("(")[0]}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Exercises list or Rest box for specific day */}
+                <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 pr-0.5 [scrollbar-width:thin]">
+                  {todayWorkout.restDay ? (
+                    <div className="h-full flex flex-col items-center justify-center p-4 bg-amber-50/50 rounded-2xl border border-amber-100 text-center space-y-2">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-100/80 text-amber-700 shadow-2xs">
+                        <HeartPulse className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-1 max-w-sm">
+                        <p className="text-xs font-extrabold text-amber-950 font-['Manrope']">Active Rest & Recovery Day</p>
+                        <p className="text-[11px] text-amber-800/90 leading-normal font-medium font-['Manrope']">
+                          {todayWorkout.recoveryTip || "Focus on light walking, hydration, and restorative rest."}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    allDayExercises.map((ex, idx) => {
+                      const exId = ex.id || `ex_${idx}`;
+                      const isChecked = completedExerciseIds.includes(exId);
+
+                      return (
+                        <div
+                          key={exId}
+                          className={`flex items-center justify-between gap-2 p-2.5 rounded-xl border transition-all text-xs ${
+                            isChecked
+                              ? "bg-lime-50/50 border-lime-200/80"
+                              : "bg-slate-50/70 border-slate-100 hover:border-slate-200"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {/* Round Check Button */}
+                            <button
+                              type="button"
+                              onClick={() => toggleExerciseCompleted(exId)}
+                              className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all cursor-pointer ${
+                                isChecked
+                                  ? "bg-[#84cc16] border-[#84cc16] text-slate-950 shadow-2xs"
+                                  : "border-slate-300 bg-white hover:border-lime-500 text-transparent"
+                              }`}
+                              title={isChecked ? "Mark incomplete" : "Mark completed"}
+                            >
+                              <Check className="h-3 w-3 stroke-[3]" />
+                            </button>
+
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase shrink-0 font-['Manrope'] ${
+                                ex.category === "warmup"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : ex.category === "cardio"
+                                  ? "bg-sky-100 text-sky-800"
+                                  : ex.category === "strength"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : ex.category === "mobility"
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-slate-100 text-slate-700"
+                              }`}
+                            >
+                              {ex.category}
+                            </span>
+                            <div className="min-w-0">
+                              <p
+                                className={`font-bold text-xs truncate leading-tight font-['Manrope'] ${
+                                  isChecked ? "text-slate-900 line-through decoration-slate-400" : "text-slate-800"
+                                }`}
+                              >
+                                {ex.name}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-medium truncate font-['Manrope']">
+                                {ex.targetMuscles}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <span className="font-mono font-bold text-slate-900 text-xs">
+                              {ex.durationMin ? `${ex.durationMin}m` : ex.sets && ex.reps ? `${ex.sets}x${ex.reps}` : "1 set"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* RIGHT COLUMN: MEALS TIMELINE (SCROLLABLE CONTAINER) */}
-            <div className="lg:col-span-7 xl:col-span-7 rounded-[22px] bg-white border border-slate-100 p-3.5 sm:p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col min-h-0">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2 shrink-0">
+            {/* RIGHT COLUMN: MEALS TIMELINE & CONSISTENCY (SCROLLABLE CONTAINER) */}
+            <div className="lg:col-span-7 xl:col-span-7 rounded-[22px] bg-white border border-slate-100 p-3.5 sm:p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col gap-3 min-h-0">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2 shrink-0">
                 <div className="flex items-center gap-2">
                   <Utensils className="h-4 w-4 text-lime-600" />
                   <h3 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope']">
@@ -520,11 +770,21 @@ export default function PatientDietFitness() {
                         </div>
                       </div>
 
-                      <div className="text-right shrink-0">
-                        <span className="font-mono font-bold text-slate-900 text-xs">{meal.calories} kcal</span>
-                        <div className="text-[9px] font-mono text-slate-400">
-                          C:{meal.carbs || 0}g P:{meal.protein || 0}g F:{meal.fat || 0}g
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-slate-900 text-xs">{meal.calories} kcal</span>
+                          <div className="text-[9px] font-mono text-slate-400">
+                            C:{meal.carbs || 0}g P:{meal.protein || 0}g F:{meal.fat || 0}g
+                          </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteLoggedMeal(meal.id || idx)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all cursor-pointer"
+                          title="Delete logged meal"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
                   ))
@@ -541,6 +801,80 @@ export default function PatientDietFitness() {
                     </Button>
                   </div>
                 )}
+              </div>
+
+              {/* Consistency & Protocol Streak Card (Light Theme, Gap-Free) */}
+              <div className="rounded-2xl bg-slate-50/90 border border-slate-200/80 p-3 shadow-2xs space-y-2.5 shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-orange-50 text-orange-600 border border-orange-200/60">
+                      <Flame className="h-4 w-4 fill-orange-500 text-orange-500" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-xs font-bold text-slate-900 font-['Manrope']">
+                          Consistency Tracker
+                        </h4>
+                        <span className="bg-orange-100/80 text-orange-800 text-[9px] font-extrabold px-2 py-0.5 rounded-full border border-orange-200 font-['Manrope']">
+                          {streakCount} {streakCount === 1 ? "Day" : "Days"} Streak 🔥
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium font-['Manrope']">
+                        Based on logged meals & workout activity
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Stat Badges */}
+                  <div className="flex items-center gap-1.5 text-[10px] font-['Manrope']">
+                    <span className="px-2 py-0.5 rounded-lg bg-white border border-slate-200 font-bold text-slate-700">
+                      Meals: {loggedMeals.length}/4
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-lg font-bold border transition-all ${
+                        isWorkoutDone
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                          : "bg-amber-100 text-amber-800 border-amber-300"
+                      }`}
+                    >
+                      {todayWorkout.restDay
+                        ? "Rest Day ✓"
+                        : isWorkoutDone
+                        ? "Workout Completed ✓"
+                        : `Workout: ${completedExerciseIds.length}/${allDayExercises.length}`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 7-Day Dynamic Weekly Streak Grid */}
+                <div className="grid grid-cols-7 gap-1.5 text-center">
+                  {currentWeekDays.map((item) => {
+                    const isToday = item.dayNum === currentDayOfWeekNumber;
+                    const isDone = item.isDone;
+
+                    return (
+                      <div
+                        key={item.dayNum}
+                        className={`py-1.5 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                          isToday
+                            ? "bg-[#84cc16] text-slate-950 font-extrabold border-lime-500 shadow-2xs"
+                            : isDone
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 font-bold"
+                            : "bg-white text-slate-400 border-slate-200 font-medium"
+                        }`}
+                      >
+                        <span className="text-[10px] uppercase font-bold">{item.label}</span>
+                        <span className="mt-0.5">
+                          {isDone ? (
+                            <Check className={`h-3 w-3 ${isToday ? "text-slate-950" : "text-emerald-600"} stroke-[2.5]`} />
+                          ) : (
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-300 inline-block" />
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
