@@ -73,7 +73,7 @@ function addDaysToDateStr(dateStr: string, days: number): string {
 export default function PatientDietFitness() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const { hasLabReports } = usePatientLabReports();
   const { panels } = usePatientLabPanels();
 
@@ -488,7 +488,7 @@ export default function PatientDietFitness() {
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-lime-400 animate-pulse" />
               <h2 className="text-xs sm:text-sm font-bold font-['Manrope']">
-                Hello, {profile?.full_name || "Maya Thompson"}!
+                Hello, {profile?.full_name || user?.email?.split("@")[0] || "Patient"}!
               </h2>
               <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">• Active Protocol</span>
             </div>
