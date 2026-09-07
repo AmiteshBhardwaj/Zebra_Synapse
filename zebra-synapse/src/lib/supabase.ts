@@ -12,66 +12,43 @@ function getSupabaseAnonKey(): string {
   return import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
 }
 
-function buildSupabaseFetch(anonKey: string): typeof fetch {
-  return async (input, init) => {
-    const headers = new Headers(init?.headers);
-    if (!headers.has("apikey")) {
-      headers.set("apikey", anonKey);
-    }
-    if (!headers.has("Authorization")) {
-      headers.set("Authorization", `Bearer ${anonKey}`);
-    }
-
-    return fetch(input, {
-      ...init,
-      headers,
-    });
-  };
-}
-
 export function isSupabaseConfigured(): boolean {
   return Boolean(getSupabaseUrl() && getSupabaseAnonKey());
 }
 
-/** Returns the browser Supabase client, or null if env vars are missing. */
+/** Returns the browser Supabase client singleton, or null if env vars are missing. */
 export function getSupabase(): SupabaseClient | null {
   if (!isSupabaseConfigured()) return null;
   if (!client) {
     const supabaseUrl = getSupabaseUrl();
     const supabaseAnonKey = getSupabaseAnonKey();
 
-    client = createClient(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        global: {
-          fetch: buildSupabaseFetch(supabaseAnonKey),
-          headers: {
-            apikey: supabaseAnonKey,
-          },
-        },
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          flowType: "pkce",
-          storageKey: AUTH_STORAGE_KEY,
-        },
+    client = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: "pkce",
+        storageKey: AUTH_STORAGE_KEY,
       },
-    );
+    });
   }
   return client;
 }
 
 export function clearSupabaseAuthStorage(): void {
   if (typeof window === "undefined") return;
-  window.localStorage.removeItem(AUTH_STORAGE_KEY);
-  window.localStorage.removeItem(AUTH_CODE_VERIFIER_STORAGE_KEY);
+  try {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.localStorage.removeItem(AUTH_CODE_VERIFIER_STORAGE_KEY);
+  } catch {}
 }
 
 export async function clearBrowserSupabaseSession(sb: SupabaseClient): Promise<void> {
   clearSupabaseAuthStorage();
-  await sb.auth.signOut({ scope: "local" });
+  try {
+    await sb.auth.signOut({ scope: "local" });
+  } catch {}
 }
 
 function getErrorMessage(error: unknown): string {
@@ -100,7 +77,8 @@ export function isInvalidRefreshTokenError(error: unknown): boolean {
   const message = getErrorMessage(error).toLowerCase();
   return (
     message.includes("invalid refresh token") ||
-    message.includes("refresh token not found")
+    message.includes("refresh token not found") ||
+    message.includes("refresh_token_not_found")
   );
 }
 

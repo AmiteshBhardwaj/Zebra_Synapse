@@ -10,7 +10,6 @@ import {
 } from "react";
 import {
   AuthApiError,
-  type AuthChangeEvent,
   type Session,
   type User,
 } from "@supabase/supabase-js";
@@ -42,31 +41,39 @@ async function fetchProfile(
   sb: SupabaseClient,
   userId: string,
 ): Promise<Profile | null> {
-  let { data, error } = await sb
-    .from("profiles")
-    .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
-    .eq("id", userId)
-    .maybeSingle();
+  let baseProfile: Profile | null = null;
 
-  if (error && (error.message.includes("schema cache") || error.message.includes("column") || error.message.includes("does not exist"))) {
-    console.warn("[auth] Supabase profiles select fallback:", error.message);
-    const fallback = await sb
+  try {
+    let { data, error } = await sb
       .from("profiles")
-      .select("id, role, full_name, license_number")
+      .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
       .eq("id", userId)
       .maybeSingle();
 
-    if (!fallback.error) {
-      data = (fallback.data as unknown) as any;
-      error = null;
+    if (error && (error.message.includes("schema cache") || error.message.includes("column") || error.message.includes("does not exist"))) {
+      console.warn("[auth] Supabase profiles select fallback:", error.message);
+      const fallback = await sb
+        .from("profiles")
+        .select("id, role, full_name, license_number")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!fallback.error && fallback.data) {
+        data = (fallback.data as unknown) as any;
+        error = null;
+      }
     }
-  }
 
-  if (error) {
-    console.error("[auth] profiles fetch:", error.message);
-  }
+    if (error) {
+      console.warn("[auth] profiles fetch query error:", error.message);
+    }
 
-  let baseProfile: Profile | null = data ? (data as Profile) : null;
+    if (data) {
+      baseProfile = data as Profile;
+    }
+  } catch (err) {
+    console.warn("[auth] profiles fetch exception:", err);
+  }
 
   if (!baseProfile) {
     // Attempt auto-healing: insert/upsert missing profile row for this authenticated user
@@ -120,19 +127,28 @@ async function fetchProfile(
       baseProfile = {
         ...localProfile,
         ...baseProfile,
-        height_cm: baseProfile.height_cm ?? localProfile.height_cm ?? null,
-        weight_kg: baseProfile.weight_kg ?? localProfile.weight_kg ?? null,
-        age: baseProfile.age ?? localProfile.age ?? null,
-        gender: baseProfile.gender ?? localProfile.gender ?? null,
-        blood_type: baseProfile.blood_type ?? localProfile.blood_type ?? null,
-        dietary_preference: baseProfile.dietary_preference ?? localProfile.dietary_preference ?? null,
-        food_allergies: baseProfile.food_allergies ?? localProfile.food_allergies ?? null,
-        dietary_conditions: baseProfile.dietary_conditions ?? localProfile.dietary_conditions ?? null,
-        dietary_notes: baseProfile.dietary_notes ?? localProfile.dietary_notes ?? null,
+        height_cm: baseProfile?.height_cm ?? localProfile.height_cm ?? null,
+        weight_kg: baseProfile?.weight_kg ?? localProfile.weight_kg ?? null,
+        age: baseProfile?.age ?? localProfile.age ?? null,
+        gender: baseProfile?.gender ?? localProfile.gender ?? null,
+        blood_type: baseProfile?.blood_type ?? localProfile.blood_type ?? null,
+        dietary_preference: baseProfile?.dietary_preference ?? localProfile.dietary_preference ?? null,
+        food_allergies: baseProfile?.food_allergies ?? localProfile.food_allergies ?? null,
+        dietary_conditions: baseProfile?.dietary_conditions ?? localProfile.dietary_conditions ?? null,
+        dietary_notes: baseProfile?.dietary_notes ?? localProfile.dietary_notes ?? null,
       };
     }
   } catch (e) {
     console.warn("[auth] local profile merge warning:", e);
+  }
+
+  if (!baseProfile) {
+    baseProfile = {
+      id: userId,
+      role: "patient",
+      full_name: "Patient User",
+      license_number: null,
+    };
   }
 
   return baseProfile;
@@ -169,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [loading, setLoading] = useState(isSupabaseConfigured());
   const inactivityTimerRef = useRef<number | null>(null);
+  const lastActivityTimestampRef = useRef<number>(Date.now());
   const bootstrapCompleteRef = useRef(false);
   const inactivityTimeoutMs = getAuthInactivityTimeoutMs();
 
@@ -356,47 +373,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     };
 
-    const handleAuthStateChange = async (
-      event: AuthChangeEvent,
-      nextSession: Session | null,
-    ) => {
+    const {
+      data: { subscription },
+    } = sb.auth.onAuthStateChange(async (event, nextSession) => {
       if (!bootstrapCompleteRef.current && event === "INITIAL_SESSION") {
         return;
       }
 
-      if (!nextSession) {
+      if (event === "SIGNED_OUT" || !nextSession) {
         await sync(null);
         return;
       }
 
+      // Restore session directly without fragile redundant network queries
       try {
-        const { error } = await sb.auth.getUser(nextSession.access_token);
-        if (error) {
-          throw error;
-        }
         await sync(nextSession);
-      } catch (error) {
-        if (
-          error instanceof AuthApiError &&
-          isInvalidRefreshTokenError(error)
-        ) {
-          console.warn("[auth] clearing invalid auth state change session");
-          await clearInvalidSession(sb);
-          return;
-        }
-
-        console.error(
-          `[auth] state change ${event.toLowerCase()}:`,
-          error instanceof Error ? error.message : error,
-        );
-        await sync(null);
+      } catch (err) {
+        console.error(`[auth] state change ${event.toLowerCase()} error:`, err);
       }
-    };
-
-    const {
-      data: { subscription },
-    } = sb.auth.onAuthStateChange((event, s) => {
-      void handleAuthStateChange(event, s);
     });
 
     void (async () => {
@@ -407,28 +401,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } = await sb.auth.getSession();
 
         if (sessionError) {
-          throw sessionError;
+          if (isInvalidRefreshTokenError(sessionError)) {
+            console.warn("[auth] clearing invalid persisted session");
+            await clearInvalidSession(sb);
+            return;
+          }
         }
-        if (!cachedSession) {
+
+        if (cachedSession) {
+          await sync(cachedSession);
+          // Background soft verification (does not kill session if offline or network drops)
+          try {
+            const { error: userError } = await sb.auth.getUser();
+            if (userError && isInvalidRefreshTokenError(userError)) {
+              console.warn("[auth] refresh token invalid during background check");
+              await clearInvalidSession(sb);
+              return;
+            }
+          } catch (e) {
+            console.warn("[auth] background check non-fatal error:", e);
+          }
+        } else {
           await sync(null);
-          bootstrapCompleteRef.current = true;
-          return;
         }
-
-        const { error: userError } = await sb.auth.getUser();
-        if (userError) {
-          throw userError;
-        }
-
-        await sync(cachedSession);
       } catch (error) {
         if (
           error instanceof AuthApiError &&
           isInvalidRefreshTokenError(error)
         ) {
-          console.warn("[auth] clearing invalid persisted session");
+          console.warn("[auth] clearing invalid persisted session on exception");
           await clearInvalidSession(sb);
-          bootstrapCompleteRef.current = true;
           return;
         }
 
@@ -439,13 +441,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await sync(null);
       } finally {
         bootstrapCompleteRef.current = true;
+        setLoading(false);
       }
     })();
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [clearInvalidSession]);
 
   const signOut = useCallback(async () => {
     try {
@@ -459,6 +462,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (sb) await sb.auth.signOut();
   }, []);
 
+  // Resilient inactivity timer designed for desktop multi-tabbing and sleep/wake cycles
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -469,14 +473,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    const resetTimer = () => {
+    const scheduleTimer = (remainingMs: number) => {
       clearTimer();
       if (!session?.user && !demoUser) return;
 
       inactivityTimerRef.current = window.setTimeout(() => {
-        void signOut();
-      }, inactivityTimeoutMs);
+        const elapsed = Date.now() - lastActivityTimestampRef.current;
+        if (elapsed >= inactivityTimeoutMs) {
+          void signOut();
+        } else {
+          scheduleTimer(inactivityTimeoutMs - elapsed);
+        }
+      }, Math.max(1000, remainingMs));
     };
+
+    let lastRecordAt = 0;
+    const handleUserActivity = () => {
+      const now = Date.now();
+      // Throttle activity updates to once every 2 seconds to avoid desktop GPU/CPU jank
+      if (now - lastRecordAt > 2000) {
+        lastRecordAt = now;
+        lastActivityTimestampRef.current = now;
+        scheduleTimer(inactivityTimeoutMs);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        const elapsed = Date.now() - lastActivityTimestampRef.current;
+        if (elapsed >= inactivityTimeoutMs && (session?.user || demoUser)) {
+          void signOut();
+        } else {
+          scheduleTimer(inactivityTimeoutMs - elapsed);
+        }
+      }
+    };
+
+    scheduleTimer(inactivityTimeoutMs);
 
     const events: Array<keyof WindowEventMap> = [
       "click",
@@ -486,18 +519,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       "touchstart",
     ];
 
-    resetTimer();
     for (const eventName of events) {
-      window.addEventListener(eventName, resetTimer, { passive: true });
+      window.addEventListener(eventName, handleUserActivity, { passive: true });
     }
-    document.addEventListener("visibilitychange", resetTimer);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       clearTimer();
       for (const eventName of events) {
-        window.removeEventListener(eventName, resetTimer);
+        window.removeEventListener(eventName, handleUserActivity);
       }
-      document.removeEventListener("visibilitychange", resetTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [inactivityTimeoutMs, session?.user, demoUser, signOut]);
 
