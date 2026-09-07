@@ -21,6 +21,7 @@ import {
   isSupabaseConfigured,
 } from "../lib/supabase";
 import { getAuthInactivityTimeoutMs } from "../lib/security";
+import { safeLocalStorage } from "../lib/safeStorage";
 import type { Profile } from "./types";
 
 type AuthContextValue = {
@@ -121,7 +122,7 @@ async function fetchProfile(
 
   // Merge locally persisted profile cache if present (ensures instant persistence across refresh)
   try {
-    const rawLocal = localStorage.getItem(`zebra_profile_${userId}`);
+    const rawLocal = safeLocalStorage.getItem(`zebra_profile_${userId}`);
     if (rawLocal) {
       const localProfile = JSON.parse(rawLocal);
       baseProfile = {
@@ -163,7 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Fallback demo state when Supabase auth is not active
   const [demoUser, setDemoUser] = useState<{ id: string; email?: string } | null>(() => {
     try {
-      const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+      const stored = safeLocalStorage.getItem(DEMO_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         return parsed.user ?? null;
@@ -174,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [demoProfile, setDemoProfile] = useState<Profile | null>(() => {
     try {
-      const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+      const stored = safeLocalStorage.getItem(DEMO_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         return parsed.profile ?? null;
@@ -192,7 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setDemoSession = useCallback((role: "patient" | "doctor", email: string) => {
     let existingProfile: Partial<Profile> = {};
     try {
-      const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+      const stored = safeLocalStorage.getItem(DEMO_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed?.profile?.role === role) {
@@ -221,8 +222,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     };
     try {
-      localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(demoData));
-      localStorage.setItem(`zebra_profile_${demoData.user.id}`, JSON.stringify(demoData.profile));
+      safeLocalStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(demoData));
+      safeLocalStorage.setItem(`zebra_profile_${demoData.user.id}`, JSON.stringify(demoData.profile));
     } catch {}
     setDemoUser(demoData.user);
     setDemoProfile(demoData.profile);
@@ -236,7 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setDemoUser(null);
       setDemoProfile(null);
       try {
-        localStorage.removeItem(DEMO_STORAGE_KEY);
+        safeLocalStorage.removeItem(DEMO_STORAGE_KEY);
       } catch {}
       setLoading(false);
     },
@@ -291,18 +292,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDemoProfile(updated);
       }
 
-      // 2. Persist to localStorage caches for all users
+      // 2. Persist to safe storage caches for all users
       try {
-        localStorage.setItem(`zebra_profile_${activeUid}`, JSON.stringify(updated));
+        safeLocalStorage.setItem(`zebra_profile_${activeUid}`, JSON.stringify(updated));
         if (!session?.user) {
-          const stored = localStorage.getItem(DEMO_STORAGE_KEY);
+          const stored = safeLocalStorage.getItem(DEMO_STORAGE_KEY);
           const parsed = stored ? JSON.parse(stored) : {};
           parsed.profile = updated;
           if (!parsed.user && demoUser) parsed.user = demoUser;
-          localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(parsed));
+          safeLocalStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(parsed));
         }
       } catch (e) {
-        console.warn("[auth] localStorage update error:", e);
+        console.warn("[auth] safeStorage update error:", e);
       }
 
       // 3. Persist to Supabase if connected
@@ -363,7 +364,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setDemoUser(null);
         setDemoProfile(null);
         try {
-          localStorage.removeItem(DEMO_STORAGE_KEY);
+          safeLocalStorage.removeItem(DEMO_STORAGE_KEY);
         } catch {}
         const p = await fetchProfile(sb, s.user.id);
         setProfile(p);
@@ -452,7 +453,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      localStorage.removeItem(DEMO_STORAGE_KEY);
+      safeLocalStorage.removeItem(DEMO_STORAGE_KEY);
     } catch {}
     setDemoUser(null);
     setDemoProfile(null);

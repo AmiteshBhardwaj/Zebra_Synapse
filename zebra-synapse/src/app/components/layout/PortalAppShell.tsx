@@ -116,7 +116,7 @@ export default function PortalAppShell({
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
           className={cn(
-            "group hidden shrink-0 border-r border-white/8 bg-[rgba(7,14,25,0.85)] px-4 py-5 backdrop-blur-2xl transition-all duration-300 ease-in-out lg:flex lg:flex-col",
+            "group hidden shrink-0 border-r border-white/8 bg-[rgba(7,14,25,0.85)] px-3 sm:px-4 py-5 backdrop-blur-2xl transition-all duration-300 ease-in-out md:flex md:flex-col",
             isExpanded ? "w-[280px]" : "w-[72px]"
           )}
         >
@@ -175,7 +175,7 @@ export default function PortalAppShell({
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-11 w-11 rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white lg:hidden"
+                      className="h-11 w-11 rounded-2xl border-white/10 bg-white/[0.03] text-white hover:bg-white/[0.08] hover:text-white md:hidden"
                     >
                       <Menu className="h-5 w-5" />
                     </Button>

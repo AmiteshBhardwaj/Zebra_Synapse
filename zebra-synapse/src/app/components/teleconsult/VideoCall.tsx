@@ -19,6 +19,7 @@ import {
   Info,
 } from "lucide-react";
 import { getSupabase } from "../../../lib/supabase";
+import { safeLocalStorage } from "../../../lib/safeStorage";
 
 interface VideoCallProps {
   consultationId: string;
@@ -177,6 +178,8 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
   const [isSpeakerMuted, setIsSpeakerMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [usingSimulatedCamera, setUsingSimulatedCamera] = useState(false);
+  const [hardwareBadge, setHardwareBadge] = useState<string | null>(null);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "connected" | "reconnecting" | "disconnected"
   >("connecting");
@@ -224,6 +227,20 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const handleUnblockAutoplay = () => {
+    const videoEl = remoteVideoRef.current;
+    if (videoEl) {
+      videoEl
+        .play()
+        .then(() => {
+          setAutoplayBlocked(false);
+        })
+        .catch((err) => {
+          console.warn("Autoplay unblock retry failed:", err);
+        });
+    }
+  };
+
   // Bind remote stream to video element
   useEffect(() => {
     const videoEl = remoteVideoRef.current;
@@ -236,6 +253,9 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         p.catch((err) => {
           if (err.name !== "AbortError") {
             console.warn("Remote autoplay waiting for user interaction:", err);
+            if (err.name === "NotAllowedError") {
+              setAutoplayBlocked(true);
+            }
           }
         });
       }
@@ -296,9 +316,9 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         console.warn("Supabase signal send error:", err);
       }
 
-      // 3. LocalStorage fallback for maximum cross-tab resilience
+      // 3. SafeStorage fallback for maximum cross-tab resilience
       try {
-        localStorage.setItem(
+        safeLocalStorage.setItem(
           `zebra_rtc_sig_${consultationId}`,
           JSON.stringify({ ...payload, _nonce: Math.random() })
         );
@@ -314,22 +334,75 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
     let isMounted = true;
 
     async function initCall() {
-      // 1. Acquire Media Stream with Graceful Fallback
-      let stream: MediaStream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        });
-      } catch (err) {
-        console.warn(
-          "Direct camera/mic access unavailable (possibly occupied by another tab). Generating virtual avatar stream fallback:",
-          err
-        );
+      // 1. Adaptive Hardware Discovery for Desktop
+      let stream: MediaStream | null = null;
+      let videoTrack: MediaStreamTrack | null = null;
+      let audioTrack: MediaStreamTrack | null = null;
+
+      if (typeof navigator !== "undefined" && navigator.mediaDevices?.getUserMedia) {
+        // Step 1A: Attempt full video + audio acquisition
+        try {
+          const fullStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          });
+          videoTrack = fullStream.getVideoTracks()[0] ?? null;
+          audioTrack = fullStream.getAudioTracks()[0] ?? null;
+        } catch (fullErr: any) {
+          console.warn("[VideoCall] Full device probe failed, checking individual media devices:", fullErr?.name || fullErr);
+
+          // Step 1B: Attempt video-only (e.g. desktop tower with webcam but no mic)
+          try {
+            const vStream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+              audio: false,
+            });
+            videoTrack = vStream.getVideoTracks()[0] ?? null;
+            if (videoTrack && isMounted) {
+              setHardwareBadge("Camera only (Mic synthesized)");
+            }
+          } catch {
+            // Camera not found or occupied
+          }
+
+          // Step 1C: Attempt audio-only (e.g. desktop tower with headset/mic but no webcam)
+          try {
+            const aStream = await navigator.mediaDevices.getUserMedia({
+              video: false,
+              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            });
+            audioTrack = aStream.getAudioTracks()[0] ?? null;
+            if (audioTrack && isMounted) {
+              setHardwareBadge("Microphone only (Virtual avatar video)");
+            }
+          } catch {
+            // Microphone not found or occupied
+          }
+        }
+      }
+
+      // Step 1D: If partial hardware was found, synthesize the missing stream channel
+      if (videoTrack || audioTrack) {
+        const sim = createSimulatedStream(role);
+        simulatedStreamCleanupRef.current = sim.cleanup;
+
+        const finalVideo = videoTrack || sim.stream.getVideoTracks()[0];
+        const finalAudio = audioTrack || sim.stream.getAudioTracks()[0];
+
+        stream = new MediaStream([finalVideo, finalAudio].filter(Boolean));
+        if (!videoTrack && isMounted) {
+          setUsingSimulatedCamera(true);
+        }
+      } else {
+        // Step 1E: Completely unavailable (no physical devices or user denied permissions)
+        console.warn("[VideoCall] No physical devices accessible. Engaging virtual avatar stream fallback.");
         const sim = createSimulatedStream(role);
         stream = sim.stream;
         simulatedStreamCleanupRef.current = sim.cleanup;
-        if (isMounted) setUsingSimulatedCamera(true);
+        if (isMounted) {
+          setUsingSimulatedCamera(true);
+          setHardwareBadge("Virtual Telehealth Feed");
+        }
       }
 
       if (!isMounted) {
@@ -774,6 +847,24 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         </div>
       )}
 
+      {/* Safari / Brave Autoplay Restriction Overlay */}
+      {autoplayBlocked && (
+        <div
+          onClick={handleUnblockAutoplay}
+          className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-md cursor-pointer p-4 text-center transition-all"
+        >
+          <div className="rounded-3xl border border-cyan-500/50 bg-slate-900/95 p-6 max-w-sm shadow-[0_0_35px_rgba(56,189,248,0.35)]">
+            <Volume2 className="h-12 w-12 text-cyan-400 mx-auto animate-bounce mb-3" />
+            <h4 className="text-base font-bold text-white mb-1.5 font-['Manrope']">
+              Click to Unblock Live Audio & Video
+            </h4>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Your desktop browser paused media autoplay. Click anywhere to activate live consultation audio and video.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Top Session Info Bar */}
       <div className="absolute top-5 left-5 right-5 flex items-center justify-between z-20 pointer-events-none">
         <div className="flex items-center gap-2.5 bg-slate-950/80 backdrop-blur-xl border border-white/10 px-3.5 py-1.5 rounded-full pointer-events-auto shadow-md">
@@ -795,7 +886,16 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         </div>
 
         <div className="flex items-center gap-2 pointer-events-auto">
-          {usingSimulatedCamera && (
+          {hardwareBadge && (
+            <div
+              className="flex items-center gap-1.5 bg-cyan-950/80 backdrop-blur-xl border border-cyan-500/30 text-cyan-200 text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-md"
+              title="Hardware device adaptation status"
+            >
+              <Info className="h-3 w-3 text-cyan-400" />
+              <span>{hardwareBadge}</span>
+            </div>
+          )}
+          {usingSimulatedCamera && !hardwareBadge && (
             <div
               className="flex items-center gap-1.5 bg-indigo-950/80 backdrop-blur-xl border border-indigo-500/30 text-indigo-200 text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-md"
               title="Physical webcam is occupied by another browser tab on this machine. Using high-fidelity virtual stream."

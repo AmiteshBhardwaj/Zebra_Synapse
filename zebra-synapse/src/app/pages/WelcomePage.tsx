@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { DnaCanvas3D } from "../components/DnaCanvas3D";
+import DnaHelix from "../components/DnaHelix";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { GlassmorphicLoginCard } from "../components/GlassmorphicLoginCard";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -71,7 +73,8 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
 
   const scrollToLogin = (tab: "patient" | "doctor" = "patient") => {
     setCardTab(tab);
-    const targetScroll = (document.documentElement.scrollHeight - window.innerHeight) * 0.85;
+    const scrollMax = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    const targetScroll = scrollMax * 0.95;
     window.scrollTo({ top: targetScroll, behavior: "smooth" });
   };
 
@@ -212,8 +215,17 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
           <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.008)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.008)_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20" />
         </div>
 
-        {/* 3D WebGL Double Helix Layer */}
-        <DnaCanvas3D progressRef={scrollProgressRef} />
+        {/* 3D WebGL Double Helix Layer with ErrorBoundary Fallback */}
+        <ErrorBoundary
+          componentName="3D DNA Engine"
+          fallback={
+            <div className="w-full h-full absolute inset-0 pointer-events-none z-0 flex items-center justify-end pr-6 lg:pr-20 overflow-hidden">
+              <DnaHelix className="w-[320px] h-[500px] lg:w-[440px] lg:h-[620px] drop-shadow-[0_0_35px_rgba(56,189,248,0.35)]" />
+            </div>
+          }
+        >
+          <DnaCanvas3D progressRef={scrollProgressRef} />
+        </ErrorBoundary>
 
         {/* Top Navigation Bar — Asymmetric Minimal Header */}
         <header className="relative z-30 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto w-full shrink-0">
@@ -232,12 +244,12 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
         </header>
 
         {/* Main Hero Content Area — Two-Column Desktop Grid */}
-        <main className="relative z-20 flex-1 flex flex-col justify-center px-6 lg:px-12 max-w-7xl mx-auto min-h-0 py-2 w-full">
+        <main className="relative z-20 flex-1 flex flex-col justify-center px-4 sm:px-6 lg:px-12 max-w-7xl mx-auto min-h-0 py-2 sm:py-4 w-full">
           
           {/* STATE 1: Hero Content */}
           <div
             ref={heroRef}
-            className="w-full grid lg:grid-cols-12 gap-8 lg:gap-12 items-center will-change-transform transform-gpu"
+            className="w-full grid lg:grid-cols-12 gap-6 lg:gap-12 items-center will-change-transform transform-gpu"
             style={{
               opacity: 1,
               transform: "translate3d(0px, 0px, 0px) scale(1)",
@@ -247,20 +259,20 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
           >
             {/* LEFT COLUMN: Editorial Hero Copy & Actions */}
             <div className="lg:col-span-7 flex flex-col items-start text-left">
-              <div className="text-cyan-400 font-mono text-[11px] tracking-[0.2em] uppercase mb-2.5 font-semibold">
+              <div className="text-cyan-400 font-mono text-[10px] sm:text-[11px] tracking-[0.2em] uppercase mb-2 font-semibold">
                 CLINICAL INTELLIGENCE PLATFORM
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-100 leading-[1.08] font-['Manrope']">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-slate-100 leading-[1.08] font-['Manrope']">
                 Clinical intelligence, <br />
                 <span className="text-cyan-400 font-extrabold">from lab data to care.</span>
               </h1>
 
-              <p className="mt-3.5 text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
+              <p className="mt-2.5 sm:mt-3.5 text-xs sm:text-sm text-slate-300 max-w-lg leading-relaxed">
                 Transform complex lab data into structured biomarkers, longitudinal insights, and actionable clinical workflows.
               </p>
 
-              <div className="flex flex-row items-center justify-start gap-3.5 my-5 w-full">
+              <div className="flex flex-row items-center justify-start gap-3.5 my-3.5 sm:my-5 w-full">
                 <Button
                   className="h-10 sm:h-11 px-6 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm transition-all flex items-center justify-center gap-2.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#06070a] shadow-[0_0_20px_rgba(8,145,178,0.4)] hover:shadow-[0_0_30px_rgba(8,145,178,0.6)]"
                   onClick={() => scrollToLogin("patient")}
@@ -271,7 +283,7 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
               </div>
 
               {/* Clinical Trust Badge Row */}
-              <div className="flex items-center flex-wrap gap-3.5 text-[11px] font-sans text-slate-300 mb-5 select-none font-medium">
+              <div className="flex items-center flex-wrap gap-2.5 sm:gap-3.5 text-[10px] sm:text-[11px] font-sans text-slate-300 mb-3 sm:mb-5 select-none font-medium">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5 text-cyan-400" />
                   HIPAA Compliant
@@ -289,15 +301,15 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
               </div>
 
               {/* Feature Capability Strip */}
-              <div className="grid gap-3.5 sm:grid-cols-3 w-full text-left pt-1">
+              <div className="grid gap-2.5 sm:gap-3.5 sm:grid-cols-3 w-full text-left pt-1">
                 {signalCards.map((item) => {
                   const Icon = item.icon;
                   return (
                     <div
                       key={item.label}
-                      className={`p-3.5 rounded-xl backdrop-blur-md flex items-center gap-3.5 transition-all duration-200 cursor-default h-full ${item.cardStyle}`}
+                      className={`p-3 sm:p-3.5 rounded-xl backdrop-blur-md flex items-center gap-3 transition-all duration-200 cursor-default h-full ${item.cardStyle}`}
                     >
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center ${item.containerStyle}`}>
+                      <div className={`flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center ${item.containerStyle}`}>
                         <Icon className={`h-4 w-4 ${item.iconStyle}`} />
                       </div>
                       <div className="min-w-0">
@@ -316,13 +328,13 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
             </div>
 
             {/* RIGHT COLUMN: Dedicated 3D Stage Space Placeholder */}
-            <div className="hidden lg:block lg:col-span-5 h-[480px] pointer-events-none relative" />
+            <div className="hidden lg:block lg:col-span-5 h-[340px] xl:h-[440px] pointer-events-none relative" />
           </div>
 
           {/* STATE 2: Revealed Embedded Glassmorphic Login Card */}
           <div
             ref={loginRef}
-            className="absolute inset-0 flex items-center justify-center px-4 pointer-events-none will-change-transform transform-gpu"
+            className="absolute inset-0 flex items-center justify-center px-4 py-4 pointer-events-none will-change-transform transform-gpu overflow-y-auto [scrollbar-width:none]"
             style={{
               opacity: prefersReducedMotion ? 1 : 0,
               transform: prefersReducedMotion ? "translate3d(0px, 0px, 0px) scale(1)" : "translate3d(0px, 35px, 0px) scale(0.92)",

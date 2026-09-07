@@ -1,19 +1,37 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import DnaHelix from "./DnaHelix";
 
 interface DnaCanvas3DProps {
   progress?: number;
   progressRef?: React.RefObject<number>;
 }
 
+function checkWebGLSupport(): boolean {
+  try {
+    if (typeof window === "undefined" || !window.WebGLRenderingContext) return false;
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl2") || canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+    return !!gl;
+  } catch {
+    return false;
+  }
+}
+
+function smoothstep(min: number, max: number, value: number): number {
+  const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
+  return x * x * (3 - 2 * x);
+}
+
 export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progressRef: externalProgressRef }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const internalProgressRef = useRef(progress);
   internalProgressRef.current = progress;
+  const [use2DFallback, setUse2DFallback] = useState(() => !checkWebGLSupport());
 
   const getProgress = () => {
     if (externalProgressRef && typeof externalProgressRef.current === "number") {
@@ -23,6 +41,7 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
   };
 
   useEffect(() => {
+    if (use2DFallback) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -34,19 +53,37 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
 
     const camera = new THREE.PerspectiveCamera(
       45,
-      container.clientWidth / container.clientHeight,
+      container.clientWidth / (container.clientHeight || 1),
       0.1,
       100
     );
     camera.position.set(0, 0, 20);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+        failIfMajorPerformanceCaveat: false,
+      });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.25;
+      container.appendChild(renderer.domElement);
+    } catch (err) {
+      console.warn("[DnaCanvas3D] WebGL renderer creation failed. Falling back to 2D helix:", err);
+      setUse2DFallback(true);
+      return;
+    }
 
-    container.appendChild(renderer.domElement);
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      console.warn("[DnaCanvas3D] WebGL context lost. Switching to 2D fallback.");
+      setUse2DFallback(true);
+    };
+    renderer.domElement.addEventListener("webglcontextlost", onContextLost);
 
     // Post-Processing Pipeline (EffectComposer + Bloom at 0.35x resolution for silky 120fps GPU performance)
     const composer = new EffectComposer(renderer);
@@ -422,9 +459,23 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
     const clock = new THREE.Clock();
     let smoothedProgress = getProgress();
 
+    let lowFpsCount = 0;
+
     const render = () => {
       const delta = Math.min(clock.getDelta(), 0.1); // Cap delta to prevent huge jumps on tab switch
       const elapsedTime = clock.getElapsedTime();
+
+      // Desktop performance safeguard: if machine struggles to sustain >= 22 FPS, switch to 2D
+      if (delta > 0.045) {
+        lowFpsCount++;
+        if (lowFpsCount > 100) {
+          console.warn("[DnaCanvas3D] Low frame rate detected on desktop GPU. Activating 2D helix fallback.");
+          setUse2DFallback(true);
+          return;
+        }
+      } else {
+        lowFpsCount = Math.max(0, lowFpsCount - 1);
+      }
 
       // Exponential damping for silky smooth progress tracking independent of refresh rate
       const targetProgress = prefersReducedMotion ? 0 : getProgress();
@@ -450,32 +501,21 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
 
         for (let i = 0; i < pointCount; i++) {
           const t = i / (pointCount - 1);
-          const y = (t - 0.5) * strandLength;
-          const angle = t * totalTurns * 1.1 + arcPhase + (idx * Math.PI) / 2;
+          const currentAngle = t * totalTurns + arcPhase;
+          const currentY = (t - 0.5) * strandLength;
 
-          // Dual-harmonic smooth plasma wave instead of harsh jitter noise
-          const wave1 = Math.sin(t * 12 + elapsedTime * 3 + idx) * 0.12;
-          const wave2 = Math.cos(t * 6 - elapsedTime * 2 + idx) * 0.08;
-          const plasmaOffset = wave1 + wave2;
-
-          positions[i * 3] = Math.cos(angle) * (radiusOffset + plasmaOffset);
-          positions[i * 3 + 1] = y;
-          positions[i * 3 + 2] = Math.sin(angle) * (radiusOffset + plasmaOffset);
+          positions[i * 3] = Math.cos(currentAngle) * radiusOffset;
+          positions[i * 3 + 1] = currentY;
+          positions[i * 3 + 2] = Math.sin(currentAngle) * radiusOffset;
         }
         posAttr.needsUpdate = true;
       });
 
-      if (!prefersReducedMotion) {
-        const smoothstep = (min: number, max: number, value: number) => {
-          const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
-          return x * x * (3 - 2 * x);
-        };
-
-        // Scroll & Center Shift Integration with smooth dampening
-        const centerShiftProgress = smoothstep(0.08, 0.48, p);
+      // Camera & Double Helix Cinematic Unzipping Transforms
+      if (p > 0.01) {
         const initialX = Math.min(4.8, Math.max(1.8, camera.aspect * 2.95));
-        const targetGroupX = THREE.MathUtils.lerp(initialX, 0, centerShiftProgress);
-        const targetRotZ = THREE.MathUtils.lerp(-0.30, 0, centerShiftProgress);
+        const targetGroupX = initialX - p * 4.2;
+        const targetRotZ = -0.30 + p * 0.38;
 
         dnaGroup.position.x += (targetGroupX - dnaGroup.position.x) * (1 - Math.exp(-9 * delta));
         dnaGroup.rotation.z += (targetRotZ - dnaGroup.rotation.z) * (1 - Math.exp(-9 * delta));
@@ -527,14 +567,25 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
     return () => {
       window.removeEventListener("resize", handleResize);
       cancelAnimationFrame(animationFrameId);
-      if (container && renderer.domElement) {
-        container.removeChild(renderer.domElement);
+      if (renderer?.domElement) {
+        renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
+        if (container && renderer.domElement.parentNode === container) {
+          container.removeChild(renderer.domElement);
+        }
       }
       composer.dispose();
-      renderer.dispose();
+      renderer?.dispose();
       scene.clear();
     };
-  }, []);
+  }, [use2DFallback]);
+
+  if (use2DFallback) {
+    return (
+      <div className="w-full h-full absolute inset-0 pointer-events-none z-0 flex items-center justify-end pr-6 lg:pr-20 overflow-hidden">
+        <DnaHelix className="w-[320px] h-[500px] lg:w-[440px] lg:h-[620px] drop-shadow-[0_0_35px_rgba(56,189,248,0.35)]" />
+      </div>
+    );
+  }
 
   return (
     <div
