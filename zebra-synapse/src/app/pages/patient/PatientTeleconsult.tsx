@@ -217,7 +217,7 @@ export default function PatientTeleconsult() {
     const payload = {
       consultationId: activeConsultationId,
       patientId: user?.id || "demo-patient-1",
-      patientName: profile?.full_name || "Maya Thompson",
+      patientName: profile?.full_name || user?.email?.split("@")[0] || "Patient",
       condition: "General Teleconsultation Request",
       requestedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       timestamp: Date.now(),

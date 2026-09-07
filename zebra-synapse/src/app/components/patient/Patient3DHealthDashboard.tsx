@@ -494,27 +494,29 @@ export function Patient3DHealthDashboard({
 
     const currentProfile = dbProfile || profile || savedProfile;
 
-    const fullName = currentProfile?.full_name || savedProfile.full_name || "Maya Thompson";
+    const emailName = user?.email ? user.email.split("@")[0] : null;
+    const fullName = currentProfile?.full_name || savedProfile.full_name || emailName || "Patient";
+
     const bloodType =
       currentProfile?.blood_type ||
       (currentProfile as any)?.blood_group ||
       (currentProfile as any)?.bloodType ||
       savedProfile.blood_type ||
       savedProfile.bloodType ||
-      "O+";
+      "--";
 
     const gender =
       currentProfile?.gender ||
       savedProfile.gender ||
-      "Female";
+      "--";
 
-    const rawAge = currentProfile?.age ?? savedProfile.age ?? 34;
+    const rawAge = currentProfile?.age ?? savedProfile.age ?? null;
     const age = rawAge ? `${rawAge} yrs` : "--";
 
-    const rawHeight = currentProfile?.height_cm ?? savedProfile.height_cm ?? 165;
+    const rawHeight = currentProfile?.height_cm ?? savedProfile.height_cm ?? null;
     const height = rawHeight ? `${rawHeight} cm` : "--";
 
-    const rawWeight = currentProfile?.weight_kg ?? savedProfile.weight_kg ?? 68.5;
+    const rawWeight = currentProfile?.weight_kg ?? savedProfile.weight_kg ?? null;
     const weight = rawWeight ? `${rawWeight} kg` : "--";
 
     const bmiVal = (rawHeight && rawWeight) ? calculateBmi(Number(rawHeight), Number(rawWeight)) : null;
@@ -720,11 +722,11 @@ export function Patient3DHealthDashboard({
     };
   }, [panels, currentOrganMeta]);
 
-  // Computed biomarkers (real extracted metrics or calibrated default panel)
+  // Computed biomarkers (real extracted metrics from active report or empty if no report uploaded)
   const displayBiomarkers = useMemo(() => {
     if (organBiomarkers.length > 0) return organBiomarkers;
-    return getDefaultMockBiomarkers(selectedOrgan);
-  }, [organBiomarkers, selectedOrgan]);
+    return [];
+  }, [organBiomarkers]);
 
   return (
     <div className="min-h-screen xl:h-screen xl:max-h-screen w-full bg-gradient-to-br from-[#e6f1fc] via-[#edf5fd] to-[#dff0fb] text-slate-800 font-sans p-2.5 sm:p-3.5 xl:p-3.5 select-none overflow-x-hidden xl:overflow-hidden flex flex-col justify-between">
@@ -998,59 +1000,78 @@ export function Patient3DHealthDashboard({
                     </div>
                   </div>
 
-                  {/* 2x2 Biomarker Stat Chips */}
-                  <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-                    {displayBiomarkers.slice(0, 4).map((m: any, idx: number) => {
-                      const isHigh = m.status === "high";
-                      const isLow = m.status === "low";
-                      const isBorderline = m.status === "borderline";
+                  {/* 2x2 Biomarker Stat Chips or Empty State */}
+                  {displayBiomarkers.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                      {displayBiomarkers.slice(0, 4).map((m: any, idx: number) => {
+                        const isHigh = m.status === "high";
+                        const isLow = m.status === "low";
+                        const isBorderline = m.status === "borderline";
 
-                      return (
-                        <div
-                          key={m.key || idx}
-                          className="flex flex-col justify-between p-2 rounded-xl bg-slate-50/90 hover:bg-sky-50/60 border border-slate-100 hover:border-sky-200/80 transition-all shadow-xs"
-                        >
-                          <div className="flex items-center justify-between gap-1 mb-0.5">
-                            <span className="text-[10px] font-semibold text-slate-500 truncate">
-                              {m.label || m.key}
-                            </span>
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                isHigh || isLow
-                                  ? "bg-rose-500 animate-pulse"
-                                  : isBorderline
-                                  ? "bg-amber-500"
-                                  : "bg-emerald-500"
-                              }`}
-                            />
-                          </div>
-
-                          <div className="flex items-baseline justify-between gap-1.5">
-                            <span className="text-sm sm:text-base font-bold text-slate-900 font-mono">
-                              {m.value !== null && m.value !== undefined ? m.value : "--"}
-                              <span className="text-[9px] font-sans font-normal text-slate-400 ml-1">
-                                {m.unit || ""}
+                        return (
+                          <div
+                            key={m.key || idx}
+                            className="flex flex-col justify-between p-2 rounded-xl bg-slate-50/90 hover:bg-sky-50/60 border border-slate-100 hover:border-sky-200/80 transition-all shadow-xs"
+                          >
+                            <div className="flex items-center justify-between gap-1 mb-0.5">
+                              <span className="text-[10px] font-semibold text-slate-500 truncate">
+                                {m.label || m.key}
                               </span>
-                            </span>
+                              <span
+                                className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                  isHigh || isLow
+                                    ? "bg-rose-500 animate-pulse"
+                                    : isBorderline
+                                    ? "bg-amber-500"
+                                    : "bg-emerald-500"
+                                }`}
+                              />
+                            </div>
 
-                            <span
-                              className={`text-[9px] font-semibold px-1.5 py-0.2 rounded-md uppercase tracking-wider ${
-                                isHigh
-                                  ? "bg-rose-100 text-rose-700"
-                                  : isLow
-                                  ? "bg-sky-100 text-sky-700"
-                                  : isBorderline
-                                  ? "bg-amber-100 text-amber-700"
-                                  : "bg-emerald-100 text-emerald-700"
-                              }`}
-                            >
-                              {m.status || "Normal"}
-                            </span>
+                            <div className="flex items-baseline justify-between gap-1.5">
+                              <span className="text-sm sm:text-base font-bold text-slate-900 font-mono">
+                                {m.value !== null && m.value !== undefined ? m.value : "--"}
+                                <span className="text-[9px] font-sans font-normal text-slate-400 ml-1">
+                                  {m.unit || ""}
+                                </span>
+                              </span>
+
+                              <span
+                                className={`text-[9px] font-semibold px-1.5 py-0.2 rounded-md uppercase tracking-wider ${
+                                  isHigh
+                                    ? "bg-rose-100 text-rose-700"
+                                    : isLow
+                                    ? "bg-sky-100 text-sky-700"
+                                    : isBorderline
+                                    ? "bg-amber-100 text-amber-700"
+                                    : "bg-emerald-100 text-emerald-700"
+                                }`}
+                              >
+                                {m.status || "Normal"}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="p-3.5 rounded-xl bg-slate-50/80 border border-dashed border-slate-200 text-center flex flex-col items-center justify-center gap-1.5 min-h-[96px]">
+                      <div className="flex items-center gap-1.5 text-slate-600 font-semibold text-xs">
+                        <Upload className="h-3.5 w-3.5 text-sky-600" />
+                        <span>No Medical Report Uploaded</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-medium max-w-xs leading-tight">
+                        Upload a lab report to view extracted biomarkers and vitals for {currentOrganMeta.name}.
+                      </p>
+                      <button
+                        onClick={() => setIsUploadModalOpen(true)}
+                        className="mt-0.5 px-2.5 py-1 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-[10px] font-semibold transition-all flex items-center gap-1 shadow-xs cursor-pointer"
+                      >
+                        <Upload className="h-3 w-3" />
+                        <span>Upload Report</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1786,52 +1807,4 @@ function Organ3DGraphic({ organId, size = "large" }: { organId: OrganSystemId; s
   }
 }
 
-// -------------------------------------------------------------
-// DEFAULT FALLBACK BIOMARKERS IF LAB REPORT NOT YET ATTACHED
-// -------------------------------------------------------------
-function getDefaultMockBiomarkers(organ: OrganSystemId): MetricAssessment[] {
-  switch (organ) {
-    case "heart":
-      return [
-        { key: "cholesterol", label: "Cholesterol", value: 165, unit: "mg/dL", range: "< 200", status: "normal", summary: "Optimal lipid balance" },
-        { key: "triglycerides", label: "Triglycerides", value: 120, unit: "mg/dL", range: "< 150", status: "normal", summary: "Low cardiovascular risk" },
-        { key: "ldl", label: "LDL Cholesterol", value: 92, unit: "mg/dL", range: "< 100", status: "normal", summary: "Optimal arterial index" },
-        { key: "hdl", label: "HDL Cholesterol", value: 58, unit: "mg/dL", range: "> 45", status: "normal", summary: "Strong protective HDL" },
-      ];
-    case "blood":
-      return [
-        { key: "hemoglobin", label: "Hemoglobin", value: 14.8, unit: "g/dL", range: "13.5 - 17.5", status: "normal", summary: "Healthy oxygen carriage" },
-        { key: "wbc", label: "White Blood Cells", value: 6.8, unit: "x10³/µL", range: "4.5 - 11.0", status: "normal", summary: "Stable immune count" },
-        { key: "platelets", label: "Platelets", value: 245, unit: "x10³/µL", range: "150 - 450", status: "normal", summary: "Normal coagulation" },
-        { key: "ferritin", label: "Ferritin", value: 110, unit: "ng/mL", range: "30 - 300", status: "normal", summary: "Sufficient iron storage" },
-      ];
-    case "lungs":
-      return [
-        { key: "eosinophils", label: "Eosinophils", value: 2.1, unit: "%", range: "1.0 - 5.0", status: "normal", summary: "Normal allergic profile" },
-        { key: "ige", label: "IgE (Allergy)", value: 45, unit: "IU/mL", range: "< 100", status: "normal", summary: "Low respiratory reactivity" },
-        { key: "lymphocytes", label: "Lymphocytes", value: 31, unit: "%", range: "20 - 40", status: "normal", summary: "Healthy pulmonary defense" },
-        { key: "hscrp", label: "hs-CRP", value: 0.8, unit: "mg/L", range: "< 1.0", status: "normal", summary: "No active inflammation" },
-      ];
-    case "stomach":
-      return [
-        { key: "glucose", label: "Fasting Glucose", value: 88, unit: "mg/dL", range: "70 - 99", status: "normal", summary: "Healthy fasting metabolism" },
-        { key: "hba1c", label: "Hemoglobin A1c", value: 5.2, unit: "%", range: "< 5.7", status: "normal", summary: "Normal long-term glucose" },
-        { key: "alt", label: "ALT (Liver/Metabolic)", value: 22, unit: "U/L", range: "7 - 56", status: "normal", summary: "Normal enzymatic function" },
-        { key: "ast", label: "AST", value: 20, unit: "U/L", range: "10 - 40", status: "normal", summary: "Healthy metabolic balance" },
-      ];
-    case "kidneys":
-      return [
-        { key: "creatinine", label: "Creatinine", value: 0.92, unit: "mg/dL", range: "0.7 - 1.3", status: "normal", summary: "Normal renal clearance" },
-        { key: "egfr", label: "eGFR", value: 104, unit: "mL/min", range: "> 90", status: "normal", summary: "Optimal filtration rate" },
-        { key: "bun", label: "BUN", value: 14, unit: "mg/dL", range: "7 - 20", status: "normal", summary: "Balanced waste filtration" },
-        { key: "sodium", label: "Sodium", value: 140, unit: "mEq/L", range: "135 - 145", status: "normal", summary: "Balanced electrolyte index" },
-      ];
-    case "brain":
-      return [
-        { key: "b12", label: "Vitamin B12", value: 580, unit: "pg/mL", range: "200 - 900", status: "normal", summary: "Healthy neuro support" },
-        { key: "folate", label: "Folate", value: 12.4, unit: "ng/mL", range: "> 4.0", status: "normal", summary: "Optimal neuro-synthesis" },
-        { key: "tsh", label: "TSH", value: 1.85, unit: "mIU/L", range: "0.4 - 4.0", status: "normal", summary: "Normal endocrine balance" },
-        { key: "calcium", label: "Calcium", value: 9.4, unit: "mg/dL", range: "8.5 - 10.5", status: "normal", summary: "Normal neuromuscular level" },
-      ];
-  }
-}
+

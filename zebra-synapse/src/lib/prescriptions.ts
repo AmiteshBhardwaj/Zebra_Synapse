@@ -116,7 +116,7 @@ export async function fetchPatientPrescriptions(sb: any, patientId?: string): Pr
     }
   }
 
-  // Fallback to local storage or defaults
+  // Fallback to local storage or default doctor prescriptions
   const cached = getStoredPrescriptions(uid);
   saveStoredPrescriptions(uid, cached);
   return cached;
