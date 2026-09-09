@@ -61,6 +61,7 @@ interface WelcomePageProps {
 export default function WelcomePage({ initialTab = "patient", defaultScrolled = false }: WelcomePageProps) {
   const navigate = useNavigate();
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [isLoginActive, setIsLoginActive] = useState<boolean>(defaultScrolled);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -73,9 +74,41 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
 
   const scrollToLogin = (tab: "patient" | "doctor" = "patient") => {
     setCardTab(tab);
-    const scrollMax = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    const targetScroll = scrollMax * 0.95;
-    window.scrollTo({ top: targetScroll, behavior: "smooth" });
+    setIsLoginActive(true);
+    if (prefersReducedMotion) {
+      if (heroRef.current) {
+        heroRef.current.style.opacity = "0";
+        heroRef.current.style.visibility = "hidden";
+        heroRef.current.style.pointerEvents = "none";
+      }
+      if (loginRef.current) {
+        loginRef.current.style.opacity = "1";
+        loginRef.current.style.visibility = "visible";
+        loginRef.current.style.pointerEvents = "auto";
+      }
+    } else {
+      const scrollMax = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const targetScroll = scrollMax * 0.95;
+      window.scrollTo({ top: targetScroll, behavior: "smooth" });
+    }
+  };
+
+  const backToHero = () => {
+    setIsLoginActive(false);
+    if (prefersReducedMotion) {
+      if (heroRef.current) {
+        heroRef.current.style.opacity = "1";
+        heroRef.current.style.visibility = "visible";
+        heroRef.current.style.pointerEvents = "auto";
+      }
+      if (loginRef.current) {
+        loginRef.current.style.opacity = "0";
+        loginRef.current.style.visibility = "hidden";
+        loginRef.current.style.pointerEvents = "none";
+      }
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   };
 
   useEffect(() => {
@@ -91,7 +124,29 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(mediaQuery.matches);
 
-    if (mediaQuery.matches) return;
+    const handleMotionChange = (e: MediaQueryListEvent) => {
+      setPrefersReducedMotion(e.matches);
+    };
+    mediaQuery.addEventListener?.("change", handleMotionChange);
+
+    // If reduced motion is active, do not bind GSAP scroll animations
+    if (mediaQuery.matches) {
+      if (heroRef.current) {
+        heroRef.current.style.opacity = isLoginActive ? "0" : "1";
+        heroRef.current.style.visibility = isLoginActive ? "hidden" : "visible";
+        heroRef.current.style.pointerEvents = isLoginActive ? "none" : "auto";
+        heroRef.current.style.transform = "none";
+      }
+      if (loginRef.current) {
+        loginRef.current.style.opacity = isLoginActive ? "1" : "0";
+        loginRef.current.style.visibility = isLoginActive ? "visible" : "hidden";
+        loginRef.current.style.pointerEvents = isLoginActive ? "auto" : "none";
+        loginRef.current.style.transform = "none";
+      }
+      return () => {
+        mediaQuery.removeEventListener?.("change", handleMotionChange);
+      };
+    }
 
     const smoothstep = (min: number, max: number, value: number) => {
       const x = Math.max(0, Math.min(1, (value - min) / (max - min)));
@@ -99,8 +154,8 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
     };
 
     let animationFrameId: number | null = null;
-    let heroState = { visible: true, pointer: true };
-    let loginState = { visible: false, pointer: false };
+    let heroState = { visible: !defaultScrolled, pointer: !defaultScrolled };
+    let loginState = { visible: defaultScrolled, pointer: defaultScrolled };
 
     const updateDOMTransforms = (progress: number) => {
       scrollProgressRef.current = progress;
@@ -110,16 +165,16 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
       animationFrameId = requestAnimationFrame(() => {
         animationFrameId = null;
 
-        // 1. Hero fade-out, scale & subtle lift up
+        // 1. Hero fade-out, scale & subtle lift up: completes cleanly by 0.28
         if (heroRef.current) {
-          const heroFactor = 1 - smoothstep(0.0, 0.42, progress);
+          const heroFactor = 1 - smoothstep(0.0, 0.28, progress);
           const heroScale = 1 - (1 - heroFactor) * 0.08;
           const heroY = (1 - heroFactor) * -35;
 
           heroRef.current.style.opacity = heroFactor.toFixed(3);
           heroRef.current.style.transform = `translate3d(0, ${heroY.toFixed(1)}px, 0) scale(${heroScale.toFixed(3)})`;
 
-          const nextPointer = heroFactor > 0.3;
+          const nextPointer = heroFactor > 0.5;
           const nextVisible = heroFactor >= 0.005;
 
           if (heroState.pointer !== nextPointer) {
@@ -132,16 +187,16 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
           }
         }
 
-        // 2. Login card smooth reveal over extended scroll track
+        // 2. Login card smooth reveal: starts strictly at 0.32, fully revealed at 0.85
         if (loginRef.current) {
-          const loginFactor = smoothstep(0.32, 0.90, progress);
+          const loginFactor = smoothstep(0.32, 0.85, progress);
           const loginScale = 0.90 + loginFactor * 0.10;
           const loginY = (1 - loginFactor) * 45;
 
           loginRef.current.style.opacity = loginFactor.toFixed(3);
           loginRef.current.style.transform = `translate3d(0, ${loginY.toFixed(1)}px, 0) scale(${loginScale.toFixed(3)})`;
 
-          const nextPointer = loginFactor > 0.4;
+          const nextPointer = loginFactor > 0.5;
           const nextVisible = loginFactor >= 0.005;
 
           if (loginState.pointer !== nextPointer) {
@@ -154,6 +209,8 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
           }
         }
 
+        setIsLoginActive(progress > 0.35);
+
         // 3. Aura opacity
         if (auraRef.current) {
           auraRef.current.style.opacity = (1 - progress * 0.4).toFixed(3);
@@ -161,7 +218,7 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
       });
     };
 
-    const scrollObj = { progress: 0 };
+    const scrollObj = { progress: defaultScrolled ? 1 : 0 };
 
     const ctx = gsap.context(() => {
       gsap.to(scrollObj, {
@@ -180,13 +237,14 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
     });
 
     return () => {
+      mediaQuery.removeEventListener?.("change", handleMotionChange);
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
       ctx.revert();
     };
-  }, []);
+  }, [prefersReducedMotion, isLoginActive, defaultScrolled]);
 
   return (
-    <div ref={containerRef} className="relative min-h-[320vh] bg-[#06070a] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300">
+    <div ref={containerRef} className={`relative ${prefersReducedMotion ? "min-h-screen" : "min-h-[320vh]"} bg-[#06070a] text-slate-100 font-sans selection:bg-cyan-500/20 selection:text-cyan-300`}>
       
       {/* Sticky Viewport Container */}
       <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col justify-between">
@@ -231,7 +289,7 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
         <header className="relative z-30 flex items-center justify-between px-6 py-5 max-w-7xl mx-auto w-full shrink-0">
           {/* Top-Left Brand Logo */}
           <div
-            onClick={() => navigate("/")}
+            onClick={backToHero}
             className="flex items-center gap-2.5 cursor-pointer group select-none"
           >
             <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#38bdf8]" />
@@ -240,7 +298,25 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
             </span>
           </div>
 
-          {/* Top-Right Direct Portal Shortcut removed */}
+          <div className="flex items-center gap-3">
+            {isLoginActive ? (
+              <button
+                type="button"
+                onClick={backToHero}
+                className="text-xs font-mono text-cyan-400 hover:text-cyan-300 px-3.5 py-1.5 rounded-xl border border-cyan-500/40 hover:border-cyan-400 bg-cyan-950/50 backdrop-blur-md transition-all cursor-pointer shadow-[0_0_12px_rgba(56,189,248,0.15)]"
+              >
+                ← Platform Overview
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => scrollToLogin("patient")}
+                className="text-xs font-mono text-slate-300 hover:text-cyan-300 px-3.5 py-1.5 rounded-xl border border-slate-800 hover:border-cyan-500/40 bg-slate-950/60 backdrop-blur-md transition-all cursor-pointer"
+              >
+                Sign In →
+              </button>
+            )}
+          </div>
         </header>
 
         {/* Main Hero Content Area — Two-Column Desktop Grid */}
@@ -334,15 +410,15 @@ export default function WelcomePage({ initialTab = "patient", defaultScrolled = 
           {/* STATE 2: Revealed Embedded Glassmorphic Login Card */}
           <div
             ref={loginRef}
-            className="absolute inset-0 flex items-center justify-center px-4 py-4 pointer-events-none will-change-transform transform-gpu overflow-y-auto [scrollbar-width:none]"
+            className="absolute inset-0 flex items-center justify-center px-4 py-4 will-change-transform transform-gpu overflow-y-auto [scrollbar-width:none]"
             style={{
-              opacity: prefersReducedMotion ? 1 : 0,
-              transform: prefersReducedMotion ? "translate3d(0px, 0px, 0px) scale(1)" : "translate3d(0px, 35px, 0px) scale(0.92)",
-              pointerEvents: prefersReducedMotion ? "auto" : "none",
-              visibility: prefersReducedMotion ? "visible" : "hidden",
+              opacity: 0,
+              transform: "translate3d(0px, 35px, 0px) scale(0.92)",
+              pointerEvents: "none",
+              visibility: "hidden",
             }}
           >
-            <GlassmorphicLoginCard initialTab={cardTab} key={cardTab} />
+            <GlassmorphicLoginCard initialTab={cardTab} key={cardTab} onBack={backToHero} />
           </div>
         </main>
 

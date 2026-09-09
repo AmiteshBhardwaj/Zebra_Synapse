@@ -456,14 +456,17 @@ export const DnaCanvas3D: React.FC<DnaCanvas3DProps> = ({ progress = 0, progress
 
     // 9. Render & Animation Loop
     let animationFrameId: number;
-    const clock = new THREE.Clock();
+    let lastTime = performance.now();
+    const startTime = performance.now();
     let smoothedProgress = getProgress();
 
     let lowFpsCount = 0;
 
     const render = () => {
-      const delta = Math.min(clock.getDelta(), 0.1); // Cap delta to prevent huge jumps on tab switch
-      const elapsedTime = clock.getElapsedTime();
+      const now = performance.now();
+      const delta = Math.min((now - lastTime) / 1000, 0.1); // Cap delta to prevent huge jumps on tab switch
+      lastTime = now;
+      const elapsedTime = (now - startTime) / 1000;
 
       // Desktop performance safeguard: if machine struggles to sustain >= 22 FPS, switch to 2D
       if (delta > 0.045) {

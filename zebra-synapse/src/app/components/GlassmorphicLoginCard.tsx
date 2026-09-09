@@ -4,6 +4,7 @@ import {
   UserCheck,
   Stethoscope,
   ArrowRight,
+  ArrowLeft,
   Lock,
   Mail,
   Eye,
@@ -28,9 +29,10 @@ import { useAuth } from "../../auth/AuthContext";
 
 interface GlassmorphicLoginCardProps {
   initialTab?: "patient" | "doctor";
+  onBack?: () => void;
 }
 
-export function GlassmorphicLoginCard({ initialTab = "patient" }: GlassmorphicLoginCardProps) {
+export function GlassmorphicLoginCard({ initialTab = "patient", onBack }: GlassmorphicLoginCardProps) {
   const navigate = useNavigate();
   const { setDemoSession } = useAuth();
   const [activeTab, setActiveTab] = useState<"patient" | "doctor">(initialTab);
@@ -209,6 +211,17 @@ export function GlassmorphicLoginCard({ initialTab = "patient" }: GlassmorphicLo
       <div className="relative z-10 rounded-3xl bg-[#030712]/75 border border-cyan-500/30 hover:border-cyan-400/50 backdrop-blur-2xl p-5 sm:p-7 max-h-[88vh] overflow-y-auto [scrollbar-width:none] shadow-[0_20px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(56,189,248,0.18),inset_0_1px_1px_rgba(255,255,255,0.15)] text-left transition-all duration-500">
         {/* Top Specular Edge Line */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent pointer-events-none" />
+
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-[11px] font-mono text-slate-400 hover:text-cyan-300 transition-colors mb-3 cursor-pointer group select-none"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 group-hover:-translate-x-0.5 transition-transform" />
+            <span>← Back to Overview</span>
+          </button>
+        )}
 
         {/* Top Header Badge & Title */}
         <div className="flex items-center justify-between mb-6">

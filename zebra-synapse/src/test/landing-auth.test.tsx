@@ -28,6 +28,16 @@ vi.mock("gsap/ScrollTrigger", () => ({
 describe("Auth & Landing Page Components", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
   });
 
   describe("WelcomePage Component", () => {
@@ -47,6 +57,41 @@ describe("Auth & Landing Page Components", () => {
       const loginBtn = screen.getByRole("button", { name: /proceed to login/i });
       expect(loginBtn).toBeInTheDocument();
       fireEvent.click(loginBtn);
+    });
+
+    it("handles reduced motion preferences cleanly without overlapping hero and login card", () => {
+      // Mock prefers-reduced-motion: reduce = true
+      window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+        matches: query.includes("prefers-reduced-motion"),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+
+      renderWithProviders(<WelcomePage />);
+
+      // Hero should be visible
+      expect(screen.getByText(/BIOMARKER ENGINE/i)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /proceed to login/i })).toBeInTheDocument();
+
+      // Proceed to login click triggers transition
+      const proceedBtn = screen.getByRole("button", { name: /proceed to login/i });
+      fireEvent.click(proceedBtn);
+
+      // Now login view should be active with Platform Overview back button
+      expect(screen.getByRole("button", { name: /platform overview/i })).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/patient@zebrasynapse\.io/i)).toBeInTheDocument();
+
+      // Click back to overview
+      const backBtn = screen.getByRole("button", { name: /platform overview/i });
+      fireEvent.click(backBtn);
+
+      // Sign In button should now be available in header
+      expect(screen.getByRole("button", { name: /sign in/i })).toBeInTheDocument();
     });
   });
 
