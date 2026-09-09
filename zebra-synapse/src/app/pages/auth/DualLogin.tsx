@@ -115,12 +115,7 @@ export default function DualLogin({ defaultPortal = "patient" }: DualLoginProps)
       );
 
       if (error) {
-        setDemoSession(activePortal, emailTrimmed);
-        toast.success(`Welcome back! Logged in as ${activePortal === "doctor" ? "Clinician" : "Patient"}.`);
-        setTimeout(() => {
-          if (activePortal === "doctor") navigate("/doctor");
-          else navigate("/patient");
-        }, 400);
+        toast.error(getSignInErrorMessage(error));
         return;
       }
 

@@ -4,12 +4,16 @@ let client: SupabaseClient | null = null;
 const AUTH_STORAGE_KEY = "zebra-synapse.auth";
 const AUTH_CODE_VERIFIER_STORAGE_KEY = `${AUTH_STORAGE_KEY}-code-verifier`;
 
+const DEFAULT_SUPABASE_URL = "https://tbxfhjwszwmgqdngrrsa.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRieGZoandzendtZ3FkbmdycnNhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODE3MDQsImV4cCI6MjEwMTk1NzcwNH0.GhsQs07Mj3cNLtQEASKpFUuL9lhqcSzHm5q0WMTsvHw";
+
 function getSupabaseUrl(): string {
-  return import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
+  return import.meta.env.VITE_SUPABASE_URL?.trim() || DEFAULT_SUPABASE_URL;
 }
 
 function getSupabaseAnonKey(): string {
-  return import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() ?? "";
+  return import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() || DEFAULT_SUPABASE_ANON_KEY;
 }
 
 export function isSupabaseConfigured(): boolean {

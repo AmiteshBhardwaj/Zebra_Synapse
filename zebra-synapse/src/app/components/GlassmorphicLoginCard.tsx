@@ -88,12 +88,7 @@ export function GlassmorphicLoginCard({ initialTab = "patient", onBack }: Glassm
       );
 
       if (error) {
-        setDemoSession(isPatient ? "patient" : "doctor", emailTrimmed);
-        toast.success(`Welcome back! Logged in as ${isPatient ? "Patient" : "Clinician"}.`);
-        setTimeout(() => {
-          if (isPatient) navigate("/patient");
-          else navigate("/doctor");
-        }, 400);
+        toast.error(getSignInErrorMessage(error));
         return;
       }
 
