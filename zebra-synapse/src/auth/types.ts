@@ -19,6 +19,7 @@ export type Profile = {
   license_number?: string | null;
   height_cm?: number | null;
   weight_kg?: number | null;
+  target_weight_kg?: number | null;
   dietary_preference?: DietaryPreference | null;
   food_allergies?: string[] | null;
   dietary_conditions?: string[] | null;

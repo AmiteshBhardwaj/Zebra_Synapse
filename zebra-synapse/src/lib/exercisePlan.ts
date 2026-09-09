@@ -29,6 +29,8 @@ export type DayWorkout = {
   estimatedDurationMin: number;
   estimatedCalories: number;
   targetHeartRateBpm: string;
+  biomarkerBadges?: string[];
+  biomarkerReason?: string;
   warmup: ExerciseItem[];
   mainWorkout: ExerciseItem[];
   cooldown: ExerciseItem[];
@@ -84,6 +86,8 @@ export type ExerciseProfileInput = {
   physicalLimitations?: string[];
   heightCm?: number | null;
   weightKg?: number | null;
+  targetWeightKg?: number | null;
+  weeklyPaceKg?: number | null;
   age?: number | null;
   systolicBp?: number | null;
   diastolicBp?: number | null;
@@ -119,10 +123,21 @@ export function deriveClinicalExerciseSafety(
   const precautions: ClinicalExerciseSafety[] = [];
   const b = panel?.biomarkers ?? {};
 
+  // Helper to get biomarker from either top-level panel column or biomarkers map
+  const getVal = (keys: string[]): number | null => {
+    if (!panel) return null;
+    for (const k of keys) {
+      const direct = (panel as any)[k];
+      if (direct !== undefined && direct !== null && typeof direct === "number" && !isNaN(direct)) return direct;
+      if (b[k] !== undefined && b[k] !== null && !isNaN(Number(b[k]))) return Number(b[k]);
+    }
+    return null;
+  };
+
   // 1. Blood Pressure / Hypertension
-  const sbp = b["systolic_bp"] ?? b["systolic"] ?? null;
-  const dbp = b["diastolic_bp"] ?? b["diastolic"] ?? null;
-  if ((sbp && sbp >= 140) || (dbp && dbp >= 90)) {
+  const sbp = getVal(["systolic_bp", "systolic"]);
+  const dbp = getVal(["diastolic_bp", "diastolic"]);
+  if ((sbp && sbp >= 135) || (dbp && dbp >= 85)) {
     precautions.push({
       id: "bp-hypertension",
       level: "caution",
@@ -138,9 +153,9 @@ export function deriveClinicalExerciseSafety(
   }
 
   // 2. Glucose & HbA1c (Diabetes / Insulin Resistance)
-  const glucose = b["fasting_glucose"] ?? b["glucose"] ?? null;
-  const hba1c = b["hba1c"] ?? null;
-  if ((glucose && glucose >= 126) || (hba1c && hba1c >= 6.5)) {
+  const glucose = getVal(["fasting_glucose", "glucose", "blood_sugar"]);
+  const hba1c = getVal(["hemoglobin_a1c", "hba1c"]);
+  if ((glucose && glucose >= 110) || (hba1c && hba1c >= 5.7)) {
     precautions.push({
       id: "glycemic-control",
       level: "warning",
@@ -156,9 +171,9 @@ export function deriveClinicalExerciseSafety(
   }
 
   // 3. Lipid Profile / Cardiac Health
-  const ldl = b["ldl"] ?? b["ldl_cholesterol"] ?? null;
-  const tg = b["triglycerides"] ?? null;
-  if ((ldl && ldl >= 160) || (tg && tg >= 200)) {
+  const ldl = getVal(["ldl", "ldl_cholesterol"]);
+  const tg = getVal(["triglycerides", "tg"]);
+  if ((ldl && ldl >= 130) || (tg && tg >= 150)) {
     precautions.push({
       id: "lipid-endurance",
       level: "info",
@@ -173,7 +188,7 @@ export function deriveClinicalExerciseSafety(
   }
 
   // 4. Hemoglobin / Anemia / Ferritin
-  const hb = b["hemoglobin"] ?? null;
+  const hb = getVal(["hemoglobin", "hgb"]);
   if (hb && hb < 12.0) {
     precautions.push({
       id: "anemia-pacing",
@@ -703,6 +718,36 @@ export function generateDeterministicExercisePlan(
   const workoutCount = days.filter((d) => !d.restDay).length;
   const restCount = days.filter((d) => d.restDay).length;
 
+  const badges: string[] = [];
+  let mainReason = "";
+
+  if (precautions.some((p) => p.id === "bp-hypertension")) {
+    badges.push("Zone 2 BP Guardrail");
+    mainReason = "Aerobic Zone 2 intensity capped to protect vascular blood pressure.";
+  }
+  if (precautions.some((p) => p.id === "glycemic-control")) {
+    badges.push("Post-Meal Glycemic Control");
+    mainReason = "Emphasizes compound movements and post-meal walks to maximize GLUT4 glucose uptake.";
+  }
+  if (precautions.some((p) => p.id === "lipid-endurance")) {
+    badges.push("Cardioprotective MICT");
+    if (!mainReason) mainReason = "Moderate aerobic continuous intervals stimulate lipoprotein lipase.";
+  }
+  if (precautions.some((p) => p.id === "joint-friendly-loading")) {
+    badges.push("Low-Impact Joint Preservation");
+    if (!mainReason) mainReason = "Low-impact exercise selections protect knee and spinal joints.";
+  }
+  if (precautions.some((p) => p.id === "anemia-pacing")) {
+    badges.push("Oxygen Pacing");
+    if (!mainReason) mainReason = "Submaximal exertion with generous recovery pauses.";
+  }
+
+  const decoratedDays = days.map((d) => ({
+    ...d,
+    biomarkerBadges: d.restDay ? ["Active Rest & Recovery"] : badges,
+    biomarkerReason: d.restDay ? "Scheduled recovery clears metabolic waste and maintains neurological adaptation." : mainReason,
+  }));
+
   return {
     id: `plan-${Date.now()}`,
     generatedAt: new Date().toISOString(),
@@ -717,12 +762,12 @@ export function generateDeterministicExercisePlan(
     },
     heartRateZones,
     safetyPrecautions: precautions,
-    days,
+    days: decoratedDays,
     weeklyTotals: {
       totalActiveMinutes: totalActiveMin,
       estimatedCaloriesBurned: totalCals,
       workoutDaysCount: workoutCount,
-          restDaysCount: restCount,
+      restDaysCount: restCount,
     }
   };
 }
@@ -742,9 +787,18 @@ export async function generateAIExercisePlan(
 
   try {
     const biomarkersList: string[] = [];
+    if (panel) {
+      const checkKeys = ["fasting_glucose", "hemoglobin_a1c", "ldl", "total_cholesterol", "triglycerides", "creatinine", "hemoglobin", "wbc", "platelets"];
+      for (const k of checkKeys) {
+        const val = (panel as any)[k];
+        if (val !== null && val !== undefined) {
+          biomarkersList.push(`${k}: ${val}`);
+        }
+      }
+    }
     if (panel?.biomarkers) {
       for (const [k, v] of Object.entries(panel.biomarkers)) {
-        if (v !== null && v !== undefined) {
+        if (v !== null && v !== undefined && !biomarkersList.some(b => b.startsWith(`${k}:`))) {
           biomarkersList.push(`${k}: ${v}`);
         }
       }
@@ -756,8 +810,10 @@ export async function generateAIExercisePlan(
 
     const prompt = `
 - Target Daily Workout Duration: ${profile.targetDurationMin || 30} minutes
+- Current Weight: ${profile.weightKg ? `${profile.weightKg} kg` : "Not provided"}
+- Goal Weight: ${profile.targetWeightKg ? `${profile.targetWeightKg} kg` : "Not specified"}
+- Target Pace: ${profile.weeklyPaceKg ? `${profile.weeklyPaceKg > 0 ? "+" : ""}${profile.weeklyPaceKg} kg/week` : "Maintenance"}
 - Height: ${profile.heightCm ? `${profile.heightCm} cm` : "Not provided"}
-- Weight: ${profile.weightKg ? `${profile.weightKg} kg` : "Not provided"}
 - Calculated BMI: ${bmi ? `${bmi} kg/m²` : "Standard"}
 - Reported Physical/Joint Limitations: ${profile.physicalLimitations && profile.physicalLimitations.length > 0 ? profile.physicalLimitations.join(", ") : "None reported"}
 

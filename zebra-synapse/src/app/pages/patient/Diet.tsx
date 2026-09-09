@@ -234,10 +234,13 @@ export default function Diet({
   const currentHeight = profile?.height_cm || 175;
   const bmr = useMemo(() => calculateBMR(currentWeight, currentHeight, 34, "male"), [currentWeight, currentHeight]);
   const tdee = useMemo(() => calculateTDEE(bmr, settings.activityLevel), [bmr, settings.activityLevel]);
-  const calorieTarget = 2100;
+  const calorieTarget = useMemo(() => {
+    return settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg);
+  }, [settings.customCalorieTarget, tdee, settings.goal, settings.weeklyPaceKg]);
+
   const macroTargets = useMemo(
-    () => calculateMacroTargets(calorieTarget, settings.goal, currentWeight, settings.customMacroSplit),
-    [calorieTarget, settings.goal, currentWeight, settings.customMacroSplit]
+    () => calculateMacroTargets(calorieTarget, settings.goal, currentWeight, settings.customMacroSplit, activePanel),
+    [calorieTarget, settings.goal, currentWeight, settings.customMacroSplit, activePanel]
   );
   const microTargets = useMemo(
     () => calculateMicroTargets(calorieTarget, settings.dietaryConditions, activePanel),
@@ -1667,13 +1670,20 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
                                 {recipe.clinicalBenefits[0]}
                               </p>
 
-                              {recipe.biomarkerBadges && (
-                                <div className="flex flex-wrap gap-1 mb-3">
-                                  {recipe.biomarkerBadges.map((badge, idx) => (
-                                    <span key={idx} className="text-[10px] font-semibold bg-lime-50 text-lime-800 px-2 py-0.5 rounded-md">
-                                      {badge}
-                                    </span>
-                                  ))}
+                              {recipe.biomarkerBadges && recipe.biomarkerBadges.length > 0 && (
+                                <div className="space-y-1 mb-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {recipe.biomarkerBadges.map((badge, idx) => (
+                                      <span key={idx} className="text-[9px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60 px-2 py-0.5 rounded-md">
+                                        {badge}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  {recipe.biomarkerReason && (
+                                    <p className="text-[10px] text-emerald-700/90 italic leading-tight">
+                                      {recipe.biomarkerReason}
+                                    </p>
+                                  )}
                                 </div>
                               )}
                             </div>

@@ -22,6 +22,10 @@
     "supabase:start": "supabase start --yes",
     "supabase:status": "supabase status",
     "supabase:stop": "supabase stop --yes",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -95,15 +99,22 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.1.12",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^25.5.2",
     "@types/peerjs": "^0.0.30",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "4.7.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
+    "jsdom": "^29.1.1",
     "supabase": "2.84.10",
     "tailwindcss": "4.1.12",
     "typescript": "^6.0.2",
-    "vite": "^6.4.2"
+    "vite": "^6.4.2",
+    "vitest": "^4.1.11"
   },
   "volta": {
     "node": "20.19.0",

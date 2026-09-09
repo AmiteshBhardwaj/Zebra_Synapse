@@ -93,6 +93,7 @@ export interface MealRecipe {
   dietaryTags: string[];
   imageUrl?: string;
   biomarkerBadges?: string[];
+  biomarkerReason?: string;
 }
 
 export interface DayDietPlan {
@@ -123,11 +124,28 @@ export interface WeightLogEntry {
   notes?: string;
 }
 
+export interface BiomarkerDietImpact {
+  id: string;
+  biomarkerKey: string;
+  biomarkerName: string;
+  value: number;
+  unit: string;
+  status: "high" | "low" | "optimal";
+  clinicalRationale: string;
+  nutritionalAction: string;
+  badgeLabel: string;
+  exerciseAction?: string;
+}
+
 export interface DietUserSettings {
-  activityLevel: ActivityLevel;
-  goal: HealthGoal;
+  currentWeightKg?: number;
   targetWeightKg: number;
   weeklyPaceKg: number; // e.g. -0.5, 0, +0.25
+  heightCm?: number;
+  age?: number;
+  gender?: "male" | "female";
+  activityLevel: ActivityLevel;
+  goal: HealthGoal;
   customCalorieTarget?: number;
   customMacroSplit?: MacroSplit;
   dailyWaterTargetMl: number;
@@ -219,18 +237,154 @@ export function calculateCalorieTarget(
 }
 
 /**
- * Calculates Macro gram targets based on total calories and selected goal.
+ * Safely extracts a numeric biomarker from LabPanelRow (checking both top-level columns and biomarkers record).
+ */
+export function getBiomarkerVal(panel: LabPanelRow | null | undefined, keys: string[]): number | null {
+  if (!panel) return null;
+  for (const k of keys) {
+    const directVal = (panel as any)[k];
+    if (directVal !== undefined && directVal !== null && typeof directVal === "number" && !isNaN(directVal)) {
+      return directVal;
+    }
+    if (panel.biomarkers && panel.biomarkers[k] !== undefined && panel.biomarkers[k] !== null) {
+      const num = Number(panel.biomarkers[k]);
+      if (!isNaN(num)) return num;
+    }
+  }
+  return null;
+}
+
+/**
+ * Evaluates active lab biomarkers against clinical thresholds to determine dietary modulations and badges.
+ */
+export function evaluateBiomarkerDietImpacts(panel: LabPanelRow | null): BiomarkerDietImpact[] {
+  if (!panel) return [];
+  const impacts: BiomarkerDietImpact[] = [];
+
+  // 1. Fasting Glucose / HbA1c (Glycemic Regulation)
+  const glucose = getBiomarkerVal(panel, ["fasting_glucose", "glucose", "blood_sugar"]);
+  const hba1c = getBiomarkerVal(panel, ["hemoglobin_a1c", "hba1c"]);
+  if ((glucose && glucose > 100) || (hba1c && hba1c >= 5.7)) {
+    const isDiabetic = (glucose && glucose >= 126) || (hba1c && hba1c >= 6.5);
+    impacts.push({
+      id: "bio-glucose",
+      biomarkerKey: "glucose",
+      biomarkerName: hba1c ? `HbA1c (${hba1c}%) / Glucose` : "Fasting Glucose",
+      value: glucose || (hba1c ? Math.round((hba1c - 2.15) * 28.7) : 105),
+      unit: hba1c ? "%" : "mg/dL",
+      status: "high",
+      badgeLabel: isDiabetic ? "Diabetic Glycemic Guard" : "Glycemic Stabilizer",
+      clinicalRationale: `Fasting glucose (${glucose ?? "--"} mg/dL) or HbA1c (${hba1c ?? "--"}%) indicates metabolic insulin resistance.`,
+      nutritionalAction: "Caps rapid high-glycemic carbohydrates to ≤35% of energy, eliminates refined sugars, and mandates ≥35g soluble fiber.",
+      exerciseAction: "15-20 min brisk walking post-meals to enhance GLUT4 glucose transporter uptake without insulin spikes."
+    });
+  }
+
+  // 2. LDL / Total Cholesterol (Cardioprotective Lipid Regulation)
+  const ldl = getBiomarkerVal(panel, ["ldl", "ldl_cholesterol"]);
+  const totalChol = getBiomarkerVal(panel, ["total_cholesterol", "cholesterol"]);
+  if ((ldl && ldl > 100) || (totalChol && totalChol > 200)) {
+    impacts.push({
+      id: "bio-lipids",
+      biomarkerKey: "ldl",
+      biomarkerName: ldl ? "LDL Cholesterol" : "Total Cholesterol",
+      value: ldl ?? (totalChol ?? 130),
+      unit: "mg/dL",
+      status: "high",
+      badgeLabel: "Lipid Protective",
+      clinicalRationale: `Elevated atherogenic cholesterol (LDL: ${ldl ?? "--"} mg/dL, Total: ${totalChol ?? "--"} mg/dL).`,
+      nutritionalAction: "Restricts saturated fatty acids to <6% of daily calories (<13g), replaces with MUFAs (olive oil, avocados) and oat beta-glucan.",
+      exerciseAction: "Prescribes Zone 2 aerobic base cardio (150+ min/wk) to upregulate lipoprotein lipase and raise protective HDL."
+    });
+  }
+
+  // 3. Triglycerides (Endogenous Lipid Clearing)
+  const tg = getBiomarkerVal(panel, ["triglycerides", "tg"]);
+  if (tg && tg > 150) {
+    impacts.push({
+      id: "bio-triglycerides",
+      biomarkerKey: "triglycerides",
+      biomarkerName: "Triglycerides",
+      value: tg,
+      unit: "mg/dL",
+      status: "high",
+      badgeLabel: "Triglyceride Guardrail",
+      clinicalRationale: `Serum triglycerides are elevated (${tg} mg/dL), elevating cardiovascular and hepatic steatosis risk.`,
+      nutritionalAction: "Eliminates high-fructose corn syrup, refined white flours, and alcohol; integrates omega-3 rich fatty fish, chia, and walnuts.",
+      exerciseAction: "Sustained moderate aerobic workouts to burn circulating free fatty acids."
+    });
+  }
+
+  // 4. Creatinine (Renal Filtration Guardrail)
+  const creatinine = getBiomarkerVal(panel, ["creatinine", "serum_creatinine"]);
+  if (creatinine && creatinine > 1.2) {
+    impacts.push({
+      id: "bio-creatinine",
+      biomarkerKey: "creatinine",
+      biomarkerName: "Serum Creatinine",
+      value: creatinine,
+      unit: "mg/dL",
+      status: "high",
+      badgeLabel: "Renal Safe Protein",
+      clinicalRationale: `Serum creatinine is elevated (${creatinine} mg/dL), indicating renal hyperfiltration strain.`,
+      nutritionalAction: "Caps daily protein to a safe 0.8–1.0 g/kg (avoiding bodybuilding protein surges) and monitors sodium/potassium ratios.",
+      exerciseAction: "Enforces hydration rest intervals, avoids extreme rhabdomyolysis-inducing exhaustion workouts."
+    });
+  }
+
+  // 5. Blood Pressure / Systolic (Hypertension / DASH)
+  const sbp = getBiomarkerVal(panel, ["systolic_bp", "systolic"]);
+  const dbp = getBiomarkerVal(panel, ["diastolic_bp", "diastolic"]);
+  if ((sbp && sbp > 125) || (dbp && dbp > 80)) {
+    impacts.push({
+      id: "bio-bp",
+      biomarkerKey: "blood_pressure",
+      biomarkerName: "Blood Pressure",
+      value: sbp ?? 130,
+      unit: "mmHg",
+      status: "high",
+      badgeLabel: "DASH Sodium Control",
+      clinicalRationale: `Resting Blood Pressure is elevated (${sbp ?? "--"}/${dbp ?? "--"} mmHg).`,
+      nutritionalAction: "Adopts DASH dietary sodium restriction (<1800 mg/day) and raises dietary potassium (>3800 mg/day) from spinach, beans, and squash.",
+      exerciseAction: "Strict heart-rate ceiling (Zone 2 max), contraindicates breath-holding heavy 1RM Valsalva straining."
+    });
+  }
+
+  // 6. Hemoglobin (Oxygen Transport / Iron)
+  const hb = getBiomarkerVal(panel, ["hemoglobin", "hgb"]);
+  if (hb && hb < 12.0) {
+    impacts.push({
+      id: "bio-hemoglobin",
+      biomarkerKey: "hemoglobin",
+      biomarkerName: "Hemoglobin",
+      value: hb,
+      unit: "g/dL",
+      status: "low",
+      badgeLabel: "Iron Bioavailability",
+      clinicalRationale: `Hemoglobin is low (${hb} g/dL), impairing systemic cellular oxygen delivery and accelerating fatigue.`,
+      nutritionalAction: "Pairs bioavailable iron (lentils, dark leafy greens, tofu) with Vitamin C (citrus, bell peppers) to maximize intestinal absorption.",
+      exerciseAction: "Submaximal pacing with generous rest ratios (1:2 work/rest) to avoid uncompensated hypoxia."
+    });
+  }
+
+  return impacts;
+}
+
+/**
+ * Calculates Macro gram targets based on total calories, selected goal, and clinical biomarkers.
  */
 export function calculateMacroTargets(
   calories: number,
   goal: HealthGoal,
   weightKg: number = 70,
-  customSplit?: MacroSplit
-): { split: MacroSplit; grams: MacroGrams } {
+  customSplit?: MacroSplit,
+  activePanel?: LabPanelRow | null
+): { split: MacroSplit; grams: MacroGrams; biomarkerModulations: string[] } {
   let split: MacroSplit;
+  const modulations: string[] = [];
 
   if (customSplit) {
-    split = customSplit;
+    split = { ...customSplit };
   } else {
     switch (goal) {
       case "muscle_gain":
@@ -252,6 +406,46 @@ export function calculateMacroTargets(
     }
   }
 
+  // Clinical Biomarker Modulations (Tier 2 Integration)
+  if (activePanel) {
+    const glucose = getBiomarkerVal(activePanel, ["fasting_glucose", "glucose"]);
+    const hba1c = getBiomarkerVal(activePanel, ["hemoglobin_a1c", "hba1c"]);
+    if ((glucose && glucose > 100) || (hba1c && hba1c >= 5.7)) {
+      if (split.carbsPct > 35) {
+        const diff = split.carbsPct - 35;
+        split.carbsPct = 35;
+        split.proteinPct += Math.round(diff * 0.6);
+        split.fatPct += diff - Math.round(diff * 0.6);
+        modulations.push("Carbohydrates capped at 35% with low-GI focus due to elevated glycemic biomarkers.");
+      }
+    }
+
+    const ldl = getBiomarkerVal(activePanel, ["ldl", "ldl_cholesterol"]);
+    const chol = getBiomarkerVal(activePanel, ["total_cholesterol", "cholesterol"]);
+    if ((ldl && ldl > 100) || (chol && chol > 200)) {
+      if (split.fatPct > 28) {
+        const diff = split.fatPct - 26;
+        split.fatPct = 26;
+        split.carbsPct += diff;
+        modulations.push("Total fats modulated to 26% (saturated fat <6%) to accelerate atherogenic LDL reduction.");
+      }
+    }
+
+    const creatinine = getBiomarkerVal(activePanel, ["creatinine", "serum_creatinine"]);
+    if (creatinine && creatinine > 1.2) {
+      // Safe renal ceiling: ~0.9g/kg body weight
+      const safeProteinGrams = Math.round(weightKg * 0.9);
+      const safeProteinCalories = safeProteinGrams * 4;
+      const safeProteinPct = Math.min(split.proteinPct, Math.round((safeProteinCalories / calories) * 100));
+      if (safeProteinPct < split.proteinPct) {
+        const diff = split.proteinPct - safeProteinPct;
+        split.proteinPct = safeProteinPct;
+        split.carbsPct += diff;
+        modulations.push(`Protein capped at ${safeProteinPct}% (~${safeProteinGrams}g, 0.9g/kg) to protect glomerular filtration.`);
+      }
+    }
+  }
+
   // Protein = 4 kcal/g, Carbs = 4 kcal/g, Fat = 9 kcal/g
   const proteinGrams = Math.round((calories * (split.proteinPct / 100)) / 4);
   const carbsGrams = Math.round((calories * (split.carbsPct / 100)) / 4);
@@ -264,6 +458,7 @@ export function calculateMacroTargets(
       carbs: carbsGrams,
       fat: fatGrams,
     },
+    biomarkerModulations: modulations,
   };
 }
 
@@ -284,10 +479,15 @@ export function calculateMicroTargets(
   let ironMg = 18;
   let waterMl = 2500;
 
-  // Clinical adjustments
-  const isHypertensive = conditions.includes("hypertension") || (activePanel?.biomarkers?.["systolic_bp"] && activePanel.biomarkers["systolic_bp"] > 130);
-  const isDiabetic = conditions.includes("diabetes") || (activePanel?.biomarkers?.["glucose"] && activePanel.biomarkers["glucose"] > 110);
-  const isRenal = conditions.includes("kidney_disease");
+  // Clinical adjustments using robust getter
+  const sbp = getBiomarkerVal(activePanel, ["systolic_bp", "systolic"]);
+  const glucose = getBiomarkerVal(activePanel, ["fasting_glucose", "glucose"]);
+  const hba1c = getBiomarkerVal(activePanel, ["hemoglobin_a1c", "hba1c"]);
+  const creatinine = getBiomarkerVal(activePanel, ["creatinine", "serum_creatinine"]);
+
+  const isHypertensive = conditions.includes("hypertension") || (sbp !== null && sbp > 130);
+  const isDiabetic = conditions.includes("diabetes") || (glucose !== null && glucose > 105) || (hba1c !== null && hba1c >= 5.7);
+  const isRenal = conditions.includes("kidney_disease") || (creatinine !== null && creatinine > 1.2);
 
   if (isHypertensive) {
     sodiumMg = 1800; // DASH diet low sodium
@@ -2440,17 +2640,50 @@ export function generateWeeklyDietPlan(
     return MEAL_RECIPES_BANK[3] || MEAL_RECIPES_BANK[0];
   };
 
-  const bmr = calculateBMR(settings.targetWeightKg || 72, 175, 36, "male");
+  const impacts = evaluateBiomarkerDietImpacts(activePanel);
+  const currentWeight = settings.currentWeightKg || 72;
+  const height = settings.heightCm || 175;
+  const age = settings.age || 35;
+  const gender = settings.gender || "male";
+
+  const bmr = calculateBMR(currentWeight, height, age, gender);
   const tdee = calculateTDEE(bmr, settings.activityLevel);
   const targetCal = settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg);
+
+  const decorateMeal = (recipe: MealRecipe): MealRecipe => {
+    const mealBadges: string[] = [...(recipe.biomarkerBadges || [])];
+    let reason = recipe.biomarkerReason || "";
+
+    if (impacts.some((i) => i.id === "bio-glucose")) {
+      if (!mealBadges.includes("Glycemic Stabilizer")) mealBadges.push("Glycemic Stabilizer");
+      if (!reason) reason = "Optimized with slow-burning complex carbs and soluble fiber to support glycemic control.";
+    }
+    if (impacts.some((i) => i.id === "bio-lipids")) {
+      if (!mealBadges.includes("Lipid Protective")) mealBadges.push("Lipid Protective");
+      if (!reason) reason = "Formulated with healthy monounsaturated fats and <6% saturated fat to assist lipid reduction.";
+    }
+    if (impacts.some((i) => i.id === "bio-creatinine")) {
+      if (!mealBadges.includes("Renal Safe Protein")) mealBadges.push("Renal Safe Protein");
+      if (!reason) reason = "Balanced protein allocation to protect kidney glomerular filtration.";
+    }
+    if (impacts.some((i) => i.id === "bio-bp")) {
+      if (!mealBadges.includes("DASH Sodium Control")) mealBadges.push("DASH Sodium Control");
+    }
+
+    return {
+      ...recipe,
+      biomarkerBadges: Array.from(new Set(mealBadges)),
+      biomarkerReason: reason || recipe.clinicalBenefits?.[0] || undefined,
+    };
+  };
 
   const days: DayDietPlan[] = [];
 
   for (let i = 0; i < 7; i++) {
-    const bf = getBf(i);
-    const lu = getLu(i);
-    const di = getDi(i);
-    const sn = getSn(i);
+    const bf = decorateMeal(getBf(i));
+    const lu = decorateMeal(getLu(i));
+    const di = decorateMeal(getDi(i));
+    const sn = decorateMeal(getSn(i));
 
     const totalCal = bf.calories + lu.calories + di.calories + sn.calories;
     const totalProt = bf.protein + lu.protein + di.protein + sn.protein;
@@ -2458,11 +2691,14 @@ export function generateWeeklyDietPlan(
     const totalFat = bf.fat + lu.fat + di.fat + sn.fat;
     const totalFib = bf.fiber + lu.fiber + di.fiber + sn.fiber;
 
-    let rationale = `Calibrated for ${settings.goal.replace(/_/g, " ")} with ${settings.dietaryPreference} dietary alignment.`;
-    if (activePanel?.biomarkers?.["glucose"] && activePanel.biomarkers["glucose"] > 105) {
-      rationale += " Emphasizes low-glycemic carbs and high soluble fiber to flatten postprandial glucose curves.";
-    } else if (activePanel?.biomarkers?.["ldl"] && activePanel.biomarkers["ldl"] > 130) {
-      rationale += " Features cardioprotective fats (EVOO, nuts) with restricted saturated fatty acids.";
+    let rationale = `Calibrated for ${settings.goal.replace(/_/g, " ")} (${targetCal} kcal/day`;
+    if (settings.weeklyPaceKg && settings.weeklyPaceKg !== 0) {
+      rationale += `, ${settings.weeklyPaceKg > 0 ? "+" : ""}${settings.weeklyPaceKg} kg/wk pace`;
+    }
+    rationale += `) with ${settings.dietaryPreference} dietary alignment.`;
+
+    if (impacts.length > 0) {
+      rationale += ` Clinical synergy active for: ${impacts.map((imp) => imp.biomarkerName).join(", ")}.`;
     }
 
     days.push({

@@ -17,12 +17,23 @@ import {
   CheckCircle2,
   Check,
   Trash2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { useAuth } from "../../../auth/AuthContext";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { useActiveReport } from "../../../hooks/useActiveReport";
 import { generateDeterministicExercisePlan } from "../../../lib/exercisePlan";
+import {
+  type DietUserSettings,
+  evaluateBiomarkerDietImpacts,
+  calculateBMR,
+  calculateTDEE,
+  calculateCalorieTarget,
+  calculateMacroTargets,
+} from "../../../lib/dietEngine";
+import GoalBiomarkerCalibrationModal from "../../components/patient/GoalBiomarkerCalibrationModal";
+import ClinicalRationaleCard from "../../components/patient/ClinicalRationaleCard";
 import {
   portalPanelClass,
   portalPrimaryButtonClass,
@@ -206,22 +217,88 @@ export default function PatientDietFitness() {
     );
   }, [loggedMeals]);
 
-  const targetCal = 2100;
-  const targetCarbs = 230;
-  const targetProtein = 140;
-  const targetFat = 65;
+  const { activePanel, biomarkerTrends } = useActiveReport(panels);
 
-  const carbPct = Math.min(100, Math.round((totals.carbs / targetCarbs) * 100));
-  const proteinPct = Math.min(100, Math.round((totals.protein / targetProtein) * 100));
-  const fatPct = Math.min(100, Math.round((totals.fat / targetFat) * 100));
-  const caloriesPct = Math.min(100, Math.round((totals.calories / targetCal) * 100));
+  // User Diet & Metabolic Settings
+  const dietSettingsKey = `zebra_diet_settings_${profile?.id || "default"}`;
+  const [dietSettings, setDietSettings] = useState<DietUserSettings>(() => {
+    try {
+      const saved = localStorage.getItem(dietSettingsKey);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.error(e);
+    }
+    return {
+      currentWeightKg: profile?.weight_kg || 78,
+      targetWeightKg: profile?.target_weight_kg || 70,
+      weeklyPaceKg: -0.5,
+      heightCm: profile?.height_cm || 175,
+      age: 36,
+      gender: (profile?.gender?.toLowerCase() === "female" ? "female" : "male") as "male" | "female",
+      activityLevel: "moderate",
+      goal: "fat_loss",
+      dailyWaterTargetMl: 2500,
+      dietaryPreference: profile?.dietary_preference || "vegetarian",
+      foodAllergies: profile?.food_allergies || [],
+      dietaryConditions: profile?.dietary_conditions || [],
+    };
+  });
+
+  const [isCalibrationOpen, setIsCalibrationOpen] = useState(false);
+
+  const handleSaveDietSettings = (newSettings: DietUserSettings) => {
+    setDietSettings(newSettings);
+    try {
+      localStorage.setItem(dietSettingsKey, JSON.stringify(newSettings));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const bmr = useMemo(() => {
+    return calculateBMR(
+      dietSettings.currentWeightKg || profile?.weight_kg || 78,
+      dietSettings.heightCm || 175,
+      dietSettings.age || 36,
+      dietSettings.gender || "male"
+    );
+  }, [dietSettings.currentWeightKg, dietSettings.heightCm, dietSettings.age, dietSettings.gender, profile?.weight_kg]);
+
+  const tdee = useMemo(() => {
+    return calculateTDEE(bmr, dietSettings.activityLevel);
+  }, [bmr, dietSettings.activityLevel]);
+
+  const targetCal = useMemo(() => {
+    return dietSettings.customCalorieTarget || calculateCalorieTarget(tdee, dietSettings.goal, dietSettings.weeklyPaceKg);
+  }, [dietSettings.customCalorieTarget, tdee, dietSettings.goal, dietSettings.weeklyPaceKg]);
+
+  const macroCalc = useMemo(() => {
+    return calculateMacroTargets(
+      targetCal,
+      dietSettings.goal,
+      dietSettings.currentWeightKg || 78,
+      dietSettings.customMacroSplit,
+      activePanel
+    );
+  }, [targetCal, dietSettings.goal, dietSettings.currentWeightKg, dietSettings.customMacroSplit, activePanel]);
+
+  const targetCarbs = macroCalc.grams.carbs;
+  const targetProtein = macroCalc.grams.protein;
+  const targetFat = macroCalc.grams.fat;
+
+  const biomarkerImpacts = useMemo(() => {
+    return evaluateBiomarkerDietImpacts(activePanel);
+  }, [activePanel]);
+
+  const carbPct = Math.min(100, Math.round((totals.carbs / Math.max(1, targetCarbs)) * 100));
+  const proteinPct = Math.min(100, Math.round((totals.protein / Math.max(1, targetProtein)) * 100));
+  const fatPct = Math.min(100, Math.round((totals.fat / Math.max(1, targetFat)) * 100));
+  const caloriesPct = Math.min(100, Math.round((totals.calories / Math.max(1, targetCal)) * 100));
 
   const currentDayOfWeekNumber = useMemo(() => {
     const jsDay = parseLocalDate(selectedDate).getDay();
     return jsDay === 0 ? 7 : jsDay;
   }, [selectedDate]);
-
-  const { activePanel, biomarkerTrends } = useActiveReport(panels);
 
   const exercisePlan = useMemo(() => {
     const fitnessStorageKey = `zebra_fitness_prefs_${profile?.id || "default"}`;
@@ -235,11 +312,16 @@ export default function PatientDietFitness() {
     return generateDeterministicExercisePlan(activePanel, biomarkerTrends, {
       fitnessLevel: prefs.fitnessLevel || "beginner",
       equipment: prefs.workoutEnv || prefs.equipment || "home_minimal",
-      goal: prefs.primaryGoal || "general_health",
+      goal: prefs.primaryGoal || (dietSettings.goal === "muscle_gain" ? "muscle_strength" : dietSettings.goal === "fat_loss" ? "weight_loss" : "general_health"),
       targetDurationMin: Number(prefs.durationMin) || 30,
       physicalLimitations: prefs.limitations || [],
+      weightKg: dietSettings.currentWeightKg || profile?.weight_kg || 78,
+      targetWeightKg: dietSettings.targetWeightKg || 70,
+      weeklyPaceKg: dietSettings.weeklyPaceKg,
+      heightCm: dietSettings.heightCm || 175,
+      age: dietSettings.age || 36,
     });
-  }, [activePanel, biomarkerTrends, profile?.id]);
+  }, [activePanel, biomarkerTrends, profile?.id, profile?.weight_kg, dietSettings]);
 
   const todayWorkout = useMemo(() => {
     return (
@@ -493,19 +575,35 @@ export default function PatientDietFitness() {
               <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">• Active Protocol</span>
             </div>
 
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-2 sm:gap-3 text-xs">
               <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-xl">
                 <span className="text-[10px] uppercase text-slate-400 font-bold">Daily Target:</span>
-                <span className="font-mono font-bold text-lime-400">2,100 kcal</span>
+                <span className="font-mono font-bold text-lime-400">{targetCal.toLocaleString()} kcal</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-xl">
+              <div className="flex items-center gap-1.5 bg-white/10 px-2.5 py-1 rounded-xl hidden md:flex">
                 <span className="text-[10px] uppercase text-slate-400 font-bold">Workout:</span>
                 <span className="font-bold text-cyan-300">
                   Day {todayWorkout.dayNumber} {todayWorkout.dayName}
                 </span>
               </div>
+              <Button
+                size="sm"
+                onClick={() => setIsCalibrationOpen(true)}
+                className="h-7 px-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs gap-1.5 shadow-sm transition-all cursor-pointer font-['Manrope']"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span>Calibrate</span>
+              </Button>
             </div>
           </div>
+
+          {/* Two-Tier Clinical Synthesis & Biomarker Card */}
+          <ClinicalRationaleCard
+            settings={dietSettings}
+            activePanel={activePanel}
+            biomarkerImpacts={biomarkerImpacts}
+            onOpenCalibration={() => setIsCalibrationOpen(true)}
+          />
 
           {/* 2-Column Split */}
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3">
@@ -647,6 +745,19 @@ export default function PatientDietFitness() {
                       {todayWorkout.targetHeartRateBpm.split("(")[0]}
                     </span>
                   </div>
+
+                  {todayWorkout.biomarkerBadges && todayWorkout.biomarkerBadges.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                      {todayWorkout.biomarkerBadges.map((badge, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/60 text-[9px] font-bold"
+                        >
+                          {badge}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Exercises list or Rest box for specific day */}
@@ -900,6 +1011,15 @@ export default function PatientDietFitness() {
           <ExercisePlan embedded={true} initialDay={selectedExerciseDay} />
         </div>
       )}
+
+      {/* Goal & Biomarker Calibration Interactive Modal */}
+      <GoalBiomarkerCalibrationModal
+        open={isCalibrationOpen}
+        onOpenChange={setIsCalibrationOpen}
+        settings={dietSettings}
+        activePanel={activePanel}
+        onSave={handleSaveDietSettings}
+      />
     </div>
   );
 }

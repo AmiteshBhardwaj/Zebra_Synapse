@@ -25,7 +25,7 @@ import { getAuthInactivityTimeoutMs } from "../lib/security";
 import { safeLocalStorage } from "../lib/safeStorage";
 import type { Profile } from "./types";
 
-type AuthContextValue = {
+export type AuthContextValue = {
   session: Session | null;
   user: User | { id: string; email?: string } | null;
   profile: Profile | null;
@@ -37,7 +37,7 @@ type AuthContextValue = {
   setDemoSession: (role: "patient" | "doctor", email: string) => void;
 };
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 async function fetchProfile(
   sb: SupabaseClient,

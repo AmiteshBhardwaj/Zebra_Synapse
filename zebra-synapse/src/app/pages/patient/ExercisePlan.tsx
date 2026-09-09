@@ -479,6 +479,24 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
                   HR Zone: <strong className="text-slate-800">{currentDayWorkout.targetHeartRateBpm}</strong>
                 </span>
               )}
+
+              {currentDayWorkout.biomarkerBadges && currentDayWorkout.biomarkerBadges.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  {currentDayWorkout.biomarkerBadges.map((badge, idx) => (
+                    <Badge
+                      key={idx}
+                      className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[9px] font-semibold"
+                    >
+                      {badge}
+                    </Badge>
+                  ))}
+                  {currentDayWorkout.biomarkerReason && (
+                    <span className="text-[10px] text-emerald-700 italic hidden md:inline">
+                      • {currentDayWorkout.biomarkerReason}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2 text-xs">
