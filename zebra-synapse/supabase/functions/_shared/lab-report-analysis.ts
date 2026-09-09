@@ -382,6 +382,12 @@ function finalizeExtraction(result: ProviderExtractionResult): FinalizedExtracti
     const definition = BIOMARKER_DEFINITION_MAP.get(candidate.key);
     if (!definition) continue;
 
+    // Normalize CRP / hs-CRP from mg/dL to canonical mg/L
+    if ((candidate.key === "crp" || candidate.key === "high_sensitivity_crp") && candidate.unit && /mg\s*\/\s*d[lL]/i.test(candidate.unit)) {
+      candidate.value = Number((candidate.value * 10).toFixed(2));
+      candidate.unit = "mg/L";
+    }
+
     const expectedUnits = definition.units.map((unit) => unit.toLowerCase()).filter(Boolean);
     if (candidate.unit && expectedUnits.length && !expectedUnits.includes(candidate.unit.toLowerCase())) {
       warnings.push(`${definition.label}: source unit '${candidate.unit}' may not match expected ${definition.units.join(" / ")}.`);

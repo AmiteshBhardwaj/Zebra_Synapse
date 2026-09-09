@@ -504,47 +504,57 @@ export async function generateLabReportAiAnswer(
   if (geminiApiKey) {
     try {
       const omniSection = context.portalData ? buildOmniContextPromptString(context.portalData) : "";
+      const dietPref = context.dietaryPreference ? context.dietaryPreference.toUpperCase() : "OMNIVORE";
 
       const prompt = `
 You are Zebra Synapse AI, an omni-context, intelligent, empathetic, and clinical-grade health assistant and platform copilot for the Zebra Synapse patient portal.
-A patient is asking a question. You have access to their entire portal context across all leftbar tabs as well as full platform knowledge.
+A patient is asking a question regarding their health, symptoms, or lab results. You have access to their entire portal context across all leftbar tabs and active lab biomarkers.
 
 ${omniSection}
 
 ACTIVE LAB REPORT CONTEXT ("${context.reportName}"):
 ${biomarkerSummaries.length > 0 ? biomarkerSummaries.join("\n") : "No specific structured biomarkers extracted yet, but patient report is on file."}
-${context.rawSnippet ? `\nEXTRACTED REPORT TEXT SNIPPET:\n${context.rawSnippet.slice(0, 1000)}\n` : ""}
+${context.rawSnippet ? `\nEXTRACTED REPORT TEXT SNIPPET:\n${context.rawSnippet.slice(0, 1200)}\n` : ""}
+
+PATIENT'S CONFIGURED DIETARY PREFERENCE: ${dietPref} (STRICTLY HONOR THIS IN ALL MEAL/DIET SUGGESTIONS)
 
 PATIENT'S QUESTION:
 "${userQuery}"
 
-CRITICAL INSTRUCTIONS & GUARDRAILS:
-1. INTENT DETECTION & MULTI-TAB EXPERTISE:
-   - ABOUT ZEBRA SYNAPSE: Explain our mission, 3D anatomical health twin, biomarker AI trends, and doctor-in-the-loop verification that guarantees licensed physician oversight.
-   - LEFTBAR TABS: Answer questions about Health Overview, Medical Records, Appointments, Teleconsultation, Prescriptions, Disease Prediction, Diet & Fitness, Clinical Trials, and Wellness Tips accurately using the data provided.
-   - LAB REPORTS & SYMPTOMS: Explain physiological mechanisms in patient-friendly terms, referencing specific lab values and reference ranges.
-   - MEDICATIONS & DOSAGE: State active prescriptions, timing, instructions, and food interactions accurately from the prescription records.
-   - APPOINTMENTS: Reference upcoming dates, doctor names, clinics, and times accurately.
-   - DIET & FITNESS: Strictly honor configured dietary preferences (Vegan: 100% plant-based, no animal products; Vegetarian: no meat/fish; Jain: no root vegetables/meat; etc.).
-2. DEEP-LINK ACTION SHORTCUTS:
-   - When referencing a portal feature, append an action tag on its own line at the end of the response:
+CRITICAL CLINICAL REASONING & RESPONSE GUARDRAILS:
+1. CLINICAL SYMPTOM & BIOMARKER SYNTHESIS:
+   - When the patient asks about symptoms (e.g. "why does my stomach hurt after eating", fatigue, dizziness, nausea, shortness of breath, joint pain, chest tightness, itching, dark urine, etc.):
+     * CAREFULLY inspect all active lab biomarkers (e.g. Conjugated Bilirubin, Total Bilirubin, SGPT/ALT, SGOT/AST, Glucose, HbA1c, Potassium, Calcium, Hemoglobin, BUN, Creatinine, etc.).
+     * Correlate the symptom to out-of-range or relevant lab values with exact numbers, units, and status.
+     * IF POSTPRANDIAL STOMACH/ABDOMINAL PAIN & ELEVATED BILIRUBIN (especially Conjugated Bilirubin):
+       - Explain the exact pathophysiological link: Conjugated bilirubin is water-soluble bile pigment processed by the liver. When the patient eats, the duodenum secretes cholecystokinin (CCK), causing the gallbladder to contract and pump bile into the digestive tract.
+       - Sluggish bile flow, biliary sludge, duct constriction, or biliary colic causes sharp biliary pressure increases post-meal, generating upper abdominal (epigastric/RUQ) pain.
+       - Detail differential considerations: biliary colic, gallbladder irritation, alkaline bile reflux gastritis, peptic ulcer, and pancreatitis.
+       - Provide immediate dietary adjustments: avoid high-fat, greasy, deep-fried triggers; eat smaller frequent meals; stay upright 60-90 min post-meal.
+       - Explicitly state emergency red flag symptoms: high fever, severe unrelenting RUQ pain, yellowing of eyes/skin, pale clay stools, tea-colored urine, intractable vomiting.
+2. RESPONSE STRUCTURE (Use clean, scannable Markdown with headers and bullet points):
+   - ### 🩺 Clinical Analysis & Biomarker Correlation
+   - #### 🔍 Physiological Mechanism (explain why the symptom happens in empathetic, patient-friendly terms)
+   - #### 📋 Differential Considerations (clinical possibilities to explore with their doctor)
+   - #### 🥗 Actionable Dietary & Lifestyle Adaptations (strictly complying with ${dietPref})
+   - #### 🚨 Warning Signs Requiring Prompt Medical Attention
+   - **Doctor-in-the-Loop Reassurance**: State clearly that this analysis has been automatically forwarded to their connected physician for review.
+3. DEEP-LINK ACTION SHORTCUTS:
+   - Append appropriate action tags at the very end on their own lines:
+     * [ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]
+     * [ACTION:navigate:/patient/medical-records:📁 View Full Lab Report]
      * [ACTION:navigate:/patient/appointments:📅 View Appointments]
-     * [ACTION:navigate:/patient/prescription:💊 View Prescriptions]
      * [ACTION:navigate:/patient/diet-fitness:🥗 Open Diet & Fitness]
      * [ACTION:navigate:/patient/disease-prediction:🔮 View Disease Predictions]
-     * [ACTION:navigate:/patient/clinical-trials:🔬 View Clinical Trials]
-     * [ACTION:navigate:/patient/teleconsult:📹 Open Teleconsultation]
-     * [ACTION:navigate:/patient/medical-records:📁 View Medical Records]
      * [ACTION:navigate:/patient:🏠 Health Overview]
-     * [ACTION:navigate:/patient/wellness-tips:✨ View Wellness Tips]
-3. EMPATHY & DOCTOR-IN-THE-LOOP:
-   - Keep answers supportive and structured with clean markdown.
-   - For clinical symptom/lab queries, reassure the patient that their response has been automatically submitted to their connected doctor for verification.
 `.trim();
 
       const chatModels = getGeminiModels();
       for (const model of chatModels) {
         try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 7500);
+
           const response = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiApiKey)}`,
             {
@@ -556,22 +566,24 @@ CRITICAL INSTRUCTIONS & GUARDRAILS:
               body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
-                  temperature: 0.3,
-                  maxOutputTokens: 1000,
+                  temperature: 0.25,
+                  maxOutputTokens: 2500,
                 },
               }),
+              signal: controller.signal,
             }
           );
+          clearTimeout(timeoutId);
 
           if (response.ok) {
             const json = await response.json();
             const generatedText = json.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (generatedText && generatedText.trim().length > 20) {
+            if (generatedText && generatedText.trim().length > 30) {
               return generatedText.trim();
             }
           }
         } catch {
-          // Fallback to next model
+          // Fallback to next candidate model or deterministic engine
         }
       }
     } catch (e) {
@@ -579,7 +591,7 @@ CRITICAL INSTRUCTIONS & GUARDRAILS:
     }
   }
 
-  // 3. Robust Clinical & Portal Inference Engine (offline / keyless)
+  // 3. Robust Clinical & Portal Inference Engine (offline / keyless / 503 fallback)
   return generateGroundedRuleBasedAnswer(queryLower, relevantFindings, context.reportName, context);
 }
 
@@ -1013,6 +1025,26 @@ function generateGroundedRuleBasedAnswer(
     return text;
   }
 
+  const isShortnessOfBreath =
+    /\b(?:breath|breaths|breathing|breathless(?:ness)?|shortness\s+of\s+breath|dyspnea|wheez(?:e|ing)|winded|panting|air\s*hunger|suffocat(?:e|ing)|gasp(?:ing)?|out\s+of\s+breath)\b/i.test(
+      query
+    );
+  const isUrineOrStoolColor =
+    /\b(?:dark(?:er)?\s*urine|tea[\s-]*color(?:ed)?|cola[\s-]*color(?:ed)?|pale\s*stools?|clay[\s-]*color(?:ed)?|white\s*stools?|chalky\s*stools?)\b/i.test(
+      query
+    );
+  const isItchingOrSkin =
+    /\b(?:itch(?:y|ing)?|pruritus|scratch(?:ing)?|skin\s*rash(?:es)?|dry\s*skin|yellow\s*skin|jaundice\s*skin)\b/i.test(
+      query
+    );
+  const isBrainFogOrCognitive =
+    /\b(?:brain\s*fog|concentration|focus|memory|confus(?:ed|ion)?|forgetful|mental\s*clarity)\b/i.test(
+      query
+    );
+  const isStomachOrDigestion =
+    /\b(?:stomach|belly|abdom(?:en|inal)?|gut|digest(?:ion|ive)?|eat|eating|eaten|postprandial|after\s+(?:food|eating|meals?)|meals?|foods?|bloat(?:ed|ing)?|nausea|nauseous|vomit(?:ing)?|heartburn|acid\s*reflux|reflux|gerd|indigestion|dyspepsia|cramp(?:s|ing)?\s+in\s+stomach|gastric|gastritis|gallbladder|biliary|pancrea(?:s|tic|titis)?|bowel|diarrhea|constipat(?:ed|ion))\b/i.test(
+      query
+    );
   const isDizzy = /dizz|lightheaded|vertigo|spinning|faint|fainting|unsteady|balance|loss of balance|woozy|giddy|passed out/i.test(query);
   const isWeakness = /weak|tired|fatigue|exhaust|energy|low energy|drowsy|sleepy|lazy|brain fog|sluggish|letharg|malaise|worn out/i.test(query);
   const isCrampsOrNumbness = /cramp|spasm|twitch|numb|tingl|pins and needles|paresthesia|soreness|stiff|tightness/i.test(query);
@@ -1022,12 +1054,305 @@ function generateGroundedRuleBasedAnswer(
   const isSugarOrDiabetes = /sugar|glucose|diabetes|hba1c|thirst|thirsty|frequent urination|polyuria|craving|sweet/i.test(query);
   const isCholesterol = /cholesterol|lipid|triglyceride|artery|plaque/i.test(query);
   const isHeadache = /headache|migraine|head pain|throbbing/i.test(query);
-  const isImmunity = /infection|immunity|wbc|white blood|sick|fever|cold|flu/i.test(query);
-  const isBoneOrJoint = /bone|joint|ache|body ache|muscle pain|gout|uric/i.test(query);
+  const isImmunity = /infection|immunity|wbc|white blood|sick|fever|cold|flu|chills|leukocyte/i.test(query);
+  const isBoneOrJoint = /bone|joint|ache|body ache|muscle pain|gout|uric|arthritis|knee|back pain/i.test(query);
 
   const abnormalFindings = findings.filter(
     (f) => f.status === "high" || f.status === "low" || f.status === "borderline"
   );
+
+  // -------------------------------------------------------------------------
+  // 0. Gastrointestinal & Stomach Pain / Postprandial Distress / Digestion
+  // -------------------------------------------------------------------------
+  if (isStomachOrDigestion) {
+    const cb = findFinding(findings, /conjugated\s*bilirubin|direct\s*bilirubin/i);
+    const tb = findFinding(findings, /total\s*bilirubin/i);
+    const unb = findFinding(findings, /unconjugated\s*bilirubin|indirect\s*bilirubin/i);
+    const sgpt = findFinding(findings, /sgpt|\balt\b/i);
+    const sgot = findFinding(findings, /sgot|\bast\b/i);
+    const alp = findFinding(findings, /alkaline\s*phosphatase|\balp\b/i);
+    const lipase = findFinding(findings, /lipase/i);
+    const amylase = findFinding(findings, /amylase/i);
+    const a1c = findFinding(findings, /a1c|hba1c/i);
+    const glucose = findFinding(findings, /glucose|fbs|blood\s*sugar/i);
+    const potassium = findFinding(findings, /potassium|\bk\+?\b/i);
+    const bun = findFinding(findings, /blood\s*urea\s*nitrogen|\bbun\b/i);
+    const urea = findFinding(findings, /\burea\b/i);
+
+    const hasBiliaryHigh =
+      (cb && (cb.status === "high" || cb.value > 0.3)) ||
+      (tb && (tb.status === "high" || tb.value > 1.2)) ||
+      (alp && (alp.status === "high" || alp.value > 120));
+
+    const hasLiverEnzymeHigh =
+      (sgpt && (sgpt.status === "high" || sgpt.value > 45)) ||
+      (sgot && (sgot.status === "high" || sgot.value > 45));
+
+    const hasPancreaticHigh =
+      (lipase && (lipase.status === "high" || lipase.value > 60)) ||
+      (amylase && (amylase.status === "high" || amylase.value > 100));
+
+    const hasGlycemicHigh =
+      (a1c && (a1c.status === "high" || a1c.value >= 6.5)) ||
+      (glucose && (glucose.status === "high" || glucose.value >= 126));
+
+    const isPostprandial = /eat|eating|after food|after meal|meal|food|postprandial/i.test(query);
+
+    const dietPref = (context?.dietaryPreference || "Omnivore").toUpperCase();
+    const isVegan = dietPref === "VEGAN";
+    const isVegetarian = isVegan || dietPref === "VEGETARIAN" || dietPref === "JAIN";
+
+    if (hasBiliaryHigh || hasLiverEnzymeHigh) {
+      const markersList: string[] = [];
+      if (cb && (cb.status === "high" || cb.value > 0.3)) {
+        markersList.push(`• **Conjugated (Direct) Bilirubin: ${cb.value} ${cb.unit}** (HIGH ⬆️, Normal: ${cb.reference})`);
+      }
+      if (tb && (tb.status === "high" || tb.value > 1.2)) {
+        markersList.push(`• **Total Bilirubin: ${tb.value} ${tb.unit}** (HIGH ⬆️, Normal: ${tb.reference})`);
+      }
+      if (alp && (alp.status === "high" || alp.value > 120)) {
+        markersList.push(`• **Alkaline Phosphatase (ALP): ${alp.value} ${alp.unit}** (HIGH ⬆️, Normal: ${alp.reference})`);
+      }
+      if (sgpt && (sgpt.status === "high" || sgpt.value > 45)) {
+        markersList.push(`• **SGPT/ALT: ${sgpt.value} ${sgpt.unit}** (ELEVATED ⬆️, Normal: ${sgpt.reference})`);
+      }
+      if (sgot && (sgot.status === "high" || sgot.value > 45)) {
+        markersList.push(`• **SGOT/AST: ${sgot.value} ${sgot.unit}** (ELEVATED ⬆️, Normal: ${sgot.reference})`);
+      }
+
+      const mealContextSentence = isPostprandial
+        ? `Your symptom—**stomach or abdominal pain after eating (postprandial pain)**—is directly explained by physiological mechanisms linking your digestive tract to your hepatobiliary system.`
+        : `Your digestive discomfort and stomach pain strongly correlate with the elevated liver and biliary excretion markers detected in your lab report.`;
+
+      const dietRecommendation = isVegan
+        ? `• **Low-Fat Plant-Based Whole Foods:** Avoid fried items, heavy cooking oils, and high-fat nut butters during active flare-ups. Prioritize light steamed vegetables (zucchini, squash, spinach), soft oats, split lentils (moong), and clear vegetable broths.`
+        : isVegetarian
+        ? `• **Gentle Vegetarian Nutrition:** Avoid heavy ghee, paneer, fried snacks, and whole milk. Choose low-fat yogurt, steamed moong dal, soft rice, and soothing vegetable soups.`
+        : `• **Lean, Low-Fat Mediterranean Diet:** Eliminate fried, greasy foods, fatty red meats, and rich cream sauces that force strong gallbladder contractions. Favor poached fish, steamed greens, oats, and boiled potatoes.`;
+
+      return (
+        `### 🩺 Clinical Analysis: Post-Meal Stomach Pain & Elevated Bilirubin\n\n` +
+        `${mealContextSentence}\n\n` +
+        `#### 📊 Out-of-Range Lab Biomarkers:\n` +
+        markersList.join("\n") +
+        `\n\n` +
+        `#### 🔍 Why Your Stomach Hurts After Eating (Physiological Mechanism):\n` +
+        `1. **What Conjugated Bilirubin Indicates:** Conjugated (direct) bilirubin is water-soluble bile pigment that your liver has already processed and packaged for excretion through your **bile ducts and gallbladder** into your small intestine (duodenum) to assist in fat digestion.\n` +
+        `2. **The Post-Meal Hormonal Trigger (CCK):** When food enters your stomach and passes into the duodenum, specialized intestinal cells immediately release the hormone **cholecystokinin (CCK)**. CCK signals your gallbladder to contract forcefully and prompts the biliary sphincter (Sphincter of Oddi) to relax, flushing concentrated bile into the digestive tract.\n` +
+        `3. **Why Pain Occurs:** Because your conjugated bilirubin is elevated (${cb ? `${cb.value} ${cb.unit}` : "above standard limits"}), there is an active clearance impediment or sluggish outflow in the biliary tree (such as biliary sludge, microscopic gallstones, choledocholithiasis, or biliary dyskinesia). When your gallbladder squeezes against this outflow resistance after a meal, pressure builds rapidly inside the biliary ducts, causing **cramping, gnawing, or aching pain in the upper stomach (epigastrium) or right upper quadrant (RUQ)**.\n\n` +
+        `#### 📋 Differential Clinical Considerations to Discuss With Your Doctor:\n` +
+        `• **Biliary Colic / Gallbladder Irritation:** Transient obstruction or spasm of the cystic duct or common bile duct triggered by meal-induced contraction.\n` +
+        `• **Alkaline Bile Reflux Gastritis:** Irritation of the gastric mucosa caused by sluggish or retrograde flow of alkaline bile salts into the stomach.\n` +
+        `• **Peptic Ulcer Disease / Gastritis:** Food ingestion stimulates gastric hydrochloric acid; if the stomach lining is inflamed, postprandial burning or cramping occurs.\n` +
+        `• **Pancreatic Duct Congestion:** Because the common bile duct shares a terminal channel (Ampulla of Vater) with the pancreatic duct, biliary outflow delay can cause secondary pancreatic tissue irritation.\n\n` +
+        `#### 🥗 Actionable Dietary & Lifestyle Adaptations (${dietPref}):\n` +
+        `${dietRecommendation}\n` +
+        `• **Eat Smaller, More Frequent Meals:** Consuming smaller portions avoids triggering massive CCK surges and reduces peak gallbladder pressure.\n` +
+        `• **Remain Upright After Eating:** Avoid lying flat for at least 60 to 90 minutes post-meal to minimize bile and gastric acid reflux.\n` +
+        `• **Hydration:** Drink plenty of room-temperature water throughout the day to support bile solubility.\n\n` +
+        `#### 🚨 Red Flag Warning Symptoms (Seek Immediate Medical Care If Present):\n` +
+        `• Severe, unrelenting right upper abdominal or back pain lasting more than 2 to 3 hours.\n` +
+        `• High fever, chills, or shaking (possible acute cholecystitis or cholangitis).\n` +
+        `• Yellowing of the sclera (white of eyes) or skin (worsening jaundice).\n` +
+        `• Pale, clay-colored stools or dark, tea-colored urine.\n` +
+        `• Inability to keep fluids down or repeated vomiting.\n\n` +
+        `**Doctor-in-the-Loop Oversight:**\n` +
+        `This clinical decision support summary has been automatically forwarded to your assigned physician's dashboard for verification. Your doctor will review these findings to determine whether an **abdominal ultrasound** or repeated liver/biliary panel is indicated.\n\n` +
+        `[ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]\n` +
+        `[ACTION:navigate:/patient/medical-records:📁 View Full Lab Report]`
+      );
+    }
+
+    if (hasPancreaticHigh) {
+      return (
+        `### 🩺 Clinical Analysis: Post-Meal Abdominal Discomfort & Pancreatic Markers\n\n` +
+        `Your stomach and abdominal pain may be related to elevated pancreatic digestive enzymes detected in your report:\n\n` +
+        (lipase ? `• **Lipase**: ${lipase.value} ${lipase.unit} (${lipase.status.toUpperCase()}, Ref: ${lipase.reference})\n` : "") +
+        (amylase ? `• **Amylase**: ${amylase.value} ${amylase.unit} (${amylase.status.toUpperCase()}, Ref: ${amylase.reference})\n` : "") +
+        `\n**Physiological Context:**\n` +
+        `Eating stimulates enzyme secretion from the pancreas. Elevated levels indicate pancreatic acinar irritation or ductal inflammation, which typically causes persistent upper abdominal pain radiating to the mid-back that intensifies after meals.\n\n` +
+        `**Clinical Guidance:**\n` +
+        `• Avoid high-fat foods, alcohol, and heavy meals immediately.\n` +
+        `• Contact your doctor or seek urgent care if the pain is severe or accompanied by nausea, vomiting, or fever.\n\n` +
+        `[ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]`
+      );
+    }
+
+    if (hasGlycemicHigh) {
+      return (
+        `### 🩺 Clinical Analysis: Post-Meal Discomfort & Glycemic Dysregulation\n\n` +
+        `Your post-meal stomach symptoms may be influenced by significant blood sugar elevations in your report:\n\n` +
+        (a1c ? `• **HbA1c**: ${a1c.value} ${a1c.unit} (${a1c.status.toUpperCase()}, Ref: ${a1c.reference})\n` : "") +
+        (glucose ? `• **Fasting Glucose**: ${glucose.value} ${glucose.unit} (${glucose.status.toUpperCase()}, Ref: ${glucose.reference})\n` : "") +
+        `\n**Physiological Context:**\n` +
+        `Prolonged hyperglycemia can affect the vagus nerve and gastrointestinal motility, leading to **diabetic gastroparesis** (delayed stomach emptying), early fullness, nausea, bloating, and postprandial cramping.\n\n` +
+        `**Next Steps:**\n` +
+        `Adopt low-glycemic, high-fiber whole food nutrition, take a light 15-minute walk after meals to aid gastric motility and glucose uptake, and review diabetes management with your physician.\n\n` +
+        `[ACTION:navigate:/patient/diet-fitness:🥗 Open Diet & Fitness]`
+      );
+    }
+
+    if (findings.length > 0) {
+      return (
+        `### 🩺 Clinical Analysis: Stomach Discomfort & Lab Findings\n\n` +
+        `Regarding your query (*"${query.replace(/[?.,!]/g, "").trim()}"*):\n\n` +
+        `Your tested liver, kidney, and metabolic markers do not show acute primary digestive organ obstruction. However, stomach pain after eating frequently stems from gastrointestinal causes that are not directly measured on routine blood panels:\n\n` +
+        `• **Gastritis or Peptic Acid Irritation:** Ingestion of food stimulates stomach acid; an inflamed gastric lining produces burning or gnawing sensations after eating.\n` +
+        `• **Food Intolerances / Sensitivities:** Lactose, gluten, FODMAPs, or histamine reactions can cause post-meal gas, bloating, and cramping.\n` +
+        `• **Functional Dyspepsia / IBS:** Altered visceral sensation or gut motility.\n\n` +
+        `**Recommended Actions:**\n` +
+        `Maintain a 3-day food and symptom diary, avoid known trigger foods (spicy, acidic, fried foods, caffeine), eat smaller meals, and consult your doctor for personalized gastrointestinal evaluation.\n\n` +
+        `[ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]`
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 0B. Shortness of Breath / Breathing Difficulty / Dyspnea
+  // -------------------------------------------------------------------------
+  if (isShortnessOfBreath) {
+    const hgb = findFinding(findings, /hemoglobin(?!\s*a1c)|hgb|\bhb\b/i);
+    const mchc = findFinding(findings, /mchc/i);
+    const rbc = findFinding(findings, /red\s*blood\s*cell|\brbc\b/i);
+    const iron = findFinding(findings, /iron|ferritin/i);
+    const bun = findFinding(findings, /blood\s*urea\s*nitrogen|\bbun\b/i);
+    const creat = findFinding(findings, /creatinine/i);
+    const potassium = findFinding(findings, /potassium|\bk\+?\b/i);
+
+    const reasons: string[] = [];
+    if (hgb && (hgb.status === "low" || hgb.value < 12)) {
+      reasons.push(
+        `• **Low Hemoglobin (${hgb.value} ${hgb.unit}, Normal: ${hgb.reference})**: Hemoglobin carries oxygen from the lungs to every cell. Anemia directly causes shortness of breath, air hunger, and rapid breathing even during minimal physical exertion.`
+      );
+    }
+    if (mchc && mchc.status === "low") {
+      reasons.push(
+        `• **Low MCHC (${mchc.value} ${mchc.unit})**: Reflects hypochromic cells with sub-optimal oxygen transport density.`
+      );
+    }
+    if (iron && iron.status === "low") {
+      reasons.push(
+        `• **Low Iron/Ferritin (${iron.value} ${iron.unit})**: Depleted iron stores limit red blood cell synthesis and cellular oxygen utilization.`
+      );
+    }
+    if (bun && (bun.status === "high" || bun.value > 20)) {
+      reasons.push(
+        `• **Elevated BUN (${bun.value} ${bun.unit})**: Can reflect fluid overload or metabolic acid-base stress, which induces compensatory rapid breathing.`
+      );
+    }
+    if (potassium && (potassium.status === "low" || potassium.status === "high")) {
+      reasons.push(
+        `• **Abnormal Potassium (${potassium.value} ${potassium.unit})**: Potassium disturbances affect diaphragmatic and intercostal respiratory muscle strength.`
+      );
+    }
+
+    if (reasons.length > 0) {
+      return (
+        `### 🩺 Clinical Analysis: Shortness of Breath & Oxygenation Markers\n\n` +
+        `Your breathing symptoms correlate with key oxygen transport and metabolic biomarkers in your report:\n\n` +
+        reasons.join("\n\n") +
+        `\n\n**Physiological Explanation:**\n` +
+        `When oxygen-carrying capacity (Hemoglobin/RBC) is diminished, your heart and lungs must work substantially harder to deliver adequate oxygen to tissues, triggering the sensation of breathlessness.\n\n` +
+        `**Recommended Next Steps:**\n` +
+        `Consult your physician for targeted anemia management and follow-up. Seek urgent emergency care if you experience chest pain, blue lips/fingers, or severe resting breathlessness.\n\n` +
+        `[ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]`
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 0C. Urine & Stool Color Changes (Dark Urine / Pale Stools)
+  // -------------------------------------------------------------------------
+  if (isUrineOrStoolColor) {
+    const cb = findFinding(findings, /conjugated\s*bilirubin|direct\s*bilirubin/i);
+    const tb = findFinding(findings, /total\s*bilirubin/i);
+
+    if ((cb && (cb.status === "high" || cb.value > 0.3)) || (tb && (tb.status === "high" || tb.value > 1.2))) {
+      return (
+        `### 🩺 Clinical Analysis: Urine & Stool Color Changes (Bilirubin Clearance)\n\n` +
+        `Your query regarding dark urine or pale stools is directly explained by your elevated biliary markers:\n\n` +
+        (cb ? `• **Conjugated (Direct) Bilirubin**: ${cb.value} ${cb.unit} (HIGH ⬆️, Normal: ${cb.reference})\n` : "") +
+        (tb ? `• **Total Bilirubin**: ${tb.value} ${tb.unit} (HIGH ⬆️, Normal: ${tb.reference})\n` : "") +
+        `\n**Physiological Mechanism:**\n` +
+        `• **Dark, Tea-Colored Urine:** Conjugated bilirubin is water-soluble. When biliary excretion through the bile ducts is sluggish or blocked, excess conjugated bilirubin enters the bloodstream and is filtered by the kidneys into urine, turning it dark amber or tea-colored.\n` +
+        `• **Pale or Clay-Colored Stool:** Normal stool brown color comes from stercobilin, which is derived from bile that successfully empties into the intestine. When bile outflow is obstructed, stool lacks pigment and appears pale or clay-like.\n\n` +
+        `**Urgent Clinical Recommendation:**\n` +
+        `This combination indicates active cholestasis or biliary outflow restriction. Please contact your doctor promptly for an evaluation and abdominal imaging.\n\n` +
+        `[ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]`
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 0D. Skin Itching / Cholestatic Pruritus / Rash
+  // -------------------------------------------------------------------------
+  if (isItchingOrSkin) {
+    const cb = findFinding(findings, /conjugated\s*bilirubin|direct\s*bilirubin/i);
+    const tb = findFinding(findings, /total\s*bilirubin/i);
+    const tsh = findFinding(findings, /tsh|thyroid/i);
+    const iron = findFinding(findings, /iron|ferritin/i);
+
+    if ((cb && (cb.status === "high" || cb.value > 0.3)) || (tb && (tb.status === "high" || tb.value > 1.2))) {
+      return (
+        `### 🩺 Clinical Analysis: Skin Itching & Biliary Markers (Cholestatic Pruritus)\n\n` +
+        `Your skin itching strongly correlates with the elevated bilirubin markers detected in your report:\n\n` +
+        (cb ? `• **Conjugated Bilirubin**: ${cb.value} ${cb.unit} (HIGH ⬆️, Normal: ${cb.reference})\n` : "") +
+        (tb ? `• **Total Bilirubin**: ${tb.value} ${tb.unit} (HIGH ⬆️, Normal: ${tb.reference})\n` : "") +
+        `\n**Physiological Mechanism:**\n` +
+        `When bile clearance is compromised, bile salts and bilirubin metabolites accumulate in the bloodstream and deposit in cutaneous nerve endings, triggering intense, generalized skin itching (cholestatic pruritus), often without an initial skin rash.\n\n` +
+        `**Actionable Guidance:**\n` +
+        `• Avoid hot showers and harsh soaps that exacerbate skin dryness.\n` +
+        `• Apply fragrance-free soothing moisturizers.\n` +
+        `• Review these results with your physician to address the underlying biliary clearance.\n\n` +
+        `[ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]`
+      );
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 0E. Brain Fog / Focus / Concentration / Cognitive Sluggishness
+  // -------------------------------------------------------------------------
+  if (isBrainFogOrCognitive) {
+    const vitB12 = findFinding(findings, /vitamin\s*b12|b12|cobalamin/i);
+    const vitD = findFinding(findings, /vitamin\s*d|25\(?oh\)?\s*vitamin\s*d/i);
+    const sodium = findFinding(findings, /sodium|\bna\+?\b/i);
+    const glucose = findFinding(findings, /glucose|fbs|blood\s*sugar/i);
+    const a1c = findFinding(findings, /a1c|hba1c/i);
+    const bun = findFinding(findings, /blood\s*urea\s*nitrogen|\bbun\b/i);
+
+    const reasons: string[] = [];
+    if (vitB12 && (vitB12.status === "low" || vitB12.value < 200)) {
+      reasons.push(
+        `• **Low Vitamin B12 (${vitB12.value} ${vitB12.unit}, Normal: ${vitB12.reference})**: Vitamin B12 is crucial for nerve myelin sheaths and neurotransmitter synthesis; deficiency is a leading cause of brain fog and memory lapses.`
+      );
+    }
+    if (vitD && (vitD.status === "low" || vitD.value < 30)) {
+      reasons.push(
+        `• **Low Vitamin D (${vitD.value} ${vitD.unit})**: Vitamin D receptors throughout the brain regulate neuroprotection and cognitive processing.`
+      );
+    }
+    if (sodium && (sodium.status === "low" || sodium.value < 135)) {
+      reasons.push(
+        `• **Low Sodium (${sodium.value} ${sodium.unit})**: Hyponatremia alters cerebral cell fluid dynamics, directly causing confusion and sluggish mental clarity.`
+      );
+    }
+    if (glucose && (glucose.status === "high" || glucose.value >= 126)) {
+      reasons.push(
+        `• **Elevated Glucose (${glucose.value} ${glucose.unit})**: Blood sugar fluctuations induce cognitive fatigue and neurovascular inflammation.`
+      );
+    }
+
+    if (reasons.length > 0) {
+      return (
+        `### 🩺 Clinical Analysis: Brain Fog & Neurometabolic Biomarkers\n\n` +
+        `Your cognitive sluggishness and brain fog are explained by several key nutritional and metabolic markers in your lab report:\n\n` +
+        reasons.join("\n\n") +
+        `\n\n**Recommended Next Steps:**\n` +
+        `Discuss targeted vitamin replenishment (high-dose B12 and Vitamin D3) and hydration/glycemic optimization with your healthcare provider.\n\n` +
+        `[ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]`
+      );
+    }
+  }
 
   // -------------------------------------------------------------------------
   // 1. Dizziness / Lightheadedness / Vertigo / Faintness
@@ -1548,61 +1873,100 @@ function generateGroundedRuleBasedAnswer(
   }
 
   // -------------------------------------------------------------------------
-  // 10. General Question or Multi-Abnormal Synthesis
+  // 10. Multi-Abnormal Clinical Decision Support & Synthesis
   // -------------------------------------------------------------------------
   if (abnormalFindings.length > 0) {
-    // Group abnormal findings by physiological domain
-    const electrolyteDeficits = abnormalFindings.filter((f) =>
-      /potassium|calcium|sodium|magnesium/i.test(f.label) && f.status === "low"
+    const hepatobiliary = abnormalFindings.filter((f) =>
+      /bilirubin|sgpt|alt|sgot|ast|alkaline\s*phosphatase|\balp\b|ggt|gamma\s*glutamyl/i.test(f.label)
     );
-    const vitaminDeficits = abnormalFindings.filter((f) =>
-      /vitamin|b12|folate|iron|ferritin|hemoglobin|mchc/i.test(f.label) && f.status === "low"
+    const renal = abnormalFindings.filter((f) =>
+      /urea|bun|creatinine|egfr|glomerular|uric\s*acid|albumin/i.test(f.label)
     );
-    const organOrMetabolicHigh = abnormalFindings.filter((f) =>
-      /urea|bun|creatinine|bilirubin|glucose|a1c|cholesterol|triglyceride|sgot|sgpt|alt|ast/i.test(f.label) &&
-      (f.status === "high" || f.status === "borderline")
+    const glycemicAndLipid = abnormalFindings.filter((f) =>
+      /glucose|fbs|blood\s*sugar|a1c|hba1c|cholesterol|ldl|triglyceride|vldl/i.test(f.label)
+    );
+    const oxygenAndVitamins = abnormalFindings.filter((f) =>
+      /hemoglobin|hgb|\bhb\b|mchc|rbc|iron|ferritin|vitamin\s*b12|b12|vitamin\s*d/i.test(f.label) &&
+      (f.status === "low" || f.status === "borderline")
+    );
+    const electrolytes = abnormalFindings.filter((f) =>
+      /potassium|calcium|sodium|magnesium|chloride/i.test(f.label) &&
+      (f.status === "low" || f.status === "high")
     );
 
-    const bullets: string[] = [];
+    const sections: string[] = [];
 
-    if (electrolyteDeficits.length > 0) {
-      const names = electrolyteDeficits.map((f) => `**${f.label}** (${f.value} ${f.unit}, Low)`).join(", ");
-      bullets.push(
-        `• **Electrolyte Deficits**: ${names}. Low levels in these minerals directly cause **dizziness, lightheadedness, muscle cramps, and physical weakness** by disrupting nerve conduction and vascular tone.`
+    if (hepatobiliary.length > 0) {
+      const markers = hepatobiliary.map((f) => `**${f.label}**: ${f.value} ${f.unit} (${f.status.toUpperCase()}, Ref: ${f.reference})`).join(", ");
+      sections.push(
+        `• **Hepatobiliary & Liver Panel (${markers})**:\n` +
+        `  Elevations in bilirubin or transaminases indicate hepatic cellular stress or reduced biliary excretion. Because bile is essential for digesting dietary fats, biliary sluggishness often manifests as post-meal stomach discomfort, fullness, or lightheadedness.`
       );
     }
 
-    if (vitaminDeficits.length > 0) {
-      const names = vitaminDeficits.map((f) => `**${f.label}** (${f.value} ${f.unit}, Low)`).join(", ");
-      bullets.push(
-        `• **Vitamin & Blood Count Deficits**: ${names}. Depleted levels lead to **fatigue, brain fog, and low physical stamina** due to reduced cellular energy and impaired oxygen transport.`
+    if (renal.length > 0) {
+      const markers = renal.map((f) => `**${f.label}**: ${f.value} ${f.unit} (${f.status.toUpperCase()}, Ref: ${f.reference})`).join(", ");
+      sections.push(
+        `• **Renal & Filtration Markers (${markers})**:\n` +
+        `  Deviations in urea, creatinine, or BUN reflect fluid balance shifts, reduced glomerular clearance, or relative dehydration affecting kidney filtration efficiency.`
       );
     }
 
-    if (organOrMetabolicHigh.length > 0) {
-      const names = organOrMetabolicHigh.map((f) => `**${f.label}** (${f.value} ${f.unit}, ${f.status.toUpperCase()})`).join(", ");
-      bullets.push(
-        `• **Elevated Metabolic & Organ Markers**: ${names}. Point to metabolic variability, dehydration, or hepatic/renal filtration stress.`
+    if (glycemicAndLipid.length > 0) {
+      const markers = glycemicAndLipid.map((f) => `**${f.label}**: ${f.value} ${f.unit} (${f.status.toUpperCase()}, Ref: ${f.reference})`).join(", ");
+      sections.push(
+        `• **Cardiometabolic & Lipid Regulation (${markers})**:\n` +
+        `  Out-of-range glucose or lipid values suggest insulin resistance or vascular metabolic strain, which can trigger post-meal fatigue, energy crashes, and long-term arterial plaque risk.`
       );
     }
 
-    // Fallback if specific groupings were empty
-    if (bullets.length === 0) {
+    if (oxygenAndVitamins.length > 0) {
+      const markers = oxygenAndVitamins.map((f) => `**${f.label}**: ${f.value} ${f.unit} (${f.status.toUpperCase()}, Ref: ${f.reference})`).join(", ");
+      sections.push(
+        `• **Cellular Energy & Oxygen Transport (${markers})**:\n` +
+        `  Low hemoglobin, MCHC, or essential vitamins (B12, D3) impair cellular ATP production and tissue oxygen delivery, directly driving chronic fatigue, brain fog, and muscle weakness.`
+      );
+    }
+
+    if (electrolytes.length > 0) {
+      const markers = electrolytes.map((f) => `**${f.label}**: ${f.value} ${f.unit} (${f.status.toUpperCase()}, Ref: ${f.reference})`).join(", ");
+      sections.push(
+        `• **Electrolyte & Neuromuscular Homeostasis (${markers})**:\n` +
+        `  Electrolyte imbalances disrupt cell membrane electrical gradients, commonly leading to dizziness, unsteady balance, muscle twitches, or palpitations.`
+      );
+    }
+
+    // Fallback if none of the specific domain arrays matched
+    if (sections.length === 0) {
       abnormalFindings.slice(0, 6).forEach((f) => {
-        bullets.push(`• **${f.label}**: ${f.value} ${f.unit} (${f.status.toUpperCase()}, Normal: ${f.reference})`);
+        sections.push(`• **${f.label}**: **${f.value} ${f.unit}** (${f.status.toUpperCase()}) — *Normal: ${f.reference}*`);
       });
     }
 
+    const dietPref = (context?.dietaryPreference || "Omnivore").toUpperCase();
+    const isVegan = dietPref === "VEGAN";
+    const isVegetarian = isVegan || dietPref === "VEGETARIAN" || dietPref === "JAIN";
+
+    const dietNote = isVegan
+      ? `As configured in your profile (**${dietPref}**), focus on clean, high-fiber, 100% plant-based whole foods (steamed greens, oats, lentils, chia, flaxseed) and avoid heavy processed oils.`
+      : isVegetarian
+      ? `As configured in your profile (**${dietPref}**), emphasize nutrient-dense vegetarian options (sprouted legumes, whole grains, light dairy/curd) while minimizing fried foods and excess saturated fats.`
+      : `Incorporate heart-healthy Mediterranean dietary habits (rich in fiber, lean proteins, olive oil, and antioxidant-rich vegetables).`;
+
     const cleanedQuery = query.replace(/[?.,!]/g, "").trim();
     const queryHeader = cleanedQuery.length > 0
-      ? `Based on your lab report (**${reportName}**), here are the key out-of-range biomarkers relevant to your query (*"${cleanedQuery}"*):`
-      : `Based on your lab report (**${reportName}**), here are the key out-of-range biomarkers detected:`;
+      ? `### 📋 Clinical Biomarker Synthesis: ${reportName}\n\nBased on your active lab report, here is how your out-of-range biomarkers relate to your question (*"${cleanedQuery}"*):`
+      : `### 📋 Clinical Biomarker Synthesis: ${reportName}\n\nHere is the clinical breakdown of the out-of-range biomarkers identified in your report:`;
 
     return (
       `${queryHeader}\n\n` +
-      bullets.join("\n\n") +
-      `\n\n**Recommended Next Steps:**\n` +
-      `Because key biomarkers are outside standard reference ranges, please review these results with your doctor for personalized dietary adjustments or clinical interventions. This response has been queued for your physician's clinical verification.`
+      sections.join("\n\n") +
+      `\n\n#### 🥗 Personalized Nutritional Guidance:\n` +
+      `${dietNote}\n\n` +
+      `#### 🩺 Recommended Next Steps:\n` +
+      `Because multiple biomarkers are outside standard reference ranges, please review these results with your physician for personalized clinical management. This inquiry has been logged and queued for your doctor's clinical verification.\n\n` +
+      `[ACTION:navigate:/patient/teleconsult:📹 Consult Your Doctor]\n` +
+      `[ACTION:navigate:/patient/medical-records:📁 View Full Lab Report]`
     );
   }
 

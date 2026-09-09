@@ -228,7 +228,9 @@ export function assemblePatientPortalContext(options: {
   else if (bmiVal >= 30) bmiCategory = "Obese";
 
   // 2. Overview & Biomarkers
-  const allMetrics: MetricAssessment[] = activePanel ? getMetricAssessments(activePanel) : [];
+  const allMetrics: MetricAssessment[] = activePanel
+    ? getMetricAssessments(activePanel).filter((m) => m.status !== "missing")
+    : [];
   const abnormalMetrics = allMetrics.filter((m) => m.status === "high" || m.status === "low" || m.status === "borderline");
 
   // 3. Prescriptions

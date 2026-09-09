@@ -48,17 +48,23 @@ const SECTION_STYLES: Record<SectionTone, { ring: string; chip: string; title: s
 
 function getMetricCategory(metric: MetricAssessment): string {
   const key = metric.key;
-  if (["hemoglobin", "wbc", "platelets", "rbc_count", "hematocrit", "mcv", "mch", "mchc"].includes(key)) {
+  if (["crp", "high_sensitivity_crp", "procalcitonin", "esr", "ferritin"].includes(key)) {
+    return "🛡️ Infection & Inflammation";
+  }
+  if (["amylase", "lipase", "sgpt", "sgot", "total_bilirubin", "conjugated_bilirubin", "unconjugated_bilirubin", "alkaline_phosphatase", "ggt"].includes(key)) {
+    return "🔬 GI & Liver Health";
+  }
+  if (["hemoglobin", "wbc", "platelets", "rbc_count", "hematocrit", "mcv", "mch", "mchc", "rdw_cv"].includes(key)) {
     return "🩸 Blood Health";
   }
-  if (["ldl", "hdl", "triglycerides", "total_cholesterol", "chol_hdl_ratio", "ldl_hdl_ratio", "homocysteine"].includes(key)) {
+  if (["ldl", "hdl", "triglycerides", "total_cholesterol", "vldl", "chol_hdl_ratio", "ldl_hdl_ratio", "homocysteine"].includes(key)) {
     return "❤️ Heart Health";
   }
-  if (["hemoglobin_a1c", "fasting_glucose", "mean_blood_glucose", "creatinine", "tsh", "microalbumin_urine"].includes(key)) {
-    return "🧠 Metabolic";
+  if (["hemoglobin_a1c", "fasting_glucose", "postprandial_glucose", "mean_blood_glucose", "creatinine", "egfr", "blood_urea_nitrogen", "urea", "uric_acid", "tsh", "t3", "t4", "microalbumin_urine"].includes(key)) {
+    return "🧠 Metabolic & Renal";
   }
-  if (["vitamin_d_25_oh", "vitamin_b12", "iron", "tibc", "transferrin_saturation"].includes(key)) {
-    return "🧬 Vitamins";
+  if (["vitamin_d_25_oh", "vitamin_b12", "iron", "tibc", "transferrin_saturation", "calcium", "sodium", "potassium", "chloride"].includes(key)) {
+    return "🧬 Vitamins & Minerals";
   }
   return "🧪 Other";
 }
@@ -66,7 +72,19 @@ function getMetricCategory(metric: MetricAssessment): string {
 function explainMetric(metric: MetricAssessment): string {
   if (metric.status === "normal") return "Within expected range. Keep current habits and routine follow-up.";
 
-  if (metric.key === "hemoglobin_a1c" || metric.key === "fasting_glucose") {
+  if (metric.key === "crp" || metric.key === "high_sensitivity_crp" || metric.key === "procalcitonin") {
+    return metric.status === "high" || metric.status === "borderline"
+      ? "Elevated level indicates an active inflammatory response, infection (such as stomach or bacterial infection), or tissue irritation."
+      : "Within expected reference limits. Low inflammatory signal.";
+  }
+
+  if (metric.key === "amylase" || metric.key === "lipase") {
+    return metric.status === "high"
+      ? "Elevated digestive enzymes indicate acute pancreatic or upper gastrointestinal irritation."
+      : "Within standard limits.";
+  }
+
+  if (metric.key === "hemoglobin_a1c" || metric.key === "fasting_glucose" || metric.key === "postprandial_glucose") {
     return metric.status === "high"
       ? "Higher than normal. This can signal blood sugar imbalance and diabetes risk."
       : "Lower than expected. Review meal timing and medication context with your clinician.";
@@ -91,7 +109,13 @@ function explainMetric(metric: MetricAssessment): string {
 
 function suggestAction(metric: MetricAssessment): string {
   if (metric.status === "normal") return "Continue current routine and repeat labs as advised.";
-  if (metric.key === "hemoglobin_a1c" || metric.key === "fasting_glucose") {
+  if (metric.key === "crp" || metric.key === "high_sensitivity_crp" || metric.key === "procalcitonin") {
+    return "Prioritize hydration/electrolytes, rest, soothing nutrition, and consult a doctor for infection management.";
+  }
+  if (metric.key === "amylase" || metric.key === "lipase") {
+    return "Avoid fatty foods and alcohol; seek physician evaluation if experiencing persistent abdominal pain.";
+  }
+  if (metric.key === "hemoglobin_a1c" || metric.key === "fasting_glucose" || metric.key === "postprandial_glucose") {
     return "Prioritize lower-glycemic meals, post-meal walks, and clinician follow-up.";
   }
   if (metric.key === "ldl" || metric.key === "triglycerides" || metric.key === "total_cholesterol") {

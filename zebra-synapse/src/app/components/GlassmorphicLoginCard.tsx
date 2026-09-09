@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getAuthRequestErrorMessage, getSignInErrorMessage } from "../../lib/authErrors";
-import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../lib/supabase";
+import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured, withAuthTimeout } from "../../lib/supabase";
 import {
   Dialog,
   DialogContent,
@@ -76,10 +76,14 @@ export function GlassmorphicLoginCard({ initialTab = "patient" }: GlassmorphicLo
     }
 
     try {
-      const { data, error } = await sb.auth.signInWithPassword({
-        email: emailTrimmed,
-        password,
-      });
+      const { data, error } = await withAuthTimeout(
+        sb.auth.signInWithPassword({
+          email: emailTrimmed,
+          password,
+        }),
+        8000,
+        "Sign in request timed out. Please check your connection."
+      );
 
       if (error) {
         setDemoSession(isPatient ? "patient" : "doctor", emailTrimmed);
@@ -99,11 +103,15 @@ export function GlassmorphicLoginCard({ initialTab = "patient" }: GlassmorphicLo
         return;
       }
 
-      const { data: row, error: profErr } = await sb
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: row, error: profErr } = await withAuthTimeout(
+        sb
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle(),
+        6000,
+        "Profile fetch timed out."
+      );
 
       if (profErr) {
         toast.error(profErr.message);

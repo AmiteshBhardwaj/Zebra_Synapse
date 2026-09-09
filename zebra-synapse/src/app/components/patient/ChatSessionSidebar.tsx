@@ -110,7 +110,9 @@ export function ChatSessionSidebar({
 
     return activeUploads.map((u) => {
       const panel = panelMap.get(u.id);
-      const metrics = panel ? getMetricAssessments(panel) : [];
+      const metrics = panel
+        ? getMetricAssessments(panel).filter((m) => m.status !== "missing")
+        : [];
       const queries = queriesMap.get(u.id) || [];
 
       const latestQuery = queries.length > 0 ? queries[queries.length - 1] : null;

@@ -424,7 +424,7 @@ export default function PatientLabChat() {
 
   const activeMetrics = useMemo(() => {
     if (!activePanel) return [];
-    return getMetricAssessments(activePanel);
+    return getMetricAssessments(activePanel).filter((m) => m.status !== "missing");
   }, [activePanel]);
 
   // Load all queries across all reports for sidebar badges & previews

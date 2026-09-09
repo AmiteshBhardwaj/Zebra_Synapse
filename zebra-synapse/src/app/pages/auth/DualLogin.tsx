@@ -17,7 +17,7 @@ import {
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { getAuthRequestErrorMessage, getSignInErrorMessage } from "../../../lib/authErrors";
-import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured } from "../../../lib/supabase";
+import { getAuthEmailRedirectUrl, getSupabase, isSupabaseConfigured, withAuthTimeout } from "../../../lib/supabase";
 import FooterLegalModals from "../../components/auth/FooterLegalModals";
 import DnaHelix from "../../components/DnaHelix";
 import { DnaCanvas3D } from "../../components/DnaCanvas3D";
@@ -105,10 +105,14 @@ export default function DualLogin({ defaultPortal = "patient" }: DualLoginProps)
     }
 
     try {
-      const { data, error } = await sb.auth.signInWithPassword({
-        email: emailTrimmed,
-        password,
-      });
+      const { data, error } = await withAuthTimeout(
+        sb.auth.signInWithPassword({
+          email: emailTrimmed,
+          password,
+        }),
+        8000,
+        "Sign in request timed out. Please check your connection."
+      );
 
       if (error) {
         setDemoSession(activePortal, emailTrimmed);
@@ -128,11 +132,15 @@ export default function DualLogin({ defaultPortal = "patient" }: DualLoginProps)
         return;
       }
 
-      const { data: row, error: profErr } = await sb
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: row, error: profErr } = await withAuthTimeout(
+        sb
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle(),
+        6000,
+        "Profile fetch timed out."
+      );
 
       if (profErr) {
         toast.error(profErr.message);

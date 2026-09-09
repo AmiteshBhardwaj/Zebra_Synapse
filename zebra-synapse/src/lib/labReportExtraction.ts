@@ -255,6 +255,11 @@ export const BIOMARKER_SANITY_BOUNDS: Record<string, { min: number; max: number 
   lymphocytes_percent: { min: 0.0, max: 100.0 },
   eosinophils_percent: { min: 0.0, max: 100.0 },
   monocytes_percent: { min: 0.0, max: 100.0 },
+  procalcitonin: { min: 0.005, max: 200.0 },
+  amylase: { min: 1.0, max: 3000.0 },
+  lipase: { min: 1.0, max: 3000.0 },
+  alkaline_phosphatase: { min: 5.0, max: 2000.0 },
+  ggt: { min: 1.0, max: 1500.0 },
   basophils_percent: { min: 0.0, max: 100.0 },
 };
 
@@ -379,6 +384,13 @@ function scaleBiomarkerValue(biomarkerKey: string, val: number, lineText: string
   if (biomarkerKey === "wbc") {
     const isThousands = /10\^?3|thousand|k\/ul/i.test(lineText) || (adjusted >= 1.0 && adjusted <= 30.0);
     if (isThousands) return Math.round(adjusted * 1000);
+  }
+
+  if (biomarkerKey === "crp" || biomarkerKey === "high_sensitivity_crp") {
+    // If reported in mg/dL (or mg/dl), scale to canonical mg/L (1 mg/dL = 10 mg/L)
+    if (/mg\s*\/\s*d[lL]/i.test(lineText)) {
+      adjusted = Number((adjusted * 10).toFixed(2));
+    }
   }
 
   return adjusted;

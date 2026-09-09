@@ -19,6 +19,7 @@ import {
   getSupabase,
   isInvalidRefreshTokenError,
   isSupabaseConfigured,
+  withAuthTimeout,
 } from "../lib/supabase";
 import { getAuthInactivityTimeoutMs } from "../lib/security";
 import { safeLocalStorage } from "../lib/safeStorage";
@@ -45,19 +46,27 @@ async function fetchProfile(
   let baseProfile: Profile | null = null;
 
   try {
-    let { data, error } = await sb
-      .from("profiles")
-      .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
-      .eq("id", userId)
-      .maybeSingle();
+    let { data, error } = await withAuthTimeout(
+      sb
+        .from("profiles")
+        .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
+        .eq("id", userId)
+        .maybeSingle(),
+      5000,
+      "Profile query timed out"
+    );
 
     if (error && (error.message.includes("schema cache") || error.message.includes("column") || error.message.includes("does not exist"))) {
       console.warn("[auth] Supabase profiles select fallback:", error.message);
-      const fallback = await sb
-        .from("profiles")
-        .select("id, role, full_name, license_number")
-        .eq("id", userId)
-        .maybeSingle();
+      const fallback = await withAuthTimeout(
+        sb
+          .from("profiles")
+          .select("id, role, full_name, license_number")
+          .eq("id", userId)
+          .maybeSingle(),
+        4000,
+        "Profile fallback timed out"
+      );
 
       if (!fallback.error && fallback.data) {
         data = (fallback.data as unknown) as any;
@@ -79,25 +88,29 @@ async function fetchProfile(
   if (!baseProfile) {
     // Attempt auto-healing: insert/upsert missing profile row for this authenticated user
     try {
-      const { data: userData } = await sb.auth.getUser();
-      const user = userData?.user;
+      const userDataRes = await withAuthTimeout(sb.auth.getUser(), 4000, "getUser timed out");
+      const user = userDataRes?.data?.user;
       const meta = user?.user_metadata || {};
       const defaultRole = meta.role === "doctor" ? "doctor" : "patient";
       const defaultName =
         meta.full_name || meta.name || user?.email?.split("@")[0] || "User";
 
-      const { data: newProfile, error: insertError } = await sb
-        .from("profiles")
-        .upsert(
-          {
-            id: userId,
-            role: defaultRole,
-            full_name: defaultName,
-          },
-          { onConflict: "id" }
-        )
-        .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
-        .maybeSingle();
+      const { data: newProfile, error: insertError } = await withAuthTimeout(
+        sb
+          .from("profiles")
+          .upsert(
+            {
+              id: userId,
+              role: defaultRole,
+              full_name: defaultName,
+            },
+            { onConflict: "id" }
+          )
+          .select("id, role, full_name, license_number, height_cm, weight_kg, age, gender, blood_type, dietary_preference, food_allergies, dietary_conditions, dietary_notes")
+          .maybeSingle(),
+        4000,
+        "Profile upsert timed out"
+      );
 
       if (insertError) {
         console.warn("[auth] auto-creating profile row in DB:", insertError.message);
@@ -376,30 +389,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = sb.auth.onAuthStateChange(async (event, nextSession) => {
-      if (!bootstrapCompleteRef.current && event === "INITIAL_SESSION") {
-        return;
-      }
+    } = sb.auth.onAuthStateChange((event, nextSession) => {
+      // Must not be an async callback directly inside onAuthStateChange to prevent GoTrue lock deadlocks
+      setTimeout(async () => {
+        if (!bootstrapCompleteRef.current && event === "INITIAL_SESSION") {
+          return;
+        }
 
-      if (event === "SIGNED_OUT" || !nextSession) {
-        await sync(null);
-        return;
-      }
+        if (event === "SIGNED_OUT" || !nextSession) {
+          await sync(null);
+          return;
+        }
 
-      // Restore session directly without fragile redundant network queries
-      try {
-        await sync(nextSession);
-      } catch (err) {
-        console.error(`[auth] state change ${event.toLowerCase()} error:`, err);
-      }
+        // Restore session directly without fragile redundant network queries
+        try {
+          await sync(nextSession);
+        } catch (err) {
+          console.error(`[auth] state change ${event.toLowerCase()} error:`, err);
+        }
+      }, 0);
     });
 
     void (async () => {
       try {
-        const {
-          data: { session: cachedSession },
-          error: sessionError,
-        } = await sb.auth.getSession();
+        const sessionRes = await withAuthTimeout(
+          sb.auth.getSession(),
+          6000,
+          "Session bootstrap timed out"
+        );
+        const cachedSession = sessionRes?.data?.session ?? null;
+        const sessionError = sessionRes?.error ?? null;
 
         if (sessionError) {
           if (isInvalidRefreshTokenError(sessionError)) {
@@ -413,7 +432,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await sync(cachedSession);
           // Background soft verification (does not kill session if offline or network drops)
           try {
-            const { error: userError } = await sb.auth.getUser();
+            const userRes = await withAuthTimeout(
+              sb.auth.getUser(),
+              5000,
+              "User verification timed out"
+            );
+            const userError = userRes?.error;
             if (userError && isInvalidRefreshTokenError(userError)) {
               console.warn("[auth] refresh token invalid during background check");
               await clearInvalidSession(sb);

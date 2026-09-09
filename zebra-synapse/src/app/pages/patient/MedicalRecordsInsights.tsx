@@ -443,7 +443,7 @@ export default function MedicalRecordsInsights() {
                 },
                 {
                   label: "Extracted Biomarkers",
-                  value: Object.keys(activePanel.biomarkers ?? {}).length,
+                  value: metrics.length,
                   detail: "Total number of structured markers in this panel.",
                   tone: "amber",
                 },

@@ -471,11 +471,12 @@ export function evaluateBiomarkerTrend(
     );
 
     const higherIsBad = [
-      "hemoglobin_a1c", "fasting_glucose", "total_cholesterol", "ldl",
-      "triglycerides", "creatinine", "total_bilirubin", "sgpt", "sgot", "uric_acid"
+      "hemoglobin_a1c", "fasting_glucose", "postprandial_glucose", "total_cholesterol", "ldl",
+      "triglycerides", "creatinine", "total_bilirubin", "sgpt", "sgot", "uric_acid",
+      "crp", "high_sensitivity_crp", "procalcitonin", "esr", "amylase", "lipase", "alkaline_phosphatase", "ggt"
     ].includes(key);
 
-    const higherIsGood = ["hdl", "albumin"].includes(key);
+    const higherIsGood = ["hdl", "albumin", "egfr"].includes(key);
 
     if (higherIsBad) {
       if (delta > 0.03 * (previousValue || 1) || (prevStatus === "normal" && currentStatus !== "normal")) {
@@ -1004,6 +1005,104 @@ export function getDiseasePredictions(
     });
   }
 
+  // Infection & Acute Inflammatory Response (e.g. Stomach / GI Infection, Sepsis, Acute Illness)
+  const infectionTriggers: TriggeredBiomarker[] = [];
+  const crpVal = panel.biomarkers?.crp ?? panel.biomarkers?.high_sensitivity_crp;
+  const wbcVal = panel.wbc ?? panel.biomarkers?.wbc;
+  const esrVal = panel.biomarkers?.esr;
+  const pctVal = panel.biomarkers?.procalcitonin;
+  const ferritinVal = panel.biomarkers?.ferritin;
+
+  if (crpVal != null && crpVal >= 5.0) {
+    infectionTriggers.push(
+      buildTrigger("crp", "C-Reactive Protein (CRP)", crpVal, "mg/L", crpVal >= 10.0 ? "high" : "borderline", "< 5.0", trends),
+    );
+  }
+  if (wbcVal != null && (wbcVal > 11000 || wbcVal < 4000)) {
+    infectionTriggers.push(
+      buildTrigger("wbc", "White Blood Cells", wbcVal, "/cmm", wbcVal > 11000 ? "high" : "low", "4000-11000", trends),
+    );
+  }
+  if (esrVal != null && esrVal > 20) {
+    infectionTriggers.push(
+      buildTrigger("esr", "ESR", esrVal, "mm/hr", "high", "< 20", trends),
+    );
+  }
+  if (pctVal != null && pctVal >= 0.1) {
+    infectionTriggers.push(
+      buildTrigger("procalcitonin", "Procalcitonin", pctVal, "ng/mL", pctVal >= 0.5 ? "high" : "borderline", "< 0.1", trends),
+    );
+  }
+  if (ferritinVal != null && ferritinVal > 350) {
+    infectionTriggers.push(
+      buildTrigger("ferritin", "Ferritin (Acute Phase)", ferritinVal, "ng/mL", "high", "20-250", trends),
+    );
+  }
+
+  if (infectionTriggers.length > 0) {
+    const isAcute = (crpVal != null && crpVal >= 25.0) || (pctVal != null && pctVal >= 0.5) || ((crpVal != null && crpVal >= 10.0) && (wbcVal != null && wbcVal >= 11500));
+    const infectionWorsening = infectionTriggers.some((t) => t.trend?.direction === "worsening");
+    const infectionImproving = infectionTriggers.some((t) => t.trend?.direction === "improving");
+    const infectionTrendNote = infectionWorsening
+      ? " Upward trajectory in acute phase proteins suggests intensifying inflammatory activity."
+      : infectionImproving
+      ? " Inflammatory markers are receding compared to prior reports, indicating resolving inflammation."
+      : "";
+
+    list.push({
+      title: isAcute ? "Acute Infection & Significant Inflammatory Response" : "Systemic Inflammatory & Immune Reaction",
+      level: isAcute ? "high" : "moderate",
+      rationale: isAcute
+        ? `Markedly elevated C-Reactive Protein (${crpVal ? crpVal + " mg/L" : "elevated"}) and immune markers indicate active infection or significant systemic inflammation (such as acute gastroenteritis/stomach infection, bacterial, or inflammatory flare).${infectionTrendNote}`
+        : `Elevated acute-phase reactants (CRP, ESR, or WBC) suggest an active inflammatory response requiring clinical correlation.${infectionTrendNote}`,
+      nextStep: isAcute
+        ? "Consult a physician or gastroenterologist promptly for infection evaluation, fluid/hydration check, and appropriate medical treatment."
+        : "Ensure adequate rest, monitor body temperature and symptoms, and review report with your clinician.",
+      triggeredBiomarkers: infectionTriggers,
+    });
+  }
+
+  // Pancreatic & Upper Gastrointestinal Markers
+  const giTriggers: TriggeredBiomarker[] = [];
+  const amylaseVal = panel.biomarkers?.amylase;
+  const lipaseVal = panel.biomarkers?.lipase;
+  const alpVal = panel.biomarkers?.alkaline_phosphatase;
+  const ggtVal = panel.biomarkers?.ggt;
+
+  if (amylaseVal != null && amylaseVal > 110) {
+    giTriggers.push(
+      buildTrigger("amylase", "Serum Amylase", amylaseVal, "U/L", amylaseVal >= 250 ? "high" : "borderline", "28-100", trends),
+    );
+  }
+  if (lipaseVal != null && lipaseVal > 60) {
+    giTriggers.push(
+      buildTrigger("lipase", "Serum Lipase", lipaseVal, "U/L", lipaseVal >= 180 ? "high" : "borderline", "10-60", trends),
+    );
+  }
+  if (alpVal != null && alpVal > 125) {
+    giTriggers.push(
+      buildTrigger("alkaline_phosphatase", "Alkaline Phosphatase (ALP)", alpVal, "U/L", alpVal >= 200 ? "high" : "borderline", "30-120", trends),
+    );
+  }
+  if (ggtVal != null && ggtVal > 50) {
+    giTriggers.push(
+      buildTrigger("ggt", "GGT", ggtVal, "U/L", ggtVal >= 100 ? "high" : "borderline", "9-48", trends),
+    );
+  }
+
+  if (giTriggers.length > 0) {
+    const isSevereGi = (lipaseVal != null && lipaseVal >= 180) || (amylaseVal != null && amylaseVal >= 250);
+    list.push({
+      title: isSevereGi ? "Acute Pancreatic & Abdominal Irritation" : "Gastrointestinal & Biliary Enzyme Elevation",
+      level: isSevereGi ? "high" : "moderate",
+      rationale: isSevereGi
+        ? "Substantially elevated pancreatic enzymes (Amylase/Lipase) indicate acute pancreatic inflammation requiring prompt clinical assessment."
+        : "Elevated digestive or biliary enzymes indicate gastrointestinal or hepatobiliary stress.",
+      nextStep: "Avoid alcohol and high-fat foods, seek clinical review, and contact emergency care if experiencing severe abdominal pain.",
+      triggeredBiomarkers: giTriggers,
+    });
+  }
+
   if (list.length === 0) {
     list.push({
       title: "No strong rule-based risk flags",
@@ -1077,6 +1176,22 @@ export function getNutritionPlans(
         "Avoid black pepper, vinegar dressings, fried snacks, and strong caffeinated beverages.",
         "Opt for soothing, easy-to-digest staples: cooked oatmeal, bananas, stewed apples, and light broths.",
         "Never skip meals or leave the stomach completely empty for prolonged periods.",
+      ],
+    });
+  }
+
+  // 4. Acute Infection & Gut Recovery Protocol (Triggered by high CRP / systemic or stomach infection)
+  const infectionCrp = panel.biomarkers?.crp ?? panel.biomarkers?.high_sensitivity_crp;
+  const infectionWbc = panel.wbc ?? panel.biomarkers?.wbc;
+  if ((infectionCrp != null && infectionCrp >= 10.0) || (infectionCrp != null && infectionCrp >= 5.0 && infectionWbc != null && infectionWbc > 11000)) {
+    plans.push({
+      headline: "Acute Infection & Gut Recovery Protocol",
+      focus: "Soothe gastrointestinal irritation, replenish electrolytes, and protect the mucosal lining during acute infection recovery.",
+      actions: [
+        "Prioritize aggressive hydration: Sip oral rehydration solutions (ORS), tender coconut water, diluted electrolyte fluids, and light clear broths throughout the day.",
+        "Follow gentle, low-residue gut recovery foods (BRAT principle): Cooked white rice, ripe bananas, stewed apples/applesauce, plain toast, and boiled potatoes.",
+        "Temporarily eliminate GI irritants: Avoid milk/unfermented dairy, greasy/fried meals, caffeine, harsh acidic sauces, and strong spices until inflammation recedes.",
+        "Gradually reintroduce soft, easy-to-digest proteins: Steamed eggs or silken tofu, followed by plain probiotic curd/yogurt as gastrointestinal tolerance improves.",
       ],
     });
   }

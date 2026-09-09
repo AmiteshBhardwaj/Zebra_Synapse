@@ -260,7 +260,10 @@ export function MetricSparklineGrid({
     .sort((a, b) => new Date(`${a.recorded_at}T00:00:00`).getTime() - new Date(`${b.recorded_at}T00:00:00`).getTime())
     .slice(-8);
 
-  const latestMetrics = orderedPanels.length > 0 ? getMetricAssessments(orderedPanels[orderedPanels.length - 1]) : [];
+  const latestMetrics =
+    orderedPanels.length > 0
+      ? getMetricAssessments(orderedPanels[orderedPanels.length - 1]).filter((m) => m.status !== "missing")
+      : [];
   const latestMetricMap = new Map(latestMetrics.map((metric) => [metric.key, metric]));
 
   const effectiveMetricKeys =

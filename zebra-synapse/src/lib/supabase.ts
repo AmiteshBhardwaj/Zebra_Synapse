@@ -30,10 +30,65 @@ export function getSupabase(): SupabaseClient | null {
         detectSessionInUrl: true,
         flowType: "pkce",
         storageKey: AUTH_STORAGE_KEY,
+        // Bypass navigator.locks in browser to prevent permanent deadlocks on concurrent auth/profile queries
+        lock: async (_name, _acquireTimeout, fn) => await fn(),
       },
     });
   }
   return client;
+}
+
+/** Wraps an async auth promise with a guaranteed timeout to prevent UI from hanging indefinitely */
+export async function withAuthTimeout<T>(
+  promise: PromiseLike<T>,
+  timeoutMs = 10000,
+  fallbackMessage = "Authentication request timed out. Please try again."
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let didTimeout = false;
+  let hadStoredAuth = false;
+
+  try {
+    hadStoredAuth =
+      typeof window !== "undefined" &&
+      Boolean(window.localStorage.getItem(AUTH_STORAGE_KEY));
+  } catch { }
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      didTimeout = true;
+      reject(new Error(fallbackMessage));
+    }, timeoutMs);
+  });
+
+  // We let the original promise run in the background even if we time out.
+  // If it resolves after timeout, we can check if it was an auth request that leaked a session.
+  const resolvedPromise = Promise.resolve(promise);
+
+  resolvedPromise.then(async (result: any) => {
+    if (didTimeout && result?.data?.session) {
+      try {
+        const sb = getSupabase();
+        if (sb && !hadStoredAuth) {
+          const current = (await sb.auth.getSession()).data?.session;
+          if (current?.access_token === result.data.session.access_token) {
+            await clearBrowserSupabaseSession(sb);
+          }
+        }
+      } catch { }
+    }
+  }).catch(() => { });
+
+  try {
+    return await Promise.race([resolvedPromise, timeoutPromise]);
+  } catch (error) {
+    return {
+      data: null,
+      error: error instanceof Error ? error : new Error(String(error))
+    } as unknown as T;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export function clearSupabaseAuthStorage(): void {
@@ -41,14 +96,14 @@ export function clearSupabaseAuthStorage(): void {
   try {
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
     window.localStorage.removeItem(AUTH_CODE_VERIFIER_STORAGE_KEY);
-  } catch {}
+  } catch { }
 }
 
 export async function clearBrowserSupabaseSession(sb: SupabaseClient): Promise<void> {
   clearSupabaseAuthStorage();
   try {
     await sb.auth.signOut({ scope: "local" });
-  } catch {}
+  } catch { }
 }
 
 function getErrorMessage(error: unknown): string {
@@ -123,3 +178,5 @@ export function getAuthEmailRedirectUrl(path = "/"): string | undefined {
     return undefined;
   }
 }
+
+
