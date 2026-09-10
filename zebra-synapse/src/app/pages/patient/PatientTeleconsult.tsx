@@ -716,15 +716,35 @@ export default function PatientTeleconsult() {
             </div>
 
             {completedNotes ? (
-              <div className="rounded-2xl border border-slate-200/80 bg-[#F4F6FC] p-4 text-xs sm:text-sm text-slate-800 whitespace-pre-wrap font-mono leading-relaxed">
-                {completedNotes}
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-slate-200/80 bg-[#F4F6FC] p-4 text-xs sm:text-sm text-slate-800 whitespace-pre-wrap font-mono leading-relaxed">
+                  {completedNotes}
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Delivered directly to your Patient Messages
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl text-xs font-bold text-slate-700 hover:text-[#0099ff] border-slate-200 gap-1.5 cursor-pointer"
+                    onClick={() => {
+                      setActiveHubTab("messages");
+                      navigate("/patient/teleconsult?tab=messages", { replace: true });
+                    }}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-[#0099ff]" />
+                    <span>Open in Messages</span>
+                    <ChevronRight className="w-3 h-3" />
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center text-xs text-slate-500 space-y-2">
                 <Loader2 className="w-5 h-5 text-slate-400 animate-spin mx-auto" />
-                <p className="font-semibold text-slate-700">Your doctor is finalizing the encounter notes...</p>
+                <p className="font-semibold text-slate-700">Your doctor is preparing your teleconsultation note...</p>
                 <p className="text-[11px] text-slate-400">
-                  This card will automatically sync as soon as the doctor saves their clinical wrap-up.
+                  This card will automatically update once sent, and the note will be delivered directly to your Patient Messages section.
                 </p>
               </div>
             )}
@@ -789,11 +809,14 @@ export default function PatientTeleconsult() {
           {/* Navigation Action Buttons */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Button
-              className="w-full sm:w-auto h-11 px-7 rounded-2xl bg-[#0099ff] hover:bg-[#0088e6] text-white font-bold text-xs shadow-md shadow-[#0099ff]/20 cursor-pointer"
-              onClick={() => navigate("/patient/appointments")}
+              className="w-full sm:w-auto h-11 px-7 rounded-2xl bg-[#0099ff] hover:bg-[#0088e6] text-white font-bold text-xs shadow-md shadow-[#0099ff]/20 cursor-pointer flex items-center gap-2"
+              onClick={() => {
+                setActiveHubTab("messages");
+                navigate("/patient/teleconsult?tab=messages", { replace: true });
+              }}
             >
-              <Calendar className="mr-2 h-4 w-4" />
-              View Appointments & Follow-ups
+              <MessageSquare className="w-4 h-4" />
+              <span>Go to Patient Messages</span>
             </Button>
             <Button
               variant="outline"

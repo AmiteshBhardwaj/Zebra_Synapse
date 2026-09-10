@@ -630,41 +630,81 @@ export default function DoctorPatientChat() {
                         minute: "2-digit",
                       });
 
-                      return (
-                        <div
-                          key={msg.id}
-                          className={`flex items-end gap-2.5 ${
-                            isDoctorSender ? "justify-end" : "justify-start"
-                          }`}
-                        >
-                          {!isDoctorSender && (
-                            <div className="h-8 w-8 rounded-xl bg-slate-200 text-[#3E36B0] flex items-center justify-center text-[10px] font-bold shrink-0 shadow-2xs">
-                              PT
-                            </div>
-                          )}
+                        const isTeleconsultNote =
+                          msg.attachments?.some(
+                            (a) => a.metadata?.type === "teleconsultation_note" || a.title === "Teleconsultation Note"
+                          ) || msg.content.includes("TELECONSULTATION CLINICAL NOTE");
 
+                        return (
                           <div
-                            className={`max-w-[78%] p-3.5 rounded-2xl text-xs sm:text-sm space-y-1.5 shadow-sm ${
-                              isDoctorSender
-                                ? "bg-[#3E36B0] text-white rounded-br-none"
-                                : "bg-white border border-slate-200/80 text-slate-900 rounded-bl-none"
+                            key={msg.id}
+                            className={`flex items-end gap-2.5 ${
+                              isDoctorSender ? "justify-end" : "justify-start"
                             }`}
                           >
-                            <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                            {!isDoctorSender && (
+                              <div className="h-8 w-8 rounded-xl bg-slate-200 text-[#3E36B0] flex items-center justify-center text-[10px] font-bold shrink-0 shadow-2xs">
+                                PT
+                              </div>
+                            )}
 
-                            <div
-                              className={`flex items-center justify-end gap-1 text-[10px] font-mono ${
-                                isDoctorSender ? "text-white/80" : "text-slate-400"
-                              }`}
-                            >
-                              <span>{formattedTime}</span>
-                              {isDoctorSender && (
-                                <CheckCheck className={`h-3 w-3 ${msg.is_read ? "text-sky-200" : "text-white/60"}`} />
-                              )}
-                            </div>
+                            {isTeleconsultNote ? (
+                              <div className="max-w-[85%] rounded-2xl border border-[#3E36B0]/30 bg-gradient-to-br from-[#3E36B0]/5 via-white to-slate-50 p-4 text-xs sm:text-sm space-y-3 shadow-sm text-slate-800">
+                                <div className="flex items-center justify-between border-b border-[#3E36B0]/15 pb-2.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#3E36B0] text-white shadow-xs">
+                                      <FileText className="h-3.5 w-3.5" />
+                                    </span>
+                                    <div>
+                                      <span className="font-extrabold text-[#3E36B0] text-xs font-['Manrope'] block">
+                                        Teleconsultation Clinical Note
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 font-medium">
+                                        Delivered to {activePatient?.name || "Patient"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                    <span>Sent to Messages</span>
+                                  </span>
+                                </div>
+
+                                <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 leading-relaxed whitespace-pre-wrap font-mono text-xs text-slate-900 shadow-2xs">
+                                  {msg.content}
+                                </div>
+
+                                <div className="flex items-center justify-between pt-0.5 text-[10px] text-slate-400 font-mono">
+                                  <span className="text-slate-600 font-semibold font-sans">
+                                    Encounter Documentation
+                                  </span>
+                                  <span>{formattedTime}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div
+                                className={`max-w-[78%] p-3.5 rounded-2xl text-xs sm:text-sm space-y-1.5 shadow-sm ${
+                                  isDoctorSender
+                                    ? "bg-[#3E36B0] text-white rounded-br-none"
+                                    : "bg-white border border-slate-200/80 text-slate-900 rounded-bl-none"
+                                }`}
+                              >
+                                <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+
+                                <div
+                                  className={`flex items-center justify-end gap-1 text-[10px] font-mono ${
+                                    isDoctorSender ? "text-white/80" : "text-slate-400"
+                                  }`}
+                                >
+                                  <span>{formattedTime}</span>
+                                  {isDoctorSender && (
+                                    <CheckCheck className={`h-3 w-3 ${msg.is_read ? "text-sky-200" : "text-white/60"}`} />
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      );
+                        );
                     })
                   )}
                   <div ref={messagesEndRef} />

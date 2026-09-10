@@ -5,6 +5,8 @@ import {
   type DoctorPatientMessage,
   deleteConversationMessages,
   fetchDoctorPatientMessages,
+  filterConversationMessages,
+  getAllGlobalMessages,
   markDoctorPatientMessagesAsRead,
   sendDoctorPatientMessage,
 } from "../lib/doctorPatientChat";
@@ -17,14 +19,24 @@ export function useDoctorPatientChat(
   patientName?: string | null
 ) {
   const { user, profile } = useAuth();
-  const [messages, setMessages] = useState<DoctorPatientMessage[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
 
   const activeDoctorId = doctorId || (profile?.role === "doctor" ? user?.id : null);
   const activePatientId = patientId || (profile?.role === "patient" ? user?.id : null);
   const activeDoctorName = doctorName || (profile?.role === "doctor" ? profile.full_name : undefined);
   const activePatientName = patientName || (profile?.role === "patient" ? profile.full_name : undefined);
+
+  const [messages, setMessages] = useState<DoctorPatientMessage[]>(() => {
+    if (!activeDoctorId || !activePatientId) return [];
+    return filterConversationMessages(
+      getAllGlobalMessages(),
+      activeDoctorId,
+      activePatientId,
+      activeDoctorName,
+      activePatientName
+    );
+  });
+  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const loadMessages = useCallback(async () => {
     if (!activeDoctorId || !activePatientId) {

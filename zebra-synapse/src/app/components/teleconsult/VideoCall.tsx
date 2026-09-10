@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { getSupabase } from "../../../lib/supabase";
 import { safeLocalStorage } from "../../../lib/safeStorage";
+import { toast } from "sonner";
 
 interface VideoCallProps {
   consultationId: string;
@@ -334,6 +335,9 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
     let isMounted = true;
 
     async function initCall() {
+      // Clear any previous call-ended flag for fresh session
+      safeLocalStorage.removeItem(`zebra_call_ended_${consultationId}`);
+
       // 1. Adaptive Hardware Discovery for Desktop
       let stream: MediaStream | null = null;
       let videoTrack: MediaStreamTrack | null = null;
@@ -606,6 +610,15 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
             remoteMediaStreamRef.current = new MediaStream();
             setRemoteStream(null);
             setConnectionStatus("disconnected");
+            if (pcRef.current) pcRef.current.close();
+            if (localStreamRef.current) {
+              localStreamRef.current.getTracks().forEach((t) => t.stop());
+            }
+            if (simulatedStreamCleanupRef.current) {
+              simulatedStreamCleanupRef.current();
+            }
+            toast.info(role === "DOCTOR" ? "The patient has concluded the call." : "The doctor has concluded the call.");
+            onLeave(callDurationSec);
           }
         } catch (err) {
           console.error("Error processing WebRTC signal message:", err);
@@ -647,8 +660,27 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         });
       }
 
-      // 5. Setup LocalStorage Storage Listener for Fallback
+      // 5. Setup LocalStorage Storage Listener for Fallback & Immediate Call Ending
       const handleStorageSignal = (e: StorageEvent) => {
+        if (e.key === `zebra_call_ended_${consultationId}` && e.newValue) {
+          try {
+            const data = JSON.parse(e.newValue);
+            if (data && data.endedBy !== role) {
+              if (pcRef.current) pcRef.current.close();
+              if (localStreamRef.current) {
+                localStreamRef.current.getTracks().forEach((t) => t.stop());
+              }
+              if (simulatedStreamCleanupRef.current) {
+                simulatedStreamCleanupRef.current();
+              }
+              toast.info(role === "DOCTOR" ? "The patient has concluded the call." : "The doctor has concluded the call.");
+              onLeave(callDurationSec);
+              return;
+            }
+          } catch {
+            // ignore
+          }
+        }
         if (e.key === `zebra_rtc_sig_${consultationId}` && e.newValue) {
           try {
             const data = JSON.parse(e.newValue);
@@ -790,6 +822,14 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
   };
 
   const handleHangup = () => {
+    try {
+      safeLocalStorage.setItem(
+        `zebra_call_ended_${consultationId}`,
+        JSON.stringify({ endedBy: role, timestamp: Date.now() })
+      );
+    } catch {
+      // ignore
+    }
     sendSignal({ type: "peer-leave" });
     if (pcRef.current) pcRef.current.close();
     if (localStreamRef.current) {
