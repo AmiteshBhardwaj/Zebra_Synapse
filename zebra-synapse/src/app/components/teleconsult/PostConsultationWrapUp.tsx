@@ -215,8 +215,8 @@ ${noteText}`;
         const targetPatId = patId || patientId;
         if (targetPatId) {
           try {
-            const formattedTitle = `Teleconsultation Note • ${finalDiagnosis || "General Consultation"}`;
-            const formattedDetails = `[TELECONSULTATION NOTE]\nDiagnosis: ${finalDiagnosis || "General Review"}\nCall Duration: ${formatDuration(callDurationSec)}\nFollow-up: ${followUpTime}\n\nCLINICAL OBSERVATIONS:\n${(noteText || finalNotes || "")}${patientAdvice ? `\n\nPATIENT ADVICE & DIRECTIVES:\n${patientAdvice}` : ""}`;
+            const formattedTitle = `Teleconsultation Note • General Consultation`;
+            const formattedDetails = `[TELECONSULTATION NOTE]\nCall Duration: ${formatDuration(callDurationSec)}\n\nCLINICAL OBSERVATIONS:\n${noteText}`;
             await sb.from("care_actions").insert({
               doctor_id: user?.id || "doctor",
               patient_id: targetPatId,
@@ -227,24 +227,6 @@ ${noteText}`;
             });
           } catch (err) {
             console.warn("Care actions teleconsult note save error:", err);
-          }
-        }
-
-        // Save Prescriptions using unified prescription service
-        if (targetPatId && prescriptions && prescriptions.length > 0) {
-          for (const rx of prescriptions) {
-            const rxDetail = `${rx.name} ${rx.dosage} (${rx.duration}) - ${rx.instructions}`;
-            try {
-              await createPrescription(sb, {
-                patientId: targetPatId,
-                prescribedBy: user?.id || "doctor",
-                prescriberName: (user as any)?.user_metadata?.full_name || "Consulting Doctor",
-                details: rxDetail,
-                status: "active",
-              });
-            } catch (err) {
-              console.warn("Unified prescription save error:", err);
-            }
           }
         }
       }
@@ -258,13 +240,12 @@ ${noteText}`;
           const existingList = existingRaw ? JSON.parse(existingRaw) : [];
           const newEntry = {
             id: `teleconsult-${consultationId}-${Date.now()}`,
-            title: `Teleconsultation Note • ${finalDiagnosis || "General Consultation"}`,
-            details: `[TELECONSULTATION NOTE]\nDiagnosis: ${finalDiagnosis || "General Review"}\nCall Duration: ${formatDuration(callDurationSec)}\nFollow-up: ${followUpTime}\n\nCLINICAL OBSERVATIONS:\n${(noteText || finalNotes || "")}${patientAdvice ? `\n\nPATIENT ADVICE & DIRECTIVES:\n${patientAdvice}` : ""}`,
+            title: `Teleconsultation Note • General Consultation`,
+            details: `[TELECONSULTATION NOTE]\nCall Duration: ${formatDuration(callDurationSec)}\n\nCLINICAL OBSERVATIONS:\n${noteText}`,
             action_type: "note",
             status: "completed",
             created_at: new Date().toISOString(),
             isTeleconsult: true,
-            diagnosis: finalDiagnosis || "General Review",
             callDuration: formatDuration(callDurationSec),
           };
           localStorage.setItem(key, JSON.stringify([newEntry, ...existingList]));

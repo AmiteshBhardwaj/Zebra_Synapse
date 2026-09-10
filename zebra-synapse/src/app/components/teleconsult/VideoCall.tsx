@@ -17,6 +17,7 @@ import {
   Clock,
   Sparkles,
   Info,
+  RefreshCw,
 } from "lucide-react";
 import { getSupabase } from "../../../lib/supabase";
 import { safeLocalStorage } from "../../../lib/safeStorage";
@@ -30,9 +31,25 @@ interface VideoCallProps {
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
+    // Fast public Google & Cloudflare STUN servers
     { urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] },
     { urls: ["stun:stun.cloudflare.com:3478"] },
     { urls: ["stun:global.stun.twilio.com:3478"] },
+    // Free OpenRelay TURN servers for cross-network NAT traversal (UDP, TCP & TLS Port 443)
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp",
+      ],
+      username: "openrelay",
+      credential: "openrelay",
+    },
+    {
+      urls: "turns:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelay",
+      credential: "openrelay",
+    },
   ],
   iceCandidatePoolSize: 10,
 };
@@ -185,6 +202,7 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
     "connecting" | "connected" | "reconnecting" | "disconnected"
   >("connecting");
   const [callDurationSec, setCallDurationSec] = useState(0);
+  const [connectingElapsedSec, setConnectingElapsedSec] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
@@ -197,6 +215,8 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
 
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const supabaseChannelRef = useRef<any>(null);
+  const isSupabaseSubscribedRef = useRef(false);
+  const pendingSupabaseSignalsRef = useRef<any[]>([]);
   const iceCandidatesQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const peerIdRef = useRef<string>(
     `${role}-${Math.random().toString(36).substring(2, 9)}-${Date.now().toString().slice(-4)}`
@@ -209,6 +229,18 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
   const seqRef = useRef(0);
   const seenMessagesRef = useRef<Set<string>>(new Set());
   const remoteMediaStreamRef = useRef<MediaStream>(new MediaStream());
+
+  // Timer for connection waiting / negotiation phase
+  useEffect(() => {
+    if (connectionStatus === "connected") {
+      setConnectingElapsedSec(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setConnectingElapsedSec((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [connectionStatus]);
 
   // Timer for active call duration
   useEffect(() => {
@@ -281,7 +313,7 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
     }
   }, [localStreamRef.current, usingSimulatedCamera]);
 
-  // Multi-transport signal dispatcher with message deduplication ID
+  // Multi-transport signal dispatcher with message deduplication ID and Supabase queueing
   const sendSignal = useCallback(
     (signal: { type: string; [key: string]: any }) => {
       seqRef.current += 1;
@@ -306,12 +338,18 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
 
       // 2. Supabase Realtime Broadcast (remote / cross-network communication)
       try {
-        if (supabaseChannelRef.current) {
+        if (supabaseChannelRef.current && isSupabaseSubscribedRef.current) {
           void supabaseChannelRef.current.send({
             type: "broadcast",
             event: "webrtc-signal",
             payload,
           });
+        } else if (supabaseChannelRef.current) {
+          // Channel is still joining/subscribing; queue for delivery once SUBSCRIBED
+          pendingSupabaseSignalsRef.current.push(payload);
+          if (pendingSupabaseSignalsRef.current.length > 50) {
+            pendingSupabaseSignalsRef.current.shift();
+          }
         }
       } catch (err) {
         console.warn("Supabase signal send error:", err);
@@ -430,7 +468,7 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
 
       // Handle incoming remote media tracks (accumulate stably in remoteMediaStream)
       pc.ontrack = (event) => {
-        console.log("Received remote track:", event.track.kind);
+        console.log("[VideoCall] Received remote track:", event.track.kind);
         const remoteMS = remoteMediaStreamRef.current;
         if (event.streams && event.streams[0]) {
           event.streams[0].getTracks().forEach((track) => {
@@ -443,23 +481,46 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
             remoteMS.addTrack(event.track);
           }
         }
-        setRemoteStream(remoteMS);
+        // Always instantiate a new MediaStream instance so React detects change and binds cleanly in Safari/Chrome
+        const freshStream = new MediaStream(remoteMS.getTracks());
+        setRemoteStream(freshStream);
         setConnectionStatus("connected");
+
+        if (remoteVideoRef.current) {
+          if (remoteVideoRef.current.srcObject !== freshStream) {
+            remoteVideoRef.current.srcObject = freshStream;
+          }
+          remoteVideoRef.current.play().catch((playErr) => {
+            if (playErr.name === "NotAllowedError") {
+              setAutoplayBlocked(true);
+            }
+          });
+        }
       };
 
-      // Handle ICE Candidate generation
+      // Handle ICE Candidate generation with cross-browser safe serialization
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          const cand = event.candidate;
+          const candidateData =
+            typeof cand.toJSON === "function"
+              ? cand.toJSON()
+              : {
+                  candidate: cand.candidate,
+                  sdpMid: cand.sdpMid,
+                  sdpMLineIndex: cand.sdpMLineIndex,
+                  usernameFragment: cand.usernameFragment,
+                };
           sendSignal({
             type: "ice-candidate",
-            candidate: event.candidate.toJSON(),
+            candidate: candidateData,
           });
         }
       };
 
       // Monitor connection state
       pc.oniceconnectionstatechange = () => {
-        console.log("ICE Connection State:", pc.iceConnectionState);
+        console.log("[VideoCall] ICE Connection State:", pc.iceConnectionState);
         if (pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
           setConnectionStatus("connected");
         } else if (pc.iceConnectionState === "disconnected") {
@@ -474,7 +535,7 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
               await pc.setLocalDescription(offer);
               sendSignal({ type: "offer", sdp: pc.localDescription });
             } catch (e) {
-              console.warn("ICE restart failed:", e);
+              console.warn("[VideoCall] ICE restart failed:", e);
             } finally {
               makingOfferRef.current = false;
             }
@@ -486,11 +547,13 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
       pc.onnegotiationneeded = async () => {
         try {
           makingOfferRef.current = true;
-          console.log("Negotiation needed: creating WebRTC offer...");
-          await pc.setLocalDescription();
+          console.log("[VideoCall] Negotiation needed: creating WebRTC offer...");
+          const offer = await pc.createOffer();
+          if (pc.signalingState !== "stable") return;
+          await pc.setLocalDescription(offer);
           sendSignal({ type: "offer", sdp: pc.localDescription });
         } catch (err) {
-          console.error("Negotiation needed error:", err);
+          console.error("[VideoCall] Negotiation needed error:", err);
         } finally {
           makingOfferRef.current = false;
         }
@@ -501,11 +564,11 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
         if (!pc.remoteDescription) return;
         while (iceCandidatesQueueRef.current.length > 0) {
           const candidate = iceCandidatesQueueRef.current.shift();
-          if (candidate) {
+          if (candidate && (candidate.candidate || candidate.candidate === "")) {
             try {
-              await pc.addIceCandidate(new RTCIceCandidate(candidate));
+              await pc.addIceCandidate(candidate);
             } catch (err) {
-              console.warn("Error adding queued ICE candidate:", err);
+              console.warn("[VideoCall] Error adding queued ICE candidate:", err);
             }
           }
         }
@@ -528,40 +591,52 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
 
         try {
           if (msg.type === "peer-ready") {
-            console.log("Peer ready received from:", msg.senderRole);
+            console.log("[VideoCall] Peer ready received from:", msg.senderRole);
             // Reply with ack
             sendSignal({ type: "peer-ready-ack" });
 
-            // Impolite peer (Doctor) initiates offer when peer is ready if currently stable
-            if (!isPolite && pc.signalingState === "stable") {
-              try {
-                makingOfferRef.current = true;
-                console.log("Doctor creating offer after receiving peer-ready...");
-                await pc.setLocalDescription();
+            // Impolite peer (Doctor) initiates or re-transmits offer when peer is ready
+            if (!isPolite) {
+              if (pc.signalingState === "have-local-offer" && pc.localDescription) {
+                console.log("[VideoCall] Doctor re-transmitting pending local offer to newly joined patient...");
                 sendSignal({ type: "offer", sdp: pc.localDescription });
-              } catch (err) {
-                console.warn("Failed to create offer on peer-ready:", err);
-              } finally {
-                makingOfferRef.current = false;
+              } else if (pc.signalingState === "stable") {
+                try {
+                  makingOfferRef.current = true;
+                  console.log("[VideoCall] Doctor creating fresh offer after receiving peer-ready...");
+                  const offer = await pc.createOffer();
+                  await pc.setLocalDescription(offer);
+                  sendSignal({ type: "offer", sdp: pc.localDescription });
+                } catch (err) {
+                  console.warn("[VideoCall] Failed to create offer on peer-ready:", err);
+                } finally {
+                  makingOfferRef.current = false;
+                }
               }
             }
           } else if (msg.type === "peer-ready-ack") {
-            console.log("Peer ready ack received from:", msg.senderRole);
-            // Impolite peer (Doctor) initiates offer if in stable
-            if (!isPolite && pc.signalingState === "stable") {
-              try {
-                makingOfferRef.current = true;
-                console.log("Doctor creating offer after receiving peer-ready-ack...");
-                await pc.setLocalDescription();
+            console.log("[VideoCall] Peer ready ack received from:", msg.senderRole);
+            // Impolite peer (Doctor) initiates or re-transmits offer if peer acknowledged readiness
+            if (!isPolite) {
+              if (pc.signalingState === "have-local-offer" && pc.localDescription) {
+                console.log("[VideoCall] Doctor re-transmitting pending local offer on peer-ready-ack...");
                 sendSignal({ type: "offer", sdp: pc.localDescription });
-              } catch (err) {
-                console.warn("Failed to create offer on peer-ready-ack:", err);
-              } finally {
-                makingOfferRef.current = false;
+              } else if (pc.signalingState === "stable") {
+                try {
+                  makingOfferRef.current = true;
+                  console.log("[VideoCall] Doctor creating offer after receiving peer-ready-ack...");
+                  const offer = await pc.createOffer();
+                  await pc.setLocalDescription(offer);
+                  sendSignal({ type: "offer", sdp: pc.localDescription });
+                } catch (err) {
+                  console.warn("[VideoCall] Failed to create offer on peer-ready-ack:", err);
+                } finally {
+                  makingOfferRef.current = false;
+                }
               }
             }
           } else if (msg.type === "offer" && msg.sdp) {
-            console.log("Received WebRTC Offer from:", msg.senderRole);
+            console.log("[VideoCall] Received WebRTC Offer from:", msg.senderRole);
             const readyForOffer =
               !makingOfferRef.current &&
               (pc.signalingState === "stable" || isSettingRemoteAnswerPendingRef.current);
@@ -569,44 +644,48 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
 
             ignoreOfferRef.current = !isPolite && offerCollision;
             if (ignoreOfferRef.current) {
-              console.log("Glare collision: impolite peer ignoring incoming offer");
+              console.log("[VideoCall] Glare collision: impolite peer ignoring incoming offer");
               return;
             }
 
             if (offerCollision) {
-              console.log("Glare collision: polite peer rolling back local description");
+              console.log("[VideoCall] Glare collision: polite peer rolling back local description");
               await pc.setLocalDescription({ type: "rollback" });
             }
 
             await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
             await flushIceCandidates();
 
-            await pc.setLocalDescription();
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
             sendSignal({ type: "answer", sdp: pc.localDescription });
           } else if (msg.type === "answer" && msg.sdp) {
-            console.log("Received WebRTC Answer from:", msg.senderRole);
+            console.log("[VideoCall] Received WebRTC Answer from:", msg.senderRole);
             if (pc.signalingState === "have-local-offer") {
               isSettingRemoteAnswerPendingRef.current = true;
               await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
               isSettingRemoteAnswerPendingRef.current = false;
               await flushIceCandidates();
             } else {
-              console.warn("Ignoring answer received in unexpected state:", pc.signalingState);
+              console.warn("[VideoCall] Ignoring answer received in unexpected state:", pc.signalingState);
             }
           } else if (msg.type === "ice-candidate" && msg.candidate) {
             try {
-              if (pc.remoteDescription && pc.remoteDescription.type) {
-                await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-              } else {
-                iceCandidatesQueueRef.current.push(msg.candidate);
+              const cand = msg.candidate;
+              if (cand && (cand.candidate || cand.candidate === "")) {
+                if (pc.remoteDescription && pc.remoteDescription.type) {
+                  await pc.addIceCandidate(cand);
+                } else {
+                  iceCandidatesQueueRef.current.push(cand);
+                }
               }
             } catch (err) {
               if (!ignoreOfferRef.current) {
-                console.warn("Failed to add ICE candidate:", err);
+                console.warn("[VideoCall] Failed to add ICE candidate:", err);
               }
             }
           } else if (msg.type === "peer-leave") {
-            console.log("Remote peer left the call.");
+            console.log("[VideoCall] Remote peer left the call.");
             remoteMediaStreamRef.current = new MediaStream();
             setRemoteStream(null);
             setConnectionStatus("disconnected");
@@ -621,7 +700,7 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
             onLeave(callDurationSec);
           }
         } catch (err) {
-          console.error("Error processing WebRTC signal message:", err);
+          console.error("[VideoCall] Error processing WebRTC signal message:", err);
         }
       };
 
@@ -636,7 +715,7 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
           };
         }
       } catch (err) {
-        console.warn("BroadcastChannel initialization error:", err);
+        console.warn("[VideoCall] BroadcastChannel initialization error:", err);
       }
 
       // 4. Setup Supabase Realtime Broadcast Signaling
@@ -654,6 +733,18 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
 
         sbChannel.subscribe((status: string) => {
           if (status === "SUBSCRIBED") {
+            isSupabaseSubscribedRef.current = true;
+            // Flush any signals queued while subscribing
+            while (pendingSupabaseSignalsRef.current.length > 0) {
+              const queued = pendingSupabaseSignalsRef.current.shift();
+              if (queued && supabaseChannelRef.current) {
+                void supabaseChannelRef.current.send({
+                  type: "broadcast",
+                  event: "webrtc-signal",
+                  payload: queued,
+                });
+              }
+            }
             // Announce presence once subscribed
             sendSignal({ type: "peer-ready" });
           }
@@ -708,6 +799,8 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
       return () => {
         clearInterval(pingInterval);
         window.removeEventListener("storage", handleStorageSignal);
+        isSupabaseSubscribedRef.current = false;
+        pendingSupabaseSignalsRef.current = [];
         if (bc) bc.close();
         if (sbChannel && sb) void sb.removeChannel(sbChannel);
       };
@@ -841,6 +934,23 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
     onLeave(callDurationSec);
   };
 
+  const handleForceReconnect = async () => {
+    const pc = pcRef.current;
+    if (!pc) return;
+    toast.info("Re-negotiating WebRTC peer-to-peer connection...");
+    try {
+      makingOfferRef.current = true;
+      const offer = await pc.createOffer({ iceRestart: true });
+      await pc.setLocalDescription(offer);
+      sendSignal({ type: "offer", sdp: pc.localDescription });
+      sendSignal({ type: "peer-ready" });
+    } catch (err) {
+      console.warn("[VideoCall] Re-negotiate error:", err);
+    } finally {
+      makingOfferRef.current = false;
+    }
+  };
+
   return (
     <div
       ref={containerRef}
@@ -880,10 +990,45 @@ export default function VideoCall({ consultationId, role, onLeave }: VideoCallPr
               : "Connecting securely to your healthcare specialist via WebRTC peer-to-peer encryption. Your consultation video will begin shortly."}
           </p>
 
-          <div className="mt-5 flex items-center gap-2 text-[11px] text-slate-500 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-slate-800">
+          {/* Realtime Tunnel & NAT Traversal Diagnostics */}
+          <div className="mt-4 flex flex-col items-center gap-2 w-full max-w-sm">
+            <div className="flex items-center justify-between w-full text-[11px] text-cyan-300/80 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-cyan-900/40">
+              <span className="flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping" />
+                {connectingElapsedSec < 4
+                  ? "Exchanging WebRTC handshake..."
+                  : connectingElapsedSec < 8
+                  ? "Traversing NAT / TURN relays..."
+                  : "Finalizing encrypted audio/video sync..."}
+              </span>
+              <span className="font-mono text-[10px] text-slate-400">
+                {formatDuration(connectingElapsedSec)}
+              </span>
+            </div>
+
+            {connectingElapsedSec >= 5 && (
+              <button
+                type="button"
+                onClick={handleForceReconnect}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-400/40 text-cyan-200 text-xs font-semibold cursor-pointer transition-all active:scale-95 shadow-xs"
+              >
+                <RefreshCw className="h-3.5 w-3.5 animate-spin text-cyan-300" />
+                <span>Force Re-connect P2P Stream</span>
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4 flex items-center gap-2 text-[11px] text-slate-500 bg-slate-900/80 px-3.5 py-1.5 rounded-xl border border-slate-800">
             <ShieldCheck className="h-4 w-4 text-emerald-400" />
             <span>End-to-End Encrypted Peer-to-Peer Telehealth Stream</span>
           </div>
+
+          {connectingElapsedSec >= 8 && (
+            <p className="mt-3 text-[11px] text-amber-300/80 max-w-xs leading-tight bg-amber-950/40 border border-amber-500/20 px-3 py-1.5 rounded-lg">
+              <Info className="h-3 w-3 inline mr-1 text-amber-400" />
+              Cross-device tip: If connecting between Windows and macOS/Safari, make sure camera/mic permissions are allowed and Apple iCloud Private Relay is turned off.
+            </p>
+          )}
         </div>
       )}
 
