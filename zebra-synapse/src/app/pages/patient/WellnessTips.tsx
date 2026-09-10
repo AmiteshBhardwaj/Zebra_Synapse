@@ -1,14 +1,16 @@
-import { ShieldCheck, Sparkles, HelpCircle, CheckCircle2, Heart, Moon, Dumbbell } from "lucide-react";
-import { useMemo } from "react";
+import { ShieldCheck, Sparkles, HelpCircle, CheckCircle2, Heart, Moon, Dumbbell, Activity, ShieldAlert, Check, Filter } from "lucide-react";
+import { useMemo, useState } from "react";
 import { usePatientLabReports } from "../../../hooks/usePatientLabReports";
 import { usePatientLabPanels } from "../../../hooks/usePatientLabPanels";
 import { formatLabDate } from "../../../lib/labPanels";
-import { getWellnessTips } from "../../../lib/labInsights";
+import { getWellnessTips, type WellnessTip } from "../../../lib/labInsights";
 import LabReportsRequiredPlaceholder from "../../components/patient/LabReportsRequiredPlaceholder";
 import ReportScopeSelector from "../../components/patient/ReportScopeSelector";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { useActiveReport } from "../../../hooks/useActiveReport";
+
+type TipCategoryFilter = "all" | "high_priority" | "glycemic_cardiac" | "inflammation" | "organ_vitality";
 
 export default function WellnessTips() {
   const { hasLabReports, uploads, loading } = usePatientLabReports();
@@ -22,10 +24,45 @@ export default function WellnessTips() {
     setSelectedReportId,
   } = useActiveReport(panels);
 
+  const [activeFilter, setActiveFilter] = useState<TipCategoryFilter>("all");
+
   const tips = useMemo(
     () => (activePanel ? getWellnessTips(activePanel, biomarkerTrends) : []),
     [activePanel, biomarkerTrends],
   );
+
+  const filteredTips = useMemo(() => {
+    if (activeFilter === "all") return tips;
+    if (activeFilter === "high_priority") {
+      return tips.filter((t) => t.impactLevel === "High Priority");
+    }
+    if (activeFilter === "glycemic_cardiac") {
+      return tips.filter(
+        (t) =>
+          t.category === "Glycemic Health" ||
+          t.category === "Cardiovascular & Lipids",
+      );
+    }
+    if (activeFilter === "inflammation") {
+      return tips.filter(
+        (t) =>
+          t.category === "Immune & Inflammation" ||
+          t.category === "Lifestyle & Recovery",
+      );
+    }
+    if (activeFilter === "organ_vitality") {
+      return tips.filter(
+        (t) =>
+          t.category === "Liver & Metabolism" ||
+          t.category === "Renal & Hydration" ||
+          t.category === "Thyroid & Energy" ||
+          t.category === "Blood & Vitality" ||
+          t.category === "Digestive & Gut Health" ||
+          t.category === "Electrolytes & Bones",
+      );
+    }
+    return tips;
+  }, [tips, activeFilter]);
 
   if (loading || panelsLoading) {
     return (
@@ -39,7 +76,7 @@ export default function WellnessTips() {
     return (
       <LabReportsRequiredPlaceholder
         title="Wellness Tips"
-        description="Tips grounded in your lab results and vitals"
+        description="Actionable lifestyle and recovery tips grounded in your lab findings"
       />
     );
   }
@@ -55,10 +92,10 @@ export default function WellnessTips() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 font-['Manrope'] leading-tight">
-                Wellness Tips
+                Wellness & Recovery Tips
               </h1>
               <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold text-[#0284c7] uppercase tracking-wider font-['Manrope']">
-                Lifestyle Guidance
+                Report-Grounded Guidance
               </span>
             </div>
             <p className="text-[11px] font-medium text-slate-400 leading-tight">
@@ -122,40 +159,141 @@ export default function WellnessTips() {
         <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4">
           {/* LEFT COLUMN: PERSONALIZED TIPS (SCROLLABLE LIST) */}
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col min-h-0">
-            <div className="flex items-center justify-between mb-2 shrink-0">
-              <h2 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope']">
-                Personalized Recommendations ({tips.length})
-              </h2>
-              <span className="text-[11px] text-slate-400 font-medium">
-                {isAllReports ? "Multi-Report Adaptive" : "Active Panel Context"}
-              </span>
+            {/* Filter Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5 shrink-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope']">
+                  Personalized Recommendations ({filteredTips.length})
+                </h2>
+                <span className="text-[11px] text-slate-400 font-medium">
+                  {isAllReports ? "Multi-Report Synthesis" : "Active Report"}
+                </span>
+              </div>
+
+              {/* Category Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 [scrollbar-width:none]">
+                {[
+                  { id: "all", label: `All (${tips.length})` },
+                  { id: "high_priority", label: "High Priority" },
+                  { id: "glycemic_cardiac", label: "Glycemic & Lipids" },
+                  { id: "inflammation", label: "Immune & Recovery" },
+                  { id: "organ_vitality", label: "Organ Health" },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setActiveFilter(f.id as TipCategoryFilter)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold transition-all cursor-pointer shrink-0 font-['Manrope'] ${
+                      activeFilter === f.id
+                        ? "bg-[#0099ff] text-white shadow-xs"
+                        : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
-              {tips.map((tip, index) => (
-                <article
-                  key={tip.title}
-                  className="rounded-[22px] border border-slate-100 bg-white p-4 sm:p-4.5 text-slate-800 shadow-[0_2px_12px_rgba(0,0,0,0.02)] hover:border-sky-200 hover:shadow-md transition-all space-y-2.5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-sky-50 border border-sky-100 text-[#0099ff] font-bold text-xs">
-                        {index + 1}
-                      </div>
-                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope'] truncate">
-                        {tip.title}
-                      </h3>
-                    </div>
-                    <Badge className="border border-sky-200 bg-sky-50 text-[10px] font-bold text-[#0284c7] shrink-0 px-2.5 py-0.5 rounded-full">
-                      Tip {index + 1}
-                    </Badge>
-                  </div>
+            <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3.5 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
+              {filteredTips.length === 0 ? (
+                <div className="rounded-[22px] bg-white border border-slate-100 p-8 text-center space-y-2">
+                  <Filter className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-sm font-bold text-slate-800">No tips matching selected filter</p>
+                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
+                    Switch to "All" to view all personalized wellness recommendations generated for this report.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setActiveFilter("all")}
+                    className="px-3 py-1.5 rounded-xl bg-sky-50 text-[#0099ff] font-semibold text-xs border border-sky-200 cursor-pointer mt-2"
+                  >
+                    Show All Tips
+                  </button>
+                </div>
+              ) : (
+                filteredTips.map((tip, index) => {
+                  const isHighImpact = tip.impactLevel === "High Priority";
+                  const isModerateImpact = tip.impactLevel === "Moderate Priority";
 
-                  <div className="rounded-xl border border-slate-100 bg-[#f8fafc] px-3.5 py-2.5 text-xs text-slate-600 leading-relaxed font-medium">
-                    {tip.detail}
-                  </div>
-                </article>
-              ))}
+                  return (
+                    <article
+                      key={tip.title}
+                      className={`rounded-[22px] border bg-white p-4 sm:p-5 text-slate-800 shadow-[0_2px_12px_rgba(0,0,0,0.02)] transition-all space-y-3 ${
+                        isHighImpact
+                          ? "border-amber-200/90 hover:border-amber-400 shadow-amber-500/5"
+                          : isModerateImpact
+                          ? "border-sky-200/90 hover:border-sky-400"
+                          : "border-slate-100 hover:border-emerald-300"
+                      }`}
+                    >
+                      {/* Top Badges & Category */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-sky-50 border border-sky-100 text-[#0099ff] font-bold text-xs">
+                            {index + 1}
+                          </div>
+                          <h3 className="text-xs sm:text-sm font-bold text-slate-900 font-['Manrope']">
+                            {tip.title}
+                          </h3>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {tip.category && (
+                            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 text-[10px] font-semibold">
+                              {tip.category}
+                            </Badge>
+                          )}
+                          <Badge
+                            className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                              isHighImpact
+                                ? "border border-amber-300 bg-amber-50 text-amber-900"
+                                : isModerateImpact
+                                ? "border border-sky-300 bg-sky-50 text-[#0284c7]"
+                                : "border border-emerald-300 bg-emerald-50 text-emerald-800"
+                            }`}
+                          >
+                            {tip.impactLevel || "Recommendation"}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Triggered By Tag (Report Grounding) */}
+                      {tip.triggeredBy && (
+                        <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200/80 text-[11px] font-mono text-slate-700">
+                          <Activity className="w-3.5 h-3.5 text-[#0099ff] shrink-0" />
+                          <span className="truncate font-semibold">{tip.triggeredBy}</span>
+                        </div>
+                      )}
+
+                      {/* Detailed Explanation */}
+                      <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                        {tip.detail}
+                      </p>
+
+                      {/* Action Steps Checklist */}
+                      {tip.actionSteps && tip.actionSteps.length > 0 && (
+                        <div className="pt-2 border-t border-slate-100 space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-['Manrope'] flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            Concrete Action Steps
+                          </p>
+                          <ul className="space-y-1.5">
+                            {tip.actionSteps.map((step, idx) => (
+                              <li key={idx} className="flex items-start gap-2 text-xs text-slate-700 font-medium">
+                                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold mt-0.5">
+                                  ✓
+                                </span>
+                                <span className="leading-snug">{step}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -179,9 +317,9 @@ export default function WellnessTips() {
                 </div>
 
                 <div className="rounded-xl border border-slate-100 bg-[#f8fafc] p-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Best Practice</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Implementation Strategy</p>
                   <p className="mt-0.5 text-xs text-slate-600 leading-relaxed">
-                    Apply 1-2 habit adjustments at a time and evaluate how your next panel trends over time.
+                    Focus on 1-2 high-priority habit adjustments first. Re-evaluate your biomarker trend line when uploading your next follow-up panel.
                   </p>
                 </div>
               </div>

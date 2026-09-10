@@ -92,9 +92,27 @@ export type NutritionPlan = {
   actions: string[];
 };
 
+export type WellnessTipCategory =
+  | "Glycemic Health"
+  | "Cardiovascular & Lipids"
+  | "Immune & Inflammation"
+  | "Liver & Metabolism"
+  | "Renal & Hydration"
+  | "Thyroid & Energy"
+  | "Blood & Vitality"
+  | "Digestive & Gut Health"
+  | "Electrolytes & Bones"
+  | "Lifestyle & Recovery";
+
+export type WellnessTipImpact = "High Priority" | "Moderate Priority" | "Maintenance";
+
 export type WellnessTip = {
   title: string;
   detail: string;
+  category?: WellnessTipCategory;
+  impactLevel?: WellnessTipImpact;
+  triggeredBy?: string;
+  actionSteps?: string[];
 };
 
 export type TrialMatch = {
@@ -1369,94 +1387,273 @@ export function getNutritionPlans(
 export function getWellnessTips(
   panel: LabPanelRow,
   trends?: BiomarkerTrendMap,
+  dietaryProfile?: DietaryProfileInput,
 ): WellnessTip[] {
   const tips: WellnessTip[] = [];
   const metrics = getMetricAssessments(panel);
-  const worst = [...metrics]
-    .filter((m) => m.status !== "missing")
-    .sort((a, b) => statusRank(b.status) - statusRank(a.status))
-    .slice(0, 4);
+  const activeMetrics = metrics.filter((m) => m.status !== "missing");
 
-  // If trends show multiple reports with worsening or improving markers, add contextual lifestyle tips
+  // Sort out-of-range metrics first (high/low), then borderline
+  const abnormalMetrics = [...activeMetrics]
+    .filter((m) => m.status === "high" || m.status === "low" || m.status === "borderline")
+    .sort((a, b) => statusRank(b.status) - statusRank(a.status));
+
+  // 1. Longitudinal Trend Signals (if multi-report context is present)
   if (trends) {
     const worseningList = Object.values(trends).filter((t) => t.direction === "worsening");
     const improvingList = Object.values(trends).filter((t) => t.direction === "improving");
 
     if (worseningList.length > 0) {
       const names = worseningList.slice(0, 2).map((t) => t.label).join(" and ");
+      const firstTrend = worseningList[0];
       tips.push({
         title: `Target upward shift in ${names}`,
-        detail: `Multi-panel tracking shows upward movement in ${names}. Prioritize consistent sleep (7-8 hours), hydration, and daily movement to reverse this trajectory.`,
+        category: "Lifestyle & Recovery",
+        impactLevel: "High Priority",
+        triggeredBy: `Multi-Report Trajectory: ${firstTrend.label} shifted by ${firstTrend.deltaText || "unfavorable delta"}`,
+        detail: `Longitudinal analysis across your uploaded reports indicates a worsening trajectory in ${names}. Targeted intervention can help reverse this upward trend before it establishes a higher baseline.`,
+        actionSteps: [
+          "Prioritize 7.5–8 hours of uninterrupted nocturnal sleep to regulate cortisol and inflammatory cytokines.",
+          "Maintain daily baseline hydration (2.5L to 3L water) to optimize renal clearance and metabolic transport.",
+          "Engage in 20–30 minutes of low-intensity continuous movement (zone 2 walking) every day.",
+        ],
       });
     } else if (improvingList.length > 0) {
       const names = improvingList.slice(0, 2).map((t) => t.label).join(" and ");
+      const firstTrend = improvingList[0];
       tips.push({
-        title: `Sustain progress in ${names}`,
-        detail: `Your latest results show measurable improvement in ${names} compared to earlier records. Keep your current habits steady.`,
+        title: `Sustain positive momentum in ${names}`,
+        category: "Lifestyle & Recovery",
+        impactLevel: "Maintenance",
+        triggeredBy: `Multi-Report Trajectory: ${firstTrend.label} improved by ${firstTrend.deltaText || "favorable delta"}`,
+        detail: `Your consecutive lab reports demonstrate measurable improvement in ${names}. Your current dietary and movement habits are yielding tangible biological benefits.`,
+        actionSteps: [
+          "Maintain your current dietary structure and physical activity consistency.",
+          "Keep logging periodic labs to confirm long-term baseline stabilization.",
+        ],
       });
     }
   }
 
-  for (const metric of worst) {
+  // 2. Biomarker-Specific Targeted Tips
+  for (const metric of abnormalMetrics) {
+    const valStr = `${metric.value} ${metric.unit}`;
+    const statusLabel = metric.status.toUpperCase();
+    const triggerTag = `Triggered by ${metric.label}: ${valStr} (${statusLabel} • Reference: ${metric.range})`;
+    const isHigh = metric.status === "high";
+    const isLow = metric.status === "low";
+    const priority: WellnessTipImpact = metric.status === "borderline" ? "Moderate Priority" : "High Priority";
+
     if (metric.key === "hemoglobin_a1c" || metric.key === "fasting_glucose") {
       tips.push({
-        title: "Move after meals",
-        detail: "Short walks after eating can improve post-meal glucose handling.",
+        title: "Post-Meal Glucose Pacing & Fiber Priming",
+        category: "Glycemic Health",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Your ${metric.label} of ${valStr} indicates elevated glycemic load. Contracting skeletal muscles post-meal triggers GLUT4 translocation, clearing glucose directly from blood without requiring excess insulin.`,
+        actionSteps: [
+          "Take a 10–15 minute brisk walk within 30 minutes of completing your main meals.",
+          "Eat non-starchy vegetables or salad first before consuming starches or carbohydrates to slow gastric emptying.",
+          "Stop caloric intake 3 hours before sleep to reduce nocturnal hepatic gluconeogenesis and morning glucose spikes.",
+        ],
       });
-    } else if (
-      metric.key === "ldl" ||
-      metric.key === "hdl" ||
-      metric.key === "triglycerides"
-    ) {
+    } else if (metric.key === "ldl" || metric.key === "total_cholesterol") {
       tips.push({
-        title: "Protect cardiovascular health",
-        detail: "Combine regular aerobic exercise with higher-fiber meals and less ultra-processed food.",
+        title: "Viscous Soluble Fiber & Lipid Clearance",
+        category: "Cardiovascular & Lipids",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Your ${metric.label} is ${valStr}. Viscous soluble fibers bind bile acids in the digestive tract, forcing the liver to consume circulating LDL cholesterol to synthesize fresh bile.`,
+        actionSteps: [
+          "Include 10–15g of soluble fiber daily from rolled oats, psyllium husk, chia seeds, lentils, and apples.",
+          "Replace saturated fats (butter, ghee, palm oil, fatty meats) with monounsaturated extra virgin olive oil, avocados, and walnuts.",
+          "Aim for 30 minutes of moderate aerobic cardiovascular exercise 5 days per week to support vascular endothelial health.",
+        ],
       });
-    } else if (
-      metric.key === "total_bilirubin" ||
-      metric.key === "sgpt" ||
-      metric.key === "sgot" ||
-      metric.key === "albumin"
-    ) {
+    } else if (metric.key === "triglycerides") {
       tips.push({
-        title: "Protect liver health",
-        detail: "Avoid alcohol, reduce heavy greasy foods, avoid OTC painkiller overuse, and rest.",
+        title: "Triglyceride Reduction & Fructose Cutback",
+        category: "Cardiovascular & Lipids",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Triglycerides at ${valStr} reflect circulating VLDL particle density. Excess refined carbohydrates, liquid sugars, and alcohol are rapidly converted into liver triglycerides.`,
+        actionSteps: [
+          "Strictly eliminate liquid sugars, high-fructose syrups, fruit juices, sodas, and alcohol.",
+          "Incorporate 2g daily omega-3 fatty acids from EPA/DHA rich foods (salmon, flaxseeds, chia seeds).",
+          "Engage in 25–30 minutes of continuous zone-2 exercise (brisk walking, cycling) to stimulate lipolysis.",
+        ],
       });
-    } else if (metric.key === "calcium") {
+    } else if (metric.key === "hdl") {
       tips.push({
-        title: "Support bone density",
-        detail: "Engage in light weight-bearing exercise and get safe daily sunlight exposure for Vitamin D.",
+        title: "Reverse Cholesterol Transport & HDL Elevation",
+        category: "Cardiovascular & Lipids",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Your HDL Cholesterol is ${valStr}. HDL facilitates reverse cholesterol transport, shuttling excess cholesterol from arterial walls back to the liver for excretion.`,
+        actionSteps: [
+          "Incorporate regular aerobic conditioning and interval movement into your weekly routine.",
+          "Consume healthy fats from almonds, walnuts, pumpkin seeds, and extra virgin olive oil.",
+          "Eliminate exposure to secondhand smoke or vaping, which directly oxidizes HDL particles.",
+        ],
       });
-    } else if (metric.key === "hemoglobin") {
+    } else if (metric.key === "crp" || metric.key === "wbc" || metric.key === "esr" || metric.key === "procalcitonin") {
       tips.push({
-        title: "Watch fatigue and exertion",
-        detail: "Low hemoglobin can contribute to low energy, so track fatigue, dizziness, or shortness of breath.",
+        title: "Systemic Anti-Inflammatory & Recovery Pacing",
+        category: "Immune & Inflammation",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Your ${metric.label} level (${valStr}) signals active systemic or localized inflammatory activity. Restorative pacing prevents further cellular oxidative stress.`,
+        actionSteps: [
+          "Prioritize deep recovery: avoid heavy max-effort resistance training during acute inflammatory elevation.",
+          "Consume anti-inflammatory nutrients: turmeric/curcumin, blueberries, dark leafy greens, and green tea.",
+          "Sip 2.5–3L of fluids daily (tender coconut water, clear broths, water with electrolytes) to flush inflammatory byproducts.",
+        ],
+      });
+    } else if (metric.key === "sgpt" || metric.key === "sgot" || metric.key === "total_bilirubin" || metric.key === "ggt") {
+      tips.push({
+        title: "Hepatic Offloading & Liver Support",
+        category: "Liver & Metabolism",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Your ${metric.label} of ${valStr} reflects hepatocyte membrane permeability or biliary stress. Reducing chemical and dietary strain helps liver parenchymal tissue regenerate.`,
+        actionSteps: [
+          "Eliminate alcohol completely and avoid deep-fried, heavy greasy, or unhygienic foods.",
+          "Avoid unmonitored overuse of OTC painkillers (such as acetaminophen/paracetamol) or unverified herbal extracts.",
+          "Eat cruciferous vegetables (broccoli, Brussels sprouts, kale, cabbage) rich in glucosinolates to support Phase II detoxification.",
+        ],
       });
     } else if (metric.key === "creatinine") {
       tips.push({
-        title: "Review hydration and medications",
-        detail: "Kidney-related markers are easier to interpret with hydration, blood pressure, and medication context.",
+        title: "Renal Filtration Care & Hydration Protocol",
+        category: "Renal & Hydration",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Creatinine at ${valStr} reflects glomerular filtration dynamics. Proper hydration reduces pre-renal strain and helps maintain optimal renal perfusion.`,
+        actionSteps: [
+          "Track urine clarity: aim for pale yellow urine throughout the day by maintaining steady fluid intake.",
+          "Avoid unmonitored NSAIDs (ibuprofen, naproxen) and heavy synthetic creatine supplements.",
+          "Keep blood pressure well controlled under clinical supervision to protect delicate renal capillaries.",
+        ],
+      });
+    } else if (metric.key === "uric_acid") {
+      tips.push({
+        title: "Uric Acid Clearance & Low-Purine Hydration",
+        category: "Renal & Hydration",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Uric Acid at ${valStr} increases the risk of monosodium urate crystal deposition in joints and kidneys.`,
+        actionSteps: [
+          "Drink at least 3 liters of water daily to encourage renal uric acid clearance.",
+          "Limit purine-dense foods: organ meats, sardines, anchovies, heavy red meats, and beer.",
+          "Include tart cherries or tart cherry extract, which contains anthocyanins that lower uric acid levels.",
+        ],
+      });
+    } else if (metric.key === "hemoglobin" || metric.key === "rbc") {
+      tips.push({
+        title: isLow ? "Hemoglobin & Iron Synergy Optimization" : "Red Blood Cell Monitoring",
+        category: "Blood & Vitality",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: isLow
+          ? `Your ${metric.label} of ${valStr} is below reference range. Hemoglobin carries oxygen to tissues; low levels cause fatigue and shortness of breath.`
+          : `Your ${metric.label} of ${valStr} is above reference range. Ensure adequate hydration.`,
+        actionSteps: isLow
+          ? [
+              "Pair iron-rich foods (spinach, lentils, dark greens, lean protein) with Vitamin C (lemon juice, bell peppers) to boost absorption by up to 300%.",
+              "Do not drink tea, coffee, or calcium-rich milk within 60 minutes of meals, as polyphenols and calcium inhibit non-heme iron absorption.",
+              "Track daily fatigue and discuss formal iron/ferritin studies with your doctor.",
+            ]
+          : [
+              "Drink plenty of water to eliminate mild hemoconcentration caused by dehydration.",
+              "Discuss high hematocrit or RBC findings with your healthcare provider.",
+            ],
+      });
+    } else if (metric.key === "calcium") {
+      tips.push({
+        title: "Bone Density & Calcium Co-Factor Balance",
+        category: "Electrolytes & Bones",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Calcium at ${valStr} requires adequate Vitamin D3 and Magnesium co-factors for proper intestinal absorption and bone mineralization.`,
+        actionSteps: [
+          "Include bioavailable calcium sources (dark leafy greens, sesame seeds, almonds, ragi, fortified plant milk, or dairy).",
+          "Get 15–20 minutes of safe morning sunlight exposure for natural cutaneous Vitamin D synthesis.",
+          "Engage in weight-bearing physical activity (brisk walking, stair climbing, bodyweight squats) to stimulate bone remodeling.",
+        ],
       });
     } else if (metric.key === "tsh" || metric.key === "t4" || metric.key === "t3") {
       tips.push({
-        title: "Track energy and thyroid signals",
-        detail: "Note any changes in energy, cold tolerance, skin/hair, and discuss thyroid follow-up with your doctor.",
+        title: "Endocrine Harmony & Thyroid Co-Factor Support",
+        category: "Thyroid & Energy",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Thyroid marker ${metric.label} at ${valStr} governs basal metabolic rate, cellular oxygen consumption, and body temperature regulation.`,
+        actionSteps: [
+          "Ensure trace mineral co-factors: consume 1–2 Brazil nuts daily for organic selenium, plus pumpkin seeds for zinc.",
+          "Maintain consistent sleep hygiene and manage stress, as chronic cortisol suppresses T4-to-T3 peripheral conversion.",
+          "Take thyroid medications strictly on an empty stomach with plain water, away from calcium/iron supplements.",
+        ],
+      });
+    } else if (metric.key === "amylase" || metric.key === "lipase") {
+      tips.push({
+        title: "Digestive Rest & Pancreatic Support",
+        category: "Digestive & Gut Health",
+        impactLevel: priority,
+        triggeredBy: triggerTag,
+        detail: `Elevated digestive enzyme ${metric.label} (${valStr}) suggests pancreatic or upper gastrointestinal irritation.`,
+        actionSteps: [
+          "Eat small, bland, easily digestible meals and avoid high-fat or fried foods.",
+          "Refrain completely from alcohol and heavy spices until enzymes normalize.",
+          "Seek prompt medical evaluation if experiencing persistent abdominal pain or nausea.",
+        ],
       });
     }
   }
 
+  // 3. Fallback / Maintenance Tips for Normal Reports
   if (tips.length === 0) {
-    tips.push({
-      title: "Keep your baseline healthy",
-      detail: "The current recorded markers look stable, so focus on consistency with food, movement, and sleep.",
-    });
+    tips.push(
+      {
+        title: "Optimal Circadian Rhythm & Sleep Architecture",
+        category: "Lifestyle & Recovery",
+        impactLevel: "Maintenance",
+        triggeredBy: "Report Status: All Extracted Biomarkers Within Normal Reference Bounds",
+        detail: "All recorded biomarkers are stable. Maintaining 7–8 hours of consistent nocturnal sleep preserves metabolic sensitivity, metabolic clearance, and immune homeostasis.",
+        actionSteps: [
+          "Keep consistent sleep and wake times even on weekends.",
+          "Get 10 minutes of direct morning sunlight within 1 hour of waking to anchor your circadian clock.",
+        ],
+      },
+      {
+        title: "Daily Zone-2 Aerobic & Metabolic Conditioning",
+        category: "Cardiovascular & Lipids",
+        impactLevel: "Maintenance",
+        triggeredBy: "Report Status: Biomarker Baseline Healthy",
+        detail: "Low-intensity steady-state cardio builds mitochondrial density and maintains vascular endothelial nitric oxide production.",
+        actionSteps: [
+          "Aim for 150 minutes per week of brisk walking, cycling, or swimming where you can comfortably converse.",
+          "Incorporate 2 short resistance/bodyweight sessions per week for muscle mass preservation.",
+        ],
+      },
+      {
+        title: "Micronutrient-Dense Plant Diversity & Hydration",
+        category: "Digestive & Gut Health",
+        impactLevel: "Maintenance",
+        triggeredBy: "Report Status: Optimal Biomarker Baseline",
+        detail: "Eating 30+ unique plant foods per week supports gut microbiome diversity, short-chain fatty acid (SCFA) production, and systemic resilience.",
+        actionSteps: [
+          "Rotate colorful vegetables, legumes, seeds, nuts, and herbs in your weekly diet.",
+          "Sip 2.5 liters of clean water daily to maintain physiological fluid balance.",
+        ],
+      },
+    );
   }
 
+  // Deduplicate tips by title
   const seen = new Set<string>();
   return tips.filter((tip) => {
-    const key = `${tip.title}::${tip.detail}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
+    if (seen.has(tip.title)) return false;
+    seen.add(tip.title);
     return true;
   });
 }
