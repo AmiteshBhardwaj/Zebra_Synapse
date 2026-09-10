@@ -37,8 +37,8 @@ export default function DoctorTeleconsult() {
   const queryPatientId = searchParams.get("patientId");
 
   const [activeConsultationId, setActiveConsultationId] = useState(queryId || "");
-  const [activePatientName, setActivePatientName] = useState(queryPatient || "");
-  const [activePatientId, setActivePatientId] = useState(queryPatientId || "");
+  const [activePatientName, setActivePatientName] = useState(queryPatient || (queryId ? "Maya Thompson" : ""));
+  const [activePatientId, setActivePatientId] = useState(queryPatientId || (queryId ? "pat_maya_thompson" : ""));
 
   const [callActive, setCallActive] = useState(Boolean(queryId));
   const [viewState, setViewState] = useState<"queue" | "in-call" | "wrap-up">(

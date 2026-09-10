@@ -71,7 +71,9 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
   const location = useLocation();
   const { user, profile } = useAuth();
 
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>(
+    () => new URLSearchParams(location.search).get("doctorId") || SEED_DOCTORS[0].id
+  );
   const [doctorsList, setDoctorsList] = useState<DoctorMeta[]>(SEED_DOCTORS);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "my_doctors" | "discover">("all");
@@ -699,6 +701,11 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
                           minute: "2-digit",
                         });
 
+                        const isTeleconsultNote =
+                          msg.attachments?.some(
+                            (a) => a.metadata?.type === "teleconsultation_note" || a.title === "Teleconsultation Note"
+                          ) || msg.content.includes("TELECONSULTATION CLINICAL NOTE");
+
                         return (
                           <div
                             key={msg.id}
@@ -712,26 +719,61 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
                               </div>
                             )}
 
-                            <div
-                              className={`max-w-[78%] p-3.5 rounded-2xl text-xs sm:text-sm space-y-1.5 shadow-sm ${
-                                isPatientSender
-                                  ? "bg-[#84cc16] text-white rounded-br-none"
-                                  : "bg-white border border-slate-100 text-slate-800 rounded-bl-none"
-                              }`}
-                            >
-                              <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                            {isTeleconsultNote ? (
+                              <div className="max-w-[85%] rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 via-white to-slate-50 p-4 text-xs sm:text-sm space-y-3 shadow-sm text-slate-800">
+                                <div className="flex items-center justify-between border-b border-indigo-100 pb-2.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#3E36B0] text-white shadow-xs">
+                                      <FileText className="h-3.5 w-3.5" />
+                                    </span>
+                                    <div>
+                                      <span className="font-extrabold text-[#3E36B0] text-xs font-['Manrope'] block">
+                                        Teleconsultation Clinical Note
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 font-medium">
+                                        Official Doctor Encounter Record
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                                    <span>Delivered</span>
+                                  </span>
+                                </div>
 
+                                <div className="rounded-xl border border-slate-200/80 bg-white p-3.5 leading-relaxed whitespace-pre-wrap font-mono text-xs text-slate-900 shadow-2xs">
+                                  {msg.content}
+                                </div>
+
+                                <div className="flex items-center justify-between pt-0.5 text-[10px] text-slate-400 font-mono">
+                                  <span className="text-indigo-950/70 font-semibold font-sans">
+                                    {activeDoctor.name} • Teleconsultation Record
+                                  </span>
+                                  <span>{formattedTime}</span>
+                                </div>
+                              </div>
+                            ) : (
                               <div
-                                className={`flex items-center justify-end gap-1 text-[10px] font-mono ${
-                                  isPatientSender ? "text-lime-100" : "text-slate-400"
+                                className={`max-w-[78%] p-3.5 rounded-2xl text-xs sm:text-sm space-y-1.5 shadow-sm ${
+                                  isPatientSender
+                                    ? "bg-[#84cc16] text-white rounded-br-none"
+                                    : "bg-white border border-slate-100 text-slate-800 rounded-bl-none"
                                 }`}
                               >
-                                <span>{formattedTime}</span>
-                                {isPatientSender && (
-                                  <CheckCheck className={`h-3 w-3 ${msg.is_read ? "text-lime-200" : "text-white/60"}`} />
-                                )}
+                                <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+
+                                <div
+                                  className={`flex items-center justify-end gap-1 text-[10px] font-mono ${
+                                    isPatientSender ? "text-lime-100" : "text-slate-400"
+                                  }`}
+                                >
+                                  <span>{formattedTime}</span>
+                                  {isPatientSender && (
+                                    <CheckCheck className={`h-3 w-3 ${msg.is_read ? "text-lime-200" : "text-white/60"}`} />
+                                  )}
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         );
                       })

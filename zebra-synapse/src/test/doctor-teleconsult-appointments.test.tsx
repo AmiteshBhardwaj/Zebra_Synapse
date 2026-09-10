@@ -6,26 +6,36 @@ import DoctorAppointments from "../app/pages/doctor/DoctorAppointments";
 import QuickScheduleAppointmentDialog from "../app/pages/doctor/QuickScheduleAppointmentDialog";
 import DoctorTeleconsult from "../app/pages/doctor/DoctorTeleconsult";
 import DoctorPatientChat from "../app/pages/doctor/DoctorPatientChat";
+import PostConsultationWrapUp from "../app/components/teleconsult/PostConsultationWrapUp";
+import PatientDoctorChat from "../app/pages/patient/PatientDoctorChat";
+import { fetchDoctorPatientMessages, getAllGlobalMessages, saveGlobalMessages } from "../lib/doctorPatientChat";
+import { mockPatientProfile, mockUser } from "./test-utils";
 
 // Mock Supabase
 vi.mock("../lib/supabase", () => {
+  const createQueryChain = () => {
+    const chain: any = {
+      select: vi.fn(() => chain),
+      eq: vi.fn(() => chain),
+      neq: vi.fn(() => chain),
+      or: vi.fn(() => chain),
+      order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+      maybeSingle: vi.fn(() => Promise.resolve({ data: null, error: null })),
+      insert: vi.fn(() => chain),
+      update: vi.fn(() => chain),
+      delete: vi.fn(() => chain),
+      channel: () => ({
+        on: () => ({ subscribe: () => ({}) }),
+        subscribe: () => ({}),
+      }),
+      then: (resolve: any) => resolve({ data: [], error: null }),
+    };
+    return chain;
+  };
+
   return {
     getSupabase: () => ({
-      from: () => ({
-        select: () => ({
-          order: () => Promise.resolve({ data: [], error: null }),
-          eq: () => ({
-            order: () => Promise.resolve({ data: [], error: null }),
-            maybeSingle: () => Promise.resolve({ data: null, error: null }),
-          }),
-        }),
-        insert: vi.fn().mockResolvedValue({ data: null, error: null }),
-        update: vi.fn().mockResolvedValue({ data: null, error: null }),
-        channel: () => ({
-          on: () => ({ subscribe: () => ({}) }),
-          subscribe: () => ({}),
-        }),
-      }),
+      from: () => createQueryChain(),
       channel: () => ({
         on: () => ({ subscribe: () => ({}) }),
         subscribe: () => ({}),
@@ -182,3 +192,104 @@ describe("Doctor Patient Chat Suite", () => {
     expect(screen.getAllByText(/Liam Carter/i).length).toBeGreaterThan(0);
   });
 });
+
+describe("Teleconsultation Post-Call Note Delivery Suite", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+  });
+
+  it("renders dedicated note writing interface on call wrap-up and sends note directly to patient messages", async () => {
+    const continueFn = vi.fn();
+    const openPatientFn = vi.fn();
+    const returnDashboardFn = vi.fn();
+
+    renderWithProviders(
+      <PostConsultationWrapUp
+        consultationId="consult-test-888"
+        patientId="pat_maya_thompson"
+        patientName="Maya Thompson"
+        callDurationSec={245}
+        initialNotes="Initial blood pressure reading 118/78 mmHg. Patient reports good tolerance."
+        waitingQueueCount={2}
+        onContinueTeleconsult={continueFn}
+        onOpenPatientDetail={openPatientFn}
+        onReturnToDashboard={returnDashboardFn}
+      />,
+      {
+        initialEntries: ["/doctor/teleconsult"],
+        authOverrides: { profile: mockDoctorProfile, user: mockDoctorUser as any },
+      }
+    );
+
+    // Verify only the note writing workstation is shown
+    expect(screen.getByText(/Teleconsultation Note for Maya Thompson/i)).toBeInTheDocument();
+    expect(screen.getByText(/Write Teleconsultation Note/i)).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(/Initial blood pressure reading 118\/78 mmHg/i)
+    ).toBeInTheDocument();
+
+    const sendBtn = screen.getByRole("button", { name: /Send Note to Patient Messages/i });
+    expect(sendBtn).toBeInTheDocument();
+
+    // Doctor clicks send note
+    fireEvent.click(sendBtn);
+
+    // Verify delivery confirmation
+    expect(await screen.findByText(/Note Sent to Maya Thompson's Messages/i)).toBeInTheDocument();
+    expect(screen.getByText(/Return to Live Waiting Queue/i)).toBeInTheDocument();
+
+    // Verify message is saved to universal messages store with teleconsultation note attachment
+    const messages = getAllGlobalMessages();
+    const teleNoteMsg = messages.find((m) => m.content.includes("consult-test-888"));
+    expect(teleNoteMsg).toBeDefined();
+    expect(teleNoteMsg?.attachments?.[0]?.metadata?.type).toBe("teleconsultation_note");
+    expect(teleNoteMsg?.sender_role).toBe("doctor");
+  });
+
+  it("renders PatientDoctorChat displaying received teleconsultation note with specialized card", async () => {
+    // Seed a teleconsultation note in universal storage for patient-123
+    const seededNote = {
+      id: "msg-tele-test-1",
+      doctor_id: "doc_amelia_hart",
+      patient_id: "patient-123",
+      sender_id: "doc_amelia_hart",
+      sender_role: "doctor" as const,
+      doctor_name: "Dr. Amelia Hart",
+      patient_name: "Maya Thompson",
+      content: "📋 TELECONSULTATION CLINICAL NOTE\nSession: #consult-test-888\nDuration: 04m 05s\nConsulting Doctor: Dr. Amelia Hart\n\nPatient advised to maintain hydration and continue routine BP logs.",
+      attachments: [
+        {
+          type: "document" as const,
+          title: "Teleconsultation Note",
+          metadata: { type: "teleconsultation_note", consultationId: "consult-test-888" },
+        },
+      ],
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+    saveGlobalMessages([seededNote]);
+
+    const fetched = await fetchDoctorPatientMessages(
+      "doc_amelia_hart",
+      "patient-123",
+      "Dr. Amelia Hart",
+      "Maya Thompson"
+    );
+    expect(fetched.length).toBe(1);
+    expect(fetched[0].content).toContain("TELECONSULTATION CLINICAL NOTE");
+
+    renderWithProviders(<PatientDoctorChat />, {
+      initialEntries: ["/patient/teleconsult?tab=messages&doctorId=doc_amelia_hart"],
+      authOverrides: { profile: mockPatientProfile, user: mockUser as any },
+    });
+
+    const noteElements = await screen.findAllByText(/Teleconsultation Clinical Note/i);
+    expect(noteElements.length).toBeGreaterThan(0);
+    expect(screen.getByText(/Official Doctor Encounter Record/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Patient advised to maintain hydration and continue routine BP logs/i)
+    ).toBeInTheDocument();
+  });
+});
+
