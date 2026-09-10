@@ -24,6 +24,7 @@ import { Button } from "../ui/button";
 import { toast } from "sonner";
 import { getSupabase } from "../../../lib/supabase";
 import { useAuth } from "../../../auth/AuthContext";
+import { createPrescription } from "../../../lib/prescriptions";
 
 export interface PrescriptionItem {
   id: string;
@@ -230,19 +231,20 @@ ${draftText}
           // ignore
         }
 
-        // Save Prescriptions to Supabase if any
+        // Save Prescriptions using unified prescription service
         if (patientId && prescriptions.length > 0) {
           for (const rx of prescriptions) {
             const rxDetail = `${rx.name} ${rx.dosage} (${rx.duration}) - ${rx.instructions}`;
             try {
-              await sb.from("prescriptions").insert({
-                patient_id: patientId,
-                prescribed_by: user?.id || "doctor",
+              await createPrescription(sb, {
+                patientId,
+                prescribedBy: user?.id || "doctor",
+                prescriberName: (user as any)?.user_metadata?.full_name || "Consulting Doctor",
                 details: rxDetail,
                 status: "active",
               });
             } catch (err) {
-              console.warn("Supabase prescription insert error:", err);
+              console.warn("Unified prescription save error:", err);
             }
           }
         }

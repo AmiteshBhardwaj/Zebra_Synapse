@@ -308,4 +308,136 @@ from seed_patients_data p
 join seed_patient_ids pids on pids.rn = p.rn
 join seed_doctor_ids d on d.rn = ((p.rn - 1) / 5) + 1;
 
+-- Link Dr. Chloe Menon (Doctor 3) as consulting specialist for Maya Thompson (Patient 1)
+insert into public.care_relationships (
+  doctor_id,
+  patient_id,
+  last_visit,
+  primary_condition,
+  health_status,
+  risk_flags
+)
+select
+  d.id,
+  p.id,
+  current_date - 10,
+  'Hyperlipidemia & Metabolic Consult',
+  'normal',
+  '{}'::text[]
+from seed_doctor_ids d
+join seed_patient_ids p on p.rn = 1
+where d.rn = 3
+on conflict (doctor_id, patient_id) do nothing;
+
+-- Seed baseline active and historical prescriptions for demo patients
+-- Maya Thompson (Patient 1, Dr. Amelia Hart & Dr. Chloe Menon)
+insert into public.prescriptions (
+  patient_id,
+  prescribed_by,
+  details,
+  status,
+  created_at,
+  completed_at
+)
+select
+  p1.id,
+  d1.id,
+  'Metformin Hydrochloride 500mg' || E'\n' || 'Take 1 tablet twice daily with meals to support glycemic control.',
+  'active',
+  '2026-08-10T10:00:00Z',
+  null
+from seed_patient_ids p1, seed_doctor_ids d1
+where p1.rn = 1 and d1.rn = 1;
+
+insert into public.prescriptions (
+  patient_id,
+  prescribed_by,
+  details,
+  status,
+  created_at,
+  completed_at
+)
+select
+  p1.id,
+  d3.id,
+  'Atorvastatin Calcium 10mg' || E'\n' || 'Take 1 tablet once daily at bedtime for lipid & cholesterol management.',
+  'active',
+  '2026-08-12T14:30:00Z',
+  null
+from seed_patient_ids p1, seed_doctor_ids d3
+where p1.rn = 1 and d3.rn = 3;
+
+insert into public.prescriptions (
+  patient_id,
+  prescribed_by,
+  details,
+  status,
+  created_at,
+  completed_at
+)
+select
+  p1.id,
+  d1.id,
+  'Vitamin D3 (Cholecalciferol) 60,000 IU' || E'\n' || 'Take 1 capsule weekly with breakfast for 8 weeks.',
+  'active',
+  '2026-08-01T09:15:00Z',
+  null
+from seed_patient_ids p1, seed_doctor_ids d1
+where p1.rn = 1 and d1.rn = 1;
+
+insert into public.prescriptions (
+  patient_id,
+  prescribed_by,
+  details,
+  status,
+  created_at,
+  completed_at
+)
+select
+  p1.id,
+  d1.id,
+  'Amoxicillin 500mg' || E'\n' || 'Take 1 capsule three times daily for 7 days (Course Complete).',
+  'completed',
+  '2026-06-15T08:00:00Z',
+  '2026-06-22T08:00:00Z'
+from seed_patient_ids p1, seed_doctor_ids d1
+where p1.rn = 1 and d1.rn = 1;
+
+-- Lucas Reed (Patient 10, Dr. Benjamin Ortiz)
+insert into public.prescriptions (
+  patient_id,
+  prescribed_by,
+  details,
+  status,
+  created_at,
+  completed_at
+)
+select
+  p10.id,
+  d2.id,
+  'Lisinopril 10mg' || E'\n' || 'Take 1 tablet daily in the morning for blood pressure management.',
+  'active',
+  '2026-08-15T09:00:00Z',
+  null
+from seed_patient_ids p10, seed_doctor_ids d2
+where p10.rn = 10 and d2.rn = 2;
+
+insert into public.prescriptions (
+  patient_id,
+  prescribed_by,
+  details,
+  status,
+  created_at,
+  completed_at
+)
+select
+  p10.id,
+  d2.id,
+  'Aspirin 81mg (Cardio Protective)' || E'\n' || 'Take 1 chewable tablet daily with water.',
+  'active',
+  '2026-08-18T10:30:00Z',
+  null
+from seed_patient_ids p10, seed_doctor_ids d2
+where p10.rn = 10 and d2.rn = 2;
+
 commit;

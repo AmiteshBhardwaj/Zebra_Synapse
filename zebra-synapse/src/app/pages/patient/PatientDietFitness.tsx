@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   UtensilsCrossed,
@@ -33,7 +33,6 @@ import {
   calculateMacroTargets,
 } from "../../../lib/dietEngine";
 import GoalBiomarkerCalibrationModal from "../../components/patient/GoalBiomarkerCalibrationModal";
-import ClinicalRationaleCard from "../../components/patient/ClinicalRationaleCard";
 import {
   portalPanelClass,
   portalPrimaryButtonClass,
@@ -84,7 +83,7 @@ function addDaysToDateStr(dateStr: string, days: number): string {
 export default function PatientDietFitness() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const { hasLabReports } = usePatientLabReports();
   const { panels } = usePatientLabPanels();
 
@@ -219,68 +218,179 @@ export default function PatientDietFitness() {
 
   const { activePanel, biomarkerTrends } = useActiveReport(panels);
 
-  // User Diet & Metabolic Settings
-  const dietSettingsKey = `zebra_diet_settings_${profile?.id || "default"}`;
-  const [dietSettings, setDietSettings] = useState<DietUserSettings>(() => {
+  // User Diet & Metabolic Settings — Ground Truth from Patient Profile Settings
+  const effectiveUserId = user?.id || profile?.id || "default";
+
+  // Read local profile backup if available (fallback when DB hasn't refreshed or columns are cached)
+  const localProfile = useMemo(() => {
+    if (effectiveUserId && effectiveUserId !== "default") {
+      try {
+        const raw = localStorage.getItem(`zebra_profile_${effectiveUserId}`);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return null;
+  }, [effectiveUserId]);
+
+  // Actual Ground Truth Physical Metrics from Patient Profile Settings
+  const profileWeight = profile?.weight_kg ?? localProfile?.weight_kg;
+  const profileHeight = profile?.height_cm ?? localProfile?.height_cm;
+  const profileAge = profile?.age ?? localProfile?.age;
+  const profileGender = (profile?.gender || localProfile?.gender || "male").toLowerCase() as "male" | "female";
+  const profileDietPref = profile?.dietary_preference || localProfile?.dietary_preference || "vegetarian";
+
+  const dietSettingsKey = `zebra_diet_settings_${effectiveUserId}`;
+
+  const resolveDietSettings = useCallback((): DietUserSettings => {
+    let saved: any = null;
     try {
-      const saved = localStorage.getItem(dietSettingsKey);
-      if (saved) return JSON.parse(saved);
+      const raw = localStorage.getItem(dietSettingsKey);
+      if (raw) saved = JSON.parse(raw);
     } catch (e) {
       console.error(e);
     }
+
+    // Physical baseline MUST match the actual patient profile metrics
+    const currentWeight = Number(profileWeight) > 0 ? Number(profileWeight) : (saved?.currentWeightKg || 66);
+    const height = Number(profileHeight) > 0 ? Number(profileHeight) : (saved?.heightCm || 178);
+    const ageVal = Number(profileAge) > 0 ? Number(profileAge) : (saved?.age || 20);
+    const genderVal = profileGender || saved?.gender || "male";
+    const dietaryPref = profileDietPref || saved?.dietaryPreference || "vegetarian";
+
+    const targetWeight = saved?.targetWeightKg ?? profile?.target_weight_kg ?? currentWeight;
+    const diff = targetWeight - currentWeight;
+    let pace = saved?.weeklyPaceKg !== undefined ? saved.weeklyPaceKg : (diff > 0.1 ? 0.25 : diff < -0.1 ? -0.25 : 0);
+    let goalVal = saved?.goal || (diff > 0.1 ? "muscle_gain" : diff < -0.1 ? "fat_loss" : "maintain_longevity");
+
+    // Directional alignment: prevent contradictory deficit during weight gain or surplus during weight loss
+    if (diff > 0.1 && pace <= 0) {
+      pace = diff >= 6 ? 0.5 : 0.25;
+      if (goalVal === "fat_loss") goalVal = "muscle_gain";
+    } else if (diff < -0.1 && pace >= 0) {
+      pace = Math.abs(diff) >= 6 ? -0.5 : -0.25;
+      if (goalVal === "muscle_gain") goalVal = "fat_loss";
+    } else if (Math.abs(diff) <= 0.1) {
+      pace = 0;
+    }
+
     return {
-      currentWeightKg: profile?.weight_kg || 78,
-      targetWeightKg: profile?.target_weight_kg || 70,
-      weeklyPaceKg: -0.5,
-      heightCm: profile?.height_cm || 175,
-      age: 36,
-      gender: (profile?.gender?.toLowerCase() === "female" ? "female" : "male") as "male" | "female",
-      activityLevel: "moderate",
-      goal: "fat_loss",
-      dailyWaterTargetMl: 2500,
-      dietaryPreference: profile?.dietary_preference || "vegetarian",
-      foodAllergies: profile?.food_allergies || [],
-      dietaryConditions: profile?.dietary_conditions || [],
+      currentWeightKg: currentWeight,
+      targetWeightKg: targetWeight,
+      weeklyPaceKg: pace,
+      heightCm: height,
+      age: ageVal,
+      gender: genderVal,
+      activityLevel: saved?.activityLevel || "moderate",
+      goal: goalVal,
+      dailyWaterTargetMl: saved?.dailyWaterTargetMl || 2500,
+      dietaryPreference: dietaryPref,
+      foodAllergies: profile?.food_allergies || localProfile?.food_allergies || saved?.foodAllergies || [],
+      dietaryConditions: profile?.dietary_conditions || localProfile?.dietary_conditions || saved?.dietaryConditions || [],
+      customCalorieTarget: saved?.customCalorieTarget,
+      customMacroSplit: saved?.customMacroSplit,
     };
-  });
+  }, [
+    dietSettingsKey,
+    profileWeight,
+    profileHeight,
+    profileAge,
+    profileGender,
+    profileDietPref,
+    profile?.target_weight_kg,
+    profile?.food_allergies,
+    profile?.dietary_conditions,
+    localProfile,
+  ]);
+
+  const [dietSettings, setDietSettings] = useState<DietUserSettings>(resolveDietSettings);
+
+  // Synchronize whenever profile vitals or ID updates
+  useEffect(() => {
+    setDietSettings(resolveDietSettings());
+  }, [resolveDietSettings]);
 
   const [isCalibrationOpen, setIsCalibrationOpen] = useState(false);
 
-  const handleSaveDietSettings = (newSettings: DietUserSettings) => {
+  const handleSaveDietSettings = async (newSettings: DietUserSettings) => {
     setDietSettings(newSettings);
     try {
       localStorage.setItem(dietSettingsKey, JSON.stringify(newSettings));
     } catch (e) {
       console.error(e);
     }
+
+    // Also sync physical metrics back to patient profile so settings remain unified
+    try {
+      const patch = {
+        weight_kg: newSettings.currentWeightKg,
+        height_cm: newSettings.heightCm,
+        age: newSettings.age,
+        gender: newSettings.gender,
+        target_weight_kg: newSettings.targetWeightKg,
+        dietary_preference: newSettings.dietaryPreference as any,
+      };
+      if (updateProfile) {
+        await updateProfile(patch);
+      }
+      if (effectiveUserId && effectiveUserId !== "default") {
+        const rawExisting = localStorage.getItem(`zebra_profile_${effectiveUserId}`);
+        const parsedExisting = rawExisting ? JSON.parse(rawExisting) : {};
+        localStorage.setItem(
+          `zebra_profile_${effectiveUserId}`,
+          JSON.stringify({
+            ...profile,
+            ...parsedExisting,
+            ...patch,
+          })
+        );
+      }
+    } catch (err) {
+      console.warn("[calibration] could not sync to profile:", err);
+    }
   };
 
   const bmr = useMemo(() => {
     return calculateBMR(
-      dietSettings.currentWeightKg || profile?.weight_kg || 78,
-      dietSettings.heightCm || 175,
-      dietSettings.age || 36,
-      dietSettings.gender || "male"
+      dietSettings.currentWeightKg || profileWeight || 66,
+      dietSettings.heightCm || profileHeight || 178,
+      dietSettings.age || profileAge || 20,
+      dietSettings.gender || profileGender || "male"
     );
-  }, [dietSettings.currentWeightKg, dietSettings.heightCm, dietSettings.age, dietSettings.gender, profile?.weight_kg]);
+  }, [dietSettings.currentWeightKg, dietSettings.heightCm, dietSettings.age, dietSettings.gender, profileWeight, profileHeight, profileAge, profileGender]);
 
   const tdee = useMemo(() => {
     return calculateTDEE(bmr, dietSettings.activityLevel);
   }, [bmr, dietSettings.activityLevel]);
 
   const targetCal = useMemo(() => {
-    return dietSettings.customCalorieTarget || calculateCalorieTarget(tdee, dietSettings.goal, dietSettings.weeklyPaceKg);
-  }, [dietSettings.customCalorieTarget, tdee, dietSettings.goal, dietSettings.weeklyPaceKg]);
+    const currentW = dietSettings.currentWeightKg || profileWeight || 66;
+    const targetW = dietSettings.targetWeightKg || currentW;
+    const diff = targetW - currentW;
+
+    if (dietSettings.customCalorieTarget) {
+      // Heal legacy buggy storage where a deficit was stored for a weight-gain goal, or surplus for weight-loss
+      if (diff > 0.5 && dietSettings.customCalorieTarget < tdee) {
+        return calculateCalorieTarget(tdee, dietSettings.goal, dietSettings.weeklyPaceKg, currentW, targetW);
+      }
+      if (diff < -0.5 && dietSettings.customCalorieTarget > tdee) {
+        return calculateCalorieTarget(tdee, dietSettings.goal, dietSettings.weeklyPaceKg, currentW, targetW);
+      }
+      return dietSettings.customCalorieTarget;
+    }
+    return calculateCalorieTarget(tdee, dietSettings.goal, dietSettings.weeklyPaceKg, currentW, targetW);
+  }, [dietSettings.customCalorieTarget, tdee, dietSettings.goal, dietSettings.weeklyPaceKg, dietSettings.currentWeightKg, profileWeight, dietSettings.targetWeightKg]);
 
   const macroCalc = useMemo(() => {
     return calculateMacroTargets(
       targetCal,
       dietSettings.goal,
-      dietSettings.currentWeightKg || 78,
+      dietSettings.currentWeightKg || profileWeight || 66,
       dietSettings.customMacroSplit,
       activePanel
     );
-  }, [targetCal, dietSettings.goal, dietSettings.currentWeightKg, dietSettings.customMacroSplit, activePanel]);
+  }, [targetCal, dietSettings.goal, dietSettings.currentWeightKg, profileWeight, dietSettings.customMacroSplit, activePanel]);
 
   const targetCarbs = macroCalc.grams.carbs;
   const targetProtein = macroCalc.grams.protein;
@@ -315,13 +425,13 @@ export default function PatientDietFitness() {
       goal: prefs.primaryGoal || (dietSettings.goal === "muscle_gain" ? "muscle_strength" : dietSettings.goal === "fat_loss" ? "weight_loss" : "general_health"),
       targetDurationMin: Number(prefs.durationMin) || 30,
       physicalLimitations: prefs.limitations || [],
-      weightKg: dietSettings.currentWeightKg || profile?.weight_kg || 78,
-      targetWeightKg: dietSettings.targetWeightKg || 70,
+      weightKg: dietSettings.currentWeightKg || profileWeight || 66,
+      targetWeightKg: dietSettings.targetWeightKg || profileWeight || 66,
       weeklyPaceKg: dietSettings.weeklyPaceKg,
-      heightCm: dietSettings.heightCm || 175,
-      age: dietSettings.age || 36,
+      heightCm: dietSettings.heightCm || profileHeight || 178,
+      age: dietSettings.age || profileAge || 20,
     });
-  }, [activePanel, biomarkerTrends, profile?.id, profile?.weight_kg, dietSettings]);
+  }, [activePanel, biomarkerTrends, profile?.id, profileWeight, profileHeight, profileAge, dietSettings]);
 
   const todayWorkout = useMemo(() => {
     return (
@@ -597,13 +707,6 @@ export default function PatientDietFitness() {
             </div>
           </div>
 
-          {/* Two-Tier Clinical Synthesis & Biomarker Card */}
-          <ClinicalRationaleCard
-            settings={dietSettings}
-            activePanel={activePanel}
-            biomarkerImpacts={biomarkerImpacts}
-            onOpenCalibration={() => setIsCalibrationOpen(true)}
-          />
 
           {/* 2-Column Split */}
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3">

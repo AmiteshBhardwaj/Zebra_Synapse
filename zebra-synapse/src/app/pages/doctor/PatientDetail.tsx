@@ -100,6 +100,10 @@ import {
 } from "../../../lib/careActions";
 import {
   PRESCRIPTIONS_SELECT,
+  fetchPatientPrescriptions,
+  createPrescription,
+  updatePrescriptionStatus,
+  subscribePrescriptions,
   formatPrescriptionDate,
   prescriptionHeading,
   type PrescriptionRow,
@@ -520,26 +524,33 @@ export default function PatientDetail() {
   const loadPrescriptions = useCallback(async () => {
     if (!patientId) return;
     const sb = getSupabase();
-    if (!sb) return;
     setPrescLoading(true);
-    const { data, error } = await sb
-      .from("prescriptions")
-      .select(PRESCRIPTIONS_SELECT)
-      .eq("patient_id", patientId)
-      .order("created_at", { ascending: false });
-    setPrescLoading(false);
-    if (error) {
-      console.error("[prescriptions]", error.message);
-      toast.error("Could not load prescriptions");
+    try {
+      const rows = await fetchPatientPrescriptions(sb, patientId);
+      setPrescriptions(rows);
+    } catch (err) {
+      console.error("[prescriptions]", err);
       setPrescriptions([]);
-      return;
+    } finally {
+      setPrescLoading(false);
     }
-    setPrescriptions(((data ?? []) as unknown) as PrescriptionRow[]);
   }, [patientId]);
 
   useEffect(() => {
     if (rel) void loadPrescriptions();
   }, [rel, loadPrescriptions]);
+
+  // Real-time synchronization across doctor and patient portals
+  useEffect(() => {
+    if (!patientId) return;
+    const sb = getSupabase();
+    const unsubscribe = subscribePrescriptions(sb, patientId, () => {
+      void loadPrescriptions();
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [patientId, loadPrescriptions]);
 
   const loadLabUploads = useCallback(async () => {
     if (!patientId || !rel) return;
@@ -913,18 +924,20 @@ export default function PatientDetail() {
       toast.error("Enter prescription details first");
       return;
     }
+    if (!patientId) return;
     const sb = getSupabase();
-    if (!sb || !user?.id || !patientId) return;
     setPrescSaving(true);
-    const { error } = await sb.from("prescriptions").insert({
-      patient_id: patientId,
-      prescribed_by: user.id,
+    const doctorName = (user as any)?.user_metadata?.full_name || "Attending Physician";
+    const res = await createPrescription(sb, {
+      patientId,
+      prescribedBy: user?.id || "doctor",
+      prescriberName: doctorName,
       details: text,
       status: "active",
     });
     setPrescSaving(false);
-    if (error) {
-      toast.error(error.message);
+    if (res.error) {
+      toast.error(res.error.message || "Failed to save prescription");
       return;
     }
     toast.success("Prescription added to patient record");
@@ -933,17 +946,28 @@ export default function PatientDetail() {
   };
 
   const handleMarkPrescriptionComplete = async (id: string) => {
+    if (!patientId) return;
+    // Optimistic UI update so the item moves to Completed immediately
+    setPrescriptions((prev) =>
+      prev.map((rx) =>
+        rx.id === id
+          ? {
+              ...rx,
+              status: "completed" as const,
+              completed_at: new Date().toISOString(),
+            }
+          : rx
+      )
+    );
     const sb = getSupabase();
-    if (!sb) return;
-    const { error } = await sb
-      .from("prescriptions")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-    if (error) {
-      toast.error(error.message);
+    const res = await updatePrescriptionStatus(sb, {
+      id,
+      patientId,
+      status: "completed",
+    });
+    if (res.error) {
+      toast.error(res.error.message || "Failed to complete prescription");
+      void loadPrescriptions();
       return;
     }
     toast.success("Prescription marked completed");
@@ -2184,17 +2208,15 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                   <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-700">Active</Badge>
-                                  {rx.prescribed_by === user?.id ? (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      className={portalSecondaryButtonClass}
-                                      onClick={() => void handleMarkPrescriptionComplete(rx.id)}
-                                    >
-                                      Mark completed
-                                    </Button>
-                                  ) : null}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className={portalSecondaryButtonClass}
+                                    onClick={() => void handleMarkPrescriptionComplete(rx.id)}
+                                  >
+                                    Mark completed
+                                  </Button>
                                 </div>
                               </div>
                             </div>

@@ -41,6 +41,7 @@ import {
 import {
   PRESCRIPTIONS_SELECT,
   fetchPatientPrescriptions,
+  subscribePrescriptions,
   formatPrescriptionDate,
   prescriptionHeading,
   type PrescriptionRow,
@@ -372,6 +373,22 @@ export function Patient3DHealthDashboard({
     void loadClinicalData();
     return () => {
       isMounted = false;
+    };
+  }, [user?.id, profile?.id]);
+
+  // Real-time prescription sync listener
+  useEffect(() => {
+    const sb = getSupabase();
+    const uid = user?.id || profile?.id;
+    if (!uid) return;
+    const unsub = subscribePrescriptions(sb, uid, async () => {
+      const allRx = await fetchPatientPrescriptions(sb, uid);
+      if (allRx) {
+        setActivePrescriptions(allRx.filter((r) => r.status === "active"));
+      }
+    });
+    return () => {
+      unsub();
     };
   }, [user?.id, profile?.id]);
 

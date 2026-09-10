@@ -206,13 +206,36 @@ export function calculateTDEE(bmr: number, activityLevel: ActivityLevel = "moder
 export function calculateCalorieTarget(
   tdee: number,
   goal: HealthGoal,
-  weeklyPaceKg: number = 0
+  weeklyPaceKg: number = 0,
+  currentWeightKg?: number,
+  targetWeightKg?: number
 ): number {
   let target = tdee;
 
-  if (weeklyPaceKg !== 0) {
-    // 7700 kcal / 7 days = 1100 kcal deficit per 1kg per week
-    const dailyAdjustment = Math.round(weeklyPaceKg * 1100);
+  // Auto-align weekly pace direction if current and target weight are specified
+  let effectivePace = weeklyPaceKg;
+  if (
+    currentWeightKg !== undefined &&
+    targetWeightKg !== undefined &&
+    currentWeightKg > 0 &&
+    targetWeightKg > 0
+  ) {
+    const delta = targetWeightKg - currentWeightKg;
+    if (delta > 0.1 && effectivePace < 0) {
+      // Weight gain goal: pace cannot be negative deficit
+      effectivePace = Math.abs(effectivePace);
+    } else if (delta < -0.1 && effectivePace > 0) {
+      // Weight loss goal: pace cannot be positive surplus
+      effectivePace = -Math.abs(effectivePace);
+    } else if (Math.abs(delta) <= 0.1 && effectivePace !== 0) {
+      // Maintenance
+      effectivePace = 0;
+    }
+  }
+
+  if (effectivePace !== 0) {
+    // 7700 kcal / 7 days = 1100 kcal per 1kg per week
+    const dailyAdjustment = Math.round(effectivePace * 1100);
     target += dailyAdjustment;
   } else {
     switch (goal) {
@@ -2648,7 +2671,7 @@ export function generateWeeklyDietPlan(
 
   const bmr = calculateBMR(currentWeight, height, age, gender);
   const tdee = calculateTDEE(bmr, settings.activityLevel);
-  const targetCal = settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg);
+  const targetCal = settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg, currentWeight, settings.targetWeightKg);
 
   const decorateMeal = (recipe: MealRecipe): MealRecipe => {
     const mealBadges: string[] = [...(recipe.biomarkerBadges || [])];

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { useAuth } from "../../../auth/AuthContext";
 import { getSupabase } from "../../../lib/supabase";
 import {
@@ -6,6 +7,8 @@ import {
   fetchPatientPrescriptions,
   formatPrescriptionDate,
   prescriptionHeading,
+  prescriptionInstructions,
+  subscribePrescriptions,
   type PrescriptionRow,
 } from "../../../lib/prescriptions";
 import { Card, CardContent } from "../../components/ui/card";
@@ -22,6 +25,7 @@ import {
 
 export default function Prescription() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [list, setList] = useState<PrescriptionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,18 +48,53 @@ export default function Prescription() {
     void load();
   }, [load]);
 
+  // Real-time bidirectional synchronization with doctor portal
+  useEffect(() => {
+    const sb = getSupabase();
+    const uid = user?.id;
+    if (!uid) return;
+    const unsub = subscribePrescriptions(sb, uid, () => {
+      void load();
+    });
+    return () => {
+      unsub();
+    };
+  }, [user?.id, load]);
+
   const active = list.filter((r) => r.status === "active");
   const completed = list.filter((r) => r.status === "completed");
 
   const prescriberLabel = (rx: PrescriptionRow) =>
     rx.prescriber?.full_name?.trim() || "Your doctor";
 
-  const handleRequestRefill = (rx: PrescriptionRow) => {
-    toast.success(`Refill request submitted for ${prescriptionHeading(rx.details)}`);
+  const handleRequestRefill = async (rx: PrescriptionRow) => {
+    const heading = prescriptionHeading(rx.details);
+    const sb = getSupabase();
+    if (sb && user?.id) {
+      try {
+        const prescriberId =
+          rx.prescribed_by && !rx.prescribed_by.startsWith("dr-")
+            ? rx.prescribed_by
+            : user.id;
+        await sb.from("doctor_patient_messages").insert({
+          doctor_id: prescriberId,
+          patient_id: user.id,
+          doctor_name: prescriberLabel(rx),
+          patient_name: (user as any)?.user_metadata?.full_name || "Patient",
+          sender_id: user.id,
+          sender_role: "patient",
+          content: `Refill Request: Patient requested a prescription refill for ${heading}.`,
+        });
+      } catch (e) {
+        console.warn("[Prescription] Could not persist refill message:", e);
+      }
+    }
+    toast.success(`Refill request submitted for ${heading}`);
   };
 
   const handleContactDoctor = (rx: PrescriptionRow) => {
-    toast(`Contact details available for ${prescriberLabel(rx)}`);
+    toast(`Connecting to ${prescriberLabel(rx)}...`);
+    navigate("/patient/teleconsult");
   };
 
   return (
@@ -102,49 +141,58 @@ export default function Prescription() {
             </div>
           ) : null}
           <div className="space-y-4">
-            {active.map((rx) => (
-              <Card key={rx.id} className={portalPanelClass}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-start gap-4 min-w-0">
-                      <div className="w-12 h-12 bg-sky-500/15 text-[#0099ff] rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
-                        <Pill className="w-6 h-6" />
+            {active.map((rx) => {
+              const instructions = prescriptionInstructions(rx.details);
+              return (
+                <Card key={rx.id} className={portalPanelClass}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-4 min-w-0">
+                        <div className="w-12 h-12 bg-sky-500/15 text-[#0099ff] rounded-2xl flex items-center justify-center shrink-0 shadow-sm">
+                          <Pill className="w-6 h-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="text-base sm:text-lg font-bold text-slate-900 font-['Manrope']">{prescriptionHeading(rx.details)}</h3>
+                          <p className="text-xs text-slate-500 font-medium mt-0.5">Prescribed by {prescriberLabel(rx)}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="text-base sm:text-lg font-bold text-slate-900 font-['Manrope']">{prescriptionHeading(rx.details)}</h3>
-                        <p className="text-xs text-slate-500 font-medium mt-0.5">Prescribed by {prescriberLabel(rx)}</p>
-                      </div>
+                      <Badge className="border-sky-200 bg-sky-50 text-[#0284c7] font-bold text-xs shrink-0">
+                        Active
+                      </Badge>
                     </div>
-                    <Badge className="border-sky-200 bg-sky-50 text-[#0284c7] font-bold text-xs shrink-0">
-                      Active
-                    </Badge>
-                  </div>
 
-                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
-                    <Calendar className="w-4 h-4 shrink-0 text-[#0099ff]" />
-                    <span>Prescribed: {formatPrescriptionDate(rx.created_at)}</span>
-                  </div>
+                    {instructions ? (
+                      <p className="text-xs text-slate-600 bg-slate-50/80 rounded-xl p-3 border border-slate-100 font-medium mb-3 whitespace-pre-wrap leading-relaxed">
+                        {instructions}
+                      </p>
+                    ) : null}
 
-                  <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
-                    <Button
-                      size="sm"
-                      className="bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs rounded-2xl px-4 h-9 shadow-sm"
-                      onClick={() => handleRequestRefill(rx)}
-                    >
-                      Request Refill
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={`rounded-2xl text-xs h-9 px-4 ${portalSecondaryButtonClass}`}
-                      onClick={() => handleContactDoctor(rx)}
-                    >
-                      Contact Doctor
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
+                      <Calendar className="w-4 h-4 shrink-0 text-[#0099ff]" />
+                      <span>Prescribed: {formatPrescriptionDate(rx.created_at)}</span>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2 border-t border-slate-100">
+                      <Button
+                        size="sm"
+                        className="bg-gradient-to-r from-[#0099ff] to-[#3b82f6] hover:from-[#0088e6] hover:to-[#2563eb] text-white font-bold text-xs rounded-2xl px-4 h-9 shadow-sm"
+                        onClick={() => handleRequestRefill(rx)}
+                      >
+                        Request Refill
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`rounded-2xl text-xs h-9 px-4 ${portalSecondaryButtonClass}`}
+                        onClick={() => handleContactDoctor(rx)}
+                      >
+                        Contact Doctor
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
 
@@ -152,26 +200,43 @@ export default function Prescription() {
           <div>
             <h2 className="text-base font-bold text-slate-900 mb-3 font-['Manrope']">Past Prescriptions</h2>
             <div className="space-y-4">
-              {completed.map((rx) => (
-                <Card key={rx.id} className={portalPanelClass}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-4 min-w-0">
-                        <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center shrink-0 text-slate-400">
-                          <Pill className="w-6 h-6" />
+              {completed.map((rx) => {
+                const instructions = prescriptionInstructions(rx.details);
+                return (
+                  <Card key={rx.id} className={portalPanelClass}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-4 min-w-0">
+                          <div className="w-12 h-12 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-center shrink-0 text-slate-400">
+                            <Pill className="w-6 h-6" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="text-base font-bold text-slate-900 font-['Manrope']">{prescriptionHeading(rx.details)}</h3>
+                            <p className="text-xs text-slate-500 mt-0.5">Prescribed by {prescriberLabel(rx)}</p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="text-base font-bold text-slate-900 font-['Manrope']">{prescriptionHeading(rx.details)}</h3>
-                          <p className="text-xs text-slate-500 mt-0.5">Prescribed by {prescriberLabel(rx)}</p>
-                        </div>
+                        <Badge className="border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs shrink-0">
+                          Completed
+                        </Badge>
                       </div>
-                      <Badge className="border-slate-200 bg-slate-100 text-slate-600 font-bold text-xs shrink-0">
-                        Completed
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+                      {instructions ? (
+                        <p className="text-xs text-slate-500 bg-slate-50/60 rounded-xl p-3 border border-slate-100 font-medium mt-3 whitespace-pre-wrap leading-relaxed">
+                          {instructions}
+                        </p>
+                      ) : null}
+
+                      <div className="flex items-center gap-2 text-xs text-slate-400 mt-3">
+                        <Calendar className="w-4 h-4 shrink-0 text-slate-400" />
+                        <span>
+                          Prescribed: {formatPrescriptionDate(rx.created_at)}
+                          {rx.completed_at ? ` • Completed: ${formatPrescriptionDate(rx.completed_at)}` : ""}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         ) : null}
