@@ -6,6 +6,7 @@ import {
   Dumbbell,
   Sparkles,
   Flame,
+  Scale,
   Plus,
   ChevronRight,
   ChevronLeft,
@@ -127,65 +128,37 @@ export default function PatientDietFitness() {
     setSelectedDate((prev) => addDaysToDateStr(prev, 1));
   };
 
-  function getInitialDemoMeals(pref?: string | null) {
-    const norm = (pref || "omnivore").toLowerCase();
-
-    if (norm === "jain") {
-      return [
-        { id: "log_1", name: "Turmeric Tofu & Bell Pepper Stir-Fry", meal: "breakfast", calories: 320, protein: 24, carbs: 18, fat: 14 },
-        { id: "log_2", name: "Moong Dal & Tri-Color Quinoa Bowl", meal: "lunch", calories: 420, protein: 28, carbs: 48, fat: 12 },
-        { id: "log_3", name: "Roasted Almonds & Dried Figs", meal: "snack", calories: 190, protein: 8, carbs: 15, fat: 12 },
-        { id: "log_4", name: "Grilled Paneer with Steamed Zucchini", meal: "dinner", calories: 480, protein: 30, carbs: 35, fat: 20 },
-      ];
-    }
-
-    if (norm === "vegetarian" || norm === "vegan") {
-      return [
-        { id: "log_1", name: "Turmeric Tofu & Baby Spinach Scramble", meal: "breakfast", calories: 340, protein: 26, carbs: 18, fat: 16 },
-        { id: "log_2", name: "Fresh Paneer Avocado & Quinoa Salad", meal: "lunch", calories: 440, protein: 32, carbs: 42, fat: 18 },
-        { id: "log_3", name: "Greek Yogurt with Mixed Berries", meal: "snack", calories: 220, protein: 14, carbs: 20, fat: 10 },
-        { id: "log_4", name: "Lentil Dal with Brown Rice & Broccoli", meal: "dinner", calories: 480, protein: 30, carbs: 52, fat: 14 },
-      ];
-    }
-
-    return [
-      { id: "log_1", name: "Scrambled Eggs with Spinach & Toast", meal: "breakfast", calories: 300, protein: 20, carbs: 25, fat: 12 },
-      { id: "log_2", name: "Grilled Chicken Salad with Quinoa", meal: "lunch", calories: 450, protein: 36, carbs: 40, fat: 20 },
-      { id: "log_3", name: "Greek Yogurt with Almonds", meal: "snack", calories: 200, protein: 12, carbs: 18, fat: 10 },
-      { id: "log_4", name: "Grilled Chicken with Sweet Potato", meal: "dinner", calories: 500, protein: 35, carbs: 45, fat: 20 },
-    ];
-  }
-
   const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${selectedDate}`;
-  const [loggedMeals, setLoggedMeals] = useState<any[]>(() => {
+
+  function getCleanFoodLogs(key: string): any[] {
     try {
-      const saved = localStorage.getItem(logsStorageKey);
-      if (saved) return JSON.parse(saved);
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      const dummyIds = new Set(["log_1", "log_2", "log_3", "log_4", "default_log_1", "default_log_2"]);
+      const filtered = parsed.filter((m: any) => m && !dummyIds.has(m.id));
+      if (filtered.length !== parsed.length) {
+        if (filtered.length > 0) {
+          localStorage.setItem(key, JSON.stringify(filtered));
+        } else {
+          localStorage.removeItem(key);
+        }
+      }
+      return filtered;
     } catch (e) {
       console.error(e);
+      return [];
     }
-    if (selectedDate === todayStr) {
-      return getInitialDemoMeals(profile?.dietary_preference);
-    }
-    return [];
+  }
+
+  const [loggedMeals, setLoggedMeals] = useState<any[]>(() => {
+    return getCleanFoodLogs(logsStorageKey);
   });
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(logsStorageKey);
-      if (saved) {
-        setLoggedMeals(JSON.parse(saved));
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    if (selectedDate === todayStr) {
-      setLoggedMeals(getInitialDemoMeals(profile?.dietary_preference));
-    } else {
-      setLoggedMeals([]);
-    }
-  }, [selectedDate, logsStorageKey, todayStr, profile?.dietary_preference]);
+    setLoggedMeals(getCleanFoodLogs(logsStorageKey));
+  }, [selectedDate, logsStorageKey]);
 
   const handleLoggedMealsChange = (nextMeals: any[]) => {
     setLoggedMeals(nextMeals);
@@ -382,6 +355,24 @@ export default function PatientDietFitness() {
     return calculateCalorieTarget(tdee, dietSettings.goal, dietSettings.weeklyPaceKg, currentW, targetW);
   }, [dietSettings.customCalorieTarget, tdee, dietSettings.goal, dietSettings.weeklyPaceKg, dietSettings.currentWeightKg, profileWeight, dietSettings.targetWeightKg]);
 
+  const weightDelta = (dietSettings.targetWeightKg || dietSettings.currentWeightKg || 66) - (dietSettings.currentWeightKg || profileWeight || 66);
+  const estimatedWeeks = dietSettings.weeklyPaceKg && Math.abs(dietSettings.weeklyPaceKg) > 0
+    ? Math.ceil(Math.abs(weightDelta) / Math.abs(dietSettings.weeklyPaceKg))
+    : null;
+
+  const goalBmr = useMemo(() => {
+    return calculateBMR(
+      dietSettings.targetWeightKg || dietSettings.currentWeightKg || 66,
+      dietSettings.heightCm || profileHeight || 178,
+      dietSettings.age || profileAge || 20,
+      dietSettings.gender || profileGender || "male"
+    );
+  }, [dietSettings.targetWeightKg, dietSettings.currentWeightKg, dietSettings.heightCm, dietSettings.age, dietSettings.gender, profileHeight, profileAge, profileGender]);
+
+  const goalTdee = useMemo(() => {
+    return calculateTDEE(goalBmr, dietSettings.activityLevel);
+  }, [goalBmr, dietSettings.activityLevel]);
+
   const macroCalc = useMemo(() => {
     return calculateMacroTargets(
       targetCal,
@@ -525,8 +516,7 @@ export default function PatientDietFitness() {
         isDone = loggedMeals.length > 0 && isWorkoutDone;
       } else {
         try {
-          const savedMeals = localStorage.getItem(`zebra_food_logs_${profile?.id || "default"}_${dStr}`);
-          const meals = savedMeals ? JSON.parse(savedMeals) : [];
+          const meals = getCleanFoodLogs(`zebra_food_logs_${profile?.id || "default"}_${dStr}`);
           const savedW = localStorage.getItem(`zebra_workout_done_${profile?.id || "default"}_${dStr}`);
           const wDone = savedW !== null ? JSON.parse(savedW) : false;
           isDone = Array.isArray(meals) && meals.length > 0 && wDone;
@@ -707,6 +697,125 @@ export default function PatientDietFitness() {
             </div>
           </div>
 
+          {/* Active Metabolic & Biomarker Calibration Engine Card */}
+          <div className="rounded-[22px] bg-gradient-to-br from-slate-950 via-[#0a1628] to-slate-900 border border-emerald-500/25 p-3.5 sm:p-4 text-slate-100 shadow-md shrink-0 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <SlidersHorizontal className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xs sm:text-sm font-bold font-['Manrope'] text-white">
+                      Metabolic Goal & Biomarker Calibration
+                    </h3>
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[9px] font-bold">
+                      Calibrated Protocol Active
+                    </Badge>
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-['Manrope']">
+                    Energy physics (Current Weight → Goal Weight) synthesized with blood lab biomarkers
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/5 border border-white/10 text-[11px] font-mono">
+                  <span className="text-slate-400">Pace:</span>
+                  <span className="text-emerald-400 font-bold">
+                    {dietSettings.weeklyPaceKg && dietSettings.weeklyPaceKg > 0 ? `+${dietSettings.weeklyPaceKg}` : dietSettings.weeklyPaceKg || 0} kg/wk
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setIsCalibrationOpen(true)}
+                  className="h-7 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs gap-1.5 shadow-sm transition-all cursor-pointer font-['Manrope']"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Adjust Calibration</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* 4 Interactive Calibration Pillars */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs font-['Manrope']">
+              {/* Pillar 1: Energy Target Calibrated */}
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-1">
+                <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider flex items-center gap-1">
+                  <Flame className="w-3 h-3 text-orange-400" /> Target Energy Calibrated
+                </span>
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-lg font-bold font-mono text-emerald-400">{targetCal.toLocaleString()}</span>
+                  <span className="text-[11px] text-slate-400">kcal / day</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-white/5">
+                  <span>BMR: <strong className="text-slate-200 font-mono">{bmr}</strong></span>
+                  <span>TDEE: <strong className="text-slate-200 font-mono">{tdee}</strong></span>
+                  <span>Goal Maint: <strong className="text-slate-200 font-mono">{goalTdee}</strong></span>
+                </div>
+              </div>
+
+              {/* Pillar 2: Physical Baseline & Target Trajectory */}
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-1">
+                <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider flex items-center gap-1">
+                  <Scale className="w-3 h-3 text-cyan-400" /> Physical Trajectory
+                </span>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-xs font-bold text-slate-200">
+                    {dietSettings.currentWeightKg || profileWeight || 66} kg <span className="text-slate-400 font-normal">→</span> {dietSettings.targetWeightKg || dietSettings.currentWeightKg || 66} kg
+                  </span>
+                  <span className={`text-[10px] font-bold font-mono ${weightDelta > 0 ? "text-emerald-400" : weightDelta < 0 ? "text-amber-400" : "text-slate-400"}`}>
+                    {weightDelta > 0 ? `+${weightDelta.toFixed(1)} kg` : `${weightDelta.toFixed(1)} kg`}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400 truncate pt-0.5 border-t border-white/5">
+                  {estimatedWeeks ? (
+                    <span>Est. <strong>{estimatedWeeks} weeks</strong> at {dietSettings.weeklyPaceKg && dietSettings.weeklyPaceKg > 0 ? `+${dietSettings.weeklyPaceKg}` : dietSettings.weeklyPaceKg} kg/wk</span>
+                  ) : (
+                    <span>Metabolic energy equilibrium maintained</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Pillar 3: Calibrated Macro Architecture */}
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-1">
+                <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-emerald-400" /> Target Macronutrients
+                </span>
+                <div className="grid grid-cols-3 gap-1 text-[11px] pt-0.5">
+                  <div className="text-center p-1 rounded bg-white/5">
+                    <span className="block text-[9px] text-emerald-300 font-semibold">Protein</span>
+                    <strong className="font-mono text-white text-xs">{targetProtein}g</strong>
+                  </div>
+                  <div className="text-center p-1 rounded bg-white/5">
+                    <span className="block text-[9px] text-amber-300 font-semibold">Carbs</span>
+                    <strong className="font-mono text-white text-xs">{targetCarbs}g</strong>
+                  </div>
+                  <div className="text-center p-1 rounded bg-white/5">
+                    <span className="block text-[9px] text-sky-300 font-semibold">Fat</span>
+                    <strong className="font-mono text-white text-xs">{targetFat}g</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pillar 4: Dynamic Synchronization Status */}
+              <div className="p-2.5 rounded-xl bg-slate-900/80 border border-white/5 space-y-1.5">
+                <span className="text-[10px] uppercase font-extrabold text-slate-400 tracking-wider flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-lime-400" /> Adaptive Protocols
+                </span>
+                <div className="space-y-1 text-[10px]">
+                  <div className="flex items-center gap-1 text-emerald-300 truncate">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    <span className="truncate">Meal Plan: Scaled to {targetCal.toLocaleString()} kcal</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-cyan-300 truncate">
+                    <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shrink-0" />
+                    <span className="truncate">Workout: Adapted for {dietSettings.goal === "muscle_gain" ? "Hypertrophy" : dietSettings.goal === "fat_loss" ? "Fat Loss" : "Longevity"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* 2-Column Split */}
           <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3">
@@ -759,7 +868,7 @@ export default function PatientDietFitness() {
                       <span className="flex items-center gap-1 text-slate-600">
                         <span className="h-2 w-2 rounded-full bg-orange-500" /> Burned
                       </span>
-                      <span className="font-mono font-bold text-slate-900">420 kcal</span>
+                      <span className="font-mono font-bold text-slate-900">{todayWorkout.estimatedCalories} kcal</span>
                     </div>
                   </div>
                 </div>
@@ -769,7 +878,7 @@ export default function PatientDietFitness() {
                   <div>
                     <div className="flex justify-between font-bold text-slate-600 mb-0.5">
                       <span>Carbs</span>
-                      <span className="font-mono">{totals.carbs}g</span>
+                      <span className="font-mono">{totals.carbs}/{targetCarbs}g</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full bg-amber-500 rounded-full" style={{ width: `${carbPct}%` }} />
@@ -778,7 +887,7 @@ export default function PatientDietFitness() {
                   <div>
                     <div className="flex justify-between font-bold text-slate-600 mb-0.5">
                       <span>Protein</span>
-                      <span className="font-mono">{totals.protein}g</span>
+                      <span className="font-mono">{totals.protein}/{targetProtein}g</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${proteinPct}%` }} />
@@ -787,7 +896,7 @@ export default function PatientDietFitness() {
                   <div>
                     <div className="flex justify-between font-bold text-slate-600 mb-0.5">
                       <span>Fat</span>
-                      <span className="font-mono">{totals.fat}g</span>
+                      <span className="font-mono">{totals.fat}/{targetFat}g</span>
                     </div>
                     <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
                       <div className="h-full bg-sky-500 rounded-full" style={{ width: `${fatPct}%` }} />
@@ -825,13 +934,18 @@ export default function PatientDietFitness() {
                         {todayWorkout.focus}
                       </h4>
                     </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold font-mono shrink-0 ${
-                        todayWorkout.restDay ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
-                      }`}
-                    >
-                      {todayWorkout.intensity}
-                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-extrabold font-mono bg-purple-100 text-purple-800">
+                        {dietSettings.goal === "muscle_gain" ? "Hypertrophy" : dietSettings.goal === "fat_loss" ? "Fat Loss" : "Health"}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold font-mono shrink-0 ${
+                          todayWorkout.restDay ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"
+                        }`}
+                      >
+                        {todayWorkout.intensity}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3 text-[10px] text-slate-500 font-semibold font-['Manrope']">
@@ -841,7 +955,7 @@ export default function PatientDietFitness() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Flame className="h-3 w-3 text-orange-500" />
-                      {todayWorkout.estimatedCalories} kcal
+                      ~{todayWorkout.estimatedCalories} kcal ({dietSettings.currentWeightKg || profileWeight || 66} kg)
                     </span>
                     <span className="flex items-center gap-1">
                       <HeartPulse className="h-3 w-3 text-rose-500" />
@@ -1104,6 +1218,9 @@ export default function PatientDietFitness() {
             onDateChange={setSelectedDate}
             loggedFoods={loggedMeals}
             onLoggedFoodsChange={handleLoggedMealsChange}
+            settings={dietSettings}
+            onSettingsChange={handleSaveDietSettings}
+            onOpenCalibration={() => setIsCalibrationOpen(true)}
           />
         </div>
       )}
@@ -1111,7 +1228,12 @@ export default function PatientDietFitness() {
       {/* Tab 3: EXERCISE PLAN */}
       {activeTab === "exercise" && (
         <div className="flex-1 min-h-0 overflow-y-auto animate-in fade-in duration-200 pr-1 [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent]">
-          <ExercisePlan embedded={true} initialDay={selectedExerciseDay} />
+          <ExercisePlan
+            embedded={true}
+            initialDay={selectedExerciseDay}
+            dietSettings={dietSettings}
+            onOpenCalibration={() => setIsCalibrationOpen(true)}
+          />
         </div>
       )}
 

@@ -56,12 +56,21 @@ const PHYSICAL_LIMITATIONS = [
   { id: "asthma", label: "Exercise-Induced Asthma", desc: "Extended warm-ups, steady aerobic pacing with inhaler available" },
 ];
 
+import type { DietUserSettings } from "../../../lib/dietEngine";
+
 export interface ExercisePlanProps {
   embedded?: boolean;
   initialDay?: number;
+  dietSettings?: DietUserSettings;
+  onOpenCalibration?: () => void;
 }
 
-export default function ExercisePlan({ embedded = false, initialDay }: ExercisePlanProps = {}) {
+export default function ExercisePlan({
+  embedded = false,
+  initialDay,
+  dietSettings,
+  onOpenCalibration,
+}: ExercisePlanProps = {}) {
   const { profile } = useAuth();
   const { hasLabReports, uploads, loading: reportsLoading } = usePatientLabReports();
   const { panels, loading: panelsLoading, hasPanels } = usePatientLabPanels();
@@ -83,6 +92,22 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     }
   }, [initialDay]);
 
+  // Calibrated Physical Metrics from Diet Settings
+  const currentWeightKg = dietSettings?.currentWeightKg ?? profile?.weight_kg ?? 66;
+  const targetWeightKg = dietSettings?.targetWeightKg ?? currentWeightKg;
+  const weeklyPaceKg = dietSettings?.weeklyPaceKg;
+  const currentHeightCm = dietSettings?.heightCm ?? profile?.height_cm ?? 178;
+  const currentAge = dietSettings?.age ?? profile?.age ?? 20;
+
+  // Align exercise goal with calibration goal:
+  const effectiveGoal: PrimaryGoal = useMemo(() => {
+    if (dietSettings?.goal === "muscle_gain") return "muscle_strength";
+    if (dietSettings?.goal === "fat_loss") return "weight_loss";
+    if (dietSettings?.goal === "heart_cardiovascular") return "cardio_endurance";
+    if (dietSettings?.goal === "maintain_longevity") return "general_health";
+    return "general_health";
+  }, [dietSettings?.goal]);
+
   // Customization dialog state with localStorage persistence
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false);
   const fitnessStorageKey = `zebra_fitness_prefs_${profile?.id || "default"}`;
@@ -103,6 +128,10 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     }
   });
   const [primaryGoal, setPrimaryGoal] = useState<PrimaryGoal>(() => {
+    if (dietSettings?.goal === "muscle_gain") return "muscle_strength";
+    if (dietSettings?.goal === "fat_loss") return "weight_loss";
+    if (dietSettings?.goal === "heart_cardiovascular") return "cardio_endurance";
+    if (dietSettings?.goal === "maintain_longevity") return "general_health";
     try {
       const saved = localStorage.getItem(fitnessStorageKey);
       return saved ? JSON.parse(saved).primaryGoal || "general_health" : "general_health";
@@ -133,14 +162,11 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     );
   };
 
-  // Calculate BMI
-  const heightCm = profile?.height_cm;
-  const weightKg = profile?.weight_kg;
-
   // Instant plan calculation (0ms wait time)
   const [plan, setPlan] = useState<WeeklyExercisePlan | null>(() => {
+    const goalToUse = effectiveGoal || primaryGoal;
     try {
-      const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}_${physicalLimitations.join("_")}`;
+      const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${goalToUse}_${currentWeightKg}_${targetWeightKg}_${weeklyPaceKg}_${physicalLimitations.join("_")}`;
       const cached = localStorage.getItem(cacheKey);
       if (cached) return JSON.parse(cached);
     } catch {
@@ -149,12 +175,14 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     return generateDeterministicExercisePlan(activePanel, biomarkerTrends, {
       fitnessLevel,
       equipment,
-      goal: primaryGoal,
+      goal: goalToUse,
       targetDurationMin: durationMin,
       physicalLimitations,
-      heightCm,
-      weightKg,
-      age: 38,
+      heightCm: currentHeightCm,
+      weightKg: currentWeightKg,
+      targetWeightKg: targetWeightKg,
+      weeklyPaceKg: weeklyPaceKg,
+      age: currentAge,
     });
   });
 
@@ -173,32 +201,35 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
   });
 
   const calculatedBmi = useMemo(() => {
-    if (heightCm && weightKg && heightCm > 0) {
-      return Number((weightKg / Math.pow(heightCm / 100, 2)).toFixed(1));
+    if (currentHeightCm && currentWeightKg && currentHeightCm > 0) {
+      return Number((currentWeightKg / Math.pow(currentHeightCm / 100, 2)).toFixed(1));
     }
     return null;
-  }, [heightCm, weightKg]);
+  }, [currentHeightCm, currentWeightKg]);
 
   // Instant local load + non-blocking background AI enhancement
   useEffect(() => {
     let cancelled = false;
+    const goalToUse = effectiveGoal || primaryGoal;
 
     const profileInput: ExerciseProfileInput = {
       fitnessLevel,
       equipment,
-      goal: primaryGoal,
+      goal: goalToUse,
       targetDurationMin: durationMin,
       physicalLimitations,
-      heightCm: heightCm ?? null,
-      weightKg: weightKg ?? null,
+      heightCm: currentHeightCm,
+      weightKg: currentWeightKg,
+      targetWeightKg: targetWeightKg,
+      weeklyPaceKg: weeklyPaceKg,
       dietaryConditions: profile?.dietary_conditions,
-      age: 38,
+      age: currentAge,
       systolicBp: activePanel?.biomarkers?.["systolic_bp"] ?? activePanel?.biomarkers?.["systolic"] ?? null,
       diastolicBp: activePanel?.biomarkers?.["diastolic_bp"] ?? activePanel?.biomarkers?.["diastolic"] ?? null,
       heartRate: (profile as any)?.heart_rate ?? null,
     } as any;
 
-    const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${primaryGoal}_${physicalLimitations.join("_")}`;
+    const cacheKey = `zebra_ex_plan_${activePanel?.id || "default"}_${fitnessLevel}_${equipment}_${goalToUse}_${currentWeightKg}_${targetWeightKg}_${weeklyPaceKg}_${physicalLimitations.join("_")}`;
     const cached = localStorage.getItem(cacheKey);
 
     if (cached) {
@@ -230,7 +261,7 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
     return () => {
       cancelled = true;
     };
-  }, [activePanel, panels.length, fitnessLevel, equipment, primaryGoal, durationMin, physicalLimitations, heightCm, weightKg]);
+  }, [activePanel, panels.length, fitnessLevel, equipment, effectiveGoal, primaryGoal, durationMin, physicalLimitations, currentHeightCm, currentWeightKg, targetWeightKg, weeklyPaceKg, currentAge]);
 
   // Persist completed items
   const toggleItemCompletion = (id: string) => {
@@ -374,6 +405,43 @@ export default function ExercisePlan({ embedded = false, initialDay }: ExerciseP
           biomarkerTrends={biomarkerTrends}
         />
       )}
+
+      {/* Calibrated Conditioning Protocol Banner */}
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-[#0b1b36] to-slate-900 text-white p-3.5 sm:p-4 border border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 shrink-0">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="h-2 w-2 rounded-full bg-lime-400 animate-pulse" />
+            <h3 className="text-sm font-bold tracking-tight font-['Manrope'] text-white">
+              Calibrated Exercise Protocol: {effectiveGoal === "muscle_strength" ? "Hypertrophy & Muscle Accumulation" : effectiveGoal === "weight_loss" ? "Metabolic Fat Oxidation & Circuit Pacing" : "Functional Longevity & Conditioning"}
+            </h3>
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-lime-400/20 text-lime-300 border border-lime-400/30 font-['Manrope']">
+              {dietSettings?.goal ? dietSettings.goal.replace(/_/g, " ") : effectiveGoal}
+              {weeklyPaceKg ? ` (${weeklyPaceKg > 0 ? "+" : ""}${weeklyPaceKg} kg/wk)` : ""}
+            </span>
+          </div>
+          <p className="text-xs text-slate-300 leading-relaxed font-['Manrope']">
+            Workouts, intensity, and calorie burns are calibrated for your physical mass (<strong>{currentWeightKg} kg</strong>) and trajectory toward <strong>{targetWeightKg} kg</strong>.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden sm:flex flex-col text-right text-[11px] text-slate-400 pr-1 font-['Manrope']">
+            <span>Weekly Target Burn: <strong className="text-emerald-300 font-mono">~{plan?.weeklyTotals?.estimatedCaloriesBurned || 0} kcal</strong></span>
+            <span>Active Days: <strong className="text-slate-200">{plan?.weeklyTotals?.workoutDaysCount || 5} days/wk</strong></span>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              if (onOpenCalibration) onOpenCalibration();
+              else setIsCustomizeOpen(true);
+            }}
+            className="h-8 px-3 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-1.5 shadow-sm transition-all cursor-pointer font-['Manrope']"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            <span>Recalibrate Protocol</span>
+          </Button>
+        </div>
+      </div>
 
       {/* 7-Day Interactive Day Selector Strip */}
       <div className="rounded-2xl bg-white border border-slate-100 p-2 sm:p-2.5 shadow-[0_2px_12px_rgba(0,0,0,0.02)] shrink-0">

@@ -287,431 +287,1283 @@ export function generateDeterministicExercisePlan(
   const heartRateZones = calculateHeartRateZones(profile.age || 38, profile.heartRate || 72);
   const precautions = deriveClinicalExerciseSafety(panel, trends, bmi, profile.physicalLimitations);
 
-  const days: DayWorkout[] = [
-    // Day 1: Monday
-    {
-      dayNumber: 1,
-      dayName: "Monday",
-      focus: "Cardiorespiratory Foundation & Core Activation",
-      intensity: fitness === "beginner" ? "Low Intensity" : "Moderate Intensity",
-      estimatedDurationMin: targetTime,
-      estimatedCalories: Math.round(targetTime * 6.5),
-      targetHeartRateBpm: heartRateZones.fatBurnZone,
-      restDay: false,
-      warmup: [
-        {
-          id: "w1",
-          name: "Arm Circles & Torso Twists",
-          category: "warmup",
-          targetMuscles: "Shoulders, Thoracic Spine",
-          durationMin: 3,
-          intensity: "low",
-          instructions: "Perform gentle forward/reverse arm circles followed by rhythmic side-to-side torso rotations.",
-        },
-        {
-          id: "w2",
-          name: "Leg Swings & Ankle Mobilization",
-          category: "warmup",
-          targetMuscles: "Hip Flexors, Hamstrings, Calves",
-          durationMin: 3,
-          intensity: "low",
-          instructions: "Hold a wall or chair for balance; gently swing each leg front-to-back and side-to-side 15 times.",
-        }
-      ],
-      mainWorkout: [
-        {
-          id: "m1",
-          name: equipment === "gym" ? "Incline Treadmill / Elliptical Walk" : "Zone-2 Brisk Walking with Posture Focus",
-          category: "cardio",
-          targetMuscles: "Cardiovascular System, Quads, Glutes",
-          durationMin: Math.max(15, targetTime - 12),
-          intensity: "moderate",
-          instructions: "Maintain a steady conversational pace where breathing is elevated but you can speak in full sentences.",
-          safetyNote: "If blood pressure is elevated, avoid sudden bursts; keep speed consistent.",
-          equipment: equipment === "gym" ? "Treadmill or Elliptical" : "Walking shoes / Outdoor or Indoor space"
-        },
-        {
-          id: "m2",
-          name: "Bird-Dog Core Stabilizers",
-          category: "strength",
-          targetMuscles: "Transverse Abdominis, Glutes, Erector Spinae",
-          sets: 3,
-          reps: "10 per side",
-          restSec: 45,
-          intensity: "low",
-          instructions: "From hands and knees, extend opposite arm and leg straight out. Hold for 2 seconds without letting lower back sag.",
-        },
-        {
-          id: "m3",
-          name: "Glute Bridges with 2-Sec Hold",
-          category: "strength",
-          targetMuscles: "Gluteus Maximus, Hamstrings, Pelvic Floor",
-          sets: 3,
-          reps: "12-15 reps",
-          restSec: 45,
-          intensity: "low",
-          instructions: "Lie on your back, knees bent, feet flat on the floor. Drive through heels to raise hips into a straight bridge.",
-        }
-      ],
-      cooldown: [
-        {
-          id: "c1",
-          name: "Standing Quad & Hamstring Stretch",
-          category: "cooldown",
-          targetMuscles: "Anterior & Posterior Thigh",
-          durationMin: 3,
-          intensity: "low",
-          instructions: "Hold each stretch gently for 25-30 seconds. Do not bounce.",
-        },
-        {
-          id: "c2",
-          name: "Diaphragmatic Box Breathing",
-          category: "cooldown",
-          targetMuscles: "Nervous System Recovery",
-          durationMin: 3,
-          intensity: "low",
-          instructions: "Inhale through nose for 4 seconds, hold 4 seconds, exhale gently 4 seconds, hold 4 seconds.",
-        }
-      ]
-    },
+  const userWeight = profile.weightKg || 70;
+  // Scientifically calibrated energy expenditure: kcal = MET * weight_kg * (duration_min / 60)
+  const calcBurn = (met: number, duration: number) => Math.max(40, Math.round(met * userWeight * (duration / 60)));
 
-    // Day 2: Tuesday
-    {
-      dayNumber: 2,
-      dayName: "Tuesday",
-      focus: "Upper Body Strength & Postural Alignment",
-      intensity: "Moderate Intensity",
-      estimatedDurationMin: targetTime,
-      estimatedCalories: Math.round(targetTime * 5.8),
-      targetHeartRateBpm: heartRateZones.fatBurnZone,
-      restDay: false,
-      warmup: [
-        {
-          id: "w3",
-          name: "Band Dislocates or Towel Pass-Throughs",
-          category: "warmup",
-          targetMuscles: "Chest, Shoulders, Upper Back",
-          durationMin: 4,
-          intensity: "low",
-          instructions: "Hold a resistance band or towel wide, gently bring it overhead and behind your back with straight arms.",
-        }
-      ],
-      mainWorkout: [
-        {
-          id: "m4",
-          name: equipment === "gym" ? "Lat Pulldown or Seated Cable Row" : "Resistance Band / Dumbbell Bent-Over Row",
-          category: "strength",
-          targetMuscles: "Latissimus Dorsi, Rhomboids, Biceps",
-          sets: 3,
-          reps: "10-12 reps",
-          restSec: 60,
-          intensity: "moderate",
-          instructions: "Hinge at the hips, pull elbows back towards your ribs, squeezing shoulder blades together firmly at the top.",
-          equipment: equipment === "gym" ? "Lat Machine / Cable" : "Resistance Band or Light Dumbbells"
-        },
-        {
-          id: "m5",
-          name: "Incline Push-ups (Wall or Bench Assisted)",
-          category: "strength",
-          targetMuscles: "Pectorals, Anterior Deltoids, Triceps",
-          sets: 3,
-          reps: "8-12 reps",
-          restSec: 60,
-          intensity: "moderate",
-          instructions: "Place hands shoulder-width on a sturdy wall, kitchen counter, or bench. Lower chest with control, push back firmly.",
-          safetyNote: "Ensure steady exhalation while pushing away to prevent blood pressure elevation."
-        },
-        {
-          id: "m6",
-          name: "Standing Dumbbell / Band Shoulder Press (Neutral Grip)",
-          category: "strength",
-          targetMuscles: "Deltoids, Upper Trapezius",
-          sets: 3,
-          reps: "10 reps",
-          restSec: 60,
-          intensity: "moderate",
-          instructions: "With palms facing each other, press weights overhead smoothly without arching your lower back.",
-        }
-      ],
-      cooldown: [
-        {
-          id: "c3",
-          name: "Doorway Chest & Biceps Stretch",
-          category: "cooldown",
-          targetMuscles: "Chest, Anterior Shoulder",
-          durationMin: 3,
-          intensity: "low",
-          instructions: "Place forearm against a door frame and gently rotate body away until a comfortable stretch is felt.",
-        }
-      ]
-    },
+  const isBulking = goal === "muscle_strength" || (profile.weeklyPaceKg !== undefined && profile.weeklyPaceKg !== null && profile.weeklyPaceKg > 0);
+  const isCutting = goal === "weight_loss" || (profile.weeklyPaceKg !== undefined && profile.weeklyPaceKg !== null && profile.weeklyPaceKg < 0);
+  const isEndurance = goal === "cardio_endurance";
 
-    // Day 3: Wednesday
-    {
-      dayNumber: 3,
-      dayName: "Wednesday",
-      focus: "Active Recovery, Mobility & Post-Meal Walks",
-      intensity: "Rest & Recovery",
-      estimatedDurationMin: Math.min(25, targetTime),
-      estimatedCalories: Math.round(targetTime * 3.8),
-      targetHeartRateBpm: "Below 100 bpm",
-      restDay: true,
-      recoveryTip: "Active recovery improves systemic blood circulation, clears metabolic waste, and maintains insulin receptor sensitivity without neurological fatigue.",
-      warmup: [],
-      mainWorkout: [
-        {
-          id: "m7",
-          name: "Gentle Low-Impact Stroll (Post-Lunch or Dinner)",
-          category: "mobility",
-          targetMuscles: "Full Body Circulation",
-          durationMin: 20,
-          intensity: "low",
-          instructions: "Take a relaxing walk outdoors or indoors. Focus on deep nasal breathing and loose arm swing.",
-        },
-        {
-          id: "m8",
-          name: "Cat-Cow & Child's Pose Spine Flow",
-          category: "mobility",
-          targetMuscles: "Spine, Hips, Lower Back",
-          durationMin: 5,
-          intensity: "low",
-          instructions: "Alternate between arched back (cow) and rounded spine (cat) with slow inhalations and exhalations.",
-        }
-      ],
-      cooldown: [
-        {
-          id: "c4",
-          name: "Legs-Up-The-Wall Relaxation",
-          category: "cooldown",
-          targetMuscles: "Lymphatic Drainage, Parasympathetic Tone",
-          durationMin: 5,
-          intensity: "low",
-          instructions: "Lie on your back near a wall and rest your legs vertically up against it to promote venous return.",
-        }
-      ]
-    },
+  let days: DayWorkout[] = [];
 
-    // Day 4: Thursday
-    {
-      dayNumber: 4,
-      dayName: "Thursday",
-      focus: "Lower Body Functional Strength & Balance",
-      intensity: "Moderate Intensity",
-      estimatedDurationMin: targetTime,
-      estimatedCalories: Math.round(targetTime * 6.2),
-      targetHeartRateBpm: heartRateZones.aerobicCardioZone,
-      restDay: false,
-      warmup: [
-        {
-          id: "w4",
-          name: "High Knees & Butt Kicks (Low Impact Marching)",
-          category: "warmup",
-          targetMuscles: "Hip Flexors, Hamstrings",
-          durationMin: 3,
-          intensity: "low",
-          instructions: "March in place bringing knees to waist height, then transition to gentle heel-to-glute touches.",
-        }
-      ],
-      mainWorkout: [
-        {
-          id: "m9",
-          name: "Chair Sit-to-Stands / Box Squats",
-          category: "strength",
-          targetMuscles: "Quadriceps, Gluteals, Core",
-          sets: 3,
-          reps: "10-12 reps",
-          restSec: 60,
-          intensity: "moderate",
-          instructions: "Stand in front of a chair with feet shoulder-width apart. Push hips back, lightly touch the seat, then drive through heels to stand.",
-          safetyNote: "Do not let knees collapse inward. Keep chest tall."
-        },
-        {
-          id: "m10",
-          name: "Reverse Step Lunges (Assisted with Chair if needed)",
-          category: "strength",
-          targetMuscles: "Quads, Hamstrings, Balance Stabilizers",
-          sets: 3,
-          reps: "8-10 per leg",
-          restSec: 60,
-          intensity: "moderate",
-          instructions: "Step backward with one foot and lower back knee towards the floor. Front knee remains aligned over ankle.",
-        },
-        {
-          id: "m11",
-          name: "Standing Calf Raises (Elevated Edge)",
-          category: "strength",
-          targetMuscles: "Gastrocnemius, Soleus (Muscle Pump)",
-          sets: 3,
-          reps: "15 reps",
-          restSec: 45,
-          intensity: "low",
-          instructions: "Rise high onto balls of feet, hold 1 second at the peak, then lower heels slowly below step level.",
-        }
-      ],
-      cooldown: [
-        {
-          id: "c5",
-          name: "Seated Figure-4 Glute Stretch",
-          category: "cooldown",
-          targetMuscles: "Piriformis, Glute Medius",
-          durationMin: 3,
-          intensity: "low",
-          instructions: "Cross one ankle over opposite knee while seated, gently hinge torso forward until stretch is felt in the hip.",
-        }
-      ]
-    },
-
-    // Day 5: Friday
-    {
-      dayNumber: 5,
-      dayName: "Friday",
-      focus: "Metabolic Conditioning & Full-Body Circuit",
-      intensity: fitness === "advanced" ? "Challenging" : "Moderate Intensity",
-      estimatedDurationMin: targetTime,
-      estimatedCalories: Math.round(targetTime * 7.0),
-      targetHeartRateBpm: heartRateZones.aerobicCardioZone,
-      restDay: false,
-      warmup: [
-        {
-          id: "w5",
-          name: "Jumping Jacks (or Step-Jacks for Low-Impact)",
-          category: "warmup",
-          targetMuscles: "Full Body, Heart Rate Elevation",
-          durationMin: 3,
-          intensity: "low",
-          instructions: "Perform rhythmic step-out jacks or gentle jumping jacks with arm raises.",
-        }
-      ],
-      mainWorkout: [
-        {
-          id: "m12",
-          name: "Kettlebell / Dumbbell Deadlift or Good Mornings",
-          category: "strength",
-          targetMuscles: "Posterior Chain, Glutes, Hamstrings, Lats",
-          sets: 3,
-          reps: "10-12 reps",
-          restSec: 60,
-          intensity: "moderate",
-          instructions: "Keep spine neutral, hinge deeply at hips with soft knees, lower weight to mid-shin, then engage glutes to stand tall.",
-          equipment: "Dumbbell, Kettlebell, or Resistance Band"
-        },
-        {
-          id: "m13",
-          name: "Modified Plank Hold (Forearm or Knees)",
-          category: "strength",
-          targetMuscles: "Core, Shoulders, Transverse Abdominis",
-          sets: 3,
-          durationMin: 1,
-          reps: "30-45 sec hold",
-          restSec: 45,
-          intensity: "moderate",
-          instructions: "Keep body in a straight line from head to heels. Squeeze glutes and brace core as if anticipating a light tap.",
-        },
-        {
-          id: "m14",
-          name: "Shadow Boxing / Low-Impact Cardio Intervals",
-          category: "cardio",
-          targetMuscles: "Cardiovascular, Deltoids, Obliques",
-          durationMin: 10,
-          intensity: "moderate",
-          instructions: "Alternate 1 minute of rhythmic jab-cross combinations with 30 seconds of slow marching recovery.",
-        }
-      ],
-      cooldown: [
-        {
-          id: "c6",
-          name: "Cobra to Downward Dog Transition",
-          category: "cooldown",
-          targetMuscles: "Abdominals, Calves, Hamstrings",
-          durationMin: 4,
-          intensity: "low",
-          instructions: "Gently press up into gentle cobra stretch, then push hips up and back into downward dog.",
-        }
-      ]
-    },
-
-    // Day 6: Saturday
-    {
-      dayNumber: 6,
-      dayName: "Saturday",
-      focus: "Aerobic Endurance & Outdoor / Lifestyle Activity",
-      intensity: "Moderate Intensity",
-      estimatedDurationMin: Math.max(35, targetTime),
-      estimatedCalories: Math.round((targetTime + 10) * 6.0),
-      targetHeartRateBpm: heartRateZones.fatBurnZone,
-      restDay: false,
-      warmup: [
-        {
-          id: "w6",
-          name: "Dynamic Hip Openers & Side Lunges",
-          category: "warmup",
-          targetMuscles: "Adductors, Hips",
-          durationMin: 4,
-          intensity: "low",
-          instructions: "Step side to side slowly, sinking into side lunges to open up groin and hips.",
-        }
-      ],
-      mainWorkout: [
-        {
-          id: "m15",
-          name: "Continuous Aerobic Activity (Cycling, Swimming, or Brisk Trail Walk)",
-          category: "cardio",
-          targetMuscles: "Heart, Lungs, Legs",
-          durationMin: Math.max(25, targetTime - 5),
-          intensity: "moderate",
-          instructions: "Engage in your favorite aerobic hobby. Aim to sustain smooth aerobic Zone 2 output continuously.",
-          safetyNote: "Carry a water bottle and take brief 30-second breathers if heart rate exceeds zone."
-        }
-      ],
-      cooldown: [
-        {
-          id: "c7",
-          name: "Full Body Static Stretch & Foam Rolling",
-          category: "cooldown",
-          targetMuscles: "IT Bands, Quads, Lats",
-          durationMin: 5,
-          intensity: "low",
-          instructions: "Dedicate 1-2 minutes per major muscle group to relieve accumulated weekly tension.",
-        }
-      ]
-    },
-
-    // Day 7: Sunday
-    {
-      dayNumber: 7,
-      dayName: "Sunday",
-      focus: "Rest, Mindfulness & Weekly System Reset",
-      intensity: "Rest & Recovery",
-      estimatedDurationMin: 15,
-      estimatedCalories: 65,
-      targetHeartRateBpm: "Resting Zone",
-      restDay: true,
-      recoveryTip: "Adequate sleep and psychological relaxation decrease systemic cortisol, optimizing cellular repair and insulin sensitivity for the upcoming week.",
-      warmup: [],
-      mainWorkout: [
-        {
-          id: "m16",
-          name: "Gentle Restorative Yoga / Full-Body Mobility",
-          category: "mobility",
-          targetMuscles: "Joint Capsules & Fascia",
-          durationMin: 15,
-          intensity: "low",
-          instructions: "Move through gentle spinal twists, butterfly stretches, and extended neck stretches while breathing deeply.",
-        }
-      ],
-      cooldown: [
-        {
-          id: "c8",
-          name: "Parasympathetic 5-Minute Meditation / Savasana",
-          category: "cooldown",
-          targetMuscles: "Vagus Nerve & Central Nervous System",
-          durationMin: 5,
-          intensity: "low",
-          instructions: "Lie flat in a quiet room, close your eyes, and allow every muscle group to completely release tension.",
-        }
-      ]
-    }
-  ];
+  if (isBulking) {
+    // -------------------------------------------------------------
+    // BULKING / HYPERTROPHY PROTOCOL (Push / Pull / Legs / Upper / Posterior Chain Split)
+    // -------------------------------------------------------------
+    days = [
+      {
+        dayNumber: 1,
+        dayName: "Monday",
+        focus: "Push: Hypertrophy & Chest/Shoulder Power",
+        intensity: "Challenging",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(6.8, targetTime),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "b_w1",
+            name: "Band Dislocates & Arm Circles",
+            category: "warmup",
+            targetMuscles: "Shoulders, Rotator Cuff, Chest",
+            durationMin: 4,
+            intensity: "low",
+            instructions: "Warm up shoulder joints and rotator cuffs with rhythmic pass-throughs and small-to-large arm circles.",
+          },
+          {
+            id: "b_w2",
+            name: "Scapular Push-ups & Thoracic Openers",
+            category: "warmup",
+            targetMuscles: "Serratus Anterior, Upper Spine",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "In a high plank, isolate scapular retraction and protraction without bending elbows.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "b_m1",
+            name: equipment === "gym" ? "Incline Barbell / Dumbbell Bench Press" : "Resistance Band Incline Chest Press",
+            category: "strength",
+            targetMuscles: "Pectoralis Major (Clavicular Head), Anterior Deltoids",
+            sets: 4,
+            reps: "8-10 reps",
+            restSec: 75,
+            intensity: "high",
+            instructions: "Lower weight with a controlled 3-second eccentric tempo, then drive explosively through chest.",
+            equipment: equipment === "gym" ? "Incline Bench & Dumbbells" : "Heavy Resistance Bands"
+          },
+          {
+            id: "b_m2",
+            name: equipment === "gym" ? "Seated Dumbbell Overhead Press" : "Standing Band Overhead Shoulder Press",
+            category: "strength",
+            targetMuscles: "Anterior & Lateral Deltoids, Triceps",
+            sets: 3,
+            reps: "8-10 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Press overhead with a neutral-to-semi-pronated grip without hyperextending your lumbar spine.",
+          },
+          {
+            id: "b_m3",
+            name: "Deficit Push-ups (Hands Elevated on Blocks/Handles)",
+            category: "strength",
+            targetMuscles: "Chest Stretch Hypertrophy, Triceps",
+            sets: 3,
+            reps: "10-12 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Descend into a deep chest stretch at the bottom before pressing firmly back to full lockout.",
+          },
+          {
+            id: "b_m4",
+            name: "Triceps Overhead Extension / Rope Pushdown",
+            category: "strength",
+            targetMuscles: "Triceps (Long & Lateral Heads)",
+            sets: 3,
+            reps: "12-15 reps",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Keep elbows pinned close to ears/sides, fully contracting triceps at peak extension.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "b_c1",
+            name: "Doorway Pectoral & Biceps Stretch",
+            category: "cooldown",
+            targetMuscles: "Chest, Front Deltoids",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Hold doorway stretch gently for 30 seconds per side while taking deep restorative breaths.",
+          }
+        ]
+      },
+      {
+        dayNumber: 2,
+        dayName: "Tuesday",
+        focus: "Pull: Back Hypertrophy & Bicep Loading",
+        intensity: "Challenging",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(6.5, targetTime),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "b_w3",
+            name: "Cat-Cow Spine Flow & Dead Hang Stretch",
+            category: "warmup",
+            targetMuscles: "Latissimus Dorsi, Spine, Decompression",
+            durationMin: 4,
+            intensity: "low",
+            instructions: "Decompress spinal discs and activate latissimus fibers before heavy pulling.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "b_m5",
+            name: equipment === "gym" ? "Lat Pulldown or Weighted Pull-ups" : "Heavy Band Lat Pulldown / Door Anchor Row",
+            category: "strength",
+            targetMuscles: "Latissimus Dorsi, Teres Major, Biceps",
+            sets: 4,
+            reps: "8-10 reps",
+            restSec: 75,
+            intensity: "high",
+            instructions: "Drive elbows down towards hip pockets, holding a 1-second peak squeeze at bottom.",
+          },
+          {
+            id: "b_m6",
+            name: equipment === "gym" ? "Chest-Supported Dumbbell / T-Bar Row" : "Bent-Over Dumbbell / Band Row",
+            category: "strength",
+            targetMuscles: "Rhomboids, Mid-Trapezius, Posterior Deltoid",
+            sets: 3,
+            reps: "10-12 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Pull elbows high and tight, pinching shoulder blades together firmly.",
+          },
+          {
+            id: "b_m7",
+            name: "Face Pulls with External Rotation",
+            category: "strength",
+            targetMuscles: "Rear Delts, Rotator Cuff, Posture",
+            sets: 3,
+            reps: "12-15 reps",
+            restSec: 45,
+            intensity: "low",
+            instructions: "Pull rope or band towards bridge of nose while externally rotating hands backward.",
+          },
+          {
+            id: "b_m8",
+            name: "Incline Dumbbell / Standing Bicep Curls",
+            category: "strength",
+            targetMuscles: "Biceps Brachii, Brachialis",
+            sets: 3,
+            reps: "10-12 reps",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Supinate wrists at the top of the curl for maximum bicep peak contraction.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "b_c2",
+            name: "Child's Pose with Lat Reach",
+            category: "cooldown",
+            targetMuscles: "Lats, Lower Back",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Walk hands to the left for 30s, then to the right for 30s to lengthen lateral trunk.",
+          }
+        ]
+      },
+      {
+        dayNumber: 3,
+        dayName: "Wednesday",
+        focus: "Active Recovery, Mobility & Tissue Remodeling",
+        intensity: "Rest & Recovery",
+        estimatedDurationMin: Math.min(25, targetTime),
+        estimatedCalories: calcBurn(3.2, Math.min(25, targetTime)),
+        targetHeartRateBpm: "Below 100 bpm",
+        restDay: true,
+        recoveryTip: "Scheduled rest day to enable muscle protein synthesis and glycogen resynthesis for the bulking surplus.",
+        warmup: [],
+        mainWorkout: [
+          {
+            id: "b_m9",
+            name: "Gentle Zone-1 Recovery Stroll",
+            category: "mobility",
+            targetMuscles: "Full Body Circulation & Waste Clearance",
+            durationMin: 18,
+            intensity: "low",
+            instructions: "Casual walking at an easy pace to promote nutrient delivery to recovering upper body muscles.",
+          },
+          {
+            id: "b_m10",
+            name: "Full-Body Foam Rolling & Thoracic Mobility",
+            category: "mobility",
+            targetMuscles: "Thoracic Spine, IT Band, Glutes",
+            durationMin: 7,
+            intensity: "low",
+            instructions: "Spend 60 seconds rolling each tight muscle group, breathing slowly and relaxing into tender spots.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "b_c3",
+            name: "Diaphragmatic Parasympathetic Box Breathing",
+            category: "cooldown",
+            targetMuscles: "Nervous System Recovery",
+            durationMin: 4,
+            intensity: "low",
+            instructions: "Inhale 4s, hold 4s, exhale 4s, hold 4s to transition body into an anabolic recovery state.",
+          }
+        ]
+      },
+      {
+        dayNumber: 4,
+        dayName: "Thursday",
+        focus: "Legs: Quad Dominance, Hamstrings & Calves",
+        intensity: "Challenging",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(7.2, targetTime),
+        targetHeartRateBpm: heartRateZones.aerobicCardioZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "b_w4",
+            name: "Bodyweight Air Squats & Hip Opener Swings",
+            category: "warmup",
+            targetMuscles: "Hip Flexors, Quads, Glutes",
+            durationMin: 4,
+            intensity: "low",
+            instructions: "Warm up knee and hip synovial fluid with deep bodyweight squats and controlled leg swings.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "b_m11",
+            name: equipment === "gym" ? "Barbell / Goblet Squat" : "Dumbbell / Heavy Goblet Squat",
+            category: "strength",
+            targetMuscles: "Quadriceps, Gluteus Maximus, Core",
+            sets: 4,
+            reps: "8-10 reps",
+            restSec: 90,
+            intensity: "high",
+            instructions: "Descend until thighs are parallel to floor, keeping chest upright and knees tracking over toes.",
+          },
+          {
+            id: "b_m12",
+            name: "Romanian Deadlifts (Dumbbell or Barbell)",
+            category: "strength",
+            targetMuscles: "Hamstrings, Glute-Ham Tie-in, Erector Spinae",
+            sets: 3,
+            reps: "8-10 reps",
+            restSec: 75,
+            intensity: "high",
+            instructions: "Hinge deeply at hips with slight knee bend, feeling a loaded stretch in the hamstrings before driving hips forward.",
+          },
+          {
+            id: "b_m13",
+            name: "Bulgarian Split Squats (Rear Foot Elevated)",
+            category: "strength",
+            targetMuscles: "Single Leg Quad & Glute Hypertrophy",
+            sets: 3,
+            reps: "10 per leg",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Elevate back foot on a bench or chair. Lower front knee until thigh is parallel, driving through heel.",
+          },
+          {
+            id: "b_m14",
+            name: "Standing Calf Raises (Elevated Edge)",
+            category: "strength",
+            targetMuscles: "Gastrocnemius, Soleus",
+            sets: 4,
+            reps: "12-15 reps",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Full stretch at the bottom, pause 2 seconds at the peak contraction.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "b_c4",
+            name: "Kneeling Hip Flexor & Quad Stretch",
+            category: "cooldown",
+            targetMuscles: "Quads, Hip Flexors",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Tuck pelvis under and gently lean forward to stretch hip flexors for 30 seconds per side.",
+          }
+        ]
+      },
+      {
+        dayNumber: 5,
+        dayName: "Friday",
+        focus: "Upper Body Compound Power & Shoulder Volume",
+        intensity: "Challenging",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(6.6, targetTime),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "b_w5",
+            name: "Arm Hugs & Overhead Reach",
+            category: "warmup",
+            targetMuscles: "Chest, Upper Traps",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Swing arms across chest rhythmically to warm up upper body fascia.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "b_m15",
+            name: equipment === "gym" ? "Flat Dumbbell Bench Press" : "Push-up Variations (Weighted / Banded)",
+            category: "strength",
+            targetMuscles: "Mid Pectorals, Anterior Deltoids, Triceps",
+            sets: 3,
+            reps: "8-10 reps",
+            restSec: 60,
+            intensity: "high",
+            instructions: "Press weights up with control, tucking elbows at roughly 45 degrees to protect shoulders.",
+          },
+          {
+            id: "b_m16",
+            name: "Dumbbell / Band Lateral Raises",
+            category: "strength",
+            targetMuscles: "Lateral Deltoid (Shoulder Cap Width)",
+            sets: 4,
+            reps: "12-15 reps",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Raise arms out to sides with a slight forward lean, leading with elbows to target side delts.",
+          },
+          {
+            id: "b_m17",
+            name: equipment === "gym" ? "Seated Cable Row / Dumbbell Single Arm Row" : "Band Single Arm Row",
+            category: "strength",
+            targetMuscles: "Mid Back, Lats, Biceps",
+            sets: 3,
+            reps: "10 reps per side",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Pull elbow back past torso without twisting waist, emphasizing back thickness.",
+          },
+          {
+            id: "b_m18",
+            name: "Hammer Curls (Neutral Grip)",
+            category: "strength",
+            targetMuscles: "Brachioradialis, Forearms, Biceps",
+            sets: 3,
+            reps: "12 reps",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Curl weights keeping palms facing each other to build arm thickness and grip power.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "b_c5",
+            name: "Across-Body Shoulder Stretch",
+            category: "cooldown",
+            targetMuscles: "Posterior Capsule, Deltoid",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Pull one arm across chest gently with the other forearm. Hold 30s per side.",
+          }
+        ]
+      },
+      {
+        dayNumber: 6,
+        dayName: "Saturday",
+        focus: "Posterior Chain, Glute Power & Functional Hypertrophy",
+        intensity: "Moderate Intensity",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(6.4, targetTime),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "b_w6",
+            name: "Glute Bridges & Ankle Rotations",
+            category: "warmup",
+            targetMuscles: "Gluteus Maximus, Ankle Mobilizers",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Activate glute contractions and loosen calves before pulling movements.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "b_m19",
+            name: equipment === "gym" ? "Barbell / Dumbbell Hip Thrusts" : "Single-Leg Elevated Glute Bridges",
+            category: "strength",
+            targetMuscles: "Gluteus Maximus, Hamstrings",
+            sets: 4,
+            reps: "10-12 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Drive through heels, locking out hips at top for a 2-second hold with chin tucked.",
+          },
+          {
+            id: "b_m20",
+            name: "Walking Dumbbell Lunges",
+            category: "strength",
+            targetMuscles: "Quads, Glutes, Core Stability",
+            sets: 3,
+            reps: "10 steps per leg",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Step forward smoothly, maintaining upright torso and balanced stride length.",
+          },
+          {
+            id: "b_m21",
+            name: "Hanging Knee Raises or Lying Leg Raises",
+            category: "strength",
+            targetMuscles: "Rectus Abdominis, Hip Flexors",
+            sets: 3,
+            reps: "12-15 reps",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Curl pelvis upward at the top to fully engage lower abdominal fibers without swinging.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "b_c6",
+            name: "Figure-4 Glute & Piriformis Stretch",
+            category: "cooldown",
+            targetMuscles: "Gluteals, Deep Hip Rotators",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Cross ankle over opposite knee and gently pull thigh towards chest. Hold 30 seconds per leg.",
+          }
+        ]
+      },
+      {
+        dayNumber: 7,
+        dayName: "Sunday",
+        focus: "Rest, Anabolic Recovery & System Reset",
+        intensity: "Rest & Recovery",
+        estimatedDurationMin: 15,
+        estimatedCalories: calcBurn(3.0, 15),
+        targetHeartRateBpm: "Resting Zone",
+        restDay: true,
+        recoveryTip: "Full rest day. Prioritize hydration, sleep, and meeting your calibrated daily calorie surplus to support muscular hypertrophy.",
+        warmup: [],
+        mainWorkout: [
+          {
+            id: "b_m22",
+            name: "Gentle Restorative Yoga Flow",
+            category: "mobility",
+            targetMuscles: "Full Body Fascia & Joints",
+            durationMin: 12,
+            intensity: "low",
+            instructions: "Flow gently through child's pose, butterfly stretch, and seated spinal twists.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "b_c7",
+            name: "Savasana & Deep Diaphragmatic Breathing",
+            category: "cooldown",
+            targetMuscles: "Vagus Nerve & Nervous System",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Lie flat on your back in quiet comfort, taking deep breaths and releasing all residual tension.",
+          }
+        ]
+      }
+    ];
+  } else if (isCutting) {
+    // -------------------------------------------------------------
+    // CUTTING / FAT LOSS PROTOCOL (Metabolic Circuits, Zone-2 Lipolysis, High EPOC)
+    // -------------------------------------------------------------
+    days = [
+      {
+        dayNumber: 1,
+        dayName: "Monday",
+        focus: "Cardiorespiratory Foundation & Core Activation",
+        intensity: "Moderate Intensity",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(6.5, targetTime),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w1",
+            name: "Arm Circles & Torso Twists",
+            category: "warmup",
+            targetMuscles: "Shoulders, Thoracic Spine",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Perform gentle forward/reverse arm circles followed by rhythmic side-to-side torso rotations.",
+          },
+          {
+            id: "w2",
+            name: "Leg Swings & Ankle Mobilization",
+            category: "warmup",
+            targetMuscles: "Hip Flexors, Hamstrings, Calves",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Hold a wall or chair for balance; gently swing each leg front-to-back and side-to-side 15 times.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m1",
+            name: equipment === "gym" ? "Incline Treadmill / Elliptical Walk" : "Zone-2 Brisk Walking with Posture Focus",
+            category: "cardio",
+            targetMuscles: "Cardiovascular System, Quads, Glutes",
+            durationMin: Math.max(15, targetTime - 12),
+            intensity: "moderate",
+            instructions: "Maintain a steady conversational pace where breathing is elevated but you can speak in full sentences.",
+            safetyNote: "If blood pressure is elevated, avoid sudden bursts; keep speed consistent.",
+            equipment: equipment === "gym" ? "Treadmill or Elliptical" : "Walking shoes / Outdoor or Indoor space"
+          },
+          {
+            id: "m2",
+            name: "Bird-Dog Core Stabilizers",
+            category: "strength",
+            targetMuscles: "Transverse Abdominis, Glutes, Erector Spinae",
+            sets: 3,
+            reps: "10 per side",
+            restSec: 45,
+            intensity: "low",
+            instructions: "From hands and knees, extend opposite arm and leg straight out. Hold for 2 seconds without letting lower back sag.",
+          },
+          {
+            id: "m3",
+            name: "Glute Bridges with 2-Sec Hold",
+            category: "strength",
+            targetMuscles: "Gluteus Maximus, Hamstrings, Pelvic Floor",
+            sets: 3,
+            reps: "12-15 reps",
+            restSec: 45,
+            intensity: "low",
+            instructions: "Lie on your back, knees bent, feet flat on the floor. Drive through heels to raise hips into a straight bridge.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c1",
+            name: "Standing Quad & Hamstring Stretch",
+            category: "cooldown",
+            targetMuscles: "Anterior & Posterior Thigh",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Hold each stretch gently for 25-30 seconds. Do not bounce.",
+          },
+          {
+            id: "c2",
+            name: "Diaphragmatic Box Breathing",
+            category: "cooldown",
+            targetMuscles: "Nervous System Recovery",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Inhale through nose for 4 seconds, hold 4 seconds, exhale gently 4 seconds, hold 4 seconds.",
+          }
+        ]
+      },
+      {
+        dayNumber: 2,
+        dayName: "Tuesday",
+        focus: "Full-Body Metabolic Resistance Circuit",
+        intensity: "Challenging",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(7.4, targetTime),
+        targetHeartRateBpm: heartRateZones.aerobicCardioZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "c_w1",
+            name: "Jumping Jacks (or Low-Impact Step Jacks)",
+            category: "warmup",
+            targetMuscles: "Full Body Dynamic Warmup",
+            durationMin: 3,
+            intensity: "moderate",
+            instructions: "Light rhythmic jumping to elevate core temperature and heart rate.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "c_m1",
+            name: "Goblet Squat to Overhead Press (Thruster)",
+            category: "strength",
+            targetMuscles: "Quads, Glutes, Deltoids, Core",
+            sets: 3,
+            reps: "12 reps",
+            restSec: 40,
+            intensity: "high",
+            instructions: "Squat down, then drive up dynamically using momentum to press weights overhead.",
+          },
+          {
+            id: "c_m2",
+            name: "Dumbbell / Band Renegade Rows or Bent Rows",
+            category: "strength",
+            targetMuscles: "Lats, Core Anti-Rotation",
+            sets: 3,
+            reps: "10 reps per side",
+            restSec: 40,
+            intensity: "moderate",
+            instructions: "Row weight towards hip while keeping torso rigid and hips parallel to floor.",
+          },
+          {
+            id: "c_m3",
+            name: "Mountain Climbers or High Knees",
+            category: "cardio",
+            targetMuscles: "Core, Hip Flexors, Caloric Burn",
+            durationMin: 5,
+            intensity: "high",
+            instructions: "Perform 40 seconds on, 20 seconds rest for 5 intervals.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c_c1",
+            name: "Cobra to Child's Pose Flow",
+            category: "cooldown",
+            targetMuscles: "Abdominals, Spine, Hips",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Gently extend spine then sit back onto heels to decompress.",
+          }
+        ]
+      },
+      {
+        dayNumber: 3,
+        dayName: "Wednesday",
+        focus: "Active Recovery, Mobility & Post-Meal Walks",
+        intensity: "Rest & Recovery",
+        estimatedDurationMin: Math.min(25, targetTime),
+        estimatedCalories: calcBurn(3.4, Math.min(25, targetTime)),
+        targetHeartRateBpm: "Below 100 bpm",
+        restDay: true,
+        recoveryTip: "Active recovery clears lactic acid, supports insulin sensitivity, and prevents caloric burnout.",
+        warmup: [],
+        mainWorkout: [
+          {
+            id: "m7",
+            name: "Gentle Low-Impact Stroll (Post-Lunch or Dinner)",
+            category: "mobility",
+            targetMuscles: "Full Body Circulation",
+            durationMin: 20,
+            intensity: "low",
+            instructions: "Take a relaxing walk outdoors or indoors. Focus on deep nasal breathing.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c4",
+            name: "Legs-Up-The-Wall Relaxation",
+            category: "cooldown",
+            targetMuscles: "Lymphatic Drainage, Parasympathetic Tone",
+            durationMin: 5,
+            intensity: "low",
+            instructions: "Lie on your back near a wall and rest your legs vertically up against it.",
+          }
+        ]
+      },
+      {
+        dayNumber: 4,
+        dayName: "Thursday",
+        focus: "Lower Body Functional Strength & Caloric Burn",
+        intensity: "Challenging",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(7.0, targetTime),
+        targetHeartRateBpm: heartRateZones.aerobicCardioZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w4",
+            name: "High Knees & Butt Kicks",
+            category: "warmup",
+            targetMuscles: "Hip Flexors, Hamstrings",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "March in place bringing knees to waist height, then gentle heel-to-glute touches.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m9",
+            name: "Chair Sit-to-Stands / Box Squats",
+            category: "strength",
+            targetMuscles: "Quadriceps, Gluteals, Core",
+            sets: 3,
+            reps: "12-15 reps",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Push hips back, touch the seat, then drive through heels to stand.",
+          },
+          {
+            id: "m10",
+            name: "Reverse Step Lunges",
+            category: "strength",
+            targetMuscles: "Quads, Hamstrings, Balance Stabilizers",
+            sets: 3,
+            reps: "10-12 per leg",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Step backward with one foot and lower back knee towards floor.",
+          },
+          {
+            id: "m11",
+            name: "Standing Calf Raises (Elevated Edge)",
+            category: "strength",
+            targetMuscles: "Gastrocnemius, Soleus",
+            sets: 3,
+            reps: "15 reps",
+            restSec: 30,
+            intensity: "low",
+            instructions: "Rise high onto balls of feet, hold 1 second at peak.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c5",
+            name: "Seated Hamstring & Calf Reach",
+            category: "cooldown",
+            targetMuscles: "Posterior Chain",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Sit on floor, extend legs, reach gently toward toes.",
+          }
+        ]
+      },
+      {
+        dayNumber: 5,
+        dayName: "Friday",
+        focus: "Metabolic Conditioning & Full-Body Density Circuit",
+        intensity: "Challenging",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(7.5, targetTime),
+        targetHeartRateBpm: heartRateZones.anaerobicPeakZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w5",
+            name: "Arm Hugs & Butt Kicks",
+            category: "warmup",
+            targetMuscles: "Full Body Dynamic",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Prepare joints for elevated tempo training.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m12",
+            name: "Kettlebell / Dumbbell Swings or Hip Hinges",
+            category: "cardio",
+            targetMuscles: "Glutes, Hamstrings, Core, Conditioning",
+            sets: 4,
+            reps: "15 reps",
+            restSec: 45,
+            intensity: "high",
+            instructions: "Hinge at hips, drive forcefully with glutes to swing weight to chest level.",
+          },
+          {
+            id: "m13",
+            name: "Incline Push-ups to Plank Hold",
+            category: "strength",
+            targetMuscles: "Chest, Core, Shoulders",
+            sets: 3,
+            reps: "10 pushups + 20s hold",
+            restSec: 45,
+            intensity: "moderate",
+            instructions: "Perform pushups with steady tempo, hold high plank at the end.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c6",
+            name: "Chest Opener & Deep Nasal Breathing",
+            category: "cooldown",
+            targetMuscles: "Respiratory System Recovery",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Interlace fingers behind back, open chest, breathe slowly.",
+          }
+        ]
+      },
+      {
+        dayNumber: 6,
+        dayName: "Saturday",
+        focus: "Aerobic Endurance & Extended Zone-2 Fat Oxidation",
+        intensity: "Moderate Intensity",
+        estimatedDurationMin: Math.max(35, targetTime),
+        estimatedCalories: calcBurn(5.8, Math.max(35, targetTime)),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w6",
+            name: "Ankle Circles & Gentle Knee Hugs",
+            category: "warmup",
+            targetMuscles: "Lower Extremity Joints",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Warm ankles and knees for sustained aerobic pace.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m14",
+            name: "Extended Zone-2 Cardio (Brisk Walk / Cycle / Elliptical)",
+            category: "cardio",
+            targetMuscles: "Heart, Lungs, Oxidative Muscle Fibers",
+            durationMin: Math.max(30, targetTime - 5),
+            intensity: "moderate",
+            instructions: "Maintain a steady, continuous pace in your fat-burn heart rate zone.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c7",
+            name: "Full-Body Static Stretches",
+            category: "cooldown",
+            targetMuscles: "Calves, Quads, Hamstrings",
+            durationMin: 4,
+            intensity: "low",
+            instructions: "Hold gentle static stretches for 30 seconds each.",
+          }
+        ]
+      },
+      {
+        dayNumber: 7,
+        dayName: "Sunday",
+        focus: "Rest, Mindfulness & Weekly System Reset",
+        intensity: "Rest & Recovery",
+        estimatedDurationMin: 15,
+        estimatedCalories: calcBurn(3.0, 15),
+        targetHeartRateBpm: "Resting Zone",
+        restDay: true,
+        recoveryTip: "Complete rest to restore cortisol balance and optimize metabolic adaptation.",
+        warmup: [],
+        mainWorkout: [
+          {
+            id: "m16",
+            name: "Gentle Restorative Yoga / Mobility",
+            category: "mobility",
+            targetMuscles: "Joint Capsules & Fascia",
+            durationMin: 12,
+            intensity: "low",
+            instructions: "Spinal twists, gentle hip openers, deep relaxation.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c8",
+            name: "Parasympathetic Meditation",
+            category: "cooldown",
+            targetMuscles: "Vagus Nerve & CNS",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Lie flat and focus on natural breath rhythm.",
+          }
+        ]
+      }
+    ];
+  } else {
+    // -------------------------------------------------------------
+    // LONGEVITY & GENERAL HEALTH / CARDIO ENDURANCE PROTOCOL
+    // -------------------------------------------------------------
+    days = [
+      {
+        dayNumber: 1,
+        dayName: "Monday",
+        focus: "Cardiorespiratory Foundation & Core Activation",
+        intensity: fitness === "beginner" ? "Low Intensity" : "Moderate Intensity",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(5.5, targetTime),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w1",
+            name: "Arm Circles & Torso Twists",
+            category: "warmup",
+            targetMuscles: "Shoulders, Thoracic Spine",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Perform gentle forward/reverse arm circles followed by rhythmic side-to-side torso rotations.",
+          },
+          {
+            id: "w2",
+            name: "Leg Swings & Ankle Mobilization",
+            category: "warmup",
+            targetMuscles: "Hip Flexors, Hamstrings, Calves",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Hold a wall or chair for balance; gently swing each leg front-to-back and side-to-side 15 times.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m1",
+            name: equipment === "gym" ? "Incline Treadmill / Elliptical Walk" : "Zone-2 Brisk Walking with Posture Focus",
+            category: "cardio",
+            targetMuscles: "Cardiovascular System, Quads, Glutes",
+            durationMin: Math.max(15, targetTime - 12),
+            intensity: "moderate",
+            instructions: "Maintain a steady conversational pace where breathing is elevated but you can speak in full sentences.",
+            safetyNote: "If blood pressure is elevated, avoid sudden bursts; keep speed consistent.",
+            equipment: equipment === "gym" ? "Treadmill or Elliptical" : "Walking shoes / Outdoor or Indoor space"
+          },
+          {
+            id: "m2",
+            name: "Bird-Dog Core Stabilizers",
+            category: "strength",
+            targetMuscles: "Transverse Abdominis, Glutes, Erector Spinae",
+            sets: 3,
+            reps: "10 per side",
+            restSec: 45,
+            intensity: "low",
+            instructions: "From hands and knees, extend opposite arm and leg straight out. Hold for 2 seconds without letting lower back sag.",
+          },
+          {
+            id: "m3",
+            name: "Glute Bridges with 2-Sec Hold",
+            category: "strength",
+            targetMuscles: "Gluteus Maximus, Hamstrings, Pelvic Floor",
+            sets: 3,
+            reps: "12-15 reps",
+            restSec: 45,
+            intensity: "low",
+            instructions: "Lie on your back, knees bent, feet flat on the floor. Drive through heels to raise hips into a straight bridge.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c1",
+            name: "Standing Quad & Hamstring Stretch",
+            category: "cooldown",
+            targetMuscles: "Anterior & Posterior Thigh",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Hold each stretch gently for 25-30 seconds. Do not bounce.",
+          },
+          {
+            id: "c2",
+            name: "Diaphragmatic Box Breathing",
+            category: "cooldown",
+            targetMuscles: "Nervous System Recovery",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Inhale through nose for 4 seconds, hold 4 seconds, exhale gently 4 seconds, hold 4 seconds.",
+          }
+        ]
+      },
+      {
+        dayNumber: 2,
+        dayName: "Tuesday",
+        focus: "Upper Body Strength & Postural Alignment",
+        intensity: "Moderate Intensity",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(5.8, targetTime),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w3",
+            name: "Band Dislocates or Towel Pass-Throughs",
+            category: "warmup",
+            targetMuscles: "Chest, Shoulders, Upper Back",
+            durationMin: 4,
+            intensity: "low",
+            instructions: "Hold a resistance band or towel wide, gently bring it overhead and behind your back with straight arms.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m4",
+            name: equipment === "gym" ? "Lat Pulldown or Seated Cable Row" : "Resistance Band / Dumbbell Bent-Over Row",
+            category: "strength",
+            targetMuscles: "Latissimus Dorsi, Rhomboids, Biceps",
+            sets: 3,
+            reps: "10-12 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Hinge at the hips, pull elbows back towards your ribs, squeezing shoulder blades together firmly at the top.",
+            equipment: equipment === "gym" ? "Lat Machine / Cable" : "Resistance Band or Light Dumbbells"
+          },
+          {
+            id: "m5",
+            name: "Incline Push-ups (Wall or Bench Assisted)",
+            category: "strength",
+            targetMuscles: "Pectorals, Anterior Deltoids, Triceps",
+            sets: 3,
+            reps: "8-12 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Place hands shoulder-width on a sturdy wall, kitchen counter, or bench. Lower chest with control, push back firmly.",
+            safetyNote: "Ensure steady exhalation while pushing away to prevent blood pressure elevation."
+          },
+          {
+            id: "m6",
+            name: "Standing Dumbbell / Band Shoulder Press (Neutral Grip)",
+            category: "strength",
+            targetMuscles: "Deltoids, Upper Trapezius",
+            sets: 3,
+            reps: "10 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "With palms facing each other, press weights overhead smoothly without arching your lower back.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c3",
+            name: "Doorway Chest & Biceps Stretch",
+            category: "cooldown",
+            targetMuscles: "Chest, Anterior Shoulder",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Place forearm against a door frame and gently rotate body away until a comfortable stretch is felt.",
+          }
+        ]
+      },
+      {
+        dayNumber: 3,
+        dayName: "Wednesday",
+        focus: "Active Recovery, Mobility & Post-Meal Walks",
+        intensity: "Rest & Recovery",
+        estimatedDurationMin: Math.min(25, targetTime),
+        estimatedCalories: calcBurn(3.2, Math.min(25, targetTime)),
+        targetHeartRateBpm: "Below 100 bpm",
+        restDay: true,
+        recoveryTip: "Active recovery improves systemic blood circulation, clears metabolic waste, and maintains insulin receptor sensitivity without neurological fatigue.",
+        warmup: [],
+        mainWorkout: [
+          {
+            id: "m7",
+            name: "Gentle Low-Impact Stroll (Post-Lunch or Dinner)",
+            category: "mobility",
+            targetMuscles: "Full Body Circulation",
+            durationMin: 20,
+            intensity: "low",
+            instructions: "Take a relaxing walk outdoors or indoors. Focus on deep nasal breathing and loose arm swing.",
+          },
+          {
+            id: "m8",
+            name: "Cat-Cow & Child's Pose Spine Flow",
+            category: "mobility",
+            targetMuscles: "Spine, Hips, Lower Back",
+            durationMin: 5,
+            intensity: "low",
+            instructions: "Alternate between arched back (cow) and rounded spine (cat) with slow inhalations and exhalations.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c4",
+            name: "Legs-Up-The-Wall Relaxation",
+            category: "cooldown",
+            targetMuscles: "Lymphatic Drainage, Parasympathetic Tone",
+            durationMin: 5,
+            intensity: "low",
+            instructions: "Lie on your back near a wall and rest your legs vertically up against it to promote venous return.",
+          }
+        ]
+      },
+      {
+        dayNumber: 4,
+        dayName: "Thursday",
+        focus: "Lower Body Functional Strength & Balance",
+        intensity: "Moderate Intensity",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(6.0, targetTime),
+        targetHeartRateBpm: heartRateZones.aerobicCardioZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w4",
+            name: "High Knees & Butt Kicks (Low Impact Marching)",
+            category: "warmup",
+            targetMuscles: "Hip Flexors, Hamstrings",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "March in place bringing knees to waist height, then transition to gentle heel-to-glute touches.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m9",
+            name: "Chair Sit-to-Stands / Box Squats",
+            category: "strength",
+            targetMuscles: "Quadriceps, Gluteals, Core",
+            sets: 3,
+            reps: "10-12 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Stand in front of a chair with feet shoulder-width apart. Push hips back, lightly touch the seat, then drive through heels to stand.",
+            safetyNote: "Do not let knees collapse inward. Keep chest tall."
+          },
+          {
+            id: "m10",
+            name: "Reverse Step Lunges (Assisted with Chair if needed)",
+            category: "strength",
+            targetMuscles: "Quads, Hamstrings, Balance Stabilizers",
+            sets: 3,
+            reps: "8-10 per leg",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Step backward with one foot and lower back knee towards the floor. Front knee remains aligned over ankle.",
+          },
+          {
+            id: "m11",
+            name: "Standing Calf Raises (Elevated Edge)",
+            category: "strength",
+            targetMuscles: "Gastrocnemius, Soleus (Muscle Pump)",
+            sets: 3,
+            reps: "15 reps",
+            restSec: 45,
+            intensity: "low",
+            instructions: "Rise high onto balls of feet, hold 1 second at the peak, then lower heels slowly below step level.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c5",
+            name: "Seated Hamstring & Calf Reach",
+            category: "cooldown",
+            targetMuscles: "Hamstrings, Calves",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Sit on floor, extend one leg, reach gently towards toes with flat back.",
+          }
+        ]
+      },
+      {
+        dayNumber: 5,
+        dayName: "Friday",
+        focus: "Metabolic Conditioning & Full-Body Agility",
+        intensity: "Moderate Intensity",
+        estimatedDurationMin: targetTime,
+        estimatedCalories: calcBurn(6.4, targetTime),
+        targetHeartRateBpm: heartRateZones.aerobicCardioZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w5",
+            name: "Shadow Boxing / Gentle Arm & Leg Punches",
+            category: "warmup",
+            targetMuscles: "Full Body Dynamic Warmup",
+            durationMin: 4,
+            intensity: "low",
+            instructions: "Light forward punches and side taps to warm up the central nervous system.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m12",
+            name: "Kettlebell / Dumbbell Romanian Deadlifts",
+            category: "strength",
+            targetMuscles: "Hamstrings, Glutes, Erector Spinae",
+            sets: 3,
+            reps: "10-12 reps",
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Hinge at the hips, keeping back flat and weights close to shins.",
+          },
+          {
+            id: "m13",
+            name: "Farmer's Walk / Loaded Carries",
+            category: "strength",
+            targetMuscles: "Grip Strength, Trapezius, Core Bracing",
+            sets: 3,
+            durationMin: 4,
+            restSec: 60,
+            intensity: "moderate",
+            instructions: "Hold weights at sides with tall posture, take smooth controlled steps for 40 seconds.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c6",
+            name: "Cobra to Child's Pose Spine Stretch",
+            category: "cooldown",
+            targetMuscles: "Abdominal Wall, Spinal Erectors",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Lie prone, press chest up gently (cobra), then push back onto heels (child's pose).",
+          }
+        ]
+      },
+      {
+        dayNumber: 6,
+        dayName: "Saturday",
+        focus: "Aerobic Endurance & Outdoor / Indoor Zone-2",
+        intensity: "Moderate Intensity",
+        estimatedDurationMin: Math.max(30, targetTime),
+        estimatedCalories: calcBurn(5.6, Math.max(30, targetTime)),
+        targetHeartRateBpm: heartRateZones.fatBurnZone,
+        restDay: false,
+        warmup: [
+          {
+            id: "w6",
+            name: "Ankle Circles & Dynamic Lunges",
+            category: "warmup",
+            targetMuscles: "Ankles, Hip Flexors",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Rotate ankles clockwise/counterclockwise, take light step lunges.",
+          }
+        ],
+        mainWorkout: [
+          {
+            id: "m14",
+            name: "Continuous Zone-2 Cardio (Walking, Cycling, or Rowing)",
+            category: "cardio",
+            targetMuscles: "Cardiovascular System, Mitochondria",
+            durationMin: Math.max(25, targetTime - 5),
+            intensity: "moderate",
+            instructions: "Sustain steady aerobic output where you could comfortably breathe through your nose.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c7",
+            name: "Standing Calf & Quad Stretches",
+            category: "cooldown",
+            targetMuscles: "Lower Extremity",
+            durationMin: 4,
+            intensity: "low",
+            instructions: "Hold stretches for 30 seconds per limb.",
+          }
+        ]
+      },
+      {
+        dayNumber: 7,
+        dayName: "Sunday",
+        focus: "Rest, Mindfulness & Weekly System Reset",
+        intensity: "Rest & Recovery",
+        estimatedDurationMin: 15,
+        estimatedCalories: calcBurn(3.0, 15),
+        targetHeartRateBpm: "Resting Zone",
+        restDay: true,
+        recoveryTip: "Rest allows muscles and cardiovascular structures to consolidate adaptations.",
+        warmup: [],
+        mainWorkout: [
+          {
+            id: "m16",
+            name: "Gentle Restorative Yoga / Full-Body Mobility",
+            category: "mobility",
+            targetMuscles: "Joint Capsules & Fascia",
+            durationMin: 12,
+            intensity: "low",
+            instructions: "Move through gentle spinal twists, butterfly stretches, and extended neck stretches.",
+          }
+        ],
+        cooldown: [
+          {
+            id: "c8",
+            name: "Parasympathetic 5-Minute Meditation",
+            category: "cooldown",
+            targetMuscles: "Vagus Nerve & Central Nervous System",
+            durationMin: 3,
+            intensity: "low",
+            instructions: "Lie flat in a quiet room, close your eyes, and allow every muscle group to release tension.",
+          }
+        ]
+      }
+    ];
+  }
 
   const totalActiveMin = days.reduce((acc, d) => acc + d.estimatedDurationMin, 0);
   const totalCals = days.reduce((acc, d) => acc + d.estimatedCalories, 0);
@@ -751,7 +1603,11 @@ export function generateDeterministicExercisePlan(
   return {
     id: `plan-${Date.now()}`,
     generatedAt: new Date().toISOString(),
-    summary: `Personalized 7-day conditioning schedule calibrated for ${bmiCat} BMI (${bmi ? `${bmi} kg/m²` : "profile baseline"}), ${fitness} fitness level, and ${goal.replace(/_/g, " ")}.`,
+    summary: isBulking
+      ? `Calibrated 7-day Hypertrophy & Progressive Overload Protocol. Tailored for muscle accumulation (${userWeight} kg → ${profile.targetWeightKg || userWeight} kg, ${profile.weeklyPaceKg ? '+' + profile.weeklyPaceKg + ' kg/wk' : 'calibrated surplus'}) with compound resistance splits and structured tissue recovery.`
+      : isCutting
+      ? `Calibrated 7-day Fat Loss & Metabolic Conditioning Protocol. Tailored for caloric deficit acceleration (${userWeight} kg → ${profile.targetWeightKg || userWeight} kg, ${profile.weeklyPaceKg ? profile.weeklyPaceKg + ' kg/wk' : 'calibrated deficit'}) with Zone-2 fat oxidation and circuit resistance.`
+      : `Personalized 7-day conditioning schedule calibrated for ${bmiCat} BMI (${bmi ? `${bmi} kg/m²` : "profile baseline"}), ${fitness} fitness level, and ${goal.replace(/_/g, " ")}.`,
     goal,
     fitnessLevel: fitness,
     equipment,

@@ -116,6 +116,9 @@ export interface DietProps {
   loggedFoods?: LoggedMealItem[];
   onLoggedFoodsChange?: (logs: LoggedMealItem[]) => void;
   onAskAiCoach?: (prompt: string) => void;
+  settings?: DietUserSettings;
+  onSettingsChange?: (newSettings: DietUserSettings) => void;
+  onOpenCalibration?: () => void;
 }
 
 export default function Diet({
@@ -125,6 +128,9 @@ export default function Diet({
   loggedFoods: externalLoggedFoods,
   onLoggedFoodsChange,
   onAskAiCoach,
+  settings: externalSettings,
+  onSettingsChange,
+  onOpenCalibration,
 }: DietProps = {}) {
   const { profile, updateProfile } = useAuth();
   const { hasLabReports, uploads, loading: reportsLoading } = usePatientLabReports();
@@ -165,7 +171,7 @@ export default function Diet({
 
   // User Diet & Metabolic Settings
   const settingsStorageKey = `zebra_diet_settings_${profile?.id || "default"}`;
-  const [settings, setSettings] = useState<DietUserSettings>(() => {
+  const [internalSettings, setInternalSettings] = useState<DietUserSettings>(() => {
     try {
       const saved = localStorage.getItem(settingsStorageKey);
       if (saved) return JSON.parse(saved);
@@ -185,10 +191,19 @@ export default function Diet({
     };
   });
 
+  const settings = externalSettings || internalSettings;
+  const setSettings = (newVal: DietUserSettings | ((prev: DietUserSettings) => DietUserSettings)) => {
+    const resolved = typeof newVal === "function" ? newVal(settings) : newVal;
+    setInternalSettings(resolved);
+    if (onSettingsChange) {
+      onSettingsChange(resolved);
+    }
+  };
+
   // Sync profile dietary preferences into settings if updated
   useEffect(() => {
-    if (profile) {
-      setSettings((prev) => ({
+    if (profile && !externalSettings) {
+      setInternalSettings((prev) => ({
         ...prev,
         dietaryPreference: profile.dietary_preference || prev.dietaryPreference,
         foodAllergies: profile.food_allergies || prev.foodAllergies,
@@ -197,7 +212,7 @@ export default function Diet({
         targetWeightKg: prev.targetWeightKg || profile.weight_kg || 70,
       }));
     }
-  }, [profile]);
+  }, [profile, externalSettings]);
 
   // Persist settings
   useEffect(() => {
@@ -229,14 +244,17 @@ export default function Diet({
     }
   }, [isCustomizeOpen, settings, profile]);
 
-  // Calculations
-  const [currentWeight, setCurrentWeight] = useState<number>(() => profile?.weight_kg || 78);
-  const currentHeight = profile?.height_cm || 175;
-  const bmr = useMemo(() => calculateBMR(currentWeight, currentHeight, 34, "male"), [currentWeight, currentHeight]);
+  // Calculations: Grounded in calibrated physical settings
+  const currentWeight = settings.currentWeightKg || profile?.weight_kg || 66;
+  const currentHeight = settings.heightCm || profile?.height_cm || 178;
+  const currentAge = settings.age || profile?.age || 20;
+  const currentGender = (settings.gender || profile?.gender || "male").toLowerCase() as "male" | "female";
+
+  const bmr = useMemo(() => calculateBMR(currentWeight, currentHeight, currentAge, currentGender), [currentWeight, currentHeight, currentAge, currentGender]);
   const tdee = useMemo(() => calculateTDEE(bmr, settings.activityLevel), [bmr, settings.activityLevel]);
   const calorieTarget = useMemo(() => {
-    return settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg);
-  }, [settings.customCalorieTarget, tdee, settings.goal, settings.weeklyPaceKg]);
+    return settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg, currentWeight, settings.targetWeightKg);
+  }, [settings.customCalorieTarget, tdee, settings.goal, settings.weeklyPaceKg, currentWeight, settings.targetWeightKg]);
 
   const macroTargets = useMemo(
     () => calculateMacroTargets(calorieTarget, settings.goal, currentWeight, settings.customMacroSplit, activePanel),
@@ -253,280 +271,35 @@ export default function Diet({
   const activeDateKey = externalDate || new Date().toISOString().split("T")[0];
   const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${activeDateKey}`;
 
-function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
-  const norm = (pref || "omnivore").toLowerCase();
-  const now = new Date().toISOString();
-
-  if (norm === "jain") {
-    return [
-      {
-        id: "log_1",
-        name: "Turmeric Tofu & Bell Pepper Stir-Fry",
-        meal: "breakfast",
-        servings: 1,
-        servingSize: "1 plate",
-        calories: 320,
-        protein: 24,
-        carbs: 18,
-        fat: 14,
-        fiber: 6,
-        sodium: 180,
-        loggedAt: now,
-      },
-      {
-        id: "log_2",
-        name: "Moong Dal & Tri-Color Quinoa Nourish Bowl",
-        meal: "lunch",
-        servings: 1,
-        servingSize: "1 bowl",
-        calories: 420,
-        protein: 28,
-        carbs: 48,
-        fat: 12,
-        fiber: 10,
-        sodium: 290,
-        loggedAt: now,
-      },
-      {
-        id: "log_3",
-        name: "Roasted Almonds & Dried Figs",
-        meal: "snack",
-        servings: 1,
-        servingSize: "1 bowl",
-        calories: 190,
-        protein: 8,
-        carbs: 15,
-        fat: 12,
-        fiber: 4,
-        sodium: 20,
-        loggedAt: now,
-      },
-      {
-        id: "log_4",
-        name: "Grilled Paneer with Steamed Zucchini & Green Beans",
-        meal: "dinner",
-        servings: 1,
-        servingSize: "1 plate",
-        calories: 480,
-        protein: 30,
-        carbs: 35,
-        fat: 20,
-        fiber: 8,
-        sodium: 310,
-        loggedAt: now,
-      },
-    ];
-  }
-
-  if (norm === "vegetarian" || norm === "vegan") {
-    return [
-      {
-        id: "log_1",
-        name: "Turmeric Tofu & Baby Spinach Scramble",
-        meal: "breakfast",
-        servings: 1,
-        servingSize: "1 plate",
-        calories: 340,
-        protein: 26,
-        carbs: 18,
-        fat: 16,
-        fiber: 6,
-        sodium: 210,
-        loggedAt: now,
-      },
-      {
-        id: "log_2",
-        name: "Fresh Paneer Avocado & Quinoa Salad",
-        meal: "lunch",
-        servings: 1,
-        servingSize: "1 bowl",
-        calories: 440,
-        protein: 32,
-        carbs: 42,
-        fat: 18,
-        fiber: 8,
-        sodium: 310,
-        loggedAt: now,
-      },
-      {
-        id: "log_3",
-        name: "Greek Yogurt with Mixed Berries & Almonds",
-        meal: "snack",
-        servings: 1,
-        servingSize: "1 bowl",
-        calories: 220,
-        protein: 14,
-        carbs: 20,
-        fat: 10,
-        fiber: 4,
-        sodium: 60,
-        loggedAt: now,
-      },
-      {
-        id: "log_4",
-        name: "Lentil Dal with Brown Rice & Steamed Broccoli",
-        meal: "dinner",
-        servings: 1,
-        servingSize: "1 plate",
-        calories: 480,
-        protein: 30,
-        carbs: 52,
-        fat: 14,
-        fiber: 12,
-        sodium: 340,
-        loggedAt: now,
-      },
-    ];
-  }
-
-  return [
-    {
-      id: "log_1",
-      name: "Scrambled Eggs with Spinach & Whole Grain Toast",
-      meal: "breakfast",
-      servings: 1,
-      servingSize: "1 plate",
-      calories: 300,
-      protein: 20,
-      carbs: 25,
-      fat: 12,
-      fiber: 6,
-      sodium: 240,
-      loggedAt: now,
-    },
-    {
-      id: "log_2",
-      name: "Grilled Chicken Salad with Avocado and Quinoa",
-      meal: "lunch",
-      servings: 1,
-      servingSize: "1 bowl",
-      calories: 450,
-      protein: 36,
-      carbs: 40,
-      fat: 20,
-      fiber: 8,
-      sodium: 320,
-      loggedAt: now,
-    },
-    {
-      id: "log_3",
-      name: "Greek Yogurt with Mixed Berries and Almonds",
-      meal: "snack",
-      servings: 1,
-      servingSize: "1 bowl",
-      calories: 200,
-      protein: 12,
-      carbs: 18,
-      fat: 10,
-      fiber: 4,
-      sodium: 60,
-      loggedAt: now,
-    },
-    {
-      id: "log_4",
-      name: "Grilled Chicken with Sweet Potato and Green Beans",
-      meal: "dinner",
-      servings: 1,
-      servingSize: "1 plate",
-      calories: 500,
-      protein: 35,
-      carbs: 45,
-      fat: 20,
-      fiber: 9,
-      sodium: 350,
-      loggedAt: now,
-    },
-  ];
-}
-
-  const [internalLoggedFoods, setInternalLoggedFoods] = useState<LoggedMealItem[]>(() => {
+  function getCleanDietLogs(key: string): LoggedMealItem[] {
     try {
-      const saved = localStorage.getItem(logsStorageKey);
-      if (saved) return JSON.parse(saved);
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      const dummyIds = new Set(["log_1", "log_2", "log_3", "log_4", "default_log_1", "default_log_2"]);
+      const filtered = parsed.filter((m: any) => m && !dummyIds.has(m.id));
+      if (filtered.length !== parsed.length) {
+        if (filtered.length > 0) {
+          localStorage.setItem(key, JSON.stringify(filtered));
+        } else {
+          localStorage.removeItem(key);
+        }
+      }
+      return filtered;
     } catch (e) {
       console.error(e);
+      return [];
     }
-    const todayStr = new Date().toISOString().split("T")[0];
-    if (activeDateKey === todayStr) {
-      return getInitialDietDemoMeals(profile?.dietary_preference);
-    }
-    return [];
+  }
+
+  const [internalLoggedFoods, setInternalLoggedFoods] = useState<LoggedMealItem[]>(() => {
+    return getCleanDietLogs(logsStorageKey);
   });
 
   // Keep internal state updated if activeDateKey changes
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(logsStorageKey);
-      if (saved) {
-        setInternalLoggedFoods(JSON.parse(saved));
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    const todayStr = new Date().toISOString().split("T")[0];
-    if (activeDateKey === todayStr) {
-      setInternalLoggedFoods([
-        {
-          id: "log_1",
-          name: "Scrambled Eggs with Spinach & Whole Grain Toast",
-          meal: "breakfast",
-          servings: 1,
-          servingSize: "1 plate",
-          calories: 300,
-          protein: 20,
-          carbs: 25,
-          fat: 12,
-          fiber: 6,
-          sodium: 240,
-          loggedAt: new Date().toISOString(),
-        },
-        {
-          id: "log_2",
-          name: "Grilled Chicken Salad with Avocado and Quinoa",
-          meal: "lunch",
-          servings: 1,
-          servingSize: "1 bowl",
-          calories: 450,
-          protein: 36,
-          carbs: 40,
-          fat: 20,
-          fiber: 8,
-          sodium: 320,
-          loggedAt: new Date().toISOString(),
-        },
-        {
-          id: "log_3",
-          name: "Greek Yogurt with Mixed Berries and Almonds",
-          meal: "snack",
-          servings: 1,
-          servingSize: "1 bowl",
-          calories: 200,
-          protein: 12,
-          carbs: 18,
-          fat: 10,
-          fiber: 4,
-          sodium: 60,
-          loggedAt: new Date().toISOString(),
-        },
-        {
-          id: "log_4",
-          name: "Grilled Chicken with Sweet Potato and Green Beans",
-          meal: "dinner",
-          servings: 1,
-          servingSize: "1 plate",
-          calories: 500,
-          protein: 35,
-          carbs: 45,
-          fat: 20,
-          fiber: 9,
-          sodium: 380,
-          loggedAt: new Date().toISOString(),
-        },
-      ]);
-    } else {
-      setInternalLoggedFoods([]);
-    }
+    setInternalLoggedFoods(getCleanDietLogs(logsStorageKey));
   }, [activeDateKey, logsStorageKey]);
 
   const loggedFoods = externalLoggedFoods ?? internalLoggedFoods;
@@ -771,8 +544,10 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
 
   const swapAlternatives = useMemo(() => {
     if (!swapTarget) return [];
-    return getMealAlternatives(swapTarget.currentRecipeId, swapTarget.mealType, settings);
-  }, [swapTarget, settings]);
+    const targetDay = weeklyPlan.find((d) => d.dayNumber === swapTarget.dayNum);
+    const targetMealCal = targetDay ? targetDay.meals[swapTarget.mealType]?.calories : undefined;
+    return getMealAlternatives(swapTarget.currentRecipeId, swapTarget.mealType, settings, targetMealCal);
+  }, [swapTarget, settings, weeklyPlan]);
 
   const handleApplyMealSwap = (newRecipe: MealRecipe) => {
     if (!swapTarget) return;
@@ -1604,11 +1379,54 @@ function getInitialDietDemoMeals(pref?: string | null): LoggedMealItem[] {
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">7-Day Biomarker-Guided Meal Plan</h2>
                   <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-                    Clinically calibrated meals matching your metabolic target of {calorieTarget} kcal/day
+                    Clinically calibrated meals matching your metabolic target of {calorieTarget.toLocaleString()} kcal/day
                   </p>
                 </div>
               </div>
             )}
+
+            {/* Calibrated Nutrition Protocol Banner */}
+            <div className="bg-gradient-to-r from-slate-900 via-[#0b1b36] to-slate-900 text-white rounded-2xl p-4 border border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="h-2 w-2 rounded-full bg-lime-400 animate-pulse" />
+                  <h3 className="text-sm font-bold tracking-tight font-['Manrope'] text-white">
+                    Calibrated Diet Plan ({calorieTarget.toLocaleString()} kcal/day)
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-lime-400/20 text-lime-300 border border-lime-400/30 font-['Manrope']">
+                    {settings.goal.replace(/_/g, " ")}
+                    {settings.weeklyPaceKg ? ` (${settings.weeklyPaceKg > 0 ? "+" : ""}${settings.weeklyPaceKg} kg/wk)` : ""}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30 capitalize font-['Manrope']">
+                    {settings.dietaryPreference}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed font-['Manrope']">
+                  Every meal is dynamically proportioned to meet your calibrated targets:{" "}
+                  <span className="font-mono text-emerald-300 font-bold">{macroTargets.grams.protein}g Protein</span> ({macroTargets.split.proteinPct}%),{" "}
+                  <span className="font-mono text-amber-300 font-bold">{macroTargets.grams.carbs}g Carbs</span> ({macroTargets.split.carbsPct}%), and{" "}
+                  <span className="font-mono text-sky-300 font-bold">{macroTargets.grams.fat}g Fat</span> ({macroTargets.split.fatPct}%).
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="hidden sm:flex flex-col text-right text-[11px] text-slate-400 pr-1 font-['Manrope']">
+                  <span>Baseline: <strong className="text-slate-200">{currentWeight} kg</strong> → Goal: <strong className="text-slate-200">{settings.targetWeightKg || currentWeight} kg</strong></span>
+                  <span>Macro Ratio: <strong className="text-emerald-300">{macroTargets.split.proteinPct}P</strong> / <strong className="text-amber-300">{macroTargets.split.carbsPct}C</strong> / <strong className="text-sky-300">{macroTargets.split.fatPct}F</strong></span>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (onOpenCalibration) onOpenCalibration();
+                    else setIsCustomizeOpen(true);
+                  }}
+                  className="h-8 px-3 rounded-xl bg-lime-500 hover:bg-lime-600 text-slate-950 font-bold text-xs gap-1.5 shadow-sm transition-all cursor-pointer font-['Manrope']"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  <span>Recalibrate Targets</span>
+                </Button>
+              </div>
+            </div>
 
             {/* Weekly Recipes Plan View */}
             <div className="space-y-6">

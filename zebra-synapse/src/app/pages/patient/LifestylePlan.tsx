@@ -209,42 +209,34 @@ export default function LifestylePlan() {
   // ==========================================
   const todayKey = new Date().toISOString().split("T")[0];
   const logsStorageKey = `zebra_food_logs_${profile?.id || "default"}_${todayKey}`;
-  const [loggedFoods, setLoggedFoods] = useState<LoggedMealItem[]>(() => {
+  function getCleanLifestyleLogs(key: string): LoggedMealItem[] {
     try {
-      const saved = localStorage.getItem(logsStorageKey);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return [
-      {
-        id: "default_log_1",
-        name: "Avocado & Chia Toast",
-        meal: "breakfast",
-        servings: 1,
-        servingSize: "2 slices",
-        calories: 380,
-        protein: 14,
-        carbs: 42,
-        fat: 18,
-        fiber: 9,
-        sodium: 290,
-        loggedAt: new Date().toISOString(),
-      },
-      {
-        id: "default_log_2",
-        name: "Greek Yogurt with Berries",
-        meal: "snack",
-        servings: 1,
-        servingSize: "1 cup",
-        calories: 160,
-        protein: 15,
-        carbs: 18,
-        fat: 3,
-        fiber: 4,
-        sodium: 65,
-        loggedAt: new Date().toISOString(),
-      },
-    ];
+      const raw = localStorage.getItem(key);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      const dummyIds = new Set(["default_log_1", "default_log_2", "log_1", "log_2", "log_3", "log_4"]);
+      const filtered = parsed.filter((m: any) => m && !dummyIds.has(m.id));
+      if (filtered.length !== parsed.length) {
+        if (filtered.length > 0) {
+          localStorage.setItem(key, JSON.stringify(filtered));
+        } else {
+          localStorage.removeItem(key);
+        }
+      }
+      return filtered;
+    } catch {
+      return [];
+    }
+  }
+
+  const [loggedFoods, setLoggedFoods] = useState<LoggedMealItem[]>(() => {
+    return getCleanLifestyleLogs(logsStorageKey);
   });
+
+  useEffect(() => {
+    setLoggedFoods(getCleanLifestyleLogs(logsStorageKey));
+  }, [logsStorageKey]);
 
   useEffect(() => {
     try {

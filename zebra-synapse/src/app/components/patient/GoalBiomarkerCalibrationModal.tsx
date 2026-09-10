@@ -120,7 +120,7 @@ export default function GoalBiomarkerCalibrationModal({
 
       // Auto-correct pace direction if discordant with goal weight
       if (diff > 0.1 && pace <= 0) {
-        pace = diff >= 6 ? 0.5 : 0.25;
+        pace = 0.25; // Evidence-based lean hypertrophy default (+275 kcal surplus)
         if (g === "fat_loss" || g === "maintain_longevity") g = "muscle_gain";
       } else if (diff < -0.1 && pace >= 0) {
         pace = Math.abs(diff) >= 6 ? -0.5 : -0.25;
@@ -201,7 +201,7 @@ export default function GoalBiomarkerCalibrationModal({
     if (!isNaN(parsedCurrent) && parsedCurrent > 0) {
       const diff = numTargetWeight - parsedCurrent;
       if (diff > 0.1) {
-        if (weeklyPace <= 0) setWeeklyPace(diff >= 6 ? 0.5 : 0.25);
+        if (weeklyPace <= 0) setWeeklyPace(0.25);
         if (goal === "fat_loss" || goal === "maintain_longevity") setGoal("muscle_gain");
       } else if (diff < -0.1) {
         if (weeklyPace >= 0) setWeeklyPace(Math.abs(diff) >= 6 ? -0.5 : -0.25);
@@ -219,7 +219,7 @@ export default function GoalBiomarkerCalibrationModal({
     if (!isNaN(parsedTarget) && parsedTarget > 0) {
       const diff = parsedTarget - numCurrentWeight;
       if (diff > 0.1) {
-        if (weeklyPace <= 0) setWeeklyPace(diff >= 6 ? 0.5 : 0.25);
+        if (weeklyPace <= 0) setWeeklyPace(0.25);
         if (goal === "fat_loss" || goal === "maintain_longevity") setGoal("muscle_gain");
       } else if (diff < -0.1) {
         if (weeklyPace >= 0) setWeeklyPace(Math.abs(diff) >= 6 ? -0.5 : -0.25);
@@ -623,7 +623,7 @@ export default function GoalBiomarkerCalibrationModal({
                   <div className="flex justify-between items-center text-xs mb-1.5 gap-2">
                     <span className="text-slate-400 shrink-0">Target Macros</span>
                     <span className="text-slate-300 font-medium truncate">
-                      P: {liveMacros.grams.protein}g | C: {liveMacros.grams.carbs}g | F: {liveMacros.grams.fat}g
+                      P: {liveMacros.grams.protein}g ({numCurrentWeight > 0 ? (liveMacros.grams.protein / numCurrentWeight).toFixed(1) : "2.0"} g/kg) | C: {liveMacros.grams.carbs}g | F: {liveMacros.grams.fat}g
                     </span>
                   </div>
                   <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden flex">

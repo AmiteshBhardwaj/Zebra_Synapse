@@ -409,23 +409,50 @@ export function calculateMacroTargets(
   if (customSplit) {
     split = { ...customSplit };
   } else {
+    const effectiveWeight = weightKg > 0 ? weightKg : 70;
+
     switch (goal) {
-      case "muscle_gain":
-        split = { proteinPct: 30, carbsPct: 45, fatPct: 25 };
+      case "muscle_gain": {
+        // Evidence-based hypertrophy: 1.8 - 2.2 g/kg body weight (clamped 15% - 25% of calories)
+        const targetProteinGrams = Math.round(effectiveWeight * 2.0);
+        const proteinCal = targetProteinGrams * 4;
+        const proteinPct = Math.max(16, Math.min(25, Math.round((proteinCal / calories) * 100)));
+        const fatPct = 25; // 25% healthy fats for endocrine/testosterone support
+        const carbsPct = Math.max(35, 100 - proteinPct - fatPct);
+        split = { proteinPct, carbsPct, fatPct };
         break;
-      case "fat_loss":
-        split = { proteinPct: 35, carbsPct: 35, fatPct: 30 };
+      }
+      case "fat_loss": {
+        // Evidence-based hypocaloric deficit: 2.0 - 2.4 g/kg to protect lean muscle mass
+        const targetProteinGrams = Math.round(effectiveWeight * 2.1);
+        const proteinCal = targetProteinGrams * 4;
+        const proteinPct = Math.max(25, Math.min(35, Math.round((proteinCal / calories) * 100)));
+        const fatPct = 28;
+        const carbsPct = Math.max(25, 100 - proteinPct - fatPct);
+        split = { proteinPct, carbsPct, fatPct };
         break;
-      case "blood_sugar_balance":
-        split = { proteinPct: 30, carbsPct: 35, fatPct: 35 };
+      }
+      case "blood_sugar_balance": {
+        // Low glycemic load: complex carbs capped, elevated healthy monounsaturated fat
+        split = { proteinPct: 25, carbsPct: 35, fatPct: 40 };
         break;
-      case "heart_cardiovascular":
-        split = { proteinPct: 25, carbsPct: 50, fatPct: 25 };
+      }
+      case "heart_cardiovascular": {
+        // Mediterranean / DASH profile: low saturated fat, high soluble fiber carbs
+        split = { proteinPct: 20, carbsPct: 55, fatPct: 25 };
         break;
+      }
       case "maintain_longevity":
-      default:
-        split = { proteinPct: 25, carbsPct: 45, fatPct: 30 };
+      default: {
+        // Metabolic balance: 1.4 - 1.6 g/kg protein, balanced fats
+        const targetProteinGrams = Math.round(effectiveWeight * 1.5);
+        const proteinCal = targetProteinGrams * 4;
+        const proteinPct = Math.max(18, Math.min(25, Math.round((proteinCal / calories) * 100)));
+        const fatPct = 28;
+        const carbsPct = Math.max(35, 100 - proteinPct - fatPct);
+        split = { proteinPct, carbsPct, fatPct };
         break;
+      }
     }
   }
 
@@ -2673,9 +2700,29 @@ export function generateWeeklyDietPlan(
   const tdee = calculateTDEE(bmr, settings.activityLevel);
   const targetCal = settings.customCalorieTarget || calculateCalorieTarget(tdee, settings.goal, settings.weeklyPaceKg, currentWeight, settings.targetWeightKg);
 
-  const decorateMeal = (recipe: MealRecipe): MealRecipe => {
+  // Calibrate meal targets so that the 4 meals sum precisely to targetCal:
+  // Breakfast (~25%), Lunch (~35%), Dinner (~28%), Snack (~12% or balance)
+  const bfTargetCal = Math.max(150, Math.round(targetCal * 0.25));
+  const luTargetCal = Math.max(200, Math.round(targetCal * 0.35));
+  const diTargetCal = Math.max(200, Math.round(targetCal * 0.28));
+  const snTargetCal = Math.max(100, targetCal - (bfTargetCal + luTargetCal + diTargetCal));
+
+  const scaleAndDecorateMeal = (recipe: MealRecipe, mealTargetCal: number): MealRecipe => {
+    const scaleRatio = mealTargetCal / Math.max(1, recipe.calories);
+    const scaledCalories = mealTargetCal;
+    const scaledProtein = Math.max(3, Math.round(recipe.protein * scaleRatio));
+    const scaledCarbs = Math.max(5, Math.round(recipe.carbs * scaleRatio));
+    const scaledFat = Math.max(2, Math.round(recipe.fat * scaleRatio));
+    const scaledFiber = Math.max(1, Math.round(recipe.fiber * scaleRatio));
+
     const mealBadges: string[] = [...(recipe.biomarkerBadges || [])];
     let reason = recipe.biomarkerReason || "";
+
+    if (scaleRatio >= 1.25) {
+      mealBadges.unshift(`Bulking Portion (${scaleRatio.toFixed(1)}x)`);
+    } else if (scaleRatio <= 0.85) {
+      mealBadges.unshift(`Calibrated Deficit (${scaleRatio.toFixed(1)}x)`);
+    }
 
     if (impacts.some((i) => i.id === "bio-glucose")) {
       if (!mealBadges.includes("Glycemic Stabilizer")) mealBadges.push("Glycemic Stabilizer");
@@ -2695,6 +2742,11 @@ export function generateWeeklyDietPlan(
 
     return {
       ...recipe,
+      calories: scaledCalories,
+      protein: scaledProtein,
+      carbs: scaledCarbs,
+      fat: scaledFat,
+      fiber: scaledFiber,
       biomarkerBadges: Array.from(new Set(mealBadges)),
       biomarkerReason: reason || recipe.clinicalBenefits?.[0] || undefined,
     };
@@ -2703,10 +2755,10 @@ export function generateWeeklyDietPlan(
   const days: DayDietPlan[] = [];
 
   for (let i = 0; i < 7; i++) {
-    const bf = decorateMeal(getBf(i));
-    const lu = decorateMeal(getLu(i));
-    const di = decorateMeal(getDi(i));
-    const sn = decorateMeal(getSn(i));
+    const bf = scaleAndDecorateMeal(getBf(i), bfTargetCal);
+    const lu = scaleAndDecorateMeal(getLu(i), luTargetCal);
+    const di = scaleAndDecorateMeal(getDi(i), diTargetCal);
+    const sn = scaleAndDecorateMeal(getSn(i), snTargetCal);
 
     const totalCal = bf.calories + lu.calories + di.calories + sn.calories;
     const totalProt = bf.protein + lu.protein + di.protein + sn.protein;
@@ -2755,7 +2807,8 @@ export function generateWeeklyDietPlan(
 export function getMealAlternatives(
   currentRecipeId: string,
   mealType: MealCategory,
-  settings: DietUserSettings
+  settings: DietUserSettings,
+  targetMealCal?: number
 ): MealRecipe[] {
   const safeRecipes = filterSafeRecipes(
     MEAL_RECIPES_BANK,
@@ -2764,7 +2817,20 @@ export function getMealAlternatives(
     settings.dietaryConditions
   );
 
-  return safeRecipes.filter((r) => r.mealType === mealType && r.id !== currentRecipeId);
+  const filtered = safeRecipes.filter((r) => r.mealType === mealType && r.id !== currentRecipeId);
+  if (!targetMealCal || targetMealCal <= 0) return filtered;
+
+  return filtered.map((r) => {
+    const scaleRatio = targetMealCal / Math.max(1, r.calories);
+    return {
+      ...r,
+      calories: targetMealCal,
+      protein: Math.max(3, Math.round(r.protein * scaleRatio)),
+      carbs: Math.max(5, Math.round(r.carbs * scaleRatio)),
+      fat: Math.max(2, Math.round(r.fat * scaleRatio)),
+      fiber: Math.max(1, Math.round(r.fiber * scaleRatio)),
+    };
+  });
 }
 
 /**
