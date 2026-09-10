@@ -987,9 +987,28 @@ export default function PatientDetail() {
     setActionDialogOpen(true);
   };
 
+  const localTeleconsultNotes = useMemo(() => {
+    if (!patientId) return [];
+    try {
+      const raw = localStorage.getItem(`zebra_patient_teleconsult_notes_${patientId}`);
+      if (!raw) return [];
+      return JSON.parse(raw) as CareActionRow[];
+    } catch {
+      return [];
+    }
+  }, [patientId]);
+
   const allDoctorNotes = useMemo(() => {
-    return careActions.filter((action) => action.action_type === "note");
-  }, [careActions]);
+    const dbNotes = careActions.filter((action) => action.action_type === "note");
+    const combined = [...localTeleconsultNotes, ...dbNotes];
+    const seen = new Set<string>();
+    return combined.filter((n) => {
+      const key = n.id || `${n.title}-${n.created_at}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [careActions, localTeleconsultNotes]);
 
   const filteredDoctorNotes = useMemo(() => {
     return allDoctorNotes.filter((note) => {
@@ -1002,6 +1021,21 @@ export default function PatientDetail() {
       if (!matchesSearch) return false;
 
       if (noteCategoryFilter === "all") return true;
+      if (noteCategoryFilter === "teleconsult") {
+        return (
+          note.title?.toLowerCase().includes("teleconsult") ||
+          note.details?.includes("[TELECONSULTATION NOTE]") ||
+          (note as any).isTeleconsult
+        );
+      }
+      if (noteCategoryFilter === "doctor") {
+        return (
+          !note.title?.toLowerCase().includes("teleconsult") &&
+          !note.details?.includes("[TELECONSULTATION NOTE]") &&
+          !(note as any).isTeleconsult &&
+          !note.details?.includes("[Attachment:")
+        );
+      }
       if (noteCategoryFilter === "soap") {
         return (
           note.title?.toLowerCase().includes("soap") ||
@@ -2265,60 +2299,8 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
 
 
         <TabsContent value="notes" className="space-y-4">
-          {/* Quick Template & Actions Banner */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white border border-slate-100 rounded-2xl shadow-xs">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                Clinical Templates:
-              </span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onClick={insertSoapTemplate}
-                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium transition-all inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Stethoscope className="w-3 h-3 text-emerald-600" />
-                  <span>SOAP Assessment</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={insertVitalsSnapshot}
-                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium transition-all inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Activity className="w-3 h-3 text-blue-600" />
-                  <span>Vitals Snapshot</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={insertFollowUpTemplate}
-                  className="px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-medium transition-all inline-flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Calendar className="w-3 h-3 text-purple-600" />
-                  <span>Follow-up Directives</span>
-                </button>
-              </div>
-            </div>
-
-            {(notes || noteTitle || noteFile) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setNotes("");
-                  setNoteTitle("");
-                  setNoteFile(null);
-                  setNoteCategory("Progress Note");
-                }}
-                className="text-xs text-rose-600 hover:text-rose-700 font-medium inline-flex items-center gap-1 cursor-pointer"
-              >
-                <Trash2 className="w-3 h-3" />
-                <span>Clear Editor</span>
-              </button>
-            )}
-          </div>
-
           <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* Left Column: Note Composer & Document Uploader */}
+            {/* Left Column: Simple Doctor Note Composer */}
             <div className="xl:col-span-5 space-y-4">
               <Card className={portalPanelClass}>
                 <CardHeader className="pb-3">
@@ -2326,9 +2308,9 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                     <div>
                       <CardTitle className="text-base flex items-center gap-2">
                         <FilePlus className="w-4 h-4 text-emerald-600" />
-                        Compose & Upload Note
+                        Add Doctor Note
                       </CardTitle>
-                      <CardDescription>Save clinical observations or attach clinical note files</CardDescription>
+                      <CardDescription>Record notes or attach medical documents for this patient</CardDescription>
                     </div>
                     <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-800 text-[11px]">
                       Doctor Charting
@@ -2337,39 +2319,6 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  {/* Category Pills */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-slate-600">Note Category</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[
-                        "Progress Note",
-                        "SOAP Assessment",
-                        "Consultation",
-                        "Follow-up Plan",
-                        "Diet & Lifestyle",
-                        "General Note",
-                      ].map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          onClick={() => {
-                            setNoteCategory(cat);
-                            if (!noteTitle || noteTitle.includes("Note") || noteTitle.includes("Assessment") || noteTitle.includes("Plan") || noteTitle.includes("Consultation")) {
-                              setNoteTitle(`${cat} - ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" })}`);
-                            }
-                          }}
-                          className={`text-[11px] px-2.5 py-1 rounded-xl font-medium transition-all cursor-pointer ${
-                            noteCategory === cat
-                              ? "bg-emerald-600 text-white font-semibold shadow-xs"
-                              : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
                   {/* Title */}
                   <div className="space-y-1.5">
                     <Label htmlFor="note_title" className="text-xs font-medium text-slate-600">
@@ -2377,7 +2326,7 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                     </Label>
                     <Input
                       id="note_title"
-                      placeholder="e.g. Clinical Progress Note, Routine Assessment..."
+                      placeholder="e.g. Clinical Progress Note, Consultation..."
                       value={noteTitle}
                       onChange={(e) => setNoteTitle(e.target.value)}
                       className={portalInputClass}
@@ -2396,10 +2345,10 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                     </div>
                     <Textarea
                       id="clinical_notes_text"
-                      placeholder="Enter clinical observations, diagnosis, treatment plans, follow-up instructions, or import from file..."
+                      placeholder="Enter doctor note, clinical observations, or follow-up instructions..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      rows={9}
+                      rows={8}
                       className="font-sans text-xs sm:text-sm leading-relaxed"
                     />
                   </div>
@@ -2409,7 +2358,7 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                     <Label className="text-xs font-medium text-slate-600 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <Paperclip className="w-3.5 h-3.5 text-slate-500" />
-                        Attach Clinical Document / Note File
+                        Attach Document (Optional)
                       </span>
                       <span className="text-[10px] text-slate-400">PDF, DOCX, TXT, Images</span>
                     </Label>
@@ -2417,14 +2366,11 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                     {!noteFile ? (
                       <label
                         htmlFor="clinical_note_file_upload"
-                        className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 hover:border-emerald-500/60 rounded-2xl bg-slate-50/50 hover:bg-emerald-50/30 transition-all cursor-pointer group"
+                        className="flex flex-col items-center justify-center p-3 border border-dashed border-slate-200 hover:border-emerald-500/60 rounded-xl bg-slate-50/50 hover:bg-emerald-50/30 transition-all cursor-pointer group"
                       >
-                        <FileUp className="w-6 h-6 text-slate-400 group-hover:text-emerald-600 transition-colors mb-1" />
-                        <p className="text-xs font-semibold text-slate-700 group-hover:text-emerald-700">
-                          Click or drag to attach file
-                        </p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          Upload scanned physician notes, PDF summaries, or chart exports
+                        <FileUp className="w-5 h-5 text-slate-400 group-hover:text-emerald-600 transition-colors mb-0.5" />
+                        <p className="text-xs font-medium text-slate-700 group-hover:text-emerald-700">
+                          Click to attach file
                         </p>
                         <input
                           id="clinical_note_file_upload"
@@ -2435,19 +2381,12 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                         />
                       </label>
                     ) : (
-                      <div className="flex items-center justify-between p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl">
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
-                            <FileText className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-semibold text-slate-900 truncate">
-                              {noteFile.name}
-                            </p>
-                            <p className="text-[10px] text-emerald-700">
-                              {formatFileSize(noteFile.size)} • Ready to save
-                            </p>
-                          </div>
+                      <div className="flex items-center justify-between p-2.5 bg-emerald-50/70 border border-emerald-200 rounded-xl">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-emerald-700 shrink-0" />
+                          <p className="text-xs font-semibold text-slate-900 truncate">
+                            {noteFile.name}
+                          </p>
                         </div>
                         <button
                           type="button"
@@ -2455,7 +2394,7 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                           className="p-1 rounded-lg hover:bg-emerald-200/60 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
                           title="Remove attached file"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     )}
@@ -2471,30 +2410,28 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                     <Send className="w-4 h-4" />
                     <span>
                       {noteFileUploading || careActionSaving
-                        ? "Saving & Uploading..."
-                        : noteFile
-                        ? "Save Note & Attach Document"
-                        : "Save Clinical Note"}
+                        ? "Saving Note..."
+                        : "Save Doctor Note"}
                     </span>
                   </Button>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Right Column: Clinical Notes Feed & Archive */}
+            {/* Right Column: Clinical & Teleconsult Notes Feed */}
             <div className="xl:col-span-7 space-y-4">
               <Card className={portalPanelClass}>
                 <CardHeader className="pb-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
-                        <CardTitle className="text-base">Clinical Notes Archive</CardTitle>
+                        <CardTitle className="text-base">Clinical & Teleconsult Notes</CardTitle>
                         <Badge className="border border-slate-200 bg-slate-100 text-slate-700 text-xs">
                           {allDoctorNotes.length} saved
                         </Badge>
                       </div>
                       <CardDescription>
-                        Chronological record of clinical notes, SOAP evaluations, and document uploads
+                        Chronological record of doctor notes and teleconsultation wrap-ups
                       </CardDescription>
                     </div>
 
@@ -2503,35 +2440,37 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                       <button
                         type="button"
                         onClick={() => setNoteCategoryFilter("all")}
-                        className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
+                        className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer ${
                           noteCategoryFilter === "all"
                             ? "bg-white text-slate-900 shadow-xs font-semibold"
                             : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
-                        All ({allDoctorNotes.length})
+                        All Notes ({allDoctorNotes.length})
                       </button>
                       <button
                         type="button"
-                        onClick={() => setNoteCategoryFilter("soap")}
-                        className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                          noteCategoryFilter === "soap"
+                        onClick={() => setNoteCategoryFilter("doctor")}
+                        className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                          noteCategoryFilter === "doctor"
                             ? "bg-white text-slate-900 shadow-xs font-semibold"
                             : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
-                        SOAP Notes
+                        <Stethoscope className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>Doctor Notes</span>
                       </button>
                       <button
                         type="button"
-                        onClick={() => setNoteCategoryFilter("documents")}
-                        className={`px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer ${
-                          noteCategoryFilter === "documents"
-                            ? "bg-white text-slate-900 shadow-xs font-semibold"
+                        onClick={() => setNoteCategoryFilter("teleconsult")}
+                        className={`px-3 py-1 rounded-lg font-medium transition-all cursor-pointer inline-flex items-center gap-1.5 ${
+                          noteCategoryFilter === "teleconsult"
+                            ? "bg-emerald-600 text-white shadow-xs font-semibold"
                             : "text-slate-600 hover:text-slate-900"
                         }`}
                       >
-                        Documents
+                        <Video className="w-3.5 h-3.5" />
+                        <span>Teleconsult Notes</span>
                       </button>
                     </div>
                   </div>
@@ -2542,7 +2481,7 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                       <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <Input
                         type="text"
-                        placeholder="Search clinical notes by keyword, observation, or title..."
+                        placeholder="Search doctor or teleconsult notes..."
                         value={notesSearchQuery}
                         onChange={(e) => setNotesSearchQuery(e.target.value)}
                         className={`${portalInputClass} pl-8.5 text-xs h-9`}
@@ -2570,32 +2509,24 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-slate-800">
-                          {notesSearchQuery ? "No matching notes found" : "No clinical notes saved yet"}
+                          {notesSearchQuery ? "No matching notes found" : "No doctor or teleconsult notes saved yet"}
                         </p>
                         <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
                           {notesSearchQuery
                             ? `No notes matching "${notesSearchQuery}". Try a different search term.`
-                            : "Use the composer on the left to write SOAP notes, clinical observations, or attach medical files."}
+                            : "Use the composer on the left to write a doctor note, or complete a teleconsultation to save a wrap-up note."}
                         </p>
                       </div>
-                      {!notesSearchQuery && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={insertSoapTemplate}
-                          className={`${portalSecondaryButtonClass} text-xs gap-1.5 mx-auto mt-2`}
-                        >
-                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                          <span>Insert SOAP Template</span>
-                        </Button>
-                      )}
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {filteredDoctorNotes.map((note) => {
                         const attachment = parseNoteAttachment(note.details);
                         const cleanText = getCleanNoteText(note.details);
+                        const isTeleconsult =
+                          (note as any).isTeleconsult ||
+                          note.title?.toLowerCase().includes("teleconsult") ||
+                          note.details?.includes("[TELECONSULTATION NOTE]");
                         const isSoap =
                           note.title?.toLowerCase().includes("soap") ||
                           note.details?.includes("SUBJECTIVE:") ||
@@ -2604,14 +2535,23 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                         return (
                           <div
                             key={note.id}
-                            className="rounded-2xl border border-slate-200 bg-white p-4.5 space-y-3 hover:border-slate-300 transition-all shadow-xs"
+                            className={`rounded-2xl border p-4.5 space-y-3 transition-all shadow-xs ${
+                              isTeleconsult
+                                ? "border-emerald-200 bg-gradient-to-br from-emerald-50/50 via-white to-slate-50/30"
+                                : "border-slate-200 bg-white hover:border-slate-300"
+                            }`}
                           >
                             {/* Note Header */}
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
                               <div className="flex items-center gap-2 flex-wrap min-w-0">
                                 <p className="font-bold text-slate-900 text-sm">{note.title}</p>
-                                {isSoap ? (
-                                  <Badge className="border border-emerald-200 bg-emerald-50 text-emerald-800 text-[10px]">
+                                {isTeleconsult ? (
+                                  <Badge className="border border-emerald-300 bg-emerald-100/90 text-emerald-900 font-semibold text-[10px] gap-1">
+                                    <Video className="w-3 h-3 text-emerald-700" />
+                                    <span>Teleconsult Wrap-up</span>
+                                  </Badge>
+                                ) : isSoap ? (
+                                  <Badge className="border border-indigo-200 bg-indigo-50 text-indigo-800 text-[10px]">
                                     SOAP Note
                                   </Badge>
                                 ) : attachment ? (
@@ -2620,7 +2560,7 @@ Date: ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric",
                                   </Badge>
                                 ) : (
                                   <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 text-[10px]">
-                                    Clinical Note
+                                    Doctor Note
                                   </Badge>
                                 )}
                               </div>

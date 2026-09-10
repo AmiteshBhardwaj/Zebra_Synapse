@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%26%20Auth-3ecf8e?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-2.5%20Flash-ea4335?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-3.7%20Flash-ea4335?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev/)
 [![PeerJS](https://img.shields.io/badge/WebRTC-PeerJS%20Video-ff5722?style=for-the-badge&logo=webrtc&logoColor=white)](https://peerjs.com/)
 
 [**Explore Live Web Application**](https://zebrasynapse.vercel.app/) • [**Watch Demo Video**](https://youtu.be/xa0-ucu9rgE?si=y67QKcMFRMQ1W2ej) • [**Architecture**](./zebra-synapse/architecture.md) • [**Demo Guide**](./zebra-synapse/demo.md) • [**Codebase Map**](./zebra-synapse/docs/codebase.md) • [**Contributing**](./zebra-synapse/CONTRIBUTING.md)
@@ -27,6 +27,7 @@
 - [Database Schema, Migrations & Security](#-database-schema-migrations--security)
 - [Repository & Directory Structure](#-repository--directory-structure)
 - [Local Setup & Development](#-local-setup--development)
+- [Docker Setup & Deployment](#-docker-setup--deployment)
 - [Deployment Guide](#-deployment-guide)
 - [Quality Assurance & Operations](#-quality-assurance--operations)
 - [Demo Credentials & Evaluation Flow](#-demo-credentials--evaluation-flow)
@@ -231,9 +232,16 @@ Apply migrations in numerical order from [`zebra-synapse/supabase/migrations/`](
 ```text
 .
 |-- README.md                    Master project overview and documentation
+|-- docker-compose.yml           Root multi-profile Docker Compose orchestration
+|-- .dockerignore                Root build context exclusion rules
 |-- vercel.json                  Root build forwarding configuration
 |-- .github/                     CI workflows and PR templates
 `-- zebra-synapse/               Sole product root
+    |-- Dockerfile               Production multi-stage build (Node 20 -> Nginx Alpine)
+    |-- Dockerfile.dev           Development container with live hot-reload
+    |-- docker-compose.yml       App-level Docker Compose specification
+    |-- nginx.conf               Production SPA web server, gzip, caching & security
+    |-- .dockerignore            App-level build context exclusion rules
     |-- src/                     Application source code
     |   |-- app/                 Pages, routes, layouts, and components
     |   |   |-- pages/           Patient, Doctor, Auth, and Welcome views
@@ -250,7 +258,7 @@ Apply migrations in numerical order from [`zebra-synapse/supabase/migrations/`](
     |-- docs/                    Codebase navigation map and attributions
     |-- research/                Archived multimodal ML training scripts (MIMIC-IV)
     |-- screenshots/             Submission imagery and UI captures
-    |-- package.json             Dependencies and build scripts
+    |-- package.json             Dependencies, build, and docker scripts
     |-- architecture.md          Canonical system architecture reference
     |-- demo.md                  Judge evaluation and demo walkthrough
     `-- CONTRIBUTING.md          Contribution and pull request guidelines
@@ -309,6 +317,52 @@ npm run dev
 
 ---
 
+## 🐳 Docker Setup & Deployment
+
+Zebra Synapse includes a production-grade multi-stage Docker build served via Nginx (with SPA routing, Gzip, security headers, and asset caching) and a development profile with live hot-reloading.
+
+### 1. Run Production Container via Docker Compose
+
+Make sure your `.env` file in `zebra-synapse/.env` is configured with your Supabase credentials, then run from either repository root or `zebra-synapse/`:
+
+```bash
+# Build and run the production Nginx container
+docker compose --profile prod up --build
+
+# Or use npm shortcut from zebra-synapse/
+npm run docker:prod
+```
+Access the application at [http://localhost:3000](http://localhost:3000).
+
+### 2. Run Development Container (Live Hot-Reloading)
+
+```bash
+# Start container with source code mount & Vite hot module replacement
+docker compose --profile dev up --build
+
+# Or use npm shortcut from zebra-synapse/
+npm run docker:dev
+```
+Access the development server at [http://localhost:5173](http://localhost:5173).
+
+### 3. Standalone Docker Build & Run
+
+```bash
+cd zebra-synapse
+
+# Build the production image with build arguments from .env
+docker build \
+  --build-arg VITE_SUPABASE_URL="https://<your-project-ref>.supabase.co" \
+  --build-arg VITE_SUPABASE_ANON_KEY="<your-anon-key>" \
+  --build-arg VITE_GEMINI_API_KEY="<your-gemini-api-key>" \
+  -t zebra-synapse .
+
+# Run the container
+docker run -d -p 3000:80 --name zebra-synapse-app zebra-synapse
+```
+
+---
+
 ## 🌐 Deployment Guide
 
 ### Vercel Deployment
@@ -327,8 +381,8 @@ npm run dev
 ### Supabase Edge Functions Deployment
 ```bash
 supabase secrets set GEMINI_API_KEY=<your-api-key>
-supabase secrets set GEMINI_MODEL=gemini-2.5-flash
-supabase secrets set GEMINI_MODEL_FALLBACK=gemini-2.5-flash-lite
+supabase secrets set GEMINI_MODEL=gemini-3.7-flash
+supabase secrets set GEMINI_MODEL_FALLBACK=gemini-3.5-flash-lite
 
 supabase functions deploy process-lab-report
 supabase functions deploy process-lab-report-queue
