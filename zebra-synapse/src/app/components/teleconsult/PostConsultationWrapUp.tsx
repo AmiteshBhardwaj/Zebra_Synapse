@@ -231,6 +231,24 @@ ${draftText}
           // ignore
         }
 
+        // Save Teleconsultation Note to care_actions DB table
+        if (patientId) {
+          try {
+            const formattedTitle = `Teleconsultation Note • ${finalDiagnosis || "General Consultation"}`;
+            const formattedDetails = `[TELECONSULTATION NOTE]\nDiagnosis: ${finalDiagnosis || "General Review"}\nCall Duration: ${formatDuration(callDurationSec)}\nFollow-up: ${followUpTime}\n\nCLINICAL OBSERVATIONS:\n${finalNotes}${patientAdvice ? `\n\nPATIENT ADVICE & DIRECTIVES:\n${patientAdvice}` : ""}`;
+            await sb.from("care_actions").insert({
+              doctor_id: user?.id || "doctor",
+              patient_id: patientId,
+              action_type: "note",
+              title: formattedTitle,
+              details: formattedDetails,
+              status: "completed",
+            });
+          } catch (err) {
+            console.warn("Care actions teleconsult note save error:", err);
+          }
+        }
+
         // Save Prescriptions using unified prescription service
         if (patientId && prescriptions.length > 0) {
           for (const rx of prescriptions) {
@@ -247,6 +265,29 @@ ${draftText}
               console.warn("Unified prescription save error:", err);
             }
           }
+        }
+      }
+
+      // 4. Also store in patient teleconsult notes cache for instant dossier availability
+      if (patientId) {
+        try {
+          const key = `zebra_patient_teleconsult_notes_${patientId}`;
+          const existingRaw = localStorage.getItem(key);
+          const existingList = existingRaw ? JSON.parse(existingRaw) : [];
+          const newEntry = {
+            id: `teleconsult-${consultationId}-${Date.now()}`,
+            title: `Teleconsultation Note • ${finalDiagnosis || "General Consultation"}`,
+            details: `[TELECONSULTATION NOTE]\nDiagnosis: ${finalDiagnosis || "General Review"}\nCall Duration: ${formatDuration(callDurationSec)}\nFollow-up: ${followUpTime}\n\nCLINICAL OBSERVATIONS:\n${finalNotes}${patientAdvice ? `\n\nPATIENT ADVICE & DIRECTIVES:\n${patientAdvice}` : ""}`,
+            action_type: "note",
+            status: "completed",
+            created_at: new Date().toISOString(),
+            isTeleconsult: true,
+            diagnosis: finalDiagnosis || "General Review",
+            callDuration: formatDuration(callDurationSec),
+          };
+          localStorage.setItem(key, JSON.stringify([newEntry, ...existingList]));
+        } catch (e) {
+          console.warn("Local storage teleconsult note cache error:", e);
         }
       }
 
