@@ -27,8 +27,10 @@ import { useAuth } from "../../../auth/AuthContext";
 import { getSupabase } from "../../../lib/supabase";
 import { useDoctorPatientChat } from "../../../hooks/useDoctorPatientChat";
 import {
+  fetchChatAccessRequests,
   getAllChatRequests,
   getRequestStatus,
+  normalizeParticipantId,
   sendChatAccessRequest,
 } from "../../../lib/doctorPatientChat";
 import {
@@ -48,18 +50,18 @@ export interface DoctorMeta {
   relationshipType: RelationshipType;
 }
 
-// Full seed roster of registered database doctors
+// Full seed roster of registered database doctors with canonical database UUIDs
 const SEED_DOCTORS: DoctorMeta[] = [
-  { id: "doc_amelia_hart", name: "Dr. Amelia Hart", specialty: "Cardiology & Internal Medicine", relationshipType: "linked" },
-  { id: "doc_benjamin_ortiz", name: "Dr. Benjamin Ortiz", specialty: "Endocrinology & Metabolic Health", relationshipType: "teleconsult" },
-  { id: "doc_chloe_menon", name: "Dr. Chloe Menon", specialty: "Gastroenterology & Hepatology", relationshipType: "teleconsult" },
-  { id: "doc_daniel_kim", name: "Dr. Daniel Kim", specialty: "Pulmonology & Respiratory Medicine", relationshipType: "unlinked" },
-  { id: "doc_evelyn_brooks", name: "Dr. Evelyn Brooks", specialty: "Nephrology & Renal Care", relationshipType: "unlinked" },
-  { id: "doc_farah_siddiqui", name: "Dr. Farah Siddiqui", specialty: "Neurology & Neuro-Endocrine", relationshipType: "unlinked" },
-  { id: "doc_gabriel_chen", name: "Dr. Gabriel Chen", specialty: "Hematology & Immune Resiliency", relationshipType: "unlinked" },
-  { id: "doc_hannah_patel", name: "Dr. Hannah Patel", specialty: "Preventive Medicine & Health Optimization", relationshipType: "unlinked" },
-  { id: "doc_isaac_romero", name: "Dr. Isaac Romero", specialty: "Clinical Nutrition & Dietary Medicine", relationshipType: "unlinked" },
-  { id: "doc_julia_nguyen", name: "Dr. Julia Nguyen", specialty: "General Practice & Telehealth", relationshipType: "unlinked" },
+  { id: "c887c92e-c384-4078-8e7e-047176611af9", name: "Dr. Amelia Hart", specialty: "Cardiology & Internal Medicine", relationshipType: "linked" },
+  { id: "622defb1-60a8-4f6c-a7d4-163d97696131", name: "Dr. Benjamin Ortiz", specialty: "Endocrinology & Metabolic Health", relationshipType: "teleconsult" },
+  { id: "72122a75-5ae8-4e3a-887b-b4c09f39a38d", name: "Dr. Chloe Menon", specialty: "Gastroenterology & Hepatology", relationshipType: "teleconsult" },
+  { id: "d2cd69f1-1654-4ec7-a251-b0f2b20a03a7", name: "Dr. Daniel Kim", specialty: "Pulmonology & Respiratory Medicine", relationshipType: "unlinked" },
+  { id: "7da29924-f9d7-44cb-a67e-2720b439cdaf", name: "Dr. Evelyn Brooks", specialty: "Nephrology & Renal Care", relationshipType: "unlinked" },
+  { id: "2fe0fd7d-d558-4693-8687-36e42ffa6aa9", name: "Dr. Farah Siddiqui", specialty: "Neurology & Neuro-Endocrine", relationshipType: "unlinked" },
+  { id: "57d6636a-ed9f-4790-ad3e-175db63bfb5b", name: "Dr. Gabriel Chen", specialty: "Hematology & Immune Resiliency", relationshipType: "unlinked" },
+  { id: "497721f2-8b8f-42fd-972f-a5f9830874a7", name: "Dr. Hannah Patel", specialty: "Preventive Medicine & Health Optimization", relationshipType: "unlinked" },
+  { id: "c2603d90-d728-487d-ae5e-dd26c32dffa9", name: "Dr. Isaac Romero", specialty: "Clinical Nutrition & Dietary Medicine", relationshipType: "unlinked" },
+  { id: "0eb87b8f-3cc1-416f-bd00-75559890bd72", name: "Dr. Julia Nguyen", specialty: "General Practice & Telehealth", relationshipType: "unlinked" },
 ];
 
 interface PatientDoctorChatProps {
@@ -71,9 +73,10 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
   const location = useLocation();
   const { user, profile } = useAuth();
 
-  const [selectedDoctorId, setSelectedDoctorId] = useState<string>(
-    () => new URLSearchParams(location.search).get("doctorId") || SEED_DOCTORS[0].id
-  );
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>(() => {
+    const fromUrl = new URLSearchParams(location.search).get("doctorId");
+    return fromUrl ? normalizeParticipantId(fromUrl) : SEED_DOCTORS[0].id;
+  });
   const [doctorsList, setDoctorsList] = useState<DoctorMeta[]>(SEED_DOCTORS);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "my_doctors" | "discover">("all");
@@ -88,7 +91,7 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
     const params = new URLSearchParams(location.search);
     const targetDocId = params.get("doctorId");
     if (targetDocId) {
-      setSelectedDoctorId(targetDocId);
+      setSelectedDoctorId(normalizeParticipantId(targetDocId));
     }
   }, [location.search]);
 
@@ -100,28 +103,32 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
 
       SEED_DOCTORS.forEach((d) => docsMap.set(d.id, d));
 
+      // Synchronize remote chat access requests
+      await fetchChatAccessRequests();
+
       const linkedDocIds = new Set<string>();
       const messageDocIds = new Set<string>();
 
       const sb = getSupabase();
       if (sb && user?.id) {
         try {
+          const canonicalUserId = normalizeParticipantId(user.id);
           const { data: rels } = await sb
             .from("care_relationships")
             .select("doctor_id")
-            .eq("patient_id", user.id);
+            .or(`patient_id.eq.${canonicalUserId},patient_id.eq.${user.id}`);
 
           (rels || []).forEach((r) => {
-            if (r.doctor_id) linkedDocIds.add(r.doctor_id);
+            if (r.doctor_id) linkedDocIds.add(normalizeParticipantId(r.doctor_id));
           });
 
           const { data: msgRows } = await sb
             .from("doctor_patient_messages")
             .select("doctor_id")
-            .eq("patient_id", user.id);
+            .or(`patient_id.eq.${canonicalUserId},patient_id.eq.${user.id}`);
 
           (msgRows || []).forEach((m) => {
-            if (m.doctor_id) messageDocIds.add(m.doctor_id);
+            if (m.doctor_id) messageDocIds.add(normalizeParticipantId(m.doctor_id));
           });
 
           const { data: doctorProfiles } = await sb
@@ -131,17 +138,24 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
 
           if (doctorProfiles && doctorProfiles.length > 0) {
             doctorProfiles.forEach((p) => {
+              const canonDocId = normalizeParticipantId(p.id);
               let relType: RelationshipType = "unlinked";
-              if (linkedDocIds.has(p.id)) {
+              if (linkedDocIds.has(canonDocId)) {
                 relType = "linked";
-              } else if (messageDocIds.has(p.id)) {
+              } else if (messageDocIds.has(canonDocId)) {
                 relType = "teleconsult";
               }
 
-              docsMap.set(p.id, {
-                id: p.id,
-                name: p.full_name || "Dr. Clinical Specialist",
-                specialty: p.license_number ? `Specialist (${p.license_number})` : "Clinical Specialist",
+              // Also inherit linked or teleconsult status if present in seed
+              const existing = docsMap.get(canonDocId);
+              if (existing && existing.relationshipType !== "unlinked") {
+                relType = existing.relationshipType;
+              }
+
+              docsMap.set(canonDocId, {
+                id: canonDocId,
+                name: p.full_name || existing?.name || "Dr. Clinical Specialist",
+                specialty: p.license_number ? `Specialist (${p.license_number})` : (existing?.specialty || "Clinical Specialist"),
                 relationshipType: relType,
               });
             });
@@ -170,6 +184,28 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
     window.addEventListener("zebra_doctor_patient_sync", handleSync);
     window.addEventListener("storage", handleSync);
 
+    // Realtime Supabase subscription for cross-device requests
+    let channel: any = null;
+    const sb = getSupabase();
+    if (sb) {
+      channel = sb
+        .channel(`patient_chat_requests_sync_${Date.now()}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "chat_access_requests",
+          },
+          () => {
+            void fetchChatAccessRequests().then(() => {
+              setRequestTick((t) => t + 1);
+            });
+          }
+        )
+        .subscribe();
+    }
+
     let bc: BroadcastChannel | null = null;
     try {
       if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -184,6 +220,7 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
       window.removeEventListener("zebra_doctor_patient_sync", handleSync);
       window.removeEventListener("storage", handleSync);
       if (bc) bc.close();
+      if (channel && sb) sb.removeChannel(channel);
     };
   }, [user?.id]);
 
@@ -275,14 +312,18 @@ export default function PatientDoctorChat({ embedded = false }: PatientDoctorCha
 
   const handleRequestChatAccess = async () => {
     if (!activeDoctor) return;
-    sendChatAccessRequest(
-      activeDoctor.id,
-      user?.id || "patient",
-      activeDoctor.name,
-      profile?.full_name || "Patient User"
-    );
-    setRequestTick((t) => t + 1);
-    toast.success(`Chat request sent to ${activeDoctor.name}! Awaiting doctor acceptance.`);
+    try {
+      await sendChatAccessRequest(
+        activeDoctor.id,
+        user?.id || "patient",
+        activeDoctor.name,
+        profile?.full_name || "Patient User"
+      );
+      setRequestTick((t) => t + 1);
+      toast.success(`Chat request sent to ${activeDoctor.name}! Awaiting doctor acceptance.`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to send chat access request");
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

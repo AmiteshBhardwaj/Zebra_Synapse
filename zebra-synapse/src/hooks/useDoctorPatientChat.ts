@@ -8,6 +8,7 @@ import {
   filterConversationMessages,
   getAllGlobalMessages,
   markDoctorPatientMessagesAsRead,
+  normalizeParticipantId,
   sendDoctorPatientMessage,
 } from "../lib/doctorPatientChat";
 import { getSupabase, isSupabaseConfigured } from "../lib/supabase";
@@ -20,8 +21,8 @@ export function useDoctorPatientChat(
 ) {
   const { user, profile } = useAuth();
 
-  const activeDoctorId = doctorId || (profile?.role === "doctor" ? user?.id : null);
-  const activePatientId = patientId || (profile?.role === "patient" ? user?.id : null);
+  const activeDoctorId = normalizeParticipantId(doctorId || (profile?.role === "doctor" ? user?.id : null));
+  const activePatientId = normalizeParticipantId(patientId || (profile?.role === "patient" ? user?.id : null));
   const activeDoctorName = doctorName || (profile?.role === "doctor" ? profile.full_name : undefined);
   const activePatientName = patientName || (profile?.role === "patient" ? profile.full_name : undefined);
 
@@ -80,20 +81,39 @@ export function useDoctorPatientChat(
     if (isSupabaseConfigured()) {
       const sb = getSupabase();
       if (sb) {
-        channel = sb
-          .channel(`chat_realtime_${activeDoctorId}_${activePatientId}_${Date.now()}`)
-          .on(
-            "postgres_changes",
-            {
-              event: "*",
-              schema: "public",
-              table: "doctor_patient_messages",
-            },
-            () => {
-              void loadMessages();
+        try {
+          const ch = sb.channel(`chat_realtime_${activeDoctorId}_${activePatientId}_${Date.now()}`);
+          if (ch && typeof ch.on === "function") {
+            ch.on(
+              "postgres_changes",
+              {
+                event: "*",
+                schema: "public",
+                table: "doctor_patient_messages",
+              },
+              () => {
+                void loadMessages();
+              }
+            );
+            // Also listen for access requests if supported
+            if (typeof ch.on === "function") {
+              ch.on(
+                "postgres_changes",
+                {
+                  event: "*",
+                  schema: "public",
+                  table: "chat_access_requests",
+                },
+                () => {
+                  void loadMessages();
+                }
+              );
             }
-          )
-          .subscribe();
+            channel = typeof ch.subscribe === "function" ? ch.subscribe() : ch;
+          }
+        } catch (err) {
+          console.warn("[useDoctorPatientChat] Realtime channel subscription warning:", err);
+        }
       }
     }
 

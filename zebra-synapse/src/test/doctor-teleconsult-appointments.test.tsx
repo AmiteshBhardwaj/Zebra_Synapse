@@ -36,11 +36,14 @@ vi.mock("../lib/supabase", () => {
   return {
     getSupabase: () => ({
       from: () => createQueryChain(),
-      channel: () => ({
-        on: () => ({ subscribe: () => ({}) }),
-        subscribe: () => ({}),
-        send: vi.fn(),
-      }),
+      channel: () => {
+        const ch: any = {
+          on: vi.fn(() => ch),
+          subscribe: vi.fn(() => ch),
+          send: vi.fn(),
+        };
+        return ch;
+      },
       removeChannel: vi.fn(),
     }),
     isSupabaseConfigured: () => true,

@@ -119,9 +119,9 @@ Doctor Advice & Next Steps:
 
     setIsSending(true);
 
-    const docId = user?.id || "doc_amelia_hart";
+    const docId = user?.id || "c887c92e-c384-4078-8e7e-047176611af9";
     const docName = profile?.full_name || "Dr. Amelia Hart";
-    const patId = patientId || "pat_maya_thompson";
+    const patId = patientId || "cfa35490-81c9-433e-a535-13a235cbe43c";
     const patName = patientName || "Maya Thompson";
 
     // Format final message content delivered to Patient Messages section

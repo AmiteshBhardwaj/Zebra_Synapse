@@ -32,8 +32,11 @@ import { useDoctorPatientChat } from "../../../hooks/useDoctorPatientChat";
 import {
   type ChatAccessRequest,
   type DoctorPatientMessage,
+  doIdsMatch,
+  fetchChatAccessRequests,
   getAllChatRequests,
   getAllGlobalMessages,
+  normalizeParticipantId,
   updateChatAccessRequestStatus,
 } from "../../../lib/doctorPatientChat";
 import { Button } from "../../components/ui/button";
@@ -50,14 +53,14 @@ interface PatientMeta {
   isLinkedOrTeleconsult: boolean;
 }
 
-// Full seed roster of clinical patients
+// Full seed roster of clinical patients with canonical database UUIDs
 const SEED_PATIENTS: PatientMeta[] = [
-  { id: "pat_maya_thompson", name: "Maya Thompson", age: 34, gender: "Female", condition: "Hypertension & BP Surveillance", isLinkedOrTeleconsult: true },
-  { id: "pat_liam_carter", name: "Liam Carter", age: 42, gender: "Male", condition: "Hyperlipidemia & Lipid Profile", isLinkedOrTeleconsult: true },
-  { id: "pat_sofia_bennett", name: "Sofia Bennett", age: 38, gender: "Female", condition: "Type 2 Diabetes Glycemic Review", isLinkedOrTeleconsult: true },
-  { id: "pat_noah_patel", name: "Noah Patel", age: 29, gender: "Male", condition: "Asthma & Respiratory Management", isLinkedOrTeleconsult: false },
-  { id: "pat_ava_richardson", name: "Ava Richardson", age: 31, gender: "Female", condition: "GERD & Gastric Protocol", isLinkedOrTeleconsult: false },
-  { id: "pat_ethan_brooks", name: "Ethan Brooks", age: 45, gender: "Male", condition: "Hypothyroidism & Thyroid Markers", isLinkedOrTeleconsult: false },
+  { id: "cfa35490-81c9-433e-a535-13a235cbe43c", name: "Maya Thompson", age: 34, gender: "Female", condition: "Hypertension & BP Surveillance", isLinkedOrTeleconsult: true },
+  { id: "8b15af6f-8915-4d75-8165-216236a88470", name: "Liam Carter", age: 42, gender: "Male", condition: "Hyperlipidemia & Lipid Profile", isLinkedOrTeleconsult: true },
+  { id: "ca38ed48-ac17-4207-afdf-bda44f027fdb", name: "Sofia Bennett", age: 38, gender: "Female", condition: "Type 2 Diabetes Glycemic Review", isLinkedOrTeleconsult: true },
+  { id: "0967e582-b4d5-4586-bbf3-3a4212c28139", name: "Noah Patel", age: 29, gender: "Male", condition: "Asthma & Respiratory Management", isLinkedOrTeleconsult: false },
+  { id: "aaea86ac-ea98-4966-9295-dd08919b629f", name: "Ava Richardson", age: 31, gender: "Female", condition: "GERD & Gastric Protocol", isLinkedOrTeleconsult: false },
+  { id: "280ee68d-36a9-4f9f-bb83-fbda186a5e92", name: "Ethan Brooks", age: 45, gender: "Male", condition: "Hypothyroidism & Thyroid Markers", isLinkedOrTeleconsult: false },
 ];
 
 export default function DoctorPatientChat() {
@@ -65,7 +68,10 @@ export default function DoctorPatientChat() {
   const location = useLocation();
   const { user, profile } = useAuth();
 
-  const [selectedPatientId, setSelectedPatientId] = useState<string>("");
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(() => {
+    const fromUrl = new URLSearchParams(location.search).get("patientId");
+    return fromUrl ? normalizeParticipantId(fromUrl) : "";
+  });
   const [patientsList, setPatientsList] = useState<PatientMeta[]>(SEED_PATIENTS);
   const [loadingPatients, setLoadingPatients] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -79,7 +85,7 @@ export default function DoctorPatientChat() {
     const params = new URLSearchParams(location.search);
     const targetPatId = params.get("patientId");
     if (targetPatId) {
-      setSelectedPatientId(targetPatId);
+      setSelectedPatientId(normalizeParticipantId(targetPatId));
     }
   }, [location.search]);
 
@@ -93,18 +99,22 @@ export default function DoctorPatientChat() {
       // Seed linked patients default map
       SEED_PATIENTS.forEach((p) => patsMap.set(p.id, p));
 
+      // Synchronize remote chat access requests
+      await fetchChatAccessRequests();
+
       // Also parse existing messages from universal storage
       const globalMsgs = getAllGlobalMessages();
       const docNameNorm = (profile?.full_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
-      const docIdNorm = (user?.id || "").toLowerCase().trim();
+      const docIdNorm = normalizeParticipantId(user?.id);
 
       globalMsgs.forEach((m) => {
-        const mDocId = (m.doctor_id || "").toLowerCase().trim();
+        const mDocId = normalizeParticipantId(m.doctor_id);
         const mDocName = (m.doctor_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "").trim();
-        if (mDocId === docIdNorm || (docIdNorm === "doc_amelia_hart" && mDocId === "doc_amelia_hart") || (docNameNorm && docNameNorm !== "doctor" && mDocName.includes(docNameNorm))) {
-          if (m.patient_id && !patsMap.has(m.patient_id)) {
-            patsMap.set(m.patient_id, {
-              id: m.patient_id,
+        const mPatId = normalizeParticipantId(m.patient_id);
+        if (doIdsMatch(mDocId, docIdNorm) || (docNameNorm && docNameNorm !== "doctor" && mDocName.includes(docNameNorm))) {
+          if (mPatId && !patsMap.has(mPatId)) {
+            patsMap.set(mPatId, {
+              id: mPatId,
               name: m.patient_name || "Patient Record",
               age: 34,
               gender: "Patient",
@@ -118,15 +128,17 @@ export default function DoctorPatientChat() {
       const sb = getSupabase();
       if (sb && user?.id) {
         try {
+          const canonicalUserId = normalizeParticipantId(user.id);
           // Fetch care relationships linked to this doctor
           const { data: rels } = await sb
             .from("care_relationships")
             .select("patient_id, primary_condition")
-            .eq("doctor_id", user.id);
+            .or(`doctor_id.eq.${canonicalUserId},doctor_id.eq.${user.id}`);
 
           (rels || []).forEach((r) => {
             if (r.patient_id) {
-              linkedConditionsMap.set(r.patient_id, r.primary_condition || "Linked Clinical Care");
+              const canonPatId = normalizeParticipantId(r.patient_id);
+              linkedConditionsMap.set(canonPatId, r.primary_condition || "Linked Clinical Care");
             }
           });
 
@@ -134,18 +146,21 @@ export default function DoctorPatientChat() {
           const { data: msgRows } = await sb
             .from("doctor_patient_messages")
             .select("patient_id, patient_name")
-            .or(`doctor_id.eq.${user.id},doctor_name.ilike.%${docNameNorm || "hart"}%`);
+            .or(`doctor_id.eq.${canonicalUserId},doctor_id.eq.${user.id},doctor_name.ilike.%${docNameNorm || "hart"}%`);
 
           (msgRows || []).forEach((m) => {
-            if (m.patient_id && !patsMap.has(m.patient_id)) {
-              patsMap.set(m.patient_id, {
-                id: m.patient_id,
-                name: m.patient_name || "Patient Record",
-                age: 34,
-                gender: "Patient",
-                condition: "Direct Clinical Care",
-                isLinkedOrTeleconsult: true,
-              });
+            if (m.patient_id) {
+              const canonPatId = normalizeParticipantId(m.patient_id);
+              if (!patsMap.has(canonPatId)) {
+                patsMap.set(canonPatId, {
+                  id: canonPatId,
+                  name: m.patient_name || "Patient Record",
+                  age: 34,
+                  gender: "Patient",
+                  condition: "Direct Clinical Care",
+                  isLinkedOrTeleconsult: true,
+                });
+              }
             }
           });
 
@@ -158,12 +173,13 @@ export default function DoctorPatientChat() {
               .in("id", targetIds);
 
             (matchedProfiles || []).forEach((p) => {
-              patsMap.set(p.id, {
-                id: p.id,
-                name: p.full_name || "Patient Record",
+              const canonPatId = normalizeParticipantId(p.id);
+              patsMap.set(canonPatId, {
+                id: canonPatId,
+                name: p.full_name || patsMap.get(canonPatId)?.name || "Patient Record",
                 age: 35,
                 gender: "Patient",
-                condition: linkedConditionsMap.get(p.id) || "Direct Clinical Care",
+                condition: linkedConditionsMap.get(canonPatId) || "Direct Clinical Care",
                 isLinkedOrTeleconsult: true,
               });
             });
@@ -188,6 +204,28 @@ export default function DoctorPatientChat() {
     window.addEventListener("zebra_doctor_patient_sync", handleSync);
     window.addEventListener("storage", handleSync);
 
+    // Realtime Supabase subscription for cross-device requests
+    let channel: any = null;
+    const sb = getSupabase();
+    if (sb) {
+      channel = sb
+        .channel(`doctor_chat_requests_sync_${Date.now()}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "chat_access_requests",
+          },
+          () => {
+            void fetchChatAccessRequests().then(() => {
+              setRequestTick((t) => t + 1);
+            });
+          }
+        )
+        .subscribe();
+    }
+
     let bc: BroadcastChannel | null = null;
     try {
       if (typeof window !== "undefined" && "BroadcastChannel" in window) {
@@ -202,6 +240,7 @@ export default function DoctorPatientChat() {
       window.removeEventListener("zebra_doctor_patient_sync", handleSync);
       window.removeEventListener("storage", handleSync);
       if (bc) bc.close();
+      if (channel && sb) sb.removeChannel(channel);
     };
   }, [user?.id, profile?.full_name]);
 
@@ -209,16 +248,15 @@ export default function DoctorPatientChat() {
   const { pendingRequests, acceptedPatientIds } = useMemo(() => {
     const allReqs = getAllChatRequests();
     const docNameNorm = (profile?.full_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "");
-    const docIdNorm = (user?.id || "").toLowerCase();
+    const docIdNorm = normalizeParticipantId(user?.id);
 
     const forThisDoctor = allReqs.filter((r) => {
-      const rDocId = (r.doctor_id || "").toLowerCase();
       const rDocName = (r.doctor_name || "").toLowerCase().replace(/^(dr\.|prof\.)\s*/i, "");
-      return rDocId === docIdNorm || (docNameNorm && rDocName && (rDocName.includes(docNameNorm) || docNameNorm.includes(rDocName)));
+      return doIdsMatch(r.doctor_id, docIdNorm) || (docNameNorm && rDocName && (rDocName.includes(docNameNorm) || docNameNorm.includes(rDocName)));
     });
 
     const pending = forThisDoctor.filter((r) => r.status === "pending");
-    const acceptedIds = new Set(forThisDoctor.filter((r) => r.status === "accepted").map((r) => r.patient_id));
+    const acceptedIds = new Set(forThisDoctor.filter((r) => r.status === "accepted").map((r) => normalizeParticipantId(r.patient_id)));
     const acceptedNames = new Set(forThisDoctor.filter((r) => r.status === "accepted").map((r) => (r.patient_name || "").toLowerCase()));
 
     return { pendingRequests: pending, acceptedPatientIds: acceptedIds, acceptedPatientNames: acceptedNames };
@@ -227,8 +265,9 @@ export default function DoctorPatientChat() {
   // Filter roster strictly to ONLY linked, teleconsulted, or accepted patients
   const activeRoster = useMemo(() => {
     let result = patientsList.filter((p) => {
+      const canonId = normalizeParticipantId(p.id);
       if (p.isLinkedOrTeleconsult) return true;
-      if (acceptedPatientIds.has(p.id)) return true;
+      if (acceptedPatientIds.has(canonId) || acceptedPatientIds.has(p.id)) return true;
       return false;
     });
 
@@ -287,8 +326,8 @@ export default function DoctorPatientChat() {
     }
   }, [messages]);
 
-  const handleAcceptRequest = (req: ChatAccessRequest) => {
-    updateChatAccessRequestStatus(req.id, "accepted");
+  const handleAcceptRequest = async (req: ChatAccessRequest) => {
+    await updateChatAccessRequestStatus(req.id, "accepted");
     setRequestTick((t) => t + 1);
 
     // If patient not in patientsList yet, add them
@@ -313,8 +352,8 @@ export default function DoctorPatientChat() {
     toast.success(`Accepted chat request from ${req.patient_name || "Patient"}!`);
   };
 
-  const handleDeclineRequest = (req: ChatAccessRequest) => {
-    updateChatAccessRequestStatus(req.id, "declined");
+  const handleDeclineRequest = async (req: ChatAccessRequest) => {
+    await updateChatAccessRequestStatus(req.id, "declined");
     setRequestTick((t) => t + 1);
     toast.info(`Declined chat request from ${req.patient_name || "Patient"}.`);
   };
